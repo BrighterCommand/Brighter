@@ -44,12 +44,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpEventRequeueCountThresholdTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry) 
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
             _event = new MyEvent();
@@ -61,15 +63,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached()
+        public async Task When_A_Requeue_Count_Threshold_For_Events_Has_Been_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             //_should_publish_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Publish);

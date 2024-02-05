@@ -18,7 +18,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// Initialise a new instance of Ms Sql Connection provider using Shared Token Cache Credentials to acquire Access Tokens.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlSharedTokenCacheConnectionProvider(MsSqlConfiguration configuration) : base(configuration)
+        public MsSqlSharedTokenCacheConnectionProvider(RelationalDatabaseConfiguration configuration) : base(configuration)
         {
             _azureUserName = Environment.GetEnvironmentVariable(_azureUserNameKey);
             _azureTenantId = Environment.GetEnvironmentVariable(_azureTenantIdKey);
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// Initialise a new instance of Ms Sql Connection provider using Shared Token Cache Credentials to acquire Access Tokens.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlSharedTokenCacheConnectionProvider(MsSqlConfiguration configuration, string userName, string tenantId) : base(configuration)
+        public MsSqlSharedTokenCacheConnectionProvider(RelationalDatabaseConfiguration configuration, string userName, string tenantId) : base(configuration)
         {
             _azureUserName = userName;
             _azureTenantId = tenantId;
@@ -42,12 +42,12 @@ namespace Paramore.Brighter.MsSql.Azure
         protected override async Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken)
         {
             var credential = GetCredential();
-            return await credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);
+            return await credential.GetTokenAsync(new TokenRequestContext(AuthenticationTokenScopes), cancellationToken);
         }
         
         private SharedTokenCacheCredential GetCredential()
         {
-            return new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions()
+            return new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions
             {
                 Username = _azureUserName,
                 TenantId = _azureTenantId,

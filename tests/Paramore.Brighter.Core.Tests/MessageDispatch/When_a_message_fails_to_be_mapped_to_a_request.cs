@@ -18,13 +18,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpFailingMessageTranslationTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
              
-            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(_commandProcessor, messageMapperRegistry) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3 };
+            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(provider, messageMapperRegistry, null)
+            {
+                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+            };
 
             var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
 
@@ -32,13 +36,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request ()
+        public async Task When_A_Message_Fails_To_Be_Mapped_To_A_Request ()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
 
             _channel.Stop();
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             //should_have_acknowledge_the_message
             _channel.AcknowledgeHappened.Should().BeTrue();

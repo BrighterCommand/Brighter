@@ -37,8 +37,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
 {
     public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
-       
-        private readonly DynamoDBContext _context;
+       private readonly DynamoDBContext _context;
+       private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
 
        public bool ContinueOnCapturedContext { get; set; }
        
@@ -48,9 +48,13 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="context">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
         /// <param name="client">The Amazon Dynamo Db client to use</param>
-        public DynamoDbInbox(IAmazonDynamoDB client )
+        public DynamoDbInbox(IAmazonDynamoDB client, DynamoDbInboxConfiguration configuration)
         {
             _context = new DynamoDBContext(client);
+            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
+            {
+                OverrideTableName = configuration.TableName
+            };
         }
 
         /// <summary>
@@ -92,10 +96,10 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>D
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             await _context
-                .SaveAsync(new CommandItem<T>(command, contextKey), cancellationToken)
+                .SaveAsync(new CommandItem<T>(command, contextKey), _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -108,7 +112,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task{T}"/></returns>
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {                
             return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
         }
@@ -121,13 +125,13 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
-        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
+        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
        {
            try
            {
                var command = await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
-               return command !=null;
+               return command != null;
            }
            catch (RequestNotFoundException<T>)
            {
@@ -143,13 +147,13 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>        
         /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
+        /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             return ExistsAsync<T>(id, contextKey).Result;
         }
 
-        private async Task<T> GetCommandAsync<T>(Guid id, string contextKey, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        private async Task<T> GetCommandAsync<T>(Guid id, string contextKey, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var queryConfig = new QueryOperationConfig
             {
@@ -161,7 +165,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             var messages = await PageAllMessagesAsync<T>(queryConfig).ConfigureAwait(false);
 
             var result = messages.Select(msg => msg.ConvertToCommand()).FirstOrDefault();
-            if ( result == null)
+            if (result == null)
                 throw new RequestNotFoundException<T>(id);
 
             return result;
@@ -170,7 +174,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         private async Task<IEnumerable<CommandItem<T>>> PageAllMessagesAsync<T>(QueryOperationConfig queryConfig) 
             where T: class, IRequest 
         {
-            var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig);
+            var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig, _dynamoOverwriteTableConfig);
             
             var messages = new List<CommandItem<T>>();
             do

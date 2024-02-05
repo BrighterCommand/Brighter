@@ -36,7 +36,21 @@ namespace Paramore.Brighter.Transforms.Storage
     public class InMemorySchemaRegistry : IAmASchemaRegistry
     {
         private readonly ConcurrentDictionary<string, List<BrighterMessageSchema>> _schemas = new ConcurrentDictionary<string, List<BrighterMessageSchema>>();
+
+        private readonly ConcurrentDictionary<int, BrighterMessageSchema> _schemasById = new ConcurrentDictionary<int, BrighterMessageSchema>();
         private static int s_schemaId = 1;
+
+        public Task<(bool, BrighterMessageSchema)> GetAsync(int schemaId)
+        {
+            var tcs = new TaskCompletionSource<(bool, BrighterMessageSchema)>();
+            if (_schemasById.TryGetValue(schemaId, out BrighterMessageSchema schema))
+            {
+                tcs.SetResult((true, schema));
+            }
+
+            tcs.SetResult((false, null));
+            return tcs.Task;
+        }
 
         /// <summary>
         /// Looks up a schema for a topic
@@ -44,15 +58,20 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="topic">The topic to find the schema for. </param>
         /// <param name="latestOnly">Only the highest version schema, or all schemas.</param>
         /// <returns>A tuple, with a boolean indicating if the schema could be found and a list of schemas that match</returns>
-        public async Task<(bool, IEnumerable<BrighterMessageSchema>)> LookupAsync(string topic, bool latestOnly = true)
+        public Task<(bool, IEnumerable<BrighterMessageSchema>)> LookupAsync(string topic, bool latestOnly = true)
         {
+            var tcs = new TaskCompletionSource<(bool, IEnumerable<BrighterMessageSchema>)>();
             var schemaFound = _schemas.TryGetValue(topic, out List<BrighterMessageSchema> messageSchemas);
 
             if (schemaFound && latestOnly) 
-                return (true, new List<BrighterMessageSchema>
-                    {messageSchemas.OrderByDescending(s => s.Version).FirstOrDefault()}); 
+                tcs.SetResult(
+                    (true, 
+                    new List<BrighterMessageSchema> {messageSchemas.OrderByDescending(s => s.Version).FirstOrDefault()})
+                    ); 
 
-            return (schemaFound, schemaFound ? messageSchemas : null);
+            tcs.SetResult((schemaFound, schemaFound ? messageSchemas : null));
+
+            return tcs.Task;
         }
 
         /// <summary>
@@ -61,26 +80,33 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="topic">The topic to use as an identifier for the schema</param>
         /// <param name="messageSchema">The JSON schema that you want to register</param>
         /// <param name="newVersion">Explicitly set the new version; if omitted will be 1 if not exists, or highest version + 1</param>
-        public async Task<int> RegisterAsync(string topic, string messageSchema, int newVersion = -1)
+        public Task<int> RegisterAsync(string topic, string messageSchema, int newVersion = -1)
         {
+            var tcs = new TaskCompletionSource<int>();
+            BrighterMessageSchema registeredSchema = null;
             var found = _schemas.TryGetValue(topic, out List<BrighterMessageSchema> schemas);
             if (found)
             {
                 var id = schemas.Select(s => s.Id).First();
                 var version = newVersion == -1 ? schemas.Select(s => s.Version).Max() + 1 : newVersion;
-                schemas.Add(new BrighterMessageSchema(topic, id, version, messageSchema));
+                registeredSchema = new BrighterMessageSchema(topic, id, version, messageSchema);
+                schemas.Add(registeredSchema);
             }
             else
             {
+                registeredSchema= new BrighterMessageSchema(topic, Interlocked.Increment(ref s_schemaId), 1, messageSchema);
                 _schemas.TryAdd(
                     topic, 
                     new List<BrighterMessageSchema>
                     {
-                        new BrighterMessageSchema(topic, Interlocked.Increment(ref s_schemaId), 1, messageSchema)
+                        registeredSchema
                     });
             }
+            
+            _schemasById.TryAdd(registeredSchema.Id, registeredSchema);
+            tcs.SetResult(registeredSchema.Id);
+            return tcs.Task;
 
-            return s_schemaId;
         }
 
         /// <summary>

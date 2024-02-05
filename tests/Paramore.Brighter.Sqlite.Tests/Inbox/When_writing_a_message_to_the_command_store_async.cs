@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Inbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqliteInboxAddMessageAsyncTests : IDisposable
+    public class SqliteInboxAddMessageAsyncTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteInbox _sqlInbox;
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupCommandDb();
 
-            _sqlInbox = new SqliteInbox(new SqliteInboxConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
+            _sqlInbox = new SqliteInbox(_sqliteTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand {Value = "Test"};
             _contextKey = "context-key";
         }
@@ -58,16 +58,16 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__sql_inbox
-            AssertionExtensions.Should((object) _storedCommand).NotBeNull();
+            AssertionExtensions.Should(_storedCommand).NotBeNull();
             //_should_read_the_command_value
-            AssertionExtensions.Should((string) _storedCommand.Value).Be(_raisedCommand.Value);
+            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
             //_should_read_the_command_id
-            AssertionExtensions.Should((Guid) _storedCommand.Id).Be(_raisedCommand.Id);
+            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _sqliteTestHelper.CleanUpDb();
+            await _sqliteTestHelper.CleanUpDbAsync();
         }
     }
 }

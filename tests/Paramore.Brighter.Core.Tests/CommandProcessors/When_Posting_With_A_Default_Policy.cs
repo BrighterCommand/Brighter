@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -38,14 +39,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutboxSync _fakeOutboxSync;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public PostCommandTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutboxSync = new FakeOutboxSync();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             const string topic = "MyCommand";
@@ -55,16 +56,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 );
 
             var messageMapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+                new MessageMapperRegistry(
+                    new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                    null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
+            var busConfiguration = new ExternalBusConfiguration { 
+                ProducerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                {
+                    { topic, _fakeMessageProducerWithPublishConfirmation },
+                }),
+                MessageMapperRegistry = messageMapperRegistry
+            };
+            
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBus(new ExternalBusConfiguration(
-                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}), 
-                    messageMapperRegistry), 
-                    _fakeOutboxSync)
+                .ExternalBusCreate(
+                    busConfiguration, 
+                    _fakeOutbox,
+                    new CommittableTransactionProvider())
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
@@ -75,14 +86,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor.Post(_myCommand);
 
             //should store the message in the sent outbox
-            _fakeOutboxSync
+            _fakeOutbox
                 .Get()
                 .SingleOrDefault(msg => msg.Id == _message.Id)
                 .Should().NotBeNull();
             //should send a message via the messaging gateway
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
             // should convert the command into a message
-            _fakeOutboxSync.Get().First().Should().Be(_message);
+            _fakeOutbox.Get().First().Should().Be(_message);
         }
 
         public void Dispose()

@@ -12,51 +12,53 @@ using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers
 {
-    public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
+    public class GreetingMadeHandlerAsync(
+        SalutationsEntityGateway uow,
+        IAmATransactionConnectionProvider provider,
+        IAmACommandProcessor postBox)
+        : RequestHandlerAsync<GreetingMade>
     {
-        private readonly SalutationsEntityGateway _uow;
-        private readonly IAmACommandProcessor _postBox;
-
-        public GreetingMadeHandlerAsync(SalutationsEntityGateway uow, IAmACommandProcessor postBox)
-        {
-            _uow = uow;
-            _postBox = postBox;
-        }
-
-        //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
+        [UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] 
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
-        [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default(CancellationToken))
+        [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY_ASYNC)]
+        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
         {
             var posts = new List<Guid>();
             
-            var tx = await _uow.Database.BeginTransactionAsync(cancellationToken);
+            var tx = await provider.GetTransactionAsync(cancellationToken);
             try
             {
                 var salutation = new Salutation(@event.Greeting);
 
-                _uow.Salutations.Add(salutation);
-                
-                posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
-                
-                await _uow.SaveChangesAsync(cancellationToken);
+                uow.Salutations.Add(salutation);
 
-                await tx.CommitAsync(cancellationToken);
+                posts.Add(await postBox.DepositPostAsync(
+                    new SalutationReceived(DateTimeOffset.Now),
+                    provider, cancellationToken: cancellationToken)
+                );
+
+                await uow.SaveChangesAsync(cancellationToken);
+
+                await provider.CommitAsync(cancellationToken);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                
-                await tx.RollbackAsync(cancellationToken);
-                
+
+                await provider.RollbackAsync(cancellationToken);
+
                 Console.WriteLine("Salutation analytical record not saved");
 
                 throw;
             }
+            finally
+            {
+                provider.Close();
+            }
 
-            await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
+            postBox.ClearOutbox(posts.ToArray());
             
-            return await base.HandleAsync(@event, cancellationToken);
+            return await base.HandleAsync(@event,cancellationToken);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using Confluent.Kafka;
@@ -49,8 +50,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (correlationId.Success)
                         messageHeader.CorrelationId = correlationId.Result;
 
+                    //If we don't have a partition key in the header, assume a non-Brighter sender and use message key
                     if (partitionKey.Success)
                         messageHeader.PartitionKey = partitionKey.Result;
+                    else
+                        messageHeader.PartitionKey = consumeResult.Message.Key;
                     
                     if (contentType.Success)
                         messageHeader.ContentType =contentType.Result;
@@ -93,39 +97,58 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private HeaderResult<Guid> ReadCorrelationId(Headers headers)
         {
-            if (headers.TryGetLastBytes(HeaderNames.CORRELATION_ID, out byte[] lastHeader))
-            {
-                var correlationValue = Encoding.UTF8.GetString(lastHeader);
-                if (Guid.TryParse(correlationValue, out Guid correlationId))
+            return ReadHeader(headers, HeaderNames.CORRELATION_ID)
+                .Map(s =>
                 {
-                    return new HeaderResult<Guid>(correlationId, true);
-                }
-                else
-                {
-                    s_logger.LogDebug("Could not parse message correlation id: {CorrelationValue}", correlationValue);
-                    return new HeaderResult<Guid>(Guid.Empty, false);
-                }
-            }
+                    if (string.IsNullOrEmpty(s))
+                    {
+                        s_logger.LogDebug("No correlation id found in message");
+                        return new HeaderResult<Guid>(Guid.Empty, true);
+                    }
 
-            return new HeaderResult<Guid>(Guid.Empty, false);
+                    if (Guid.TryParse(s, out Guid correlationId))
+                    {
+                        return new HeaderResult<Guid>(correlationId, true);
+                    }
+
+                    s_logger.LogDebug("Could not parse message correlation id: {CorrelationValue}", s);
+                    return new HeaderResult<Guid>(Guid.Empty, false);
+                });
         }
 
         private HeaderResult<string> ReadReplyTo(Headers headers)
         {
-            if (headers.TryGetLastBytes(HeaderNames.REPLY_TO, out byte[] lastHeader))
-            {
-                var replyToValue = Encoding.UTF8.GetString(lastHeader);
-                return new HeaderResult<string>(replyToValue, true);
-            }
-        
-            return new HeaderResult<string>(string.Empty, false);
+            return ReadHeader(headers, HeaderNames.REPLY_TO)
+              .Map(s =>
+              {
+                  if (string.IsNullOrEmpty(s))
+                  {
+                      s_logger.LogDebug("No reply to found in message");
+                      return new HeaderResult<string>(string.Empty, true);
+                  }
+
+                  return new HeaderResult<string>(s, true);
+              });
         }
 
         private HeaderResult<DateTime> ReadTimeStamp(Headers headers)
         {
-            if (headers.TryGetLastBytes(HeaderNames.TIMESTAMP, out byte[] lastHeader))
+            if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out byte[] lastHeader))
             {
-                return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(BitConverter.ToInt64(lastHeader, 0)), true);
+                //Additional testing for a non unixtimestamp string
+                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.CurrentInfo, DateTimeStyles.AdjustToUniversal, out DateTime timestamp))
+                {
+                    return new HeaderResult<DateTime>(timestamp, true);
+                }
+
+                try
+                {
+                    return new HeaderResult<DateTime>(DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(lastHeader, 0)).DateTime, true);
+                }
+                catch (Exception)
+                {
+                    return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+                }
             }
 
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
@@ -182,7 +205,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (string.IsNullOrEmpty(s))
                     {
                         s_logger.LogDebug("No partition key found in message");
-                        return new HeaderResult<string>(string.Empty, true);
+                        return new HeaderResult<string>(string.Empty, false);
                     }
 
                     return new HeaderResult<string>(s, true);
@@ -197,7 +220,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private HeaderResult<string> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
         {
-            if (headers.TryGetLastBytes(key, out byte[] lastHeader))
+            if (headers.TryGetLastBytesIgnoreCase(key, out byte[] lastHeader))
             {
                 try
                 {
@@ -211,10 +234,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     return new HeaderResult<string>(null, false);
                 }
             }
-            else
-            {
-                return new HeaderResult<string>(string.Empty, !dieOnMissing);
-            }
+           
+            return new HeaderResult<string>(string.Empty, !dieOnMissing);
         }
     }
 }

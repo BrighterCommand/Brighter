@@ -26,12 +26,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             Dispatched.TryAdd(command.Id, command);
         }
 
-        public Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if (cancellationToken.IsCancellationRequested)
-                tcs.SetCanceled();
+                tcs.SetCanceled(cancellationToken);
             
             Send(command);
 
@@ -43,12 +43,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             Dispatched.TryAdd(@event.Id, @event);
         }
 
-        public Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
               var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
               if (cancellationToken.IsCancellationRequested)
-                  tcs.SetCanceled();
+                  tcs.SetCanceled(cancellationToken);
          
               Publish(@event);
 
@@ -59,23 +59,39 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         {
             ClearOutbox(DepositPost(request));
         }
+        
+        public void Post<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
+        {
+            Post(request);
+        }
+        
 
-        public Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
               var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
               if (cancellationToken.IsCancellationRequested)
-                  tcs.SetCanceled();
+                  tcs.SetCanceled(cancellationToken);
               
               Post(request);
 
               return tcs.Task;
+        }
+        
+        public Task PostAsync<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            return PostAsync(request, continueOnCapturedContext, cancellationToken);
         }
 
         public Guid DepositPost<T>(T request) where T : class, IRequest
         {
             Deposited.Enqueue(new DepositedMessage(request));
             return request.Id;
+        }
+        
+        public Guid DepositPost<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
+        {
+            return DepositPost(request);
         }
 
         public Guid[] DepositPost<T>(IEnumerable<T> request) where T : class, IRequest
@@ -88,13 +104,18 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
             return ids.ToArray();
         }
+        
+        public Guid[] DepositPost<T, TTransaction>(IEnumerable<T> request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
+        {
+            return DepositPost(request);
+        }
 
-        public Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if(cancellationToken.IsCancellationRequested)
-                tcs.SetCanceled();
+                tcs.SetCanceled(cancellationToken);
             
             DepositPost(request);
             
@@ -103,9 +124,14 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
 
         }
+        
+        public Task<Guid> DepositPostAsync<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            return DepositPostAsync(request, continueOnCapturedContext, cancellationToken);
+        }
 
         public async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var ids = new List<Guid>();
             foreach (T r in requests)
@@ -114,6 +140,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             }
 
             return ids.ToArray();
+        }
+        
+        public async Task<Guid[]> DepositPostAsync<T, TTransaction>(IEnumerable<T> requests, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            return await DepositPostAsync(requests, continueOnCapturedContext, cancellationToken);
         }
 
         public void ClearOutbox(params Guid[] posts)
@@ -137,12 +169,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             ClearOutbox(depositedMessages);
         }
 
-        public Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        public Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if(cancellationToken.IsCancellationRequested)
-                tcs.SetCanceled();
+                tcs.SetCanceled(cancellationToken);
 
             ClearOutbox(posts.ToArray());
 
@@ -157,7 +189,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         }
 
         public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken);
         }

@@ -34,12 +34,12 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
     public class OutboxMaxSize
     {
         [Fact]
-        public void When_max_size_is_exceeded_shrink()
+        public async Task When_max_size_is_exceeded_shrink()
         {
             //Arrange
             const int limit = 5;
             
-            var outbox = new InMemoryOutbox()
+            var outbox = new InMemoryOutbox
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5
@@ -53,19 +53,19 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             outbox.Add(new MessageTestDataBuilder());
 
-            Task.Delay(500).Wait(); //Allow time for compaction to run
+            await Task.Delay(500); //Allow time for compaction to run
             
             //should clear compaction percentage from the outbox, and then add  the  new one
             outbox.EntryCount.Should().Be(3);
         }
 
         [Fact]
-        public void When_shrinking_evict_oldest_messages_first()
+        public async Task When_shrinking_evict_oldest_messages_first()
         {
             //Arrange
             const int limit = 5;
             
-            var outbox = new InMemoryOutbox()
+            var outbox = new InMemoryOutbox
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             for (int i = 0; i <= limit - 1; i++)
             {
                 outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
-                Task.Delay(1000);
+                await Task.Delay(1000);
             }
 
             //Act
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             outbox.Add(new MessageTestDataBuilder());
 
-            Task.Delay(500).Wait(); //Allow time for compaction to run
+            await Task.Delay(500); //Allow time for compaction to run
             
             //should clear compaction percentage from the outbox, and then add  the  new one
             outbox.Get(messageIds[0]).Should().BeNull();

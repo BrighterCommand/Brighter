@@ -7,6 +7,7 @@ using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter;
@@ -16,6 +17,7 @@ using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MsSql.EntityFrameworkCore;
 using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.Control.Api;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
@@ -69,7 +71,7 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
     o.UseSqlServer(dbConnString);
 });
 
-var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
@@ -81,8 +83,7 @@ builder.Services.AddServiceActivator(options =>
         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
         options.UseScoped = true;
         
-    }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-    .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
+    })
     .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
@@ -129,6 +130,7 @@ app.UseEndpoints(endpoints =>
             await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
         }
     });
+    endpoints.MapBrighterControlEndpoints();
     
     endpoints.Map("Dispatcher", (IDispatcher dispatcher) => { return dispatcher.Consumers.Count(); });
 });

@@ -2,48 +2,62 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DapperExtensions;
-using DapperExtensions.Predicate;
+using Dapper;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
-    public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
+    public class DeletePersonHandlerAsync(
+        IAmARelationalDbConnectionProvider relationalDbConnectionProvider,
+        ILogger<DeletePersonHandlerAsync> logger)
+        : RequestHandlerAsync<DeletePerson>
     {
-        private readonly IUnitOfWork _uow;
-
-        public DeletePersonHandlerAsync(IUnitOfWork uow)
-        {
-            _uow = uow;
-        }
-        
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default)
         {
-            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
+            var connection = await relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
+            var tx = await connection.BeginTransactionAsync(cancellationToken);
             try
             {
+                var people = await connection.QueryAsync<Person>(
+                    "select * from Person where name = @name",
+                    new {name = deletePerson.Name},
+                    tx
+                    );
+                var person = people.SingleOrDefault();
 
-                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, deletePerson.Name);
-                var people = await _uow.Database.GetListAsync<Person>(searchbyName, transaction: tx);
-                var person = people.Single();
+                if (person != null)
+                {
+                    await connection.ExecuteAsync(
+                        "delete from Greeting where Recipient_Id = @PersonId",
+                        new { PersonId = person.Id },
+                        tx);
+                    
+                    await connection.ExecuteAsync("delete from Person where Id = @Id",
+                        new {Id = person.Id},
+                        tx);
 
-                var deleteById = Predicates.Field<Greeting>(g => g.RecipientId, Operator.Eq, person.Id);
-                await _uow.Database.DeleteAsync(deleteById, tx);
-                
-                await tx.CommitAsync(cancellationToken);
+                    await tx.CommitAsync(cancellationToken);
+                }
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(deletePerson, cancellationToken);
+            }
+            finally
+            {
+                await connection.DisposeAsync();
+                await tx.DisposeAsync();
+
             }
 
             return await base.HandleAsync(deletePerson, cancellationToken);

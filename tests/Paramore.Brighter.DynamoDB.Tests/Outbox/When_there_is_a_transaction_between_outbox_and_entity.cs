@@ -9,16 +9,19 @@ using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
 public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
 {
+    private readonly ITestOutputHelper _testOutputHelper;
     private readonly DynamoDbOutbox _dynamoDbOutbox;
     private readonly string _entityTableName;
 
-    public DynamoDbOutboxTransactionTests()
+    public DynamoDbOutboxTransactionTests(ITestOutputHelper testOutputHelper)
     {
+        _testOutputHelper = testOutputHelper;
         var tableRequestFactory = new DynamoDbTableFactory();
 
         //act
@@ -69,19 +72,20 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
         TransactWriteItemsResponse response = null;
         try
         {
-            var transaction = uow.BeginOrGetTransaction();
+            var transaction = await uow.GetTransactionAsync();
             transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = attributes, } });
             transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = OutboxTableName, Item = messageAttributes}});
-            
-            response = await uow.CommitAsync();
+
+            await uow.CommitAsync();
+            response = uow.LastResponse;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            _testOutputHelper.WriteLine(e.ToString());
             throw;
         }
 
-        Assert.NotNull(response); 
+        Assert.NotNull(response);
         Assert.Equal(HttpStatusCode.OK, response.HttpStatusCode);
         Assert.Equal(2, response.ContentLength);    //number of tables in the transaction
     }

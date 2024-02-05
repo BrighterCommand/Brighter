@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -31,11 +32,12 @@ namespace Paramore.Brighter.ServiceActivator
     /// Used when the message pump should block for I/O
     /// Will guarantee strict ordering of the messages on the queue
     /// Predictable performance as only one thread, allows you to configure number of performers for number of threads to use
-    /// Lower throughput than asuync
+    /// Lower throughput than async
     /// </summary>
     /// <typeparam name="TRequest"></typeparam>
     public class MessagePumpBlocking<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
+        private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
@@ -45,24 +47,13 @@ namespace Paramore.Brighter.ServiceActivator
         public MessagePumpBlocking(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistry messageMapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
-            : base(commandProcessorProvider, messageMapperRegistry, messageTransformerFactory)
+            IAmAMessageTransformerFactory messageTransformerFactory) 
+            : base(commandProcessorProvider)
         {
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
+            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
         
-        /// <summary>
-        /// Constructs a message pump 
-        /// </summary>
-        /// <param name="commandProcessor">A command processor</param>
-        /// <param name="messageMapperRegistry">The registry of mappers</param>
-        /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
-        public MessagePumpBlocking(
-            IAmACommandProcessor commandProcessor, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory = null) :
-            this(new CommandProcessorProvider(commandProcessor), messageMapperRegistry, messageTransformerFactory)
-        {}
-
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
             s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
@@ -85,6 +76,28 @@ namespace Paramore.Brighter.ServiceActivator
                     break;
                 }
             }
+        }
+
+        protected override TRequest TranslateMessage(Message message)
+        {
+            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
+
+            TRequest request;
+
+            try
+            {
+                request = _unwrapPipeline.Unwrap(message);
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
+
+            return request;
         }
     }
 }

@@ -43,7 +43,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
         public DispatchBuilderWithNamedGateway()
         {
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+                null
+                );
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             var policyRegistry = new PolicyRegistry
             {
@@ -77,7 +80,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
             _builder = DispatchBuilder.With()
                 .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
-                .MessageMappers(messageMapperRegistry, null)
+                .MessageMappers(messageMapperRegistry, null, null, null)
                 .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
                 .Subscriptions(new []
                 {
@@ -100,7 +103,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            AssertionExtensions.Should((object) _dispatcher).NotBeNull();
+            AssertionExtensions.Should(_dispatcher).NotBeNull();
         }
 
         public void Dispose()

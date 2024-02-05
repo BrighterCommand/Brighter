@@ -28,7 +28,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             return messages.Select(x => new BrokeredMessageWrapper(x));
         }
-      
+
         public void Close()
         {
             s_logger.LogWarning("Closing the MessageReceiver connection");
@@ -36,14 +36,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             s_logger.LogWarning("MessageReceiver connection stopped");
         }
 
-        public async Task Complete(string lockToken)
+        public Task Complete(string lockToken)
         {
-            await _messageReceiver.CompleteMessageAsync(CreateMessageShiv(lockToken)).ConfigureAwait(false);
+            return _messageReceiver.CompleteMessageAsync(CreateMessageShiv(lockToken));
         }
 
-        public async Task DeadLetter(string lockToken)
+        public Task DeadLetter(string lockToken)
         {
-            await _messageReceiver.DeadLetterMessageAsync(CreateMessageShiv(lockToken));
+            return _messageReceiver.DeadLetterMessageAsync(CreateMessageShiv(lockToken));
         }
 
         public bool IsClosedOrClosing => _messageReceiver.IsClosed;

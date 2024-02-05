@@ -143,7 +143,7 @@ internal class RmqMessagePublisher
                 {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
                 {HeaderNames.TOPIC, message.Header.Topic},
                 {HeaderNames.HANDLED_COUNT, message.Header.HandledCount},
-            };
+             };
 
             if (message.Header.CorrelationId != Guid.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString());

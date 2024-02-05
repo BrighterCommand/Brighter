@@ -7,7 +7,7 @@ namespace HelloAsyncListeners
 {
     public class WantToBeGreetedToo : RequestHandlerAsync<GreetingEvent>
     {
-        public override async Task<GreetingEvent> HandleAsync(GreetingEvent @event, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<GreetingEvent> HandleAsync(GreetingEvent @event, CancellationToken cancellationToken = default)
         {
             var api = new IpFyApi(new Uri("https://api.ipify.org"));
             var result = await api.GetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);

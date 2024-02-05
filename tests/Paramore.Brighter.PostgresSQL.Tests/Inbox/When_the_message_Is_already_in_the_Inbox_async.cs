@@ -37,7 +37,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
     public class SqlInboxDuplicateMessageAsyncTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _pgTestHelper;
-        private readonly PostgresSqlInbox _pgSqlInbox;
+        private readonly PostgreSqlInbox _pgSqlInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
         private Exception _exception;
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             _pgTestHelper = new PostgresSqlTestHelper();
             _pgTestHelper.SetupCommandDb();
 
-            _pgSqlInbox = new PostgresSqlInbox(_pgTestHelper.InboxConfiguration);
+            _pgSqlInbox = new PostgreSqlInbox(_pgTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "test-context";
         }
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             var storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
 
             //_should_read_the_command_from_the__dynamo_db_inbox
-            AssertionExtensions.Should((object) storedCommand).NotBeNull();
+            AssertionExtensions.Should(storedCommand).NotBeNull();
         }
 
         public void Dispose()

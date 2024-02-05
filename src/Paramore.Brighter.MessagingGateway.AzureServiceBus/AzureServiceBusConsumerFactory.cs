@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
         public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration)
         : this (new ServiceBusConnectionStringClientProvider(configuration.ConnectionString), configuration.AckOnRead)
-        { } 
+        { }
 
         /// <summary>
         /// Factory to create an Azure Service Bus Consumer
@@ -31,7 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _ackOnRead = ackOnRead;
             _clientProvider = clientProvider;
         }
-        
+
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>
@@ -41,12 +41,19 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
 
-            AzureServiceBusSubscriptionConfiguration config = new AzureServiceBusSubscriptionConfiguration();
-            if (subscription is AzureServiceBusSubscription sub) config = sub.Configuration;
+            var config = new AzureServiceBusSubscriptionConfiguration();
+            
+            if (subscription is AzureServiceBusSubscription sub) 
+                config = sub.Configuration;
 
-            return new AzureServiceBusConsumer(subscription.RoutingKey, subscription.ChannelName,
-                new AzureServiceBusMessageProducer(nameSpaceManagerWrapper,
-                    new ServiceBusSenderProvider(_clientProvider), subscription.MakeChannels), nameSpaceManagerWrapper,
+            return new AzureServiceBusConsumer(
+                subscription.RoutingKey, 
+                subscription.ChannelName,
+                new AzureServiceBusMessageProducer(
+                    nameSpaceManagerWrapper,
+                    new ServiceBusSenderProvider(_clientProvider), 
+                    subscription.MakeChannels), 
+                nameSpaceManagerWrapper,
                 new ServiceBusReceiverProvider(_clientProvider),
                 makeChannels: subscription.MakeChannels,
                 receiveMode: _ackOnRead ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock,

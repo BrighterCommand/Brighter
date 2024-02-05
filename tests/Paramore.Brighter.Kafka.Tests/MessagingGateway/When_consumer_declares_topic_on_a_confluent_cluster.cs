@@ -80,8 +80,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     SslCaLocation = SupplyCertificateLocation()
                     
                 },
-                new KafkaPublication[] {new KafkaPublication()
-                {
+                new KafkaPublication[] {new KafkaPublication
+                    {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 3,
@@ -118,7 +118,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_a_consumer_declares_topics_on_a_confluent_cluster()
+        public async Task When_a_consumer_declares_topics_on_a_confluent_cluster()
         {
             var message = new Message(
                 new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 try
                 {
                     maxTries++;
-                    Task.Delay(500).Wait(); //Let topic propogate in the broker
+                    await Task.Delay(500); //Let topic propagate in the broker
                     messages = _consumer.Receive(10000);
                     _consumer.Acknowledge(messages[0]);
                     
@@ -147,7 +147,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }
                 catch (ChannelFailureException cfx)
                 {
-                    //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
+                    //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
 

@@ -22,6 +22,9 @@
  
 #endregion
 
+using System;
+using System.Data;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
@@ -29,41 +32,47 @@ using Microsoft.Data.Sqlite;
 namespace Paramore.Brighter.Sqlite
 {
     /// <summary>
-    /// A connection provider that uses the connection string to create a connection
+    /// A connection provider for Sqlite 
     /// </summary>
-    public class SqliteConnectionProvider : ISqliteConnectionProvider
+    public class SqliteConnectionProvider : RelationalDbConnectionProvider
     {
         private readonly string _connectionString;
 
         /// <summary>
-        /// Initialise a new instance of Sqlte Connection provider from a connection string
+        /// Create a connection provider for Sqlite using a connection string for Db access
         /// </summary>
-        /// <param name="configuration">Ms Sql Configuration</param>
-        public SqliteConnectionProvider(SqliteConfiguration configuration)
+        /// <param name="configuration">The configuration of the Sqlite database</param>
+        public SqliteConnectionProvider(IAmARelationalDatabaseConfiguration configuration)
         {
+            if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
+                throw new ArgumentNullException(nameof(configuration.ConnectionString)); 
             _connectionString = configuration.ConnectionString;
         }
 
-        public SqliteConnection GetConnection()
+        /// <summary>
+        /// Gets a existing Connection; creates a new one if it does not exist
+        /// The connection is not opened, you need to open it yourself.
+        /// </summary>
+        /// <returns>A database connection</returns>
+        public override DbConnection GetConnection()
         {
-            return new SqliteConnection(_connectionString);
+            var connection = new SqliteConnection(_connectionString);
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+            return connection;
         }
 
-        public async Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        /// <summary>
+        /// Gets a existing Connection; creates a new one if it does not exist
+        /// The connection is not opened, you need to open it yourself.
+        /// </summary>
+        /// <returns>A database connection</returns>
+         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<SqliteConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            tcs.SetResult(GetConnection());
-            return await tcs.Task;
+            var connection = new SqliteConnection(_connectionString);
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
+            return connection;
         }
-
-        public SqliteTransaction GetTransaction()
-        {
-            //This Connection Factory does not support Transactions 
-            return null;
-        }
-
-        public bool HasOpenTransaction { get => false; }
-        public bool IsSharedConnection { get => false; }
     }
 }

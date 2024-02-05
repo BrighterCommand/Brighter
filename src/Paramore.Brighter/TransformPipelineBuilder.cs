@@ -147,10 +147,15 @@ namespace Paramore.Brighter
             }
         }
 
-        private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
+        public bool HasPipeline<TRequest>() where TRequest : class, IRequest
+        {
+            return _mapperRegistry.Get<TRequest>() != null;
+        }
+
+        private IEnumerable<IAmAMessageTransform> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest : class, IRequest
         {
-            var transforms = new List<IAmAMessageTransformAsync>();
+            var transforms = new List<IAmAMessageTransform>();
 
             //Allowed to be null to avoid breaking v9 interfaces
             if (_messageTransformerFactory == null)
@@ -190,7 +195,7 @@ namespace Paramore.Brighter
         private IAmAMessageMapper<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest
         {
             var messageMapper = _mapperRegistry.Get<TRequest>();
-            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}", typeof(TRequest).Name));
+            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set runAsync on the subscription to match the mapper type?", typeof(TRequest).Name));
             return messageMapper;
         }
 
@@ -242,7 +247,7 @@ namespace Paramore.Brighter
 
         private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
         {
-            return messageMapper.GetType().GetTypeInfo().GetMethods();
+            return messageMapper.GetType().GetMethods();
         }
 
         private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipeline<TRequest> pipeline) where TRequest : class, IRequest

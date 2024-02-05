@@ -9,20 +9,14 @@ using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
-    public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
+    public class DeletePersonHandlerAsync(IAmADynamoDbConnectionProvider dynamoDbConnectionProvider)
+        : RequestHandlerAsync<DeletePerson>
     {
-        private readonly DynamoDbUnitOfWork _unitOfWork;
-
-        public DeletePersonHandlerAsync(IAmABoxTransactionConnectionProvider unitOfWork)
-        {
-            _unitOfWork = (DynamoDbUnitOfWork)unitOfWork;
-        }
-        
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default)
         {
-            var context = new DynamoDBContext(_unitOfWork.DynamoDb);
+            var context = new DynamoDBContext(dynamoDbConnectionProvider.DynamoDb);
             await context.DeleteAsync(deletePerson.Name, cancellationToken);
 
             return await base.HandleAsync(deletePerson, cancellationToken);

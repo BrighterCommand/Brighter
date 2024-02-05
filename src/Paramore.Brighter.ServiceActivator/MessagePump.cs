@@ -57,23 +57,15 @@ namespace Paramore.Brighter.ServiceActivator
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private int _unacceptableMessageCount = 0;
-        private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
 
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
-        /// <param name="messageMapperRegistry">The registry of mappers</param>
-        /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
-        public MessagePump(
-            IAmACommandProcessorProvider commandProcessorProvider,
-            IAmAMessageMapperRegistry messageMapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null)
+        protected MessagePump(IAmACommandProcessorProvider commandProcessorProvider)
         {
             CommandProcessorProvider = commandProcessorProvider;
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
-            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
-        }
+       }
 
         public int TimeoutInMilliseconds { get; set; }
 
@@ -176,59 +168,76 @@ namespace Paramore.Brighter.ServiceActivator
 
                     span?.SetStatus(ActivityStatusCode.Ok);
                 }
-                catch (ConfigurationException configurationException)
-                {
-                    s_logger.LogCritical(configurationException,
-                        "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}",
-                        Channel.Name, Thread.CurrentThread.ManagedThreadId);
-
-                    RejectMessage(message);
-                    span?.SetStatus(ActivityStatusCode.Error,
-                        $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
-                    Channel.Dispose();
-                    break;
-                }
-                catch (DeferMessageAction)
-                {
-                    span?.SetStatus(ActivityStatusCode.Error, "Deferring message for later action");
-                    if (RequeueMessage(message)) continue;
-                }
                 catch (AggregateException aggregateException)
                 {
-                    var (stop, requeue) = HandleProcessingException(aggregateException);
-
-                    span?.SetStatus(ActivityStatusCode.Error, $"Error while dispatching, re-queueing {requeue}, rejecting {stop}");
-                    if (requeue)
+                    var stop = false;
+                    var defer = false;
+  
+                    foreach (var exception in aggregateException.InnerExceptions)
                     {
-                        if (RequeueMessage(message)) continue;
+                        if (exception is ConfigurationException configurationException)
+                        {
+                            s_logger.LogCritical(configurationException, "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                            stop = true;
+                            break;
+                        }
+
+                        if (exception is DeferMessageAction)
+                        {
+                            defer = true;
+                            continue;
+                        }
+
+                        s_logger.LogError(exception, "MessagePump: Failed to dispatch message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    }
+
+                    if (defer)
+                    {
+                        s_logger.LogDebug("MessagePump: Deferring message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                        span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
+                        if (RequeueMessage(message))
+                            continue;
                     }
 
                     if (stop)
                     {
                         RejectMessage(message);
+                        span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                         Channel.Dispose();
                         break;
                     }
+
+                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to dispatch message {message.Id} from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
+                }
+                catch (ConfigurationException configurationException)
+                {
+                    s_logger.LogCritical(configurationException,"MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    RejectMessage(message);
+                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
+                    Channel.Dispose();
+                    break;
+                }
+                catch (DeferMessageAction)
+                {
+                    s_logger.LogDebug("MessagePump: Deferring message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    
+                    span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
+                    
+                    if (RequeueMessage(message)) continue;
                 }
                 catch (MessageMappingException messageMappingException)
                 {
-                    s_logger.LogWarning(messageMappingException,
-                        "MessagePump: Failed to map message '{Id}' from {ChannelName} on thread # {ManagementThreadId}",
-                        message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    s_logger.LogWarning(messageMappingException, "MessagePump: Failed to map message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
                     IncrementUnacceptableMessageLimit();
                     
-                    span?.SetStatus(ActivityStatusCode.Error,
-                        $"MessagePump: Failed to map message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
+                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to map message {message.Id} from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 catch (Exception e)
                 {
-                    s_logger.LogError(e,
-                        "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}",
-                        message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    s_logger.LogError(e, "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
-                    span?.SetStatus(ActivityStatusCode.Error,
-                        $"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
+                    span?.SetStatus(ActivityStatusCode.Error,$"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 finally
                 {
@@ -264,36 +273,6 @@ namespace Paramore.Brighter.ServiceActivator
         // i..e an async pipeline uses SendAsync/PublishAsync and a blocking pipeline uses Send/Publish
         protected abstract void DispatchRequest(MessageHeader messageHeader, TRequest request);
 
-        private (bool, bool) HandleProcessingException(AggregateException aggregateException)
-        {
-            var stop = false;
-            var requeue = false;
-  
-            foreach (var exception in aggregateException.InnerExceptions)
-            {
-                if (exception is DeferMessageAction)
-                {
-                    requeue = true;
-                    continue;
-                }
-
-                if (exception is ConfigurationException)
-                {
-                    s_logger.LogCritical(exception,
-                        "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}",
-                        Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    stop = true;
-                    break;
-                }
-
-                s_logger.LogInformation(exception,
-                    "MessagePump: Failed to dispatch message from {ChannelName} on thread # {ManagementThreadId}",
-                    Channel.Name, Thread.CurrentThread.ManagedThreadId);
-            }
-
-            return (stop, requeue);
-        }
-
         private void IncrementUnacceptableMessageLimit()
         {
             _unacceptableMessageCount++;
@@ -314,25 +293,23 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Returns True if the message should be acked, false if the channel has handled it</returns>
         private bool RequeueMessage(Message message)
         {
-            message.UpdateHandledCount();
+            message.Header.UpdateHandledCount();
 
             if (DiscardRequeuedMessagesEnabled())
             {
                 if (message.HandledCountReached(RequeueCount))
                 {
-                    var originalMessageId = message.Header.Bag.ContainsKey(Message.OriginalMessageIdHeaderName) ? message.Header.Bag[Message.OriginalMessageIdHeaderName].ToString() : null;
+                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object value) ? value.ToString() : null;
 
                     s_logger.LogError(
-                        "MessagePump: Have tried {RequeueCount} times to handle this message {Id}{OriginalMessageId} from {ChannelName} on thread # {ManagementThreadId}, dropping message.{5}Message Body:{Request}",
+                        "MessagePump: Have tried {RequeueCount} times to handle this message {Id}{OriginalMessageId} from {ChannelName} on thread # {ManagementThreadId}, dropping message.",
                         RequeueCount,
                         message.Id,
                         string.IsNullOrEmpty(originalMessageId)
                             ? string.Empty
                             : $" (original message id {originalMessageId})",
                         Channel.Name,
-                        Thread.CurrentThread.ManagedThreadId,
-                        Environment.NewLine,
-                        message.Body.Value);
+                        Thread.CurrentThread.ManagedThreadId);
 
                     RejectMessage(message);
                     return false;
@@ -346,27 +323,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Channel.Requeue(message, RequeueDelayInMilliseconds);
         }
 
-        private TRequest TranslateMessage(Message message)
-        {
-            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
-
-            TRequest request;
-
-            try
-            {
-                request = _unwrapPipeline.UnwrapAsync(message).GetAwaiter().GetResult();
-            }
-            catch (ConfigurationException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
-            }
-
-            return request;
-        }
+        protected abstract TRequest TranslateMessage(Message message);
 
         private bool UnacceptableMessageLimitReached()
         {

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,13 +37,14 @@ namespace Paramore.Brighter
     /// We provide implementations of <see cref="IAmAnOutboxAsync{T}"/> for various databases. Users using unsupported databases should consider a Pull
     /// request
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public interface IAmAnOutboxAsync<in T> : IAmAnOutbox<T> where T : Message
+    /// <typeparam name="T">The type of message</typeparam>
+    /// <typeparam name="TTransaction">The type of transaction supported by the Outbox</typeparam>
+    public interface IAmAnOutboxAsync<T, TTransaction> : IAmAnOutbox where T : Message
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
-        /// or access the Result or otherwise block. You may need the orginating synchronization context if you need to access thread specific storage
+        /// or access the Result or otherwise block. You may need the originating synchronization context if you need to access thread specific storage
         /// such as HTTPContext 
         /// </summary>
         bool ContinueOnCapturedContext { get; set; }
@@ -53,9 +55,13 @@ namespace Paramore.Brighter
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(T message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null);
+        Task AddAsync(
+            T message, 
+            int outBoxTimeout = -1, 
+            CancellationToken cancellationToken = default,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
 
         /// <summary>
         /// Awaitable Get the specified message identifier.
@@ -64,7 +70,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
-        Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken));
+        Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default);
         
         /// <summary>
         ///  Returns all messages in the store
@@ -79,7 +85,7 @@ namespace Paramore.Brighter
             int pageSize = 100, 
             int pageNumber = 1, 
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken));
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Awaitable Get the messages.
@@ -88,7 +94,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
-        Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken));
+        Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Update a message to show it is dispatched
@@ -96,7 +102,7 @@ namespace Paramore.Brighter
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken));
+        Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Update messages to show it is dispatched
@@ -104,7 +110,7 @@ namespace Paramore.Brighter
         /// <param name="ids">The ids of the messages to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken));
+        Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Retrieves messages that have been sent within the window
@@ -122,7 +128,7 @@ namespace Paramore.Brighter
             int pageNumber = 1,
             int outboxTimeout = -1,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken));
+            CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
@@ -146,5 +152,24 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <param name="messageIds">The id of the message to delete</param>
         Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds);
+        
+        /// <summary>
+        /// Get the messages that have been dispatched
+        /// </summary>
+        /// <param name="hoursDispatchedSince">The number of hours since the message was dispatched</param>
+        /// <param name="pageSize">The amount to return</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Messages that have already been dispatched</returns>
+        Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            int hoursDispatchedSince,
+            int pageSize = 100,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the number of un dispatched messages in the outbox
+        /// </summary>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Number of messages in the outbox that have yet to be dispatched</returns>
+        Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken);
     }
 }

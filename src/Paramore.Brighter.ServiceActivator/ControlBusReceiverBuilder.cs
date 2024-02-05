@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Transactions;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -67,7 +68,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         }
 
         /// <summary>
-        /// The Control Bus may use a Request-Reply pattern over a Publish-Subscribe pattern, frr example a Heartbear ot Trace
+        /// The Control Bus may use a Request-Reply pattern over a Publish-Subscribe pattern, frr example a Heartbeat ot Trace
         /// Message. To enable us to reply we need to have an <see cref="IAmAMessageProducer"/> instance that lets us respond to
         /// the sender (over the control bus).
         /// </summary>
@@ -138,11 +139,15 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
             
-            var incomingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
+            var incomingMessageMapperRegistry = new MessageMapperRegistry(
+            new ControlBusMessageMapperFactory(), null
+                );
             incomingMessageMapperRegistry.Register<ConfigurationCommand, ConfigurationCommandMessageMapper>();
             incomingMessageMapperRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandMessageMapper>();
 
-            var outgoingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
+            var outgoingMessageMapperRegistry = new MessageMapperRegistry(
+                new ControlBusMessageMapperFactory(), null
+                );
             outgoingMessageMapperRegistry.Register<HeartbeatReply, HeartbeatReplyCommandMessageMapper>();
 
             var producerRegistry = _producerRegistryFactory.Create();
@@ -150,10 +155,14 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var outbox = new SinkOutboxSync();
             
             CommandProcessor commandProcessor = null;
+            var externalBusConfiguration = new ExternalBusConfiguration();
+            externalBusConfiguration.ProducerRegistry = producerRegistry;
+            externalBusConfiguration.MessageMapperRegistry = outgoingMessageMapperRegistry;
+            
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
-                .ExternalBus(new ExternalBusConfiguration(producerRegistry, outgoingMessageMapperRegistry), outbox)
+                .ExternalBusCreate(externalBusConfiguration, outbox, new CommittableTransactionProvider())
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
             
@@ -173,7 +182,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             return DispatchBuilder.With()
                 .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
-                .MessageMappers(incomingMessageMapperRegistry, null)
+                .MessageMappers(incomingMessageMapperRegistry, null, null, null)
                 .DefaultChannelFactory(_channelFactory)                                        
                 .Subscriptions(subscriptions)
                 .Build();
@@ -183,9 +192,9 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        private class SinkOutboxSync : IAmAnOutboxSync<Message>
+        private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
-            public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+            public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
             {
                 //discard message
             }

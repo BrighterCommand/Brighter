@@ -85,10 +85,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             };
 
-            _producerConfig = new ProducerConfig(_clientConfig)
+            //We repeat properties because copying them from them to the producer config updates in client config in place
+            _producerConfig = new ProducerConfig()
             {
+                Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
+                BootstrapServers = string.Join(",", configuration.BootStrapServers),
+                ClientId = configuration.Name,
+                Debug = configuration.Debug,
+                SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                SaslUsername = configuration.SaslUsername,
+                SaslPassword = configuration.SaslPassword,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int)configuration.SecurityProtocol.Value) : null,
+                SslCaLocation = configuration.SslCaLocation,
+                SslKeyLocation = configuration.SslKeystoreLocation,
                 BatchNumMessages = publication.BatchNumberMessages,
                 EnableIdempotence = publication.EnableIdempotence,
+                EnableDeliveryReports = true,   //don't change this, we need it for the callback
                 MaxInFlight = publication.MaxInFlightRequestsPerConnection,
                 LingerMs = publication.LingerMs,
                 MessageTimeoutMs = publication.MessageTimeoutMs,
@@ -293,7 +306,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (status == PersistenceStatus.Persisted)
             {
-                if (headers.TryGetLastBytes(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
+                if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
                 {
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val) && (Guid.TryParse(val, out Guid messageId)))
@@ -306,8 +319,5 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             Task.Run((() =>OnMessagePublished?.Invoke(false, Guid.Empty)));
         }
-
-
-
     }
 }

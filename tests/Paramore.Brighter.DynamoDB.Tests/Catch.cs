@@ -47,6 +47,7 @@ namespace Paramore.Brighter.DynamoDB.Tests
 
             return exception;
         }
+
         public static async Task<Exception> ExceptionAsync(Func<Task> action)
         {
             Exception exception = null;

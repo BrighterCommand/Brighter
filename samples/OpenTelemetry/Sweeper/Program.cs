@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Transactions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -23,24 +24,19 @@ Paramore.Brighter.Logging.ApplicationLogging.LoggerFactory = LoggerFactory.Creat
 using var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Brighter Sweeper Sample"))
     .AddSource("Paramore.Brighter")
-    // .AddZipkinExporter(o => o.HttpClientFactory = () =>
-    // {
-    //     HttpClient client = new HttpClient();
-    //     client.DefaultRequestHeaders.Add("X-MyCustomHeader", "value");
-    //     return client;
-    //     o.Endpoint = new Uri("http://localhost:9411/api/v2/spans");
-    // })
     .AddJaegerExporter()
     .Build();
 
-IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>()
+IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
 {
     {"default", new FakeMessageProducer()}
 });
 
 builder.Services.AddBrighter()
-    .UseExternalBus(producerRegistry)
-    .UseInMemoryOutbox()
+    .UseExternalBus((configure) =>
+    {
+        configure.ProducerRegistry = producerRegistry;
+    })
     .UseOutboxSweeper(options =>
     {
         options.TimerInterval = 5;
@@ -49,7 +45,7 @@ builder.Services.AddBrighter()
 
 var app = builder.Build();
 
-var outBox = app.Services.GetService<IAmAnOutboxSync<Message>>();
+var outBox = app.Services.GetService<IAmAnOutboxSync<Message, CommittableTransaction>>();
 outBox.Add(new Message(new MessageHeader(Guid.NewGuid(), "Test.Topic", MessageType.MT_COMMAND, DateTime.UtcNow),
     new MessageBody("Hello")));
 

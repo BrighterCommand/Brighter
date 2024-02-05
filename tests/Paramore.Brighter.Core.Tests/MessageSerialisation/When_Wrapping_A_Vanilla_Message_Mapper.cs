@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
@@ -17,8 +18,10 @@ public class VanillaMessageWrapRequestTests
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyVanillaCommandMessageMapper) } };
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyVanillaCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
         
@@ -32,7 +35,7 @@ public class VanillaMessageWrapRequestTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = _transformPipeline.WrapAsync(_myCommand).Result;
+        var message = _transformPipeline.Wrap(_myCommand);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

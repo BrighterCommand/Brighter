@@ -33,19 +33,19 @@ namespace Paramore.Brighter
     /// </summary>
     public class SimpleMessageTransformerFactory : IAmAMessageTransformerFactory
     {
-        private readonly Func<Type, IAmAMessageTransformAsync> _factoryMethod;
+        private readonly Func<Type, IAmAMessageTransform> _factoryMethod;
 
-        public SimpleMessageTransformerFactory(Func<Type, IAmAMessageTransformAsync> factoryMethod)
+        public SimpleMessageTransformerFactory(Func<Type, IAmAMessageTransform> factoryMethod)
         {
             _factoryMethod = factoryMethod;
         }
 
-        public IAmAMessageTransformAsync Create(Type transformerType)
+        public IAmAMessageTransform Create(Type transformerType)
         {
             return _factoryMethod(transformerType);
         }
 
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(IAmAMessageTransform transformer)
         {
             return;
         }

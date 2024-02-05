@@ -83,9 +83,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
                 }
 
-                if (headers.ContainsKey(HeaderNames.CORRELATION_ID))
+                if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out object correlationHeader))
                 {
-                    var correlationId = Encoding.UTF8.GetString((byte[])headers[HeaderNames.CORRELATION_ID]);
+                    var correlationId = Encoding.UTF8.GetString((byte[])correlationHeader);
                     message.Header.CorrelationId = Guid.Parse(correlationId);
                 }
 

@@ -41,8 +41,8 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
         public DynamoDbInboxAddMessageAsyncTests()
         {
-            _dynamoDbInbox = new DynamoDbInbox(Client);
-            
+            _dynamoDbInbox = new DynamoDbInbox(Client, new DynamoDbInboxConfiguration());
+
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
             _dynamoDbInbox.Add(_raisedCommand, _contextKey);
@@ -54,11 +54,11 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             _storedCommand = await _dynamoDbInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__dynamo_db_inbox
-            AssertionExtensions.Should((object) _storedCommand).NotBeNull();
+            AssertionExtensions.Should(_storedCommand).NotBeNull();
             //_should_read_the_command_value
-            AssertionExtensions.Should((string) _storedCommand.Value).Be(_raisedCommand.Value);
+            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
             //_should_read_the_command_id
-            AssertionExtensions.Should((Guid) _storedCommand.Id).Be(_raisedCommand.Id);
+            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
         }
     }
 }

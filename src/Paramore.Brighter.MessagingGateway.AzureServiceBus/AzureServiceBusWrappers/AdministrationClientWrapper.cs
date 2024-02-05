@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus.Administration;
@@ -45,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public bool TopicExists(string topic)
         {
             s_logger.LogDebug("Checking if topic {Topic} exists...", topic);
-            
+
             bool result;
 
             try
@@ -66,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             {
                 s_logger.LogWarning("Topic {Topic} does not exist.", topic);
             }
-            
+
             return result;
         }
 
@@ -74,20 +73,24 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// Create a Topic
         /// </summary>
         /// <param name="topic">The name of the Topic</param>
-        public void CreateTopic(string topic)
+        /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
+        public void CreateTopic(string topic, TimeSpan? autoDeleteOnIdle = null)
         {
             s_logger.LogInformation("Creating topic {Topic}...", topic);
 
             try
             {
-                _administrationClient.CreateTopicAsync(topic).GetAwaiter().GetResult();
+                _administrationClient.CreateTopicAsync(new CreateTopicOptions(topic)
+                {
+                    AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
+                }).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
                 s_logger.LogError(e,"Failed to create topic {Topic}.", topic);
                 throw;
             }
-            
+
             s_logger.LogInformation("Topic {Topic} created.", topic);
         }
 
@@ -130,7 +133,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 s_logger.LogError(e, "Failed to check if subscription {ChannelName} for topic {Topic} exists.", subscriptionName, topicName);
                 throw;
             }
-            
+
             if (result)
             {
                 s_logger.LogDebug("Subscription {ChannelName} for topic {Topic} exists.", subscriptionName, topicName);
@@ -169,7 +172,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         private void Initialise()
         {
             s_logger.LogDebug("Initialising new management client wrapper...");
-            
+
             try
             {
                 _administrationClient = _clientProvider.GetServiceBusAdministrationClient();
@@ -182,14 +185,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             s_logger.LogDebug("New management client wrapper initialised.");
         }
-        
+
         private async Task CreateSubscriptionAsync(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
         {
             s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
 
             if (!TopicExists(topicName))
             {
-                CreateTopic(topicName);
+                CreateTopic(topicName, subscriptionConfiguration.QueueIdleBeforeDelete);
             }
 
             var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
@@ -197,7 +200,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 MaxDeliveryCount = subscriptionConfiguration.MaxDeliveryCount,
                 DeadLetteringOnMessageExpiration = subscriptionConfiguration.DeadLetteringOnMessageExpiration,
                 LockDuration = subscriptionConfiguration.LockDuration,
-                DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive
+                DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive,
+                AutoDeleteOnIdle = subscriptionConfiguration.QueueIdleBeforeDelete,
+                RequiresSession = subscriptionConfiguration.RequireSession
             };
 
             var ruleOptions = string.IsNullOrEmpty(subscriptionConfiguration.SqlFilter)
@@ -212,7 +217,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 s_logger.LogError(e, "Failed to create subscription {ChannelName} for topic {Topic}.", subscriptionName, topicName);
                 throw;
             }
-            
+
             s_logger.LogInformation("Subscription {ChannelName} for topic {Topic} created.", subscriptionName, topicName);
         }
     }

@@ -76,7 +76,6 @@ namespace GreetingsReceiverConsole
                             options.Subscriptions = subscriptions;
                             options.ChannelFactory = new ChannelFactory(awsConnection);
                         })
-                        .UseInMemoryOutbox()
                         .AutoFromAssemblies();
                         
                         //We need this for the check as to whether an S3 bucket exists

@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// Initialise a new instance of Ms Sql Connection provider using Default Azure Credentials to acquire Access Tokens.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlDefaultAzureConnectionProvider(MsSqlConfiguration configuration) : base(configuration) { }
+        public MsSqlDefaultAzureConnectionProvider(RelationalDatabaseConfiguration configuration) : base(configuration) { }
         
         protected override AccessToken GetAccessTokenFromProvider()
         {
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.MsSql.Azure
         {
             var credential = new DefaultAzureCredential();
 
-            return await credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);
+            return await credential.GetTokenAsync(new TokenRequestContext(AuthenticationTokenScopes), cancellationToken);
         }
     }
 }

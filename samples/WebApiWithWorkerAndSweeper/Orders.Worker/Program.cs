@@ -3,9 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using OpenTelemetry;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using Orders.Data;
 using Orders.Domain;
 using Orders.Domain.Commands;
@@ -13,8 +10,6 @@ using Orders.Domain.Events;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
-using Paramore.Brighter.MsSql;
-using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
@@ -50,7 +45,7 @@ string dbConnString = "Server=127.0.0.1,11433;Database=BrighterOrderTests;User I
             
 
 
-var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
@@ -62,8 +57,7 @@ builder.Services.AddServiceActivator(options =>
         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
         options.UseScoped = true;
         
-    }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-    .UseMsSqlTransactionConnectionProvider(typeof(SqlConnectionProvider))
+    })
     .AutoFromAssemblies(Assembly.GetAssembly(typeof(CreateOrderCommand)));
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

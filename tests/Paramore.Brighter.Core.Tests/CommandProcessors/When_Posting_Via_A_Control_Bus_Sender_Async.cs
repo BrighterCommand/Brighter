@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -39,11 +40,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     [Collection("CommandProcessor")]
      public class ControlBusSenderPostMessageAsyncTests : IDisposable
     {
-        private readonly CommandProcessor _commandProcessor;
         private readonly ControlBusSender _controlBusSender;
-        private readonly MyCommand _myCommand = new MyCommand();
+        private readonly MyCommand _myCommand = new();
         private readonly Message _message;
-        private readonly IAmAnOutboxSync<Message> _outbox;
+        private readonly IAmAnOutboxSync<Message, CommittableTransaction> _outbox;
         private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public ControlBusSenderPostMessageAsyncTests()
@@ -59,7 +59,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy
@@ -70,14 +72,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
-                messageMapperRegistry,
-                _outbox,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},});
+            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
+            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, _outbox);
 
-            _controlBusSender = new ControlBusSender(_commandProcessor);
+            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                policyRegistry,
+                bus,
+                messageMapperRegistry);
+
+            _controlBusSender = new ControlBusSender(commandProcessor);
         }
 
         [Fact(Skip = "Requires publisher confirmation")]

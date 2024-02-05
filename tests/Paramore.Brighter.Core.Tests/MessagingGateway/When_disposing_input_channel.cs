@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
             _channel.Dispose();
 
-            //_should_call_dipose_on_messaging_gateway
+            //_should_call_dispose_on_messaging_gateway
             A.CallTo(() => _messageConsumer.Dispose()).MustHaveHappened();
         }
     }

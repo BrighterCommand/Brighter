@@ -39,7 +39,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
         public DynamoDbInboxEmptyWhenSearchedAsyncTests()
         {
-            _dynamoDbInbox = new DynamoDbInbox(Client);
+            _dynamoDbInbox = new DynamoDbInbox(Client, new DynamoDbInboxConfiguration());
         }
 
         [Fact]
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         {
             var exception =
                 await Catch.ExceptionAsync(() => _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid(), "some key"));
-            AssertionExtensions.Should((object)exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
     }
 }

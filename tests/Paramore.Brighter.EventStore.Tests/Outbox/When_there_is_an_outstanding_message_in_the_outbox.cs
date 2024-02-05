@@ -38,7 +38,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
     public class OutStandingMessageTests : EventStoreFixture
     {
         [Fact]
-        public void When_there_is_an_outstanding_message_in_the_outbox()
+        public async void When_there_is_an_outstanding_message_in_the_outbox()
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             
             eventStoreOutbox.Add(outstandingMessage);
             eventStoreOutbox.Add(dispatchedMessage);
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
             eventStoreOutbox.MarkDispatched(dispatchedMessage.Id, DateTime.UtcNow, args);
             eventStoreOutbox.Add(outstandingRecentMessage);
 

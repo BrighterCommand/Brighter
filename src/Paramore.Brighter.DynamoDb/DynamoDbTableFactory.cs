@@ -338,11 +338,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         // Then we test for a string, and treat that explicitly as a string
         // If not we look for a byte array and treat it as binary
         // Everything else is unsupported in .NET
-        private ScalarAttributeType GetDynamoDbType(Type propertyType, bool hasonverter)
+        private ScalarAttributeType GetDynamoDbType(Type propertyType, bool hasConverter)
         {
             if (propertyType.IsPrimitive)
             {
                 return ScalarAttributeType.N;
+            }
+
+            if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                var baseType = Nullable.GetUnderlyingType(propertyType);
+                return GetDynamoDbType(baseType, hasConverter);
             }
 
             if (propertyType == typeof(string))
@@ -384,7 +390,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 return new ScalarAttributeType("M");
             }
 
-            if (hasonverter)
+            if (hasConverter)
             {
                 //at this point we can't tie you to something we understand, so if you have a custom converter
                 //let's assume that you store it to a string

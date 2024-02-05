@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj" />
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-      <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
+  </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapper" Version="2.0.123" />
+      <PackageReference Include="Dapper" Version="2.1.24" />
       <PackageReference Include="DapperExtensions" Version="1.7.0" />
       <PackageReference Include="Paramore.Darker" Version="3.0.0" />
       <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />

@@ -5,12 +5,12 @@ namespace GreetingsEntities
 {
     public class Person
     {
-        public byte[] TimeStamp { get; set; }
-        public long Id { get; set; }
+        public DateTime TimeStamp { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; }
         public IList<Greeting> Greetings { get; set; } = new List<Greeting>();
         
-        public Person(){ /*Required for DapperExtensions*/}
+        public Person(){ /*Required for Dapper*/}
 
         public Person(string name)
         {

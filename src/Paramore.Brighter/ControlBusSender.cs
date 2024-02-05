@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,27 +29,26 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
-    /// <summary>
-    /// Class ControlBusSender.
-    /// This is really just a 'convenience' wrapper over a command processor to make it easy to configure two different command processors, one for normal messages the other for control messages.
-    /// Why? The issue arises because an application providing a lot of monitoring messages might find that the load of those control messages begins to negatively impact the throughput of normal messages.
-    /// To avoid this you can put control messages over a seperate broker. (There are some availability advantages here too).
-    /// But many IoC containers make your life hard when you do this, as you have to indicate that you want to build the MonitorHandler with one command processor and the other handlers with another
-    /// Wrapping the Command Processor in this class helps to alleviate that issue, by taking a dependency on a seperate interface.
-    /// What goes over a control bus?
-    /// The Control Bus is used carry the following types of messages:
+    // Class ControlBusSender.
+    // This is really just a 'convenience' wrapper over a command processor to make it easy to configure two different command processors, one for normal messages the other for control messages.
+    // Why? The issue arises because an application providing a lot of monitoring messages might find that the load of those control messages begins to negatively impact the throughput of normal messages.
+    // To avoid this you can put control messages over a seperate broker. (There are some availability advantages here too).
+    // But many IoC containers make your life hard when you do this, as you have to indicate that you want to build the MonitorHandler with one command processor and the other handlers with another
+    // Wrapping the Command Processor in this class helps to alleviate that issue, by taking a dependency on a seperate interface.
+    // What goes over a control bus?
+    // The Control Bus is used carry the following types of messages:
     //      Configuration - Allows runtime configuration of a service activator node, including stopping and starting, adding and removing of channels, control of resources allocated to channels.
     //      Heartbeat - A ping to service activator node to determine if it is still 'alive'. The node returns a message over a private queue established by the caller.The message also displays diagnostic information on the health of the node.
     //      Exceptions— Any exceptions generated on the node may be sent by the Control Bus to monitoring systems.
-    //      Statistics— Each service activator node broadcasts statistics about the processig of messages which can be collated by a listener to the control bus to calculate the numnber of messages proceses, average throughput, average time to process a message, and so on.This data is split out by message type, so we can aggregate results.
+    //      Statistics— Each service activator node broadcasts statistics about the processing of messages which can be collated by a listener to the control bus to calculate the nunber of messages processes, average throughput, average time to process a message, and so on.This data is split out by message type, so we can aggregate results.
     /// 
-    /// </summary>
     public class ControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync, IDisposable
     {
         /// <summary>
         /// The command processor that underlies the control bus; we only use the Post method
         /// </summary>
         private readonly CommandProcessor _commandProcessor;
+
         private bool _disposed;
 
         /// <summary>
@@ -63,16 +63,21 @@ namespace Paramore.Brighter
         /// <summary>
         /// Posts the specified request.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="request">The request.</param>
-        public void Post<T>(T request) where T : class, IRequest
+        /// <param name="request">The request</param>
+        /// <typeparam name="TRequest">The type of request</typeparam>
+        public void Post<TRequest>(TRequest request) where TRequest : class, IRequest
         {
             _commandProcessor.Post(request);
         }
 
-        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task PostAsync<TRequest>(
+            TRequest request,
+            bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default)
+            where TRequest : class, IRequest
         {
-            await _commandProcessor.PostAsync(request, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+            await _commandProcessor.PostAsync(request, continueOnCapturedContext, cancellationToken)
+                .ConfigureAwait(continueOnCapturedContext);
         }
 
         public void Dispose()

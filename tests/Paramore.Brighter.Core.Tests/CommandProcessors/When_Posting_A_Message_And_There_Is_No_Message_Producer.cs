@@ -23,7 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -40,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     {
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private readonly FakeOutboxSync _fakeOutboxSync;
+        private readonly FakeOutbox _fakeOutbox;
         private Exception _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly RetryPolicy _retryPolicy;
@@ -50,14 +52,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutboxSync = new FakeOutboxSync();
+            _fakeOutbox = new FakeOutbox();
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
-            _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            _messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
             _messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             _retryPolicy = Policy
@@ -67,19 +71,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
-
         }
 
         [Fact]
         public void When_Creating_A_Command_Processor_Without_Producer_Registry()
         {
-            _exception = Catch.Exception(() => new CommandProcessor(
-                 new InMemoryRequestContextFactory(),
-                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, _retryPolicy }, { CommandProcessor.CIRCUITBREAKER, _circuitBreakerPolicy } },
-                 _messageMapperRegistry,
-                 _fakeOutboxSync,
-                 null));               
+            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, _retryPolicy }, { CommandProcessor.CIRCUITBREAKER, _circuitBreakerPolicy } };
+
+            _exception = Catch.Exception(() => new ExternalBusServices<Message, CommittableTransaction>(null, policyRegistry, _fakeOutbox));               
 
             _exception.Should().BeOfType<ConfigurationException>();
         }

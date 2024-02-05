@@ -3,9 +3,19 @@ updates:
 - package-ecosystem: "nuget"
   directory: "/"
   schedule:
-    interval: weekly
+    interval: "weekly"
+    day: "sunday"
+    time: "16:00"
   open-pull-requests-limit: 10
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
-    interval: weekly
+    interval: "weekly"
+    day: "sunday"
+    time: "16:00"
+- package-ecosystem: "docker"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+    day: "sunday"
+    time: "16:00"

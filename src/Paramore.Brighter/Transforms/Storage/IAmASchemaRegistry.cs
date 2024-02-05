@@ -30,8 +30,13 @@ namespace Paramore.Brighter.Transforms.Storage
 {
     public interface IAmASchemaRegistry
     {
-        
-        Task<bool, BrighterMessageSchema> GetAsync(int schemaId)
+                      
+        /// <summary>
+        /// Lookup the schema by its id
+        /// </summary>
+        /// <param name="schemaId">The id of the schema</param>
+        /// <returns></returns>
+        Task<(bool, BrighterMessageSchema)> GetAsync(int schemaId);
         
         
         /// <summary>

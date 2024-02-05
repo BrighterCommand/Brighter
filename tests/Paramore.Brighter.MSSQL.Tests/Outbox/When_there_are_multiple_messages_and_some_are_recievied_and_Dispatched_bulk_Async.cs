@@ -12,8 +12,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
     public class MsSqlOutboxBulkGetAsyncTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
-        private readonly string _Topic1 = "test_topic";
-        private readonly string _Topic2 = "test_topic3";
+        private readonly string _topic1 = "test_topic";
+        private readonly string _topic2 = "test_topic3";
         private IEnumerable<Message> _messages;
         private readonly Message _message1;
         private readonly Message _message2;
@@ -27,13 +27,13 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-            _message = new Message(new MessageHeader(Guid.NewGuid(), _Topic1, MessageType.MT_COMMAND),
+            _message = new Message(new MessageHeader(Guid.NewGuid(), _topic1, MessageType.MT_COMMAND),
                 new MessageBody("message body"));
-            _message1 = new Message(new MessageHeader(Guid.NewGuid(), _Topic2, MessageType.MT_EVENT),
+            _message1 = new Message(new MessageHeader(Guid.NewGuid(), _topic2, MessageType.MT_EVENT),
                 new MessageBody("message body2"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _Topic1, MessageType.MT_COMMAND),
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _topic1, MessageType.MT_COMMAND),
                 new MessageBody("message body3"));
-            _message3 = new Message(new MessageHeader(Guid.NewGuid(), _Topic2, MessageType.MT_EVENT),
+            _message3 = new Message(new MessageHeader(Guid.NewGuid(), _topic2, MessageType.MT_EVENT),
                 new MessageBody("message body4"));
         }
 

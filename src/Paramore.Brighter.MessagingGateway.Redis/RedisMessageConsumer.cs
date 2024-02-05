@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Creates a consumer that reads from a List in Redis via a BLPOP (so will block).
         /// </summary>
-        /// <param name="redisMessagingGatewayConfiguration">Configuration for our Redis cient etc.</param>
+        /// <param name="redisMessagingGatewayConfiguration">Configuration for our Redis client etc.</param>
         /// <param name="queueName">Key of the list in Redis we want to read from</param>
         /// <param name="topic">The topic that the list subscribes to</param>
         public RedisMessageConsumer(
@@ -107,7 +107,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>The message read from the list</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            s_logger.LogDebug("RedisMessageConsumer: Preparing to retrieve next message from queue {ChannelName} with routing key {Topic} via exchange {ExchangeName} on subscription {3}", _queueName, Topic);
+            s_logger.LogDebug("RedisMessageConsumer: Preparing to retrieve next message from queue {ChannelName} with routing key {Topic}", _queueName, Topic);
 
             if (_inflight.Any())
             {
@@ -215,7 +215,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 msg = client.GetValue(key);
                 s_logger.LogInformation(
                     "Redis: Received message from queue {ChannelName} with routing key {Topic}, message: {Request}",
-                    _queueName, Topic, JsonSerializer.Serialize(msg, JsonSerialisationOptions.Options), Environment.NewLine);
+                    _queueName, Topic, JsonSerializer.Serialize(msg, JsonSerialisationOptions.Options));
             }
             else
             {

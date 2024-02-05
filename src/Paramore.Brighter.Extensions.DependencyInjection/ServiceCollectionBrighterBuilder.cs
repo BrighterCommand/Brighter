@@ -23,15 +23,13 @@ THE SOFTWARE. */
 
 #endregion
 
-
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -40,6 +38,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceCollectionSubscriberRegistry _serviceCollectionSubscriberRegistry;
         private readonly ServiceCollectionMessageMapperRegistry _mapperRegistry;
         private readonly ServiceCollectionTransformerRegistry _transformerRegistry;
+        
+        public IPolicyRegistry<string> PolicyRegistry { get; set; }
 
         /// <summary>
         /// Registers the components of Brighter pipelines
@@ -48,16 +48,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="serviceCollectionSubscriberRegistry">The register for looking up message handlers</param>
         /// <param name="mapperRegistry">The register for looking up message mappers</param>
         /// <param name="transformerRegistry">The register for transforms</param>
+        /// <param name="policyRegistry">The list of policies that we require</param>
         public ServiceCollectionBrighterBuilder(
-            IServiceCollection services, 
+            IServiceCollection services,
             ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry,
-            ServiceCollectionMessageMapperRegistry mapperRegistry, 
-            ServiceCollectionTransformerRegistry transformerRegistry = null)
+            ServiceCollectionMessageMapperRegistry mapperRegistry,
+            ServiceCollectionTransformerRegistry transformerRegistry = null,
+            IPolicyRegistry<string> policyRegistry = null
+            )
         {
             Services = services;
             _serviceCollectionSubscriberRegistry = serviceCollectionSubscriberRegistry;
             _mapperRegistry = mapperRegistry;
             _transformerRegistry = transformerRegistry ?? new ServiceCollectionTransformerRegistry(services);
+            PolicyRegistry = policyRegistry;
         }
 
         /// <summary>
@@ -66,9 +70,35 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IServiceCollection Services { get; }
 
         /// <summary>
-        /// Scan the assemblies provided for implementations of IHandleRequests, IHandleRequestsAsync, IAmAMessageMapper and register them with ServiceCollection
+        /// Scan the assemblies provided for implementations of IHandleRequestsAsync and register them with ServiceCollection
+        /// </summary>
+        /// <param name="registerHandlers">A callback to register handlers</param>
+        /// <returns>This builder, allows chaining calls</returns>
+        public IBrighterBuilder AsyncHandlers(Action<IAmAnAsyncSubcriberRegistry> registerHandlers)
+        {
+            if (registerHandlers == null)
+                throw new ArgumentNullException(nameof(registerHandlers));
+
+            registerHandlers(_serviceCollectionSubscriberRegistry);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection 
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
+        /// <returns>This builder, allows chaining calls</returns>
+        public IBrighterBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies)
+        {
+            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).Assembly);
+            return this;
+        }
+
+        /// <summary>
+        /// Scan the assemblies provided for implementations of IHandleRequests, IHandleRequestsAsync, IAmAMessageMapper and register them with ServiceCollection
+        /// </summary>
+        /// <param name="extraAssemblies">The assemblies to scan</param>
         /// <returns></returns>
         public IBrighterBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
         {
@@ -110,23 +140,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (assemblies.Length == 0)
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(assemblies));
 
-            var mappers =
-                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
-                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
-                from i in ti.ImplementedInterfaces
-                where i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
-                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
-
-            foreach (var mapper in mappers)
-            {
-                _mapperRegistry.Add(mapper.RequestType, mapper.HandlerType);
-            }
+            RegisterMappersFromAssemblies(assemblies);
+            RegisterAsyncMappersFromAssemblies(assemblies);
 
             return this;
         }
 
+
         /// <summary>
-        /// Register handers with the built in subscriber registry
+        /// Register handlers with the built in subscriber registry
         /// </summary>
         /// <param name="registerHandlers">A callback to register handlers</param>
         /// <returns>This builder, allows chaining calls</returns>
@@ -147,37 +169,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>This builder, allows chaining calls</returns>
         public IBrighterBuilder HandlersFromAssemblies(params Assembly[] assemblies)
         {
-            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).GetTypeInfo().Assembly);
+            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).Assembly);
             return this;
         }
-
-
-        /// <summary>
-        /// Scan the assemblies provided for implementations of IHandleRequestsAsyn and register them with ServiceCollection
-        /// </summary>
-        /// <param name="registerHandlers">A callback to register handlers</param>
-        /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterBuilder AsyncHandlers(Action<IAmAnAsyncSubcriberRegistry> registerHandlers)
-        {
-            if (registerHandlers == null)
-                throw new ArgumentNullException(nameof(registerHandlers));
-
-            registerHandlers(_serviceCollectionSubscriberRegistry);
-
-            return this;
-        }
-
-        /// <summary>
-        /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection 
-        /// </summary>
-        /// <param name="assemblies">The assemblies to scan</param>
-        /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies)
-        {
-            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).GetTypeInfo().Assembly);
-            return this;
-        }
-
 
         /// <summary>
         /// Scan the assemblies for implementations of IAmAMessageTransformAsync and register them with the ServiceCollection
@@ -204,7 +198,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return this;
         }
-
+        
         private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies, Assembly assembly)
         {
             assemblies = assemblies.Concat(new[] { assembly });
@@ -212,7 +206,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
                 from i in ti.ImplementedInterfaces
-                where i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == interfaceType
+                where i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
 
             foreach (var subscriber in subscribers)
@@ -220,5 +214,36 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
             }
         }
+        
+        private void RegisterMappersFromAssemblies(Assembly[] assemblies)
+        {
+            var mappers =
+                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
+                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
+                from i in ti.ImplementedInterfaces
+                where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
+                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
+
+            foreach (var mapper in mappers)
+            {
+                _mapperRegistry.Add(mapper.RequestType, mapper.HandlerType);
+            }
+        }
+        
+        private void RegisterAsyncMappersFromAssemblies(Assembly[] assemblies)
+        {
+            var mappers =
+                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
+                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
+                from i in ti.ImplementedInterfaces
+                where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapperAsync<>)
+                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
+
+            foreach (var mapper in mappers)
+            {
+                _mapperRegistry.AddAsync(mapper.RequestType, mapper.HandlerType);
+            }
+        }
+
     }
 }

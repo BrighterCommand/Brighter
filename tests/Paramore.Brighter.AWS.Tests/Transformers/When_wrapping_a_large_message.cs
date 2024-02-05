@@ -19,8 +19,8 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 {
     public class LargeMessagePayloadWrapTests : IDisposable
     {
-        private WrapPipeline<MyLargeCommand> _transformPipeline;
-        private readonly TransformPipelineBuilder _pipelineBuilder;
+        private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
+        private readonly TransformPipelineBuilderAsync _pipelineBuilder;
         private readonly MyLargeCommand _myCommand;
         private readonly S3LuggageStore _luggageStore;
         private readonly AmazonS3Client _client;
@@ -32,11 +32,12 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             //arrange
             TransformPipelineBuilder.ClearPipelineCache();
 
-            var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()))
-            {
-                { typeof(MyLargeCommand), typeof(MyLargeCommandMessageMapper) }
-            };
-
+            var mapperRegistry =
+                new MessageMapperRegistry(new SimpleMessageMapperFactory(
+                    _ => new MyLargeCommandMessageMapper()),
+                    null);
+            mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+            
             _myCommand = new MyLargeCommand(6000);
 
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
@@ -61,16 +62,16 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 #pragma warning disable CS0618 // It is obsolete, but we want the string value here not the replacement one
                     bucketRegion: S3Region.EUW1,
 #pragma warning restore CS0618
-                    tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
+                    tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                     acl: S3CannedACL.Private,
                     abortFailedUploadsAfterDays: 1,
                     deleteGoodUploadsAfterDays: 1)
                 .GetAwaiter()
                 .GetResult();
 
-            var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore));
+            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
-            _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
         }
 
         [Fact]
@@ -78,11 +79,11 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
         {
             //act
             _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-            var message = _transformPipeline.WrapAsync(_myCommand).Result;
+            var message = await _transformPipeline.WrapAsync(_myCommand);
 
             //assert
-            message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK).Should().BeTrue();
-            _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
+            message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();
+            _id = (string)message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
             message.Body.Value.Should().Be($"Claim Check {_id}");
             
             (await _luggageStore.HasClaimAsync(_id)).Should().BeTrue();

@@ -16,5 +16,10 @@ namespace Paramore.Brighter.Extensions.Hosting
         /// The minimum age in hours to Archive
         /// </summary>
         public int MinimumAge { get; set; } = 24;
+
+        /// <summary>
+        /// Send messages to the archive provider in parallel
+        /// </summary>
+        public bool ParallelArchiving { get; set; } = false;
     }
 }

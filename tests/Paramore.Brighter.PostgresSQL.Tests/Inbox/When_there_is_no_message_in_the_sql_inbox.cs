@@ -37,7 +37,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
     public class SqlInboxEmptyWhenSearchedTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _pgTestHelper;
-        private readonly PostgresSqlInbox _pgSqlInbox;
+        private readonly PostgreSqlInbox _pgSqlInbox;
         private readonly string _contextKey;
         private MyCommand _storedCommand;
 
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             _pgTestHelper = new PostgresSqlTestHelper();
             _pgTestHelper.SetupCommandDb();
 
-            _pgSqlInbox = new PostgresSqlInbox(_pgTestHelper.InboxConfiguration);
+            _pgSqlInbox = new PostgreSqlInbox(_pgTestHelper.InboxConfiguration);
             _contextKey = "context-key";
         }
 
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             Guid commandId = Guid.NewGuid();
             var exception = Catch.Exception(() => _storedCommand = _pgSqlInbox.Get<MyCommand>(commandId, _contextKey));
 
-            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
 
         [Fact]

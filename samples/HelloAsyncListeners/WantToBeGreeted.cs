@@ -7,7 +7,7 @@ namespace HelloAsyncListeners
 {
     public class WantToBeGreeted : RequestHandlerAsync<GreetingEvent>
     {
-        public override async Task<GreetingEvent> HandleAsync(GreetingEvent @event, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<GreetingEvent> HandleAsync(GreetingEvent @event, CancellationToken cancellationToken = default)
         {
             // Simulated exceptions
             if (@event.Name.ToLower().Equals("roger"))

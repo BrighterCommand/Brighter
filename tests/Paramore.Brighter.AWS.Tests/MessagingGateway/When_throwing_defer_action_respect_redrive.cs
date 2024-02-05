@@ -89,14 +89,16 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
+            var provider = new CommandProcessorProvider(_commandProcessor);
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName))
+                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)),
+                null
                 ); 
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(_commandProcessor, messageMapperRegistry)
+            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, null)
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };
@@ -126,23 +128,23 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
         [Fact]
-        public void When_throwing_defer_action_respect_redrive()
+        public async Task When_throwing_defer_action_respect_redrive()
         {
             //put something on an SNS topic, which will be delivered to our SQS queue
             _sender.Send(_message);
 
             //start a message pump, let it process messages
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(5000).Wait();
+            await Task.Delay(5000);
 
             //send a quit message to the pump to terminate it 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
             
-            Task.Delay(5000);
+            await Task.Delay(5000);
 
             //inspect the dlq
             GetDLQCount(_dlqChannelName).Should().Be(1);

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// Close the connection.
         /// </summary>
         void Close();
-        
+
         /// <summary>
         /// Is the connection currently closed.
         /// </summary>

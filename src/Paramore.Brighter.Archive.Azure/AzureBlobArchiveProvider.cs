@@ -1,39 +1,123 @@
+using Azure.Storage;
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Storage.Azure;
 
 public class AzureBlobArchiveProvider : IAmAnArchiveProvider
 {
-    private BlobContainerClient _containerClient;
-    
+    private readonly BlobContainerClient _containerClient;
+    private readonly AzureBlobArchiveProviderOptions _options;
+    private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobArchiveProvider>();
+
     public AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options)
     {
         _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
+        _options = options;
     }
 
+    /// <summary>
+    /// Send a Message to the archive provider
+    /// </summary>
+    /// <param name="message">Message to send</param>
     public void ArchiveMessage(Message message)
     {
-        var blobClient = _containerClient.GetBlobClient(message.Id.ToString());
-        
-        blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes));
+        var blobClient = GetBlobClient(message);
+
+        var alreadyUploaded = blobClient.Exists();
+
+        if (alreadyUploaded.Value)
+        {
+            _logger.LogDebug("Message with Id {MessageId} has already been uploaded", message.Id);
+            return;
+        }
+
+        var opts = GetUploadOptions(message);
+        blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes), opts);
     }
 
+    /// <summary>
+    /// Send a Message to the archive provider
+    /// </summary>
+    /// <param name="message">Message to send</param>
+    /// <param name="cancellationToken">The Cancellation Token</param>
     public async Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
     {
-        var blobClient = _containerClient.GetBlobClient(message.Id.ToString());
+        var blobClient = GetBlobClient(message);
 
-        // var options = new Dictionary<string, string>()
-        //     {
-        //         { "topic", message.Header.Topic },
-        //         { "correlationId", message.Header.CorrelationId.ToString() },
-        //         { "message_type", message.Header.MessageType.ToString() },
-        //         { "timestamp", message.Header.TimeStamp.ToString() },
-        //         { "content_type", message.Header.ContentType }
-        //     };
-        //
-        // await blobClient.SetTagsAsync(options, cancellationToken: cancellationToken);
+        var alreadyUploaded = await blobClient.ExistsAsync(cancellationToken);
+        if (alreadyUploaded.Value)
+        {
+            _logger.LogDebug("Message with Id {MessageId} has already been uploaded", message.Id);
+            return;
+        }
 
-        // await blobClient.UploadAsync(BinaryData.FromString(message.Body.Value));
-        await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), cancellationToken);
+        var opts = GetUploadOptions(message);
+        await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), opts, cancellationToken);
+    }
+
+    /// <summary>
+    /// Archive messages in Parallel
+    /// </summary>
+    /// <param name="message">Message to send</param>
+    /// <param name="cancellationToken">The Cancellation Token</param>
+    /// <returns>IDs of successfully archived messages</returns>
+    public async Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+    {
+        var uploads = new Queue<Task<Guid?>>();
+
+        foreach (var message in messages)
+        {
+            uploads.Enqueue(UploadSafe(message, cancellationToken));
+        }
+
+        var results = await Task.WhenAll(uploads);
+        return results.Where(r => r.HasValue).Select(r => r.Value).ToArray();
+
+    }
+
+    private async Task<Guid?> UploadSafe(Message message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ArchiveMessageAsync(message, cancellationToken);
+            return message.Id;
+        }
+        catch(Exception e)
+        {
+            _logger.LogError(e, "Error archiving message with Id {MessageId}", message.Id);
+            return null;
+        }
+    }
+
+    private BlobClient GetBlobClient(Message message)
+    {
+        var storageLocation = _options.StorageLocationFunc.Invoke(message);
+        _logger.LogDebug("Uploading Message with Id {MessageId} to {ArchiveLocation}", message.Id, storageLocation);
+        return _containerClient.GetBlobClient(storageLocation);
+    }
+    
+    private BlobUploadOptions GetUploadOptions(Message message)
+    {
+        var opts = new BlobUploadOptions()
+        {
+            AccessTier = _options.AccessTier,
+            TransferOptions = new StorageTransferOptions
+            {
+                // Set the maximum number of workers that 
+                // may be used in a parallel transfer.
+                MaximumConcurrency = _options.MaxConcurrentUploads,
+
+                // Set the maximum length of a transfer to 50MB.
+                MaximumTransferSize = _options.MaxUploadSize * 1024 * 1024
+            }
+        };
+
+        if (_options.TagBlobs)
+            opts.Tags = _options.TagsFunc.Invoke(message);
+
+        return opts;
     }
 }

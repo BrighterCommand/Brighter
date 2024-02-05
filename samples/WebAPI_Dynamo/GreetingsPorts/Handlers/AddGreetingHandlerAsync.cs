@@ -14,60 +14,62 @@ using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
-    public class AddGreetingHandlerAsync: RequestHandlerAsync<AddGreeting>
+    public class AddGreetingHandlerAsync(
+        IAmADynamoDbTransactionProvider transactionProvider,
+        IAmACommandProcessor postBox,
+        ILogger<AddGreetingHandlerAsync> logger)
+        : RequestHandlerAsync<AddGreeting>
     {
-        private readonly DynamoDbUnitOfWork _unitOfWork;
-        private readonly IAmACommandProcessor _postBox;
-        private readonly ILogger<AddGreetingHandlerAsync> _logger;
-
-
-        public AddGreetingHandlerAsync(IAmABoxTransactionConnectionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
-        {
-            _unitOfWork = (DynamoDbUnitOfWork)uow;
-            _postBox = postBox;
-            _logger = logger;
-        }
-        
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default)
         {
             var posts = new List<Guid>();
             
             //We use the unit of work to grab connection and transaction, because Outbox needs
             //to share them 'behind the scenes'
-            var context = new DynamoDBContext(_unitOfWork.DynamoDb);
-            var transaction = _unitOfWork.BeginOrGetTransaction();
+            var context = new DynamoDBContext(transactionProvider.DynamoDb);
+            var transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
             try
             {
-                var person = await context.LoadAsync<Person>(addGreeting.Name);
-                
+                var person = await context.LoadAsync<Person>(addGreeting.Name, cancellationToken);
+
                 person.Greetings.Add(addGreeting.Greeting);
 
                 var document = context.ToDocument(person);
                 var attributeValues = document.ToAttributeMap();
-               
-               //write the added child entity to the Db - just replace the whole entity as we grabbed the original
-               //in production code, an update expression would be faster
-               transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = "People", Item = attributeValues}});
+
+                //write the added child entity to the Db - just replace the whole entity as we grabbed the original
+                //in production code, an update expression would be faster
+                transaction.TransactItems.Add(new TransactWriteItem
+                {
+                    Put = new Put { TableName = "People", Item = attributeValues }
+                });
 
                 //Now write the message we want to send to the Db in the same transaction.
-                posts.Add(await _postBox.DepositPostAsync(new GreetingMade(addGreeting.Greeting), cancellationToken: cancellationToken));
-                
+                posts.Add(await postBox.DepositPostAsync(
+                    new GreetingMade(addGreeting.Greeting),
+                    transactionProvider,
+                    cancellationToken: cancellationToken));
+
                 //commit both new greeting and outgoing message
-                await _unitOfWork.CommitAsync(cancellationToken);
+                await transactionProvider.CommitAsync(cancellationToken);
             }
             catch (Exception e)
-            {   
-                _logger.LogError(e, "Exception thrown handling Add Greeting request");
+            {
+                logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
-                _unitOfWork.Rollback();
+                await transactionProvider.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(addGreeting, cancellationToken);
+            }
+            finally
+            {
+                transactionProvider.Close();
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.
             //Alternatively, you can let the Sweeper do this, but at the cost of increased latency
-            await _postBox.ClearOutboxAsync(posts, cancellationToken:cancellationToken);
+            await postBox.ClearOutboxAsync(posts, cancellationToken:cancellationToken);
 
             return await base.HandleAsync(addGreeting, cancellationToken);
         }

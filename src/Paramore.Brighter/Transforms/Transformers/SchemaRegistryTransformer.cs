@@ -190,9 +190,11 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <param name="message">The message passed to the transform</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
-        public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
+        public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
-            return message;
+            var tcs = new TaskCompletionSource<Message>();
+            tcs.SetResult(message);
+            return tcs.Task;
         }
 
         private async Task<(int, JsonSchema)> RegisterSchemaAsync(Message message, int? version = null)

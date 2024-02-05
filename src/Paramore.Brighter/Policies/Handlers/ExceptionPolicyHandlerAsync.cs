@@ -22,10 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Policies.Attributes;
 using Polly;
+using Polly.Registry;
 
 namespace Paramore.Brighter.Policies.Handlers
 {
@@ -42,8 +45,8 @@ namespace Paramore.Brighter.Policies.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
-        private AsyncPolicy _policy;
-
+         private bool _initialized = false;
+        private List<AsyncPolicy> _policies = new List<AsyncPolicy>();
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="IAmAPolicyRegistry" /> from the <see cref="IRequestContext" /> and query it for the
         /// policy identified in <see cref="UsePolicyAttribute" />
@@ -52,9 +55,11 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <exception cref="System.ArgumentException">Could not find the policy for this attribute, did you register it with the command processor's container;initializerList</exception>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
-            //we expect the first and only parameter to be a string
-            var policyName = (string)initializerList[0];
-            _policy = Context.Policies.Get<AsyncPolicy>(policyName);
+            if (_initialized) return;
+
+            var policies = (List<string>)initializerList[0];
+            policies.Each(p => _policies.Add(Context.Policies.Get<AsyncPolicy>(p)));
+            _initialized = true;
         }
 
         /// <summary>
@@ -62,10 +67,26 @@ namespace Paramore.Brighter.Policies.Handlers
         /// </summary>
         /// <param name="command">The command.</param>
         /// <param name="cancellationToken">Allow the sender to cancel the reques (optional) </param>
-        /// <returns>AA Task<TRequest> that wraps the asynchonous call to the policy, which itself wraps the handler chain</TRequest></returns>
-        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        /// <returns>AA Task<TRequest> that wraps the asynchronous call to the policy, which itself wraps the handler chain</TRequest></returns>
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
-            return await _policy.ExecuteAsync(async () => await base.HandleAsync(command, cancellationToken)).ConfigureAwait(ContinueOnCapturedContext);
+            if (_policies.Count == 1)
+            {
+                return await _policies[0].ExecuteAsync(async () => await base.HandleAsync(command, cancellationToken))
+                    .ConfigureAwait(ContinueOnCapturedContext);
+            }
+            else
+            {
+                var policyWrap = _policies[0].WrapAsync(_policies[1]);
+                if (_policies.Count <= 2) return await policyWrap.ExecuteAsync(async () => await base.HandleAsync(command, cancellationToken));
+                
+                //we have more than two policies, so we need to wrap them
+                for (int i = 2; i < _policies.Count; i++)
+                {
+                    policyWrap = policyWrap.WrapAsync(_policies[i]);
+                }
+                return await policyWrap.ExecuteAsync(async () => await base.HandleAsync(command,cancellationToken));
+            }
         }
     }
 }

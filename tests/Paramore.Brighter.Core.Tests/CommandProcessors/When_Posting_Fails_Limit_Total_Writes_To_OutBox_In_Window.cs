@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -45,23 +46,33 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer = new FakeErroringMessageProducerSync();
 
             var messageMapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+                new MessageMapperRegistry(
+                    new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                    null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
+
+            var busConfiguration = new ExternalBusConfiguration { 
+                ProducerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                {
+                    { "MyCommand", _fakeMessageProducer },
+                }),
+                MessageMapperRegistry = messageMapperRegistry,
+                Outbox = _outbox
+            };
 
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBus(new ExternalBusConfiguration(
-                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyCommand", _fakeMessageProducer},}), 
-                    messageMapperRegistry), 
-                    _outbox
-                    )
+                .ExternalBusCreate(
+                    busConfiguration, 
+                    _outbox,
+                    new CommittableTransactionProvider())
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
 
         [Fact]
-        public void When_Posting_Fails_Limit_Total_Writes_To_OutBox_In_Window()
+        public async void When_Posting_Fails_Limit_Total_Writes_To_OutBox_In_Window()
         {
             //We are only going to allow 50 erroring messages
             _fakeMessageProducer.MaxOutStandingMessages = 3;
@@ -78,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     sentList.Add(command.Id);
 
                     //We need to wait for the sweeper thread to check the outstanding in the outbox
-                    Task.Delay(50).Wait();
+                    await Task.Delay(50);
 
                 } while (sentList.Count < 10);
             }

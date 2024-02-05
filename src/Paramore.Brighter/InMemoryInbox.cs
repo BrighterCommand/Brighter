@@ -113,7 +113,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        /// or access the Result or otherwise block. You may need the orginating synchronization context if you need to access thread specific storage
+        /// or access the Result or otherwise block. You may need the originating synchronization context if you need to access thread specific storage
         /// such as HTTPContext
         /// </summary>
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
@@ -152,7 +152,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken"></param>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -204,7 +204,7 @@ namespace Paramore.Brighter
         /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -231,7 +231,7 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task{T}" />.</returns>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 

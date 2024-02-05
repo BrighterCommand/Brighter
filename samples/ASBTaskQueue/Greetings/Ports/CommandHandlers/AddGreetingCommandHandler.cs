@@ -24,18 +24,18 @@ namespace Greetings.Ports.CommandHandlers
         }
         
         public async override Task<AddGreetingCommand> HandleAsync(AddGreetingCommand command,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
                 //Save  the new Greeting
-                var greeting = new Greeting() {GreetingMessage = command.GreetingMessage};
+                var greeting = new Greeting {GreetingMessage = command.GreetingMessage};
                 await _dataContext.GreetingsRegister.AddAsync(greeting, cancellationToken);
 
                 //Create an Event for externals
-                var newGreetingAddedEvent = new GreetingAsyncEvent() {Greeting = command.GreetingMessage};
+                var newGreetingAddedEvent = new GreetingAsyncEvent {Greeting = command.GreetingMessage};
                 var eventId = await _commandProcessor.DepositPostAsync(newGreetingAddedEvent, cancellationToken: cancellationToken);
 
                 await _dataContext.SaveChangesAsync(cancellationToken);
@@ -64,7 +64,7 @@ namespace Greetings.Ports.CommandHandlers
             }
             
             
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command, cancellationToken);
         }
     }
 }

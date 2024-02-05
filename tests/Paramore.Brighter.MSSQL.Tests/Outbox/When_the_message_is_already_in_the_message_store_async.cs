@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest));
 
-            //should ignore the duplcate key and still succeed
+            //should ignore the duplicate key and still succeed
             _exception.Should().BeNull();
         }
 

@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _disposedValue;
 
         /// <summary>
-        /// Constructs a KafkaMessageConsumer using Confluent's Consumer Biulder. We set up callbacks to handle assigned, revoked or lost partitions as
+        /// Constructs a KafkaMessageConsumer using Confluent's Consumer Builder. We set up callbacks to handle assigned, revoked or lost partitions as
         /// well as errors. We handle storing and committing offsets, using a batch strategy to commit, with a sweeper thread to prevent partially complete
         /// batches lingering beyond a timeout threshold.
         /// </summary>
@@ -82,9 +82,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="readCommittedOffsetsTimeoutMs">Timeout when reading the committed offsets, used when closing a consumer to log where it reached.
         /// Defaults to 5000</param>
         /// <param name="numPartitions">If we are creating missing infrastructure, How many partitions should the topic have. Defaults to 1</param>
+        /// <param name="partitionAssignmentStrategy">What is the strategy for assigning partitions to consumers?</param>
         /// <param name="replicationFactor">If we are creating missing infrastructure, how many in-sync replicas do we need. Defaults to 1</param>
         /// <param name="topicFindTimeoutMs">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
-        /// <param name="makeChannels">Should we create infrastructure (topics) where it does not existk or check. Defaults to Create</param>
+        /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -98,6 +99,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int sweepUncommittedOffsetsIntervalMs = 30000,
             int readCommittedOffsetsTimeoutMs = 5000,
             int numPartitions = 1,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
             short replicationFactor = 1,
             int topicFindTimeoutMs = 10000,
             OnMissingChannel makeChannels = OnMissingChannel.Create
@@ -132,12 +134,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
                 SslCaLocation = configuration.SslCaLocation
             };
-            _consumerConfig = new ConsumerConfig(_clientConfig)
+            
+            
+            // We repeat properties because copying them from the ClientConfig modifies the ClientConfig in place 
+            _consumerConfig = new ConsumerConfig()
             {
-                GroupId = groupId,
+                BootstrapServers = string.Join(",", configuration.BootStrapServers), 
                 ClientId = configuration.Name,
+                Debug = configuration.Debug,
+                SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                SaslUsername = configuration.SaslUsername,
+                SaslPassword = configuration.SaslPassword,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                SslCaLocation = configuration.SslCaLocation,
+                GroupId = groupId,
                 AutoOffsetReset = offsetDefault,
-                BootstrapServers = string.Join(",", configuration.BootStrapServers),
                 SessionTimeoutMs = sessionTimeoutMs,
                 MaxPollIntervalMs = maxPollIntervalMs,
                 EnablePartitionEof = true,
@@ -147,7 +159,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 EnableAutoOffsetStore = false,
                 EnableAutoCommit = false,
                 // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
-                PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
+                PartitionAssignmentStrategy = partitionAssignmentStrategy,
             };
 
             _maxBatchSize = commitBatchSize;
@@ -388,7 +400,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (KafkaException ke)
             {
-                //This is only loggin for debug, so skip errors here
+                //This is only login for debug, so skip errors here
                 s_logger.LogDebug("kafka error logging the offsets: {ErrorMessage}", ke.Message);
             }
         }
@@ -409,53 +421,68 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         private void CommitOffsets()
         {
-           
-           var listOffsets = new List<TopicPartitionOffset>();
-           for (int i = 0; i < _maxBatchSize; i++)
-           {
-               bool hasOffsets = _offsetStorage.TryTake(out var offset);
-               if (hasOffsets)
-                   listOffsets.Add(offset);
-               else
-                   break;
+            try
+            {
+                var listOffsets = new List<TopicPartitionOffset>();
+                for (int i = 0; i < _maxBatchSize; i++)
+                {
+                    bool hasOffsets = _offsetStorage.TryTake(out var offset);
+                    if (hasOffsets)
+                        listOffsets.Add(offset);
+                    else
+                        break;
 
-           }
-           
-           if (s_logger.IsEnabled(LogLevel.Information))
-           {
-               var offsets = listOffsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
-               var offsetAsString = string.Join(Environment.NewLine, offsets);
-               s_logger.LogInformation("Commiting offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
-           }
-           
-           _consumer.Commit(listOffsets);
-           _flushToken.Release(1);
+                }
+
+                if (s_logger.IsEnabled(LogLevel.Information))
+                {
+                    var offsets = listOffsets.Select(tpo =>
+                        $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+                    var offsetAsString = string.Join(Environment.NewLine, offsets);
+                    s_logger.LogInformation("Commiting offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+                }
+
+                _consumer.Commit(listOffsets);
+            }
+            finally
+            {
+                _flushToken.Release(1);
+            }
         }
         
         private void CommitAllOffsets(DateTime flushTime)
         {
-            var listOffsets = new List<TopicPartitionOffset>();
-            var currentOffsetsInBag = _offsetStorage.Count; 
-            for (int i = 0; i < currentOffsetsInBag; i++)
+            try
             {
-                bool hasOffsets = _offsetStorage.TryTake(out var offset);
-                if (hasOffsets)
-                    listOffsets.Add(offset);
-                else
-                    break;
 
+
+                var listOffsets = new List<TopicPartitionOffset>();
+                var currentOffsetsInBag = _offsetStorage.Count;
+                for (int i = 0; i < currentOffsetsInBag; i++)
+                {
+                    bool hasOffsets = _offsetStorage.TryTake(out var offset);
+                    if (hasOffsets)
+                        listOffsets.Add(offset);
+                    else
+                        break;
+
+                }
+
+                if (s_logger.IsEnabled(LogLevel.Information))
+                {
+                    var offsets = listOffsets.Select(tpo =>
+                        $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+                    var offsetAsString = string.Join(Environment.NewLine, offsets);
+                    s_logger.LogInformation("Sweeping offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+                }
+
+                _consumer.Commit(listOffsets);
+                _lastFlushAt = flushTime;
             }
-           
-            if (s_logger.IsEnabled(LogLevel.Information))
+            finally
             {
-                var offsets = listOffsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
-                var offsetAsString = string.Join(Environment.NewLine, offsets);
-                s_logger.LogInformation("Sweeping offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+                _flushToken.Release(1);
             }
-           
-            _consumer.Commit(listOffsets);
-            _lastFlushAt = flushTime;
-            _flushToken.Release(1);
         }
 
         // The batch size has been exceeded, so flush our offsets

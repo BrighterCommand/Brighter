@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,16 +9,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter
 {
-
-    public abstract class
-        RelationDatabaseOutboxSync<TConnection, TCommand, TDataReader, TParameter> : IAmAnOutboxSync<Message>,
-            IAmAnOutboxAsync<Message>
+    public abstract class RelationDatabaseOutbox : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>, IAmABulkOutboxAsync<Message, DbTransaction> 
     {
         private readonly IRelationDatabaseOutboxQueries _queries;
         private readonly ILogger _logger;
         private readonly string _outboxTableName;
 
-        protected RelationDatabaseOutboxSync(string outboxTableName, IRelationDatabaseOutboxQueries queries, ILogger logger)
+        protected RelationDatabaseOutbox(string outboxTableName, IRelationDatabaseOutboxQueries queries, ILogger logger)
         {
             _outboxTableName = outboxTableName;
             _queries = queries;
@@ -39,13 +38,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">Connection Provider to use for this call</param>
         /// <returns>Task.</returns>
-        public void Add(Message message, int outBoxTimeout = -1,
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public void Add(
+            Message message, 
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
-            WriteToStore(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
+            WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
             {
                 _logger.LogWarning(
                     "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -58,12 +59,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">Connection Provider to use for this call</param>
         /// <returns>Task.</returns>
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public void Add(
+            IEnumerable<Message> messages, 
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null
+            )
         {
-            WriteToStore(transactionConnectionProvider,
+            WriteToStore(transactionProvider,
                 connection => InitBulkAddDbCommand(messages.ToList(), connection),
                 () => _logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"));
         }
@@ -74,7 +78,8 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The id of the message to delete</param>
         public void Delete(params Guid[] messageIds)
         {
-            WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+            if(messageIds.Any())
+                WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
         }
 
         /// <summary>
@@ -83,14 +88,17 @@ namespace Paramore.Brighter
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken">Cancellation Token</param>
-        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">Connection Provider to use for this call</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Task AddAsync(Message message, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken),
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(
+            Message message,
+            int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null
+            )
         {
             var parameters = InitAddDbParameters(message);
-            return WriteToStoreAsync(transactionConnectionProvider,
+            return WriteToStoreAsync(transactionProvider,
                 connection => InitAddDbCommand(connection, parameters), () =>
                 {
                     _logger.LogWarning(
@@ -106,13 +114,16 @@ namespace Paramore.Brighter
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
-        public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken),
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(
+            IEnumerable<Message> messages, 
+            int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null
+            )
         {
-            return WriteToStoreAsync(transactionConnectionProvider,
+            return WriteToStoreAsync(transactionProvider,
                 connection => InitBulkAddDbCommand(messages.ToList(), connection),
                 () => _logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"),
                 cancellationToken);
@@ -159,8 +170,10 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
-        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public Task<Message> GetAsync(
+            Guid messageId, 
+            int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default)
         {
             return ReadFromStoreAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
                 dr => MapFunctionAsync(dr, cancellationToken), cancellationToken);
@@ -173,8 +186,11 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Cancellation Token.</param>
         /// <param name="messageIds">The Ids of the messages</param>
         /// <returns></returns>
-        public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public Task<IEnumerable<Message>> GetAsync(
+            IEnumerable<Guid> messageIds, 
+            int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default
+            )
         {
             return ReadFromStoreAsync(
                 connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout),
@@ -206,7 +222,7 @@ namespace Paramore.Brighter
             int pageSize = 100,
             int pageNumber = 1,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return (await ReadFromStoreAsync(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
@@ -235,7 +251,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return WriteToStoreAsync(null,
                 connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow), null,
@@ -255,7 +271,7 @@ namespace Paramore.Brighter
         public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince,
             int pageSize = 100, int pageNumber = 1,
             int outboxTimeout = -1, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return ReadFromStoreAsync(
                 connection =>
@@ -317,57 +333,115 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The id of the message to delete</param>
         public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
         {
+            if(!messageIds.Any())
+                return Task.CompletedTask;
+            
             return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null,
                 cancellationToken);
         }
 
+        /// <summary>
+        /// Get the messages that have been dispatched
+        /// </summary>
+        /// <param name="hoursDispatchedSince">The number of hours since the message was dispatched</param>
+        /// <param name="pageSize">The amount to return</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Messages that have already been dispatched</returns>
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            return ReadFromStoreAsync(connection => CreateDispatchedCommand(connection, hoursDispatchedSince, pageSize),
+                dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+        }
+
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            return ReadFromStoreAsync(
+                connection => CreateRemainingOutstandingCommand(connection),
+                dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
+        }
+
         #endregion
 
-        protected abstract void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider,
-            Func<TConnection, TCommand> commandFunc, Action loggingAction);
+        protected abstract void WriteToStore(
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            Func<DbConnection, DbCommand> commandFunc, 
+            Action loggingAction
+            );
 
-        protected abstract Task WriteToStoreAsync(IAmABoxTransactionConnectionProvider transactionConnectionProvider,
-            Func<TConnection, TCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken);
+        protected abstract Task WriteToStoreAsync(
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
+            Func<DbConnection, DbCommand> commandFunc, 
+            Action loggingAction, 
+            CancellationToken cancellationToken
+            );
 
-        protected abstract T ReadFromStore<T>(Func<TConnection, TCommand> commandFunc,
-            Func<TDataReader, T> resultFunc);
+        protected abstract T ReadFromStore<T>(
+            Func<DbConnection, DbCommand> commandFunc,
+            Func<DbDataReader, T> resultFunc
+            );
 
-        protected abstract Task<T> ReadFromStoreAsync<T>(Func<TConnection, TCommand> commandFunc,
-            Func<TDataReader, Task<T>> resultFunc, CancellationToken cancellationToken);
+        protected abstract Task<T> ReadFromStoreAsync<T>(
+            Func<DbConnection, DbCommand> commandFunc,
+            Func<DbDataReader, Task<T>> resultFunc, 
+            CancellationToken cancellationToken
+            );
 
         #region Things that Create Commands
 
-        private TCommand CreatePagedDispatchedCommand(TConnection connection, double millisecondsDispatchedSince,
-            int pageSize, int pageNumber)
+        private DbCommand CreatePagedDispatchedCommand(
+            DbConnection connection, 
+            double millisecondsDispatchedSince,
+            int pageSize, 
+            int pageNumber)
             => CreateCommand(connection, GenerateSqlText(_queries.PagedDispatchedCommand), 0,
                 CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize),
                 CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince));
+        
+        private DbCommand CreateDispatchedCommand(DbConnection connection, int hoursDispatchedSince,
+            int pageSize)
+            => CreateCommand(connection, GenerateSqlText(_queries.DispatchedCommand), 0,
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("DispatchedSince", -1 * hoursDispatchedSince));
 
-        private TCommand CreatePagedReadCommand(TConnection connection, int pageSize, int pageNumber)
+        private DbCommand CreatePagedReadCommand(
+            DbConnection connection, 
+            int pageSize, 
+            int pageNumber
+            )
             => CreateCommand(connection, GenerateSqlText(_queries.PagedReadCommand), 0,
                 CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize));
 
-        private TCommand CreatePagedOutstandingCommand(TConnection connection, double milliSecondsSinceAdded,
-            int pageSize, int pageNumber)
+        private DbCommand CreatePagedOutstandingCommand(
+            DbConnection connection, 
+            double milliSecondsSinceAdded,
+            int pageSize, 
+            int pageNumber)
             => CreateCommand(connection, GenerateSqlText(_queries.PagedOutstandingCommand), 0,
                 CreatePagedOutstandingParameters(milliSecondsSinceAdded, pageSize, pageNumber));
+        
+        private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
+            => CreateCommand(connection, GenerateSqlText(_queries.GetNumberOfOutstandingMessagesCommand), 0);
 
-        private TCommand InitAddDbCommand(TConnection connection, TParameter[] parameters)
+        private DbCommand InitAddDbCommand(
+            DbConnection connection, 
+            IDbDataParameter[] parameters
+            )
             => CreateCommand(connection, GenerateSqlText(_queries.AddCommand), 0, parameters);
 
-        private TCommand InitBulkAddDbCommand(List<Message> messages, TConnection connection)
+        private DbCommand InitBulkAddDbCommand(List<Message> messages, DbConnection connection)
         {
             var insertClause = GenerateBulkInsert(messages);
             return CreateCommand(connection, GenerateSqlText(_queries.BulkAddCommand, insertClause.insertClause), 0,
                 insertClause.parameters);
         }
 
-        private TCommand InitMarkDispatchedCommand(TConnection connection, Guid messageId, DateTime? dispatchedAt)
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
             => CreateCommand(connection, GenerateSqlText(_queries.MarkDispatchedCommand), 0,
                 CreateSqlParameter("MessageId", messageId),
                 CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()));
 
-        private TCommand InitMarkDispatchedCommand(TConnection connection, IEnumerable<Guid> messageIds,
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, IEnumerable<Guid> messageIds,
             DateTime? dispatchedAt)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
@@ -376,11 +450,11 @@ namespace Paramore.Brighter
                     .ToArray());
         }
 
-        private TCommand InitGetMessageCommand(TConnection connection, Guid messageId, int outBoxTimeout = -1)
+        private DbCommand InitGetMessageCommand(DbConnection connection, Guid messageId, int outBoxTimeout = -1)
             => CreateCommand(connection, GenerateSqlText(_queries.GetMessageCommand), outBoxTimeout,
                 CreateSqlParameter("MessageId", messageId));
 
-        private TCommand InitGetMessagesCommand(TConnection connection, List<Guid> messageIds, int outBoxTimeout = -1)
+        private DbCommand InitGetMessagesCommand(DbConnection connection, List<Guid> messageIds, int outBoxTimeout = -1)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds);
             return CreateCommand(connection, GenerateSqlText(_queries.GetMessagesCommand, inClause.inClause), outBoxTimeout,
@@ -390,44 +464,44 @@ namespace Paramore.Brighter
         private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
             => string.Format(sqlFormat, orderedParams.Prepend(_outboxTableName).ToArray());
 
-        private TCommand InitDeleteDispatchedCommand(TConnection connection, IEnumerable<Guid> messageIds)
+        private DbCommand InitDeleteDispatchedCommand(DbConnection connection, IEnumerable<Guid> messageIds)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
             return CreateCommand(connection, GenerateSqlText(_queries.DeleteMessagesCommand, inClause.inClause), 0,
                 inClause.parameters);
         }
 
-        protected abstract TCommand CreateCommand(TConnection connection, string sqlText, int outBoxTimeout,
-            params TParameter[] parameters);
+        protected abstract DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
+            params IDbDataParameter[] parameters);
 
         #endregion
 
 
         #region Parameters
 
-        protected abstract TParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
-            int pageSize, int pageNumber);
+        protected abstract IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
+            int pageSize, int pageNumber);      
 
         #endregion
         
-        protected abstract TParameter CreateSqlParameter(string parameterName, object value);
-        protected abstract TParameter[] InitAddDbParameters(Message message, int? position = null);
+        protected abstract IDbDataParameter CreateSqlParameter(string parameterName, object value);
+        protected abstract IDbDataParameter[] InitAddDbParameters(Message message, int? position = null);
 
-        protected abstract Message MapFunction(TDataReader dr);
+        protected abstract Message MapFunction(DbDataReader dr);
 
-        protected abstract Task<Message> MapFunctionAsync(TDataReader dr, CancellationToken cancellationToken);
+        protected abstract Task<Message> MapFunctionAsync(DbDataReader dr, CancellationToken cancellationToken);
 
-        protected abstract IEnumerable<Message> MapListFunction(TDataReader dr);
+        protected abstract IEnumerable<Message> MapListFunction(DbDataReader dr);
 
-        protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(TDataReader dr,
-            CancellationToken cancellationToken);
+        protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(DbDataReader dr, CancellationToken cancellationToken);
         
+        protected abstract Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken);
         
-        private (string inClause, TParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
+        private (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
         {
             var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
 
-            var parameters = new TParameter[messageIds.Count];
+            var parameters = new IDbDataParameter[messageIds.Count];
             for (int i = 0; i < paramNames.Count(); i++)
             {
                 parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
@@ -436,14 +510,14 @@ namespace Paramore.Brighter
             return (string.Join(",", paramNames), parameters);
         }
 
-        private  (string insertClause, TParameter[] parameters) GenerateBulkInsert(List<Message> messages)
+        private  (string insertClause, IDbDataParameter[] parameters) GenerateBulkInsert(List<Message> messages)
         {
             var messageParams = new List<string>();
-            var parameters = new List<TParameter>();
+            var parameters = new List<IDbDataParameter>();
 
             for (int i = 0; i < messages.Count(); i++)
             {
-                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
+                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_PartitionKey, @p{i}_HeaderBag, @p{i}_Body)");
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
             }
 

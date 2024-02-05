@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Inbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqliteInboxDuplicateMessageAsyncTests : IDisposable
+    public class SqliteInboxDuplicateMessageAsyncTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteInbox _sqlInbox;
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupCommandDb();
 
-            _sqlInbox = new SqliteInbox(new SqliteInboxConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
+            _sqlInbox = new SqliteInbox(_sqliteTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand {Value = "Test"};
             _contextKey = "context-key";
         }
@@ -60,12 +60,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
             var exists = await _sqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
-            AssertionExtensions.Should((bool) exists).BeTrue();
+            AssertionExtensions.Should(exists).BeTrue();
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _sqliteTestHelper.CleanUpDb();
+            await _sqliteTestHelper.CleanUpDbAsync();
+
         }
     }
 }
