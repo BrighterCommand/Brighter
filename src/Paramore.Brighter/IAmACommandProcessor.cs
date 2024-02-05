@@ -138,7 +138,7 @@ namespace Paramore.Brighter
         /// <param name="requests">The requests to save to the outbox</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid[] DepositPost<TRequest>(IEnumerable<TRequest> requests) where TRequest : class, IRequest;
+        Guid[] DepositPost<TRequest>(IEnumerable<TRequest> requests) where TRequest : class, IRequest;
 
         /// <summary>
         /// Adds a messages into the outbox, and returns the id of the saved message.
@@ -152,7 +152,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid[] DepositPost<TRequest, TTransaction>(
+        Guid[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider 
             ) where TRequest : class, IRequest;
@@ -251,7 +251,7 @@ namespace Paramore.Brighter
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null);
+        void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null);
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
@@ -268,7 +268,7 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null);
+        void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null);
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
