@@ -134,7 +134,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                try { Transaction.Rollback(); } catch(Exception e) { /*ignore*/ }
+                try { Transaction.Rollback(); } catch(Exception) { /*ignore*/ }
                 Transaction = null;
             }
             

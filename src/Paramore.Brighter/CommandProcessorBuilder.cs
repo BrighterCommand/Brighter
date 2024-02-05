@@ -162,6 +162,7 @@ namespace Paramore.Brighter
         /// <param name="transformerFactory">A factory for common transforms of messages</param>
         /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
+        /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
         /// <returns></returns>
         public INeedARequestContext ExternalBus(
             ExternalBusType busType, 
@@ -169,12 +170,14 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageTransformerFactory transformerFactory,
             IAmAChannelFactory responseChannelFactory = null, 
-            IEnumerable<Subscription> subscriptions = null
+            IEnumerable<Subscription> subscriptions = null,
+            InboxConfiguration inboxConfiguration = null
         )
         {
             _messageMapperRegistry = messageMapperRegistry;
             _transformerFactory = transformerFactory;
-
+            _inboxConfiguration = inboxConfiguration;
+                    
             switch (busType)
             {
                 case ExternalBusType.None:
@@ -335,6 +338,7 @@ namespace Paramore.Brighter
         /// <param name="transformerFactory">A factory for transforms used for common transformations to outgoing messages</param>
         /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
+        /// <param name="inboxConfiguration">What is the inbox configuration</param>
         /// <returns></returns>
         INeedARequestContext ExternalBus(
             ExternalBusType busType, 
@@ -342,7 +346,8 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageTransformerFactory transformerFactory,
             IAmAChannelFactory responseChannelFactory = null, 
-            IEnumerable<Subscription> subscriptions = null
+            IEnumerable<Subscription> subscriptions = null,
+            InboxConfiguration inboxConfiguration = null
             );
 
         /// <summary>
