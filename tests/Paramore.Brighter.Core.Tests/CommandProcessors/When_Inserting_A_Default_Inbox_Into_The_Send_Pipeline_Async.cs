@@ -59,6 +59,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, 
                     { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
                 },
+                new PayloadTypeRouter(),
                 inboxConfiguration: inboxConfiguration
                 );
             

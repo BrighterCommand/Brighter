@@ -51,8 +51,7 @@ namespace Paramore.Brighter.Core.Tests
 
             MyDoesNotFailMultiplePoliciesHandler.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-                policyRegistry);
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new PayloadTypeRouter());
 
         }
 

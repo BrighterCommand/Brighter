@@ -70,6 +70,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
             handlerFactory, 
             new InMemoryRequestContextFactory(), 
             policyRegistry, 
+            new PayloadTypeRouter(),
             messageMapperRegistry,
             bus);
     }

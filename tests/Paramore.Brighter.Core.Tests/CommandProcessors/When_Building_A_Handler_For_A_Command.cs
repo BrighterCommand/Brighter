@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var handlerFactory = new TestHandlerFactorySync<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
             _requestContext = new RequestContext();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _chainBuilder = new PipelineBuilder<MyCommand>(new PayloadTypeRouter(), registry, handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

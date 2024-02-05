@@ -49,7 +49,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new SubscriberRegistry(), 
                 new ServiceProviderHandlerFactory(container.BuildServiceProvider()), 
                 new InMemoryRequestContextFactory(), 
-                new PolicyRegistry());
+                new PolicyRegistry(),
+                new PayloadTypeRouter());
         }
 
         [Fact]

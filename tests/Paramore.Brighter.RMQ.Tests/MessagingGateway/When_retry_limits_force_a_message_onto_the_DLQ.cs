@@ -82,8 +82,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 subscriberRegistry: subscriberRegistry,
                 handlerFactory: new QuickHandlerFactory(() => handler),
                 requestContextFactory: new InMemoryRequestContextFactory(),
-                policyRegistry: new PolicyRegistry()
-            );
+                policyRegistry: new PolicyRegistry(), router: new PayloadTypeRouter());
 
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             var messageMapperRegistry = new MessageMapperRegistry(

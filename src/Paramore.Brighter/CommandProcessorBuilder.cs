@@ -254,24 +254,22 @@ namespace Paramore.Brighter
             if (_bus == null) 
             {
                 return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory, 
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
+                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry, router: new PayloadTypeRouter(),
                     featureSwitchRegistry: _featureSwitchRegistry);
             }
 
             if (!_useRequestReplyQueues)
                 return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry, bus: _bus,
-                    featureSwitchRegistry: _featureSwitchRegistry, inboxConfiguration: _inboxConfiguration,
-                    messageTransformerFactory: _transformerFactory);
+                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry, router: new PayloadTypeRouter(), mapperRegistry: _messageMapperRegistry,
+                    bus: _bus, featureSwitchRegistry: _featureSwitchRegistry,
+                    inboxConfiguration: _inboxConfiguration, messageTransformerFactory: _transformerFactory);
             
             if (_useRequestReplyQueues)
                 return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry, bus: _bus,
-                    featureSwitchRegistry: _featureSwitchRegistry, inboxConfiguration: _inboxConfiguration,
-                    messageTransformerFactory: _transformerFactory, replySubscriptions: _replySubscriptions,
-                    responseChannelFactory: _responseChannelFactory);
+                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry, router: new PayloadTypeRouter(), mapperRegistry: _messageMapperRegistry,
+                    bus: _bus, featureSwitchRegistry: _featureSwitchRegistry,
+                    inboxConfiguration: _inboxConfiguration, messageTransformerFactory: _transformerFactory,
+                    replySubscriptions: _replySubscriptions, responseChannelFactory: _responseChannelFactory);
 
             throw new ConfigurationException(
                 "The configuration options chosen cannot be used to construct a command processor");

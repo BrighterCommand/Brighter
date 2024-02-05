@@ -52,7 +52,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 subscriberRegistry,
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
-                new PolicyRegistry());
+                new PolicyRegistry(),
+                new PayloadTypeRouter());
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 

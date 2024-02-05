@@ -36,7 +36,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             _inboxConfiguration = new InboxConfiguration();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, _inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(
+                new PayloadTypeRouter(), registry, (IAmAHandlerFactoryAsync)handlerFactory, _inboxConfiguration);
             
         }
 

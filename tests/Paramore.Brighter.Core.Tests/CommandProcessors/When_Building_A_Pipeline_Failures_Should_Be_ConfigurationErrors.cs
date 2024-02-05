@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                var handlerFactory = new TestHandlerFactorySync<MyCommand, MyCommandHandler>(() => throw new InvalidOperationException("Could no create handler"));
                _requestContext = new RequestContext();
    
-               _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+               _chainBuilder = new PipelineBuilder<MyCommand>(new PayloadTypeRouter(), registry, handlerFactory);
                PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

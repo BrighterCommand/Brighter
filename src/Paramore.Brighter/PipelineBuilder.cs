@@ -52,10 +52,12 @@ namespace Paramore.Brighter
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
         /// target handler which represent other filter steps in the pipeline
         /// </summary>
+        /// <param name="router">How do we route requests to handlers</param>
         /// <param name="registry">What handler services this request</param>
         /// <param name="handlerFactorySync">Callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
+            IAmARequestRouter router,
             IAmASubscriberRegistry registry, 
             IAmAHandlerFactorySync handlerFactorySync,
             InboxConfiguration inboxConfiguration = null) 
@@ -63,10 +65,21 @@ namespace Paramore.Brighter
             _handlerFactorySync = handlerFactorySync;
             _inboxConfiguration = inboxConfiguration;
             _instanceScope = new HandlerLifetimeScope(handlerFactorySync);
-            _interpreter = new Interpreter<TRequest>(registry, handlerFactorySync);
+            
+            //we only have one router, so we can just cast to it, for now
+            _interpreter = ((PayloadTypeRouter)router).CreateInterpreter<TRequest>(registry, handlerFactorySync);
         }
 
+        /// <summary>
+        /// Used to build a pipeline of handlers from the target handler and the attributes on that
+        /// target handler which represent other filter steps in the pipeline
+        /// </summary>
+        /// <param name="router">How do we route requests to handlers</param>
+        /// <param name="registry">What handler services this request</param>
+        /// <param name="asyncHandlerFactory">Callback to the user code to create instances of handlers</param>
+        /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
+            IAmARequestRouter router,
             IAmASubscriberRegistry registry, 
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             InboxConfiguration inboxConfiguration = null)
@@ -74,7 +87,8 @@ namespace Paramore.Brighter
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
             _instanceScope = new HandlerLifetimeScope(asyncHandlerFactory);
-            _interpreter = new Interpreter<TRequest>(registry, asyncHandlerFactory);
+            //we only have one router, so we can just cast to it, for now
+            _interpreter = ((PayloadTypeRouter)router).CreateInterpreterAsync<TRequest>(registry, asyncHandlerFactory);
         }
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
