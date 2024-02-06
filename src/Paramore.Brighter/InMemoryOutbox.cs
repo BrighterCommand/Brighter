@@ -464,5 +464,10 @@ namespace Paramore.Brighter
         {
             return Task.FromResult(DispatchedMessages(hoursDispatchedSince, pageSize));
         }
+
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_requests.Count(r => r.Value.TimeFlushed == DateTime.MinValue));
+        }
     }
 }

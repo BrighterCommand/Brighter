@@ -49,7 +49,6 @@ namespace GreetingsWeb
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-
             if (env.IsDevelopment())
             {
                 app.UseSwagger();
@@ -98,7 +97,7 @@ namespace GreetingsWeb
                 ConfigureSqlite(services);
             else
                 ConfigureProductionDatabase(GetDatabaseType(), services);
-        }
+            }
 
         private void ConfigureProductionDatabase(DatabaseType databaseType, IServiceCollection services)
         {
@@ -164,14 +163,14 @@ namespace GreetingsWeb
                         .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
                 )
                 .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.Sqlite.ToString()});
-        }
-        
+            }
+
         private void ConfigureBrighter(IServiceCollection services)
         {
             var messagingTransport = GetTransportType();
             
             AddSchemaRegistryMaybe(services, messagingTransport);
-            
+
             var outboxConfiguration = new RelationalDatabaseConfiguration(
                 DbConnectionString(),
                 binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
@@ -180,7 +179,7 @@ namespace GreetingsWeb
 
             (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
                 OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration, services);
-            
+
             services.AddBrighter(options =>
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
@@ -190,7 +189,7 @@ namespace GreetingsWeb
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
                 .UseExternalBus((configure) =>
-                {
+                        {
                     configure.ProducerRegistry = ConfigureProducerRegistry(messagingTransport);
                     configure.Outbox = makeOutbox.outbox;
                     configure.TransactionProvider = makeOutbox.transactionProvider;
@@ -314,7 +313,7 @@ namespace GreetingsWeb
                MessagingGlobals.KAFKA => MessagingTransport.Kafka,
                _ => throw new ArgumentOutOfRangeException(nameof(MessagingGlobals.BRIGHTER_TRANSPORT),
                    "Messaging transport is not supported")
-           };
-       }
+            };
+        }
     }
 }

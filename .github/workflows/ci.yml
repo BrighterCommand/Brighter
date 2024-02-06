@@ -43,10 +43,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: Linux-nuget-${{ hashFiles('**/*.csproj') }}
+          key: Linux-nuget-${{ hashFiles('**/Directory.Packages.props') }}
           restore-keys: |
             Linux-nuget-
       - name: Build
@@ -323,7 +323,7 @@ jobs:
         env:
           MYSQL_DATABASE: BrighterTests
           MYSQL_ROOT_PASSWORD: root
-        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+        options: --health-cmd="healthcheck.sh --su-mysql --connect --innodb_initialized" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
       - uses: actions/checkout@v4
@@ -390,7 +390,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -120,7 +120,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             return this;
         }
-        
+
         /// <summary>
         /// Supplies the specified the policy registry, so we can use policies for Task Queues or in user-defined request handlers such as ExceptionHandler
         /// that provide quality of service concerns
@@ -162,6 +162,7 @@ namespace Paramore.Brighter
         /// <param name="transformerFactory">A factory for common transforms of messages</param>
         /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
+        /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
         /// <returns></returns>
         public INeedARequestContext ExternalBus(
             ExternalBusType busType, 
@@ -169,12 +170,14 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageTransformerFactory transformerFactory,
             IAmAChannelFactory responseChannelFactory = null, 
-            IEnumerable<Subscription> subscriptions = null
+            IEnumerable<Subscription> subscriptions = null,
+            InboxConfiguration inboxConfiguration = null
         )
         {
             _messageMapperRegistry = messageMapperRegistry;
             _transformerFactory = transformerFactory;
-
+            _inboxConfiguration = inboxConfiguration;
+                    
             switch (busType)
             {
                 case ExternalBusType.None:
@@ -275,7 +278,7 @@ namespace Paramore.Brighter
 
             throw new ConfigurationException(
                 "The configuration options chosen cannot be used to construct a command processor");
-        }
+            }
     }
 
     #region Progressive interfaces
@@ -335,6 +338,7 @@ namespace Paramore.Brighter
         /// <param name="transformerFactory">A factory for transforms used for common transformations to outgoing messages</param>
         /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
+        /// <param name="inboxConfiguration">What is the inbox configuration</param>
         /// <returns></returns>
         INeedARequestContext ExternalBus(
             ExternalBusType busType, 
@@ -342,7 +346,8 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageTransformerFactory transformerFactory,
             IAmAChannelFactory responseChannelFactory = null, 
-            IEnumerable<Subscription> subscriptions = null
+            IEnumerable<Subscription> subscriptions = null,
+            InboxConfiguration inboxConfiguration = null
             );
 
         /// <summary>

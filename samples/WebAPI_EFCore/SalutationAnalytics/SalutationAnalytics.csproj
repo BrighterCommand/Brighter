@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -36,7 +36,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.0" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     </ItemGroup>
 
 </Project>
