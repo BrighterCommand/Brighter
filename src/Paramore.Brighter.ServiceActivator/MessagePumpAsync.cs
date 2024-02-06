@@ -136,6 +136,14 @@ namespace Paramore.Brighter.ServiceActivator
 
                 return future.GetAwaiter().GetResult();
             }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
             finally
             {
                 SynchronizationContext.SetSynchronizationContext(prevCtx);
