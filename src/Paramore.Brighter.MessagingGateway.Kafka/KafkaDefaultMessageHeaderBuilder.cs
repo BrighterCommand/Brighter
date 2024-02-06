@@ -5,7 +5,7 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    internal class KafkaDefaultMessageHeaderBuilder : IKafkaMessageHeaderBuilder
+    public class KafkaDefaultMessageHeaderBuilder : IKafkaMessageHeaderBuilder
     {
         private static readonly string[] s_headersToReset;
 
