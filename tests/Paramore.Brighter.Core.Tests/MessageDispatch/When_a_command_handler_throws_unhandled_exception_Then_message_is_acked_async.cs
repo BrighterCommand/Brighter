@@ -46,17 +46,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
 
             _commandProcessor = new SpyExceptionCommandProcessor();
+            var commandProcessorProvider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()));
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
              
-            _messagePump = new MessagePumpAsync<MyCommand>(_commandProcessor, messageMapperRegistry) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
+            _messagePump = new MessagePumpAsync<MyCommand>(commandProcessorProvider, messageMapperRegistry, null)
+            {
+                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
+            };
 
-            var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
+            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyCommand>()
                 .WrapAsync(new MyCommand())
-                .GetAwaiter().GetResult();
+                .Result;
             _channel.Enqueue(msg);
         }
 

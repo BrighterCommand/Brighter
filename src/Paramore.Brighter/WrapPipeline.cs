@@ -47,7 +47,7 @@ namespace Paramore.Brighter
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
-            IEnumerable<IAmAMessageTransformAsync> transforms)
+            IEnumerable<IAmAMessageTransform> transforms)
         {
             MessageMapper = messageMapper;
             Transforms = transforms;
@@ -77,10 +77,10 @@ namespace Paramore.Brighter
         /// <param name="request">The request to wrap</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
-        public async Task<Message> WrapAsync(TRequest request, CancellationToken cancellationToken = default)
+        public Message Wrap(TRequest request)
         {
             var message = MessageMapper.MapToMessage(request);
-            await Transforms.EachAsync(async transform => message = await transform.WrapAsync(message, cancellationToken));
+            Transforms.Each(transform => message = transform.Wrap(message));
             return message;
         }
     }

@@ -20,8 +20,10 @@ public class MessageWrapCleanupTests
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
         
@@ -29,26 +31,26 @@ public class MessageWrapCleanupTests
     }
     
     [Fact]
-    public async Task When_Wrapping_Clean_Up_The_Pipeline()
+    public void When_Wrapping_Clean_Up_The_Pipeline()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = await _transformPipeline.WrapAsync(_myCommand);
+        var message = _transformPipeline.Wrap(_myCommand);
         _transformPipeline.Dispose();
         
         //assert
-        s_released.Should().Be("|MySimpleTransformAsync");
+        s_released.Should().Be("|MySimpleTransform");
 
     }
     
     private class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {
-        public IAmAMessageTransformAsync Create(Type transformerType)
+        public IAmAMessageTransform Create(Type transformerType)
         {
-            return new MySimpleTransformAsync();
+            return new MySimpleTransform();
         }
 
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(IAmAMessageTransform transformer)
         {
             var disposable = transformer as IDisposable;
             disposable?.Dispose();

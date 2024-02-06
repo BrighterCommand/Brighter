@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -17,13 +18,16 @@ public class MessageUnwrapRequestTests
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
-        
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
+
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
+            null
+        );
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         MyTransformableCommand myCommand = new();
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
+        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
@@ -36,13 +40,13 @@ public class MessageUnwrapRequestTests
     }
     
     [Fact]
-    public async Task When_Unwrapping_A_Message_Mapper()
+    public void When_Unwrapping_A_Message_Mapper()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = await _transformPipeline.UnwrapAsync(_message);
+        var request = _transformPipeline.Unwrap(_message);
         
         //assert
-        request.Value = MySimpleTransformAsync.HEADER_KEY;
+        request.Value.Should().Be( MySimpleTransformAsync.TRANSFORM_VALUE);
     }
 }

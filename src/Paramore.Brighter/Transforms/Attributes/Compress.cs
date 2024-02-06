@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <returns>The type for the compression middleware</returns>
         public override Type GetHandlerType()
         {
-            return typeof(CompressPayloadTransformer);
+            return typeof(CompressPayloadTransformerAsync);
         }
     }
 }

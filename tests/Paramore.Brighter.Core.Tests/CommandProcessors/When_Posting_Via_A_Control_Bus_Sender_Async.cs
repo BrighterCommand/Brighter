@@ -59,7 +59,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy
@@ -78,9 +80,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             CommandProcessor commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
-                messageMapperRegistry,
-                bus
-                );
+                bus,
+                messageMapperRegistry);
 
             _controlBusSender = new ControlBusSender(commandProcessor);
         }

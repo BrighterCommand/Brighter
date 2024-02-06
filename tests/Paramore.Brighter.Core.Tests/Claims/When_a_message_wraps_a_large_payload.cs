@@ -14,12 +14,12 @@ public class ClaimCheckLargePayloadTests
     private readonly ClaimCheckTransformer _transformer;
     private readonly Message _message;
     private readonly string _body;
-    private readonly InMemoryStorageProviderAsync _store;
+    private readonly InMemoryStorageProvider _store;
 
     public ClaimCheckLargePayloadTests()
     {
         //arrange
-        _store = new InMemoryStorageProviderAsync();
+        _store = new InMemoryStorageProvider();
         _transformer = new ClaimCheckTransformer(store: _store);
         _transformer.InitializeWrapFromAttributeParams(5);
 
@@ -30,10 +30,10 @@ public class ClaimCheckLargePayloadTests
     }
     
     [Fact]
-    public async Task When_a_message_wraps_a_large_payload()
+    public void When_a_message_wraps_a_large_payload()
     {
         //act
-        var luggageCheckedMessage = await _transformer.WrapAsync(_message);
+        var luggageCheckedMessage = _transformer.Wrap(_message);
 
         //assert
         bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object storedData);
@@ -42,7 +42,7 @@ public class ClaimCheckLargePayloadTests
 
         var claimCheck = (string)storedData;
 
-        var luggage = await new StreamReader(await _store.RetrieveAsync(claimCheck)).ReadToEndAsync(); 
+        var luggage = new StreamReader(_store.Retrieve(claimCheck)).ReadToEnd(); 
         
         luggage.Should().Be(_body);
     }

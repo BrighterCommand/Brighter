@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 {
                     return new MyEventMessageMapper();
                 }
-            }));
+            }), null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
@@ -87,8 +87,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
-                messageMapperRegistry,
-                bus);
+                bus,
+                messageMapperRegistry);
         }
 
 

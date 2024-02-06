@@ -8,22 +8,15 @@ using Paramore.Brighter;
 
 namespace GreetingsSender
 {
-    public class TimedMessageGenerator : IHostedService, IDisposable
+    public class TimedMessageGenerator(IAmACommandProcessor processor, ILogger<TimedMessageGenerator> logger)
+        : IHostedService, IDisposable
     {
-        private readonly IAmACommandProcessor _processor;
-        private readonly ILogger<TimedMessageGenerator> _logger;
         private Timer _timer;
         private long _iteration = 0;
 
-        public TimedMessageGenerator(IAmACommandProcessor processor, ILogger<TimedMessageGenerator> logger)
-        {
-            _processor = processor;
-            _logger = logger;
-        }
-
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Kafka Message Generator is starting.");
+            logger.LogInformation("Kafka Message Generator is starting");
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
 
@@ -32,7 +25,7 @@ namespace GreetingsSender
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Kafka Message Generator is stopping.");
+            logger.LogInformation("Kafka Message Generator is stopping");
 
             _timer?.Change(Timeout.Infinite, 0);
 
@@ -45,9 +38,9 @@ namespace GreetingsSender
 
             var greetingEvent = new GreetingEvent{ Id = Guid.NewGuid(), Greeting = $"Hello # {_iteration}"};
             
-            _processor.Post(greetingEvent);
+            processor.Post(greetingEvent);
 
-            _logger.LogInformation("Sending message with id {Id} and greeting {Request}", greetingEvent.Id,
+            logger.LogInformation("Sending message with id {Id} and greeting {Request}", greetingEvent.Id,
                 greetingEvent.Greeting);
         }
 

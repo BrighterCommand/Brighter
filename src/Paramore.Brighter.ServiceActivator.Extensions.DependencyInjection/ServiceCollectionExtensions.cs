@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -70,9 +69,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             var messageTransformFactory = ServiceCollectionExtensions.TransformFactory(serviceProvider);
+            var messageTransformFactoryAsync = ServiceCollectionExtensions.TransformFactoryAsync(serviceProvider);
             
             return dispatcherBuilder
-                .MessageMappers(messageMapperRegistry, messageTransformFactory)
+                .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
                 .DefaultChannelFactory(options.ChannelFactory)
                 .Subscriptions(options.Subscriptions).Build();
         }
