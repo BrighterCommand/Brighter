@@ -53,17 +53,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            var messageMapperRegistry = new MessageMapperRegistry(
+                null,
+            new SimpleMessageMapperFactoryAsync((type) =>
             {
-                if (type.Equals(typeof(MyCommandMessageMapper)))
-                    return new MyCommandMessageMapper();
+                if (type == typeof(MyCommandMessageMapperAsync))
+                    return new MyCommandMessageMapperAsync();
                 else
                 {
-                    return new MyEventMessageMapper();
+                    return new MyEventMessageMapperAsync();
                 }
             }));
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -91,9 +93,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                messageMapperRegistry,
-                bus
-            );
+                bus,
+                messageMapperRegistry);
         }
 
 

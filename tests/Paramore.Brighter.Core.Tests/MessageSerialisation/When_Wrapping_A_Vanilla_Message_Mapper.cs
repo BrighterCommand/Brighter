@@ -18,8 +18,10 @@ public class VanillaMessageWrapRequestTests
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyVanillaCommandMessageMapper) } };
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyVanillaCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
         
@@ -29,11 +31,11 @@ public class VanillaMessageWrapRequestTests
     }
     
     [Fact]
-    public async Task When_Wrapping_A_Vanilla_Message_Mapper()
+    public void When_Wrapping_A_Vanilla_Message_Mapper()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = await _transformPipeline.WrapAsync(_myCommand);
+        var message = _transformPipeline.Wrap(_myCommand);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

@@ -43,7 +43,9 @@ namespace Paramore.Brighter
         public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry)
             where T : Message
         {
-            var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
+            var mapper = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()),
+                null);
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
             var busConfiguration = new ExternalBusConfiguration();

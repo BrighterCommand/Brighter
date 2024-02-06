@@ -23,8 +23,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            var messageMapperRegistry = new MessageMapperRegistry(
+                null,
+                new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync())
+                );
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             var connection = new Subscription<MyEvent>(
                 new SubscriptionName("test"),
@@ -34,10 +37,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 channelName: new ChannelName("fakeChannel"), 
                 routingKey: new RoutingKey("fakekey"),
                 runAsync: true);
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
+            _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { connection }, null, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapperAsync().MapToMessage(@event).Result;
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);

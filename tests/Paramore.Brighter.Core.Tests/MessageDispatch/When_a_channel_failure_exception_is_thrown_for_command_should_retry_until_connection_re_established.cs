@@ -41,12 +41,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpRetryCommandOnConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             var channel = new FailingChannel { NumberOfRetries = 1 };
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, messageMapperRegistry) 
-                { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
+            _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null)
+            {
+                Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1
+            };
 
             var command = new MyCommand();
 

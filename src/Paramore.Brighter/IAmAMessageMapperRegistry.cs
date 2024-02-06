@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -45,5 +47,13 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <typeparam name="TMessageMapper">The type of the t message mapper.</typeparam>
         void Register<TRequest, TMessageMapper>() where TRequest : class, IRequest where TMessageMapper : class, IAmAMessageMapper<TRequest>;
+
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <param name="request">The type of the request to map</param>
+        /// <param name="mapper">The type of the mapper for this request</param>
+        /// <exception cref="System.ArgumentException"></exception>
+        void Register(Type request, Type mapper);
     }
 }

@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// </summary>
         /// <param name="claimCheck">The claim check for the luggage</param>
         /// <param name="cancellationToken">The cancellation token</param>
-        Task DeleteAsync(string claimCheck, CancellationToken cancellationToken);
+        Task DeleteAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Downloads the luggage associated with the claim check
@@ -49,14 +49,14 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="claimCheck">The claim check for the luggage</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The luggage as a stream</returns>
-        Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken);
+        Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Do we have luggage for this claim check - in case of error or deletion
         /// </summary>
         /// <param name="claimCheck"></param>
         /// <param name="cancellationToken">The cancellation token</param>
-        Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken);
+        Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Puts luggage into the store and provides a claim check for that luggage
@@ -64,6 +64,6 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="stream">A stream representing the luggage to check</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>A claim check for the luggage stored</returns>
-        Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken);
+        Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default(CancellationToken));
     }
 }

@@ -30,6 +30,7 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using System.Text.Json;
+using FakeItEasy;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -41,13 +42,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpRetryEventConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             var channel = new FailingChannel { NumberOfRetries = 1 };
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry) 
-                { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            {
+                Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1
+            };
 
             var @event = new MyEvent();
 

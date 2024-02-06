@@ -36,20 +36,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class PerformerCanStopTests
     {
-        private readonly Performer _performer;
-        private readonly SpyCommandProcessor _commandProcessor;
         private readonly FakeChannel _channel;
         private readonly Task _performerTask;
 
         public PerformerCanStopTests()
         {
-            _commandProcessor = new SpyCommandProcessor();
+            SpyCommandProcessor commandProcessor = new();
+            var provider = new CommandProcessorProvider(commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            var messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry);
+            var messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null);
             messagePump.Channel = _channel;
             messagePump.TimeoutInMilliseconds = 5000;
 
@@ -57,9 +57,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
             _channel.Enqueue(message);
 
-            _performer = new Performer(_channel, messagePump);
-            _performerTask = _performer.Run();
-            _performer.Stop();
+            Performer performer = new(_channel, messagePump);
+            _performerTask = performer.Run();
+            performer.Stop();
         }
         
 #pragma warning disable xUnit1031

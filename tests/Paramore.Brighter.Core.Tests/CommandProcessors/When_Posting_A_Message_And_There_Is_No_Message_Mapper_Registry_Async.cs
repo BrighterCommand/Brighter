@@ -59,7 +59,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
 
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -76,8 +78,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
-                messageMapperRegistry,
-                bus);
+                bus,
+                messageMapperRegistry);
         }
 
         [Fact]
@@ -86,7 +88,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
 
             //_should_throw_an_exception
-            _exception.Should().BeOfType<ConfigurationException>();
+            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
 
         public void Dispose()

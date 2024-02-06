@@ -10,7 +10,7 @@ public class UncompressedPayloadTests
 {
     
     [Fact]
-    public async Task When_a_message_is_not_gzip_compressed()
+    public void When_a_message_is_not_gzip_compressed()
     {
         
         //arrange
@@ -26,14 +26,14 @@ public class UncompressedPayloadTests
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
 
         //act
-        var msg = await transformer.UnwrapAsync(message);
+        var msg = transformer.Unwrap(message);
         
         //assert
         msg.Body.Value.Should().Be(smallContent);
     }
     
     [Fact]
-    public async Task When_a_message_is_not_zlib_compressed()
+    public void When_a_message_is_not_zlib_compressed()
     {
         
         //arrange
@@ -49,14 +49,14 @@ public class UncompressedPayloadTests
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
         
         //act
-        var msg = await transformer.UnwrapAsync(message);
+        var msg = transformer.Unwrap(message);
         
         //assert
         msg.Body.Value.Should().Be(smallContent);
     }
     
     [Fact]
-    public async Task When_a_message_is_not_brotli_compressed()
+    public void When_a_message_is_not_brotli_compressed()
     {
         
         //arrange
@@ -72,7 +72,7 @@ public class UncompressedPayloadTests
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
         
         //act
-        var msg = await transformer.UnwrapAsync(message);
+        var msg = transformer.Unwrap(message);
         
         //assert
         msg.Body.Value.Should().Be(smallContent);

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter
 {
@@ -35,18 +36,25 @@ namespace Paramore.Brighter
     /// registered via <see cref="IAmAMessageMapperRegistry"/>
     /// This is a default implementation of<see cref="IAmAMessageMapperRegistry"/> which is suitable for most usages, the interface is provided mainly for testing
     /// </summary>
-    public class MessageMapperRegistry : IAmAMessageMapperRegistry, IEnumerable<KeyValuePair<Type, Type>>
+    public class MessageMapperRegistry : IAmAMessageMapperRegistry, IAmAMessageMapperRegistryAsync 
     {
         private readonly IAmAMessageMapperFactory _messageMapperFactory;
+        private readonly IAmAMessageMapperFactoryAsync _messageMapperFactoryAsync;
         private readonly Dictionary<Type, Type> _messageMappers = new Dictionary<Type, Type>();
+        private readonly Dictionary<Type, Type> _asyncMessageMappers = new Dictionary<Type, Type>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageMapperRegistry"/> class.
         /// </summary>
         /// <param name="messageMapperFactory">The message mapper factory.</param>
-        public MessageMapperRegistry(IAmAMessageMapperFactory messageMapperFactory)
+        /// <param name="messageMapperFactoryAsync">The async message mapper factory</param>
+        public MessageMapperRegistry(IAmAMessageMapperFactory messageMapperFactory, IAmAMessageMapperFactoryAsync messageMapperFactoryAsync)
         {
             _messageMapperFactory = messageMapperFactory;
+            _messageMapperFactoryAsync = messageMapperFactoryAsync;
+
+            if (messageMapperFactory == null && messageMapperFactoryAsync == null)
+                throw new ConfigurationException("Should have at least one factory");
         }
 
         /// <summary>
@@ -66,16 +74,23 @@ namespace Paramore.Brighter
                 return null;
             }
         }
-
-        //support object initializer
+        
         /// <summary>
-        /// Adds the specified message type.
+        /// Gets this instance.
         /// </summary>
-        /// <param name="messageType">Type of the message.</param>
-        /// <param name="messageMapper">The message mapper.</param>
-        public void Add(Type messageType, Type messageMapper)
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <returns>IAmAMessageMapperAsync&lt;TRequest&gt;.</returns>
+        public IAmAMessageMapperAsync<TRequest> GetAsync<TRequest>() where TRequest : class, IRequest
         {
-            _messageMappers.Add(messageType, messageMapper);
+            if (_asyncMessageMappers.ContainsKey(typeof(TRequest)))
+            {
+                var messageMapperType = _asyncMessageMappers[typeof(TRequest)];
+                return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
+            }
+            else
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -93,21 +108,46 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Returns an enumerator that iterates through the collection.
+        /// Registers this instance.
         /// </summary>
-        /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
-        public IEnumerator<KeyValuePair<Type, Type>> GetEnumerator()
+        /// <param name="request">The type of the request to map</param>
+        /// <param name="mapper">The type of the mapper for this request</param>
+        /// <exception cref="System.ArgumentException"></exception>
+        public void Register(Type request, Type mapper)
         {
-            return _messageMappers.GetEnumerator();
-        }
+            if (_messageMappers.ContainsKey(request))
+                throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", request.Name));
 
+            _messageMappers.Add(request, mapper);
+        }
+        
         /// <summary>
-        /// Returns an enumerator that iterates through a collection.
+        /// Registers this instance.
         /// </summary>
-        /// <returns>An <see cref="T:System.Collections.IEnumerator" /> object that can be used to iterate through the collection.</returns>
-        IEnumerator IEnumerable.GetEnumerator()
+        /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <typeparam name="TMessageMapper">The type of the t message mapper.</typeparam>
+        /// <exception cref="System.ArgumentException"></exception>
+        public void RegisterAsync<TRequest, TMessageMapper>() where TRequest : class, IRequest where TMessageMapper : class, IAmAMessageMapperAsync<TRequest>
         {
-            return GetEnumerator();
+            if (_asyncMessageMappers.ContainsKey(typeof(TRequest)))
+                throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", typeof(TRequest).Name));
+
+            _asyncMessageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
+
+        }
+        
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <param name="request">The type of the request to map</param>
+        /// <param name="mapper">The type of the mapper for this request</param>
+        /// <exception cref="System.ArgumentException"></exception>
+        public void RegisterAsync(Type request, Type mapper)
+        {
+            if (_asyncMessageMappers.ContainsKey(request))
+                throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", request.Name));
+
+            _asyncMessageMappers.Add(request, mapper);
         }
     }
 }

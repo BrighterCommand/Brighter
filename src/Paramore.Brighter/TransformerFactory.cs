@@ -38,7 +38,7 @@ namespace Paramore.Brighter
             _messageType = typeof(TRequest);
         }
 
-        public IAmAMessageTransformAsync CreateMessageTransformer()
+        public IAmAMessageTransform CreateMessageTransformer()
         {
             var transformerType = _attribute.GetHandlerType();
             var transformer = _factory.Create(transformerType);

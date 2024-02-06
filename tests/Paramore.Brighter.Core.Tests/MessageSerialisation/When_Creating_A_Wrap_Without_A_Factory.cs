@@ -16,10 +16,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     public TransformPipelineMissingFactoryWrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();  
-        
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
+        TransformPipelineBuilder.ClearPipelineCache();
+
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
 
@@ -27,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     }
     
     [Fact]
-    public async Task When_Creating_A_Wrap_Without_A_Factory()
+    public void When_Creating_A_Wrap_Without_A_Factory()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
@@ -36,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper");
 
         //wrap should just do message mapper                                          
-        var message = await _transformPipeline.WrapAsync(_myCommand);
+        var message = _transformPipeline.Wrap(_myCommand);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

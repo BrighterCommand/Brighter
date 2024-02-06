@@ -23,7 +23,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
     [Trait("Fragile", "CI")]
     public class LargeMessagePaylodUnwrapTests : IDisposable
     {
-        private readonly TransformPipelineBuilder _pipelineBuilder;
+        private readonly TransformPipelineBuilderAsync _pipelineBuilder;
         private readonly AmazonS3Client _client;
         private readonly string _bucketName;
         private readonly S3LuggageStore _luggageStore;
@@ -33,10 +33,12 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             //arrange
             TransformPipelineBuilder.ClearPipelineCache();
 
-            var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()))
-            {
-                { typeof(MyLargeCommand), typeof(MyLargeCommandMessageMapper) }
-            };
+            var mapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
+                null
+            );
+            
+            mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
             
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
 
@@ -67,9 +69,9 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 .GetAwaiter()
                 .GetResult();
 
-            var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore));
+            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
-            _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
         }
     
         [Fact]
@@ -99,7 +101,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
             );
 
-            message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
+            message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
 
             //act
             var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();

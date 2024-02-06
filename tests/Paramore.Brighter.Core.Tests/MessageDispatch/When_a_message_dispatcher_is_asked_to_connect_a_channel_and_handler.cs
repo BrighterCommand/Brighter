@@ -46,7 +46,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var connection = new Subscription<MyEvent>(
@@ -56,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 channelFactory: new InMemoryChannelFactory(_channel),
                 channelName: new ChannelName("fakeChannel"), 
                 routingKey: new RoutingKey("fakekey"));
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
+            _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { connection }, messageMapperRegistry);
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
