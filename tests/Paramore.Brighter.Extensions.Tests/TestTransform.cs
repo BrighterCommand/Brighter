@@ -38,13 +38,13 @@ public class TestTransform : IAmAMessageTransformAsync, IAmAMessageTransform
     {
         var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
         tcs.SetResult(message);
-        return Task.FromResult(tcs.Task.Result);
+        return tcs.Task;
     }
 
     public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken)
     {
         var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
         tcs.SetResult(message);
-        return Task.FromResult(tcs.Task.Result);
+        return tcs.Task;
     }
 }

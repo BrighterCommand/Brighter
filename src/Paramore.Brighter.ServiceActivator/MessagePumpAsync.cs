@@ -90,7 +90,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         private static void RunDispatch(Action<TRequest> act, TRequest request)
         {
-            if (act == null) throw new ArgumentNullException("act");
+            if (act == null) throw new ArgumentNullException(nameof(act));
 
             var prevCtx = SynchronizationContext.Current;
             try
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.ServiceActivator
         
         private static TRequest RunTranslate(Func<Message, Task<TRequest>> act, Message message)
         {
-            if (act == null) throw new ArgumentNullException("act");
+            if (act == null) throw new ArgumentNullException(nameof(act));
 
             var prevCtx = SynchronizationContext.Current;
             try
