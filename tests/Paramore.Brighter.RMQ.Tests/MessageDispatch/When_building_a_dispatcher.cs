@@ -44,7 +44,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
         public DispatchBuilderTests()
         {
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var retryPolicy = Policy
@@ -82,7 +84,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
             _builder = DispatchBuilder.With()
                 .CommandProcessorFactory(() =>new CommandProcessorProvider(commandProcessor))
-                .MessageMappers(messageMapperRegistry, null)
+                .MessageMappers(messageMapperRegistry, null, null, null)
                 .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
                 .Subscriptions(new []
                 {

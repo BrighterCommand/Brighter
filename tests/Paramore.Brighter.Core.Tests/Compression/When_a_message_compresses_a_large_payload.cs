@@ -27,10 +27,10 @@ public class CompressLargePayloadTests
     }
 
     [Fact]
-    public async Task When_a_message_gzip_compresses_a_large_payload()
+    public void When_a_message_gzip_compresses_a_large_payload()
     {
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
-        var compressedMessage = await _transformer.WrapAsync(_message);
+        var compressedMessage = _transformer.Wrap(_message);
 
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
@@ -38,18 +38,18 @@ public class CompressLargePayloadTests
         BitConverter.ToUInt16(compressedMessage.Body.Bytes, 0).Should().Be(GZIP_LEAD_BYTES);
         
         //mime types
-        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformer.GZIP);
-        compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
-        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformer.GZIP);
+        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformerAsync.GZIP);
+        compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
+        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformerAsync.GZIP);
         
 
     }
     
     [Fact]
-    public async Task When_a_message_zlib_compresses_a_large_payload()
+    public void When_a_message_zlib_compresses_a_large_payload()
     {
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.Zlib, CompressionLevel.Optimal, 5);
-        var compressedMessage = await _transformer.WrapAsync(_message);
+        var compressedMessage = _transformer.Wrap(_message);
     
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
@@ -58,16 +58,16 @@ public class CompressLargePayloadTests
         compressedMessage.Body.Bytes[0].Should().Be(ZLIB_LEAD_BYTE);
     
         //mime types
-        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformer.DEFLATE);
-        compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
-        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformer.DEFLATE);
+        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformerAsync.DEFLATE);
+        compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
+        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformerAsync.DEFLATE);
     }
     
     [Fact]
-    public async Task When_a_message_brotli_compresses_a_large_payload()
+    public void When_a_message_brotli_compresses_a_large_payload()
     {
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.Brotli, CompressionLevel.Optimal, 5);
-        var compressedMessage = await _transformer.WrapAsync(_message);
+        var compressedMessage = _transformer.Wrap(_message);
     
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
@@ -75,9 +75,9 @@ public class CompressLargePayloadTests
         compressedMessage.Body.ContentType.Should().Be("application/br");
         
         //mime types
-        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformer.BROTLI);
-        compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
-        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformer.BROTLI);
+        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformerAsync.BROTLI);
+        compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
+        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformerAsync.BROTLI);
     
     }
 }

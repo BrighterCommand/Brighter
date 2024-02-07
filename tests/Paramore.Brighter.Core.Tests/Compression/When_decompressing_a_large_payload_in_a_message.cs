@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Core.Tests.Compression;
 public class UncompressLargePayloadTests
 {
     [Fact]
-    public async Task When_decompressing_a_large_gzip_payload_in_a_message()
+    public void When_decompressing_a_large_gzip_payload_in_a_message()
     {
         //arrange
         var transformer = new CompressPayloadTransformer();
@@ -26,9 +26,9 @@ public class UncompressLargePayloadTests
 
         Stream compressionStream = new GZipStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformer.GZIP;
-        await input.CopyToAsync(compressionStream);
-        await compressionStream.FlushAsync();
+        string mimeType = CompressPayloadTransformerAsync.GZIP;
+        input.CopyToAsync(compressionStream);
+        compressionStream.FlushAsync();
 
         var body = new MessageBody(output.ToArray(), mimeType);
         
@@ -38,7 +38,7 @@ public class UncompressLargePayloadTests
         message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
         
         //act
-        var msg = await transformer.UnwrapAsync(message);
+        var msg = transformer.Unwrap(message);
         
         //assert
         msg.Body.Value.Should().Be(largeContent);
@@ -48,7 +48,7 @@ public class UncompressLargePayloadTests
     }
     
     [Fact]
-    public async Task When_decompressing_a_large_zlib_payload_in_a_message()
+    public void When_decompressing_a_large_zlib_payload_in_a_message()
     {
         //arrange
         var transformer = new CompressPayloadTransformer();
@@ -61,9 +61,9 @@ public class UncompressLargePayloadTests
 
         Stream compressionStream = new ZLibStream(output, CompressionLevel.Optimal);
             
-        string mimeType = CompressPayloadTransformer.DEFLATE;
-        await input.CopyToAsync(compressionStream);
-        await compressionStream.FlushAsync();
+        string mimeType = CompressPayloadTransformerAsync.DEFLATE;
+        input.CopyToAsync(compressionStream);
+        compressionStream.FlushAsync();
 
         var body = new MessageBody(output.ToArray(), mimeType);
         
@@ -73,7 +73,7 @@ public class UncompressLargePayloadTests
         message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
         
          //act
-        var msg = await transformer.UnwrapAsync(message);
+        var msg = transformer.Unwrap(message);
         
         //assert
         msg.Body.Value.Should().Be(largeContent);
@@ -83,7 +83,7 @@ public class UncompressLargePayloadTests
     }
     
     [Fact]
-    public async Task When_decompressing_a_large_brotli_payload_in_a_message()
+    public void When_decompressing_a_large_brotli_payload_in_a_message()
     {
         //arrange
         var transformer = new CompressPayloadTransformer();
@@ -97,18 +97,18 @@ public class UncompressLargePayloadTests
         Stream compressionStream = new BrotliStream(output, CompressionLevel.Optimal);
             
         string mimeType = CompressPayloadTransformer.BROTLI;
-        await input.CopyToAsync(compressionStream);
-        await compressionStream.FlushAsync();
+        input.CopyToAsync(compressionStream);
+        compressionStream.FlushAsync();
 
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
         
-        message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
+        message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
         
         //act
-         var msg = await transformer.UnwrapAsync(message);
+         var msg = transformer.Unwrap(message);
         
         //assert
         msg.Body.Value.Should().Be(largeContent);

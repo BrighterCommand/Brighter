@@ -14,15 +14,9 @@ using Paramore.Darker.QueryLogging;
 
 namespace GreetingsPorts.Handlers
 {
-    public class FIndGreetingsForPersonHandlerAsync : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
+    public class FIndGreetingsForPersonHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
+        : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
     {
-        private readonly IAmARelationalDbConnectionProvider  _relationalDbConnectionProvider;
-
-        public FIndGreetingsForPersonHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
-        {
-            _relationalDbConnectionProvider = relationalDbConnectionProvider;
-        }
-       
         [QueryLogging(0)]
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
@@ -34,7 +28,7 @@ namespace GreetingsPorts.Handlers
             var sql = @"select p.Id, p.Name, g.Id, g.Message 
                         from Person p
                         inner join Greeting g on g.Recipient_Id = p.Id";
-            await using var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
+            await using var connection = await relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
             var people = await connection.QueryAsync<Person, Greeting, Person>(sql, (person, greeting) =>
             {
                 person.Greetings.Add(greeting);

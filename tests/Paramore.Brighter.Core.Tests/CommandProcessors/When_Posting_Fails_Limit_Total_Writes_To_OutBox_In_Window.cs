@@ -46,7 +46,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer = new FakeErroringMessageProducerSync();
 
             var messageMapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+                new MessageMapperRegistry(
+                    new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                    null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var busConfiguration = new ExternalBusConfiguration { 

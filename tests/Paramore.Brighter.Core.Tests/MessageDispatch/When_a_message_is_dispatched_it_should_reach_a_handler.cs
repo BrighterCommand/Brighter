@@ -55,15 +55,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new PolicyRegistry(),
                 new PayloadTypeRouter());
             
+            var provider = new CommandProcessorProvider(commandProcessor);
+
+            
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
             var channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper())); 
+                new SimpleMessageMapperFactory(
+                    _ => new MyEventMessageMapper()),
+                null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(commandProcessor, messageMapperRegistry) 
-                { Channel = channel, TimeoutInMilliseconds = 5000 };
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            {
+                Channel = channel, TimeoutInMilliseconds = 5000
+            };
 
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options)));
             channel.Enqueue(message);

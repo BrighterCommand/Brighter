@@ -43,17 +43,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpEventProcessingDeferMessageActionTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper())); 
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            {
+                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
+            };
 
             var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null);
 
             var msg = transformPipelineBuilder.BuildWrapPipeline<MyEvent>()
-                .WrapAsync(new MyEvent()).GetAwaiter().GetResult();
+                .Wrap(new MyEvent());
             
             _channel.Enqueue(msg);
         }

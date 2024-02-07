@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
          //arrange
           TransformPipelineBuilder.ClearPipelineCache();
           
-          var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
+          var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
 
          //act
          var exception = Catch.Exception(() => new TransformPipelineBuilder(null, messageTransformerFactory));

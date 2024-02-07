@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 {
                     return new MyEventMessageMapper();
                 }
-            }));
+            }), null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 

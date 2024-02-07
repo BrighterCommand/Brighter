@@ -112,7 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private static MessageBody ReadMessageBody(Amazon.SQS.Model.Message sqsMessage, string contentType)
         {
-            if(contentType == CompressPayloadTransformer.GZIP || contentType == CompressPayloadTransformer.DEFLATE || contentType == CompressPayloadTransformer.BROTLI)
+            if(contentType == CompressPayloadTransformerAsync.GZIP || contentType == CompressPayloadTransformerAsync.DEFLATE || contentType == CompressPayloadTransformerAsync.BROTLI)
                 return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
             
             return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.UTF8);
