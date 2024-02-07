@@ -33,9 +33,9 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             TransformPipelineBuilder.ClearPipelineCache();
 
             var mapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory(
-                    _ => new MyLargeCommandMessageMapper()),
-                    null);
+                new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
+                    _ => new MyLargeCommandMessageMapperAsync())
+                    );
             mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
             
             _myCommand = new MyLargeCommand(6000);
