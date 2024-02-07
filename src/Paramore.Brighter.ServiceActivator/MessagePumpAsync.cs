@@ -136,14 +136,6 @@ namespace Paramore.Brighter.ServiceActivator
 
                 return future.GetAwaiter().GetResult();
             }
-            catch (ConfigurationException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
-            }
             finally
             {
                 SynchronizationContext.SetSynchronizationContext(prevCtx);
@@ -162,9 +154,18 @@ namespace Paramore.Brighter.ServiceActivator
 
         private async Task<TRequest> TranslateAsync(Message message)
         {
-            var request = await _unwrapPipeline.UnwrapAsync(message);
-            return request;
+            try
+            {
+                return await _unwrapPipeline.UnwrapAsync(message);
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
         }
-
     }
 }
