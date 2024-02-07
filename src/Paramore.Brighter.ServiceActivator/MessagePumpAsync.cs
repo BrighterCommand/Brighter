@@ -90,7 +90,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         private static void RunDispatch(Action<TRequest> act, TRequest request)
         {
-            if (act == null) throw new ArgumentNullException("act");
+            if (act == null) throw new ArgumentNullException(nameof(act));
 
             var prevCtx = SynchronizationContext.Current;
             try
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.ServiceActivator
         
         private static TRequest RunTranslate(Func<Message, Task<TRequest>> act, Message message)
         {
-            if (act == null) throw new ArgumentNullException("act");
+            if (act == null) throw new ArgumentNullException(nameof(act));
 
             var prevCtx = SynchronizationContext.Current;
             try
@@ -136,6 +136,14 @@ namespace Paramore.Brighter.ServiceActivator
 
                 return future.GetAwaiter().GetResult();
             }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
             finally
             {
                 SynchronizationContext.SetSynchronizationContext(prevCtx);
@@ -151,12 +159,21 @@ namespace Paramore.Brighter.ServiceActivator
         {
             await CommandProcessorProvider.Get().SendAsync(request, continueOnCapturedContext: true);
         }
-        
+
         private async Task<TRequest> TranslateAsync(Message message)
         {
-            var request = await _unwrapPipeline.UnwrapAsync(message);
-            return request;
+            try
+            {
+                return await _unwrapPipeline.UnwrapAsync(message);
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
         }
-
     }
 }

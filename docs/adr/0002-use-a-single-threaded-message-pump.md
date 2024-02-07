@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-Any service activator pattern will have a message pump, which reads from a queue. 
+Any service activator pattern will have a message pump, which reads from a queue.
 
 There are different strategies we could use, a common one for example is to use a BlockingCollection to hold messages read from the queue, and then use threads from the threadpool to process those messages. However, a multi-threaded pump has the issue that it will de-order an 
 otherwise ordered queue, as the threads will pull items from the blocking collection in parallel, not sequentially. In addition, where we have multiple threads it becomes difficult to create resources used by the pump without protecting them from race conditions.
