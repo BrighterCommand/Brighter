@@ -202,33 +202,18 @@ namespace Paramore.Brighter
         private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
-            if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute> transformAttributes))
-            {
-                transformAttributes = FindMapToMessage(messageMapper)
+            return s_wrapTransformsMemento.GetOrAdd(key, s => FindMapToMessage(messageMapper)
                     .GetOtherWrapsInPipeline()
-                    .OrderByDescending(attribute => attribute.Step);
-
-                s_wrapTransformsMemento.TryAdd(key, transformAttributes);
-            }
-
-            return transformAttributes;
+                .OrderByDescending(attribute => attribute.Step));
         }
 
         private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapperAsync<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
-            if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute> transformAttributes))
-            {
-                transformAttributes = FindMapToRequest(messageMapper)
+            return s_unWrapTransformsMemento.GetOrAdd(key, s => FindMapToRequest(messageMapper)
                     .GetOtherUnwrapsInPipeline()
-                    .OrderByDescending(attribute => attribute.Step);
-
-                s_unWrapTransformsMemento.TryAdd(key, transformAttributes);
+                .OrderByDescending(attribute => attribute.Step));
             }
-
-            return transformAttributes;
-        }
-
 
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapperAsync<TRequest> messageMapper) where TRequest : class, IRequest
         {
