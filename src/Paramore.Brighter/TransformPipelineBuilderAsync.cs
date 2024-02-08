@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -232,22 +232,23 @@ namespace Paramore.Brighter
 
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapperAsync<TRequest> messageMapper) where TRequest : class, IRequest
         {
-            return FindMethods(messageMapper)
-                .Where(method => method.Name == nameof(IAmAMessageMapperAsync<TRequest>.MapToMessage))
-                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
+            return messageMapper.GetType().GetMethod(nameof(IAmAMessageMapperAsync<TRequest>.MapToMessageAsync),
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                CallingConventions.Any,
+                new Type[] { typeof(TRequest), typeof(CancellationToken) },
+                null);
         }
 
 
         private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapperAsync<TRequest> messageMapper) where TRequest : class, IRequest
         {
-            return FindMethods(messageMapper)
-                .Where(method => method.Name == nameof(IAmAMessageMapperAsync<TRequest>.MapToRequest))
-                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(Message));
-        }
-
-        private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapperAsync<TRequest> messageMapper) where TRequest : class, IRequest
-        {
-            return messageMapper.GetType().GetMethods();
+            return messageMapper.GetType().GetMethod(nameof(IAmAMessageMapperAsync<TRequest>.MapToRequestAsync),
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                CallingConventions.Any,
+                new Type[] { typeof(Message), typeof(CancellationToken) },
+                null);
         }
 
         private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipelineAsync<TRequest> pipeline) where TRequest : class, IRequest

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Net.Mime;
+using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
 using Confluent.Kafka;
@@ -40,7 +41,7 @@ namespace Greetings.Ports.Mappers
         private readonly SerializationContext _serializationContext = new(MessageComponentType.Value, Topic);
         private const string Topic = "greeting.event";
 
-        public async Task<Message> MapToMessage(GreetingEvent request)
+        public async Task<Message> MapToMessageAsync(GreetingEvent request, CancellationToken cancellationToken = default)
         {
             var header = new MessageHeader(messageId: request.Id, topic: Topic, messageType: MessageType.MT_EVENT);
             //This uses the Confluent JSON serializer, which wraps Newtonsoft but also performs schema registration and validation
@@ -57,7 +58,7 @@ namespace Greetings.Ports.Mappers
             return new Message(header, body);
         }
 
-        public async Task<GreetingEvent> MapToRequest(Message message)
+        public async Task<GreetingEvent> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
         {
             var deserializer = new JsonDeserializer<GreetingEvent>();
             //This uses the Confluent JSON serializer, which wraps Newtonsoft but also performs schema registration and validation
