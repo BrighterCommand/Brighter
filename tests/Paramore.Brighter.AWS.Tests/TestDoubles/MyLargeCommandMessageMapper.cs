@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Attributes;
@@ -26,17 +27,19 @@ public class MyLargeCommandMessageMapper : IAmAMessageMapper<MyLargeCommand>
 public class MyLargeCommandMessageMapperAsync : IAmAMessageMapperAsync<MyLargeCommand>
 {
     [ClaimCheck(0, thresholdInKb: 5)]
-    public Task<Message> MapToMessage(MyLargeCommand request)
+    public async Task<Message> MapToMessage(MyLargeCommand request)
     {
-        return Task.FromResult(new Message(
+        using var memoryContentStream = new MemoryStream();
+        await JsonSerializer.SerializeAsync(memoryContentStream, request, new JsonSerializerOptions(JsonSerializerDefaults.General));
+        return new Message(
             new MessageHeader(request.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
-            new MessageBody(JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General))))
-        );
+            new MessageBody(memoryContentStream.ToArray()));
     }
 
     [RetrieveClaim(0, retain:false)]
-    public Task<MyLargeCommand> MapToRequest(Message message)
+    public async Task<MyLargeCommand> MapToRequest(Message message)
     {
-        return Task.FromResult(JsonSerializer.Deserialize<MyLargeCommand>(message.Body.Bytes));
+        using MemoryStream stream = new(message.Body.Bytes);
+        return await JsonSerializer.DeserializeAsync<MyLargeCommand>(stream);
     }
 }

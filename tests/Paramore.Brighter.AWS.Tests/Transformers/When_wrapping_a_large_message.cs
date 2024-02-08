@@ -36,6 +36,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
                     _ => new MyLargeCommandMessageMapperAsync())
                     );
+           
             mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
             
             _myCommand = new MyLargeCommand(6000);
