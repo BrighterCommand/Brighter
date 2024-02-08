@@ -30,13 +30,14 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
         public LargeMessagePayloadWrapTests()
         {
             //arrange
-            TransformPipelineBuilder.ClearPipelineCache();
+            TransformPipelineBuilderAsync.ClearPipelineCache();
 
             var mapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory(
-                    _ => new MyLargeCommandMessageMapper()),
-                    null);
-            mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+                new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
+                    _ => new MyLargeCommandMessageMapperAsync())
+                    );
+           
+            mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
             
             _myCommand = new MyLargeCommand(6000);
 
@@ -69,9 +70,9 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 .GetAwaiter()
                 .GetResult();
 
-            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+            var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
-            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync);
         }
 
         [Fact]
