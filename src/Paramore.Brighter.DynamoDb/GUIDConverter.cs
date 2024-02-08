@@ -9,10 +9,6 @@ namespace Paramore.Brighter.DynamoDb
         public DynamoDBEntry ToEntry(object value)
         {
             var uuid = (Guid)value;
-            if (uuid == null)
-                throw new InvalidOperationException(
-                    $"Supplied type was of type {value.GetType().Name} not Accounts.Application.CardDetails");
-
             var json = uuid.ToString();
 
             DynamoDBEntry entry = new Primitive

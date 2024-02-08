@@ -60,10 +60,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             headers.Add(header.Key, BitConverter.GetBytes(intValue));
                             break;
                         case Guid guidValue:
-                            headers.Add(header.Key, guidValue.ToByteArray());
+                            headers.Add(header.Key, guidValue.ToString().ToByteArray());
                             break;
                         case byte[] byteArray:
                             headers.Add(header.Key, byteArray);
+                            break;
+                        case double doubleValue:
+                            headers.Add(header.Key, BitConverter.GetBytes(doubleValue));
+                            break;
+                        case DateTime dateTimeValue:
+                            headers.Add(header.Key, dateTimeValue.ToString().ToByteArray());
                             break;
                         default:
                             headers.Add(header.Key, header.Value.ToString().ToByteArray());
