@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
@@ -31,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
     internal class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
     {
-        public Task<Message> MapToMessage(MyEvent request)
+        public Task<Message> MapToMessageAsync(MyEvent request, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<Message>();
             var header = new MessageHeader(request.Id, "MyEvent", MessageType.MT_EVENT);
@@ -41,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return tcs.Task;
         }
 
-        public async Task<MyEvent> MapToRequest(Message message)
+        public async Task<MyEvent> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
         {
             using var stream = new MemoryStream(message.Body.Bytes);
             stream.Position = 0;

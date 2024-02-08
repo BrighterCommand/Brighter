@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
@@ -45,13 +46,16 @@ namespace Paramore.Brighter
         /// Maps to message.
         /// </summary>
         /// <param name="request">The request.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>Message.</returns>
-        Task<Message> MapToMessage(TRequest request);
+        Task<Message> MapToMessageAsync(TRequest request, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Maps to request.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>TRequest.</returns>
-        Task<TRequest> MapToRequest(Message message);
+        Task<TRequest> MapToRequestAsync(Message message, CancellationToken cancellationToken = default);
     }
 }

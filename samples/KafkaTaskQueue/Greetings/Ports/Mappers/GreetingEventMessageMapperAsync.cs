@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System.IO;
 using Greetings.Ports.Commands;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
 
@@ -35,12 +36,12 @@ namespace Greetings.Ports.Mappers
         //NOTE: Typically you should use the Serdes provided by the Kafka client, but we're using the .NET serializer here
         //See the Schema Registry sample for an example of how to use the Confluent Serdes serializer
             
-        public async Task<Message> MapToMessage(GreetingEvent request)
+        public async Task<Message> MapToMessageAsync(GreetingEvent request, CancellationToken cancellationToken = default)
         {
            
             var header = new MessageHeader(messageId: request.Id, topic: "greeting.event", messageType: MessageType.MT_EVENT);
             var ms = new MemoryStream();
-            await JsonSerializer.SerializeAsync(ms, request, JsonSerialisationOptions.Options);
+            await JsonSerializer.SerializeAsync(ms, request, JsonSerialisationOptions.Options, cancellationToken);
             var body = new MessageBody(ms.ToArray());
             
             //This won't have repeats that need to go to the same partition, but it's a good example of how to set the partition key
@@ -50,10 +51,10 @@ namespace Greetings.Ports.Mappers
             return message;
         }
 
-        public async Task<GreetingEvent> MapToRequest(Message message)
+        public async Task<GreetingEvent> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
         {
             using var ms = new MemoryStream(message.Body.Bytes); 
-            var greetingCommand = await JsonSerializer.DeserializeAsync<GreetingEvent>(ms, JsonSerialisationOptions.Options);
+            var greetingCommand = await JsonSerializer.DeserializeAsync<GreetingEvent>(ms, JsonSerialisationOptions.Options, cancellationToken);
             return greetingCommand;
         }
     }
