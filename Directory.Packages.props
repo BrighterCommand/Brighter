@@ -62,7 +62,7 @@
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.QueryLogging" Version="3.0.0" />
-    <PackageVersion Include="Polly" Version="8.2.1" />
+    <PackageVersion Include="Polly" Version="8.3.0" />
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
