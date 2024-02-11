@@ -63,7 +63,7 @@ public class KafkaHeaderToBrighterTests
         readMessage.Header.Topic.Should().Be(message.Header.Topic);
         readMessage.Header.DelayedMilliseconds.Should().Be(message.Header.DelayedMilliseconds);
         readMessage.Header.HandledCount.Should().Be(message.Header.HandledCount);
-        //readMessage.Header.TimeStamp.ToString("u").Should().Be(message.Header.TimeStamp.ToString("u"));            
+        readMessage.Header.TimeStamp.ToString("u").Should().Be(message.Header.TimeStamp.ToString("u"));            
         
         //NOTE: Because we can only coerce the byte[] to a string for a unknown bag key, coercing to a specific
         //type has to be done by the user of the bag.
