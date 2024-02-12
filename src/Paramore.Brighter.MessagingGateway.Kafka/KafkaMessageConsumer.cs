@@ -470,7 +470,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     var offsets = listOffsets.Select(tpo =>
                         $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
                     var offsetAsString = string.Join(Environment.NewLine, offsets);
-                    s_logger.LogInformation($"Sweeping offsets: {Environment.NewLine} {{Offset}}", offsetAsString);
+                    s_logger.LogInformation("Sweeping offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
                 }
 
                 _consumer.Commit(listOffsets);
