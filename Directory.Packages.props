@@ -4,12 +4,12 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.3" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.9" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.300" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.18" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.43" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.300.42" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.42" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.24" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.49" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.300.48" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.48" />
     <PackageVersion Include="Azure.Identity" Version="1.10.4" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.17.2" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.19.1" />
@@ -44,7 +44,7 @@
     <PackageVersion Include="MySqlConnector" Version="2.3.5" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
-    <PackageVersion Include="Npgsql" Version="8.0.1" />
+    <PackageVersion Include="Npgsql" Version="8.0.2" />
     <PackageVersion Include="NUnit" Version="4.0.1" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.0.0">
       <PrivateAssets>all</PrivateAssets>
@@ -59,7 +59,7 @@
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.QueryLogging" Version="3.0.0" />
-    <PackageVersion Include="Polly" Version="8.2.1" />
+    <PackageVersion Include="Polly" Version="8.3.0" />
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
@@ -68,7 +68,7 @@
     <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="3.2.0" />
-    <PackageVersion Include="ServiceStack.Redis.Core" Version="8.0.0" />
+    <PackageVersion Include="ServiceStack.Redis.Core" Version="8.1.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.0" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
