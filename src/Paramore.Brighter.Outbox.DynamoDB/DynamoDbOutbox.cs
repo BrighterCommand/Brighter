@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -92,6 +91,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>       
         /// <param name="message">The message to be stored</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="transactionProvider"></param>
         public void Add(
             Message message, 
             int outBoxTimeout = -1, 
@@ -167,7 +167,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
-       /// <inheritdoc />
+        /// <inheritdoc />
         /// <summary>
         ///     Finds a command with the specified identifier.
         /// </summary>
@@ -207,16 +207,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             return messages;
         }
-
+        
         [Obsolete("Removed in v10, Please use OutstandingMessages instead.")]
-        IList<Message> IAmAnOutboxSync<Message>.Get(
-            int pageSize, 
-            int pageNumber, 
-            Dictionary<string, object> args)
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            throw new NotSupportedException();
+            throw new NotImplementedException();
         }
-
+        
         /// <summary>
         /// Get paginated list of Messages.
         /// </summary>
@@ -225,13 +222,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken"></param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of messages</returns>
-        Task<IList<Message>> IAmAnOutboxAsync<Message>.GetAsync(
-            int pageSize, 
-            int pageNumber, 
-            Dictionary<string, object> args,
-            CancellationToken cancellationToken)
+        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
-            throw new NotSupportedException();
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -239,6 +233,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="args"></param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(
             Guid id, 
@@ -300,6 +295,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="args"></param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             var message = _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig).Result;
@@ -314,9 +310,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         private static void MarkMessageDispatched(DateTime dispatchedAt, MessageItem message)
         {
-            dispatchedAt = dispatchedAt ?? DateTime.UtcNow;
-            message.DeliveryTime = dispatchedAt.Value.Ticks;
-            message.DeliveredAt = dispatchedAt.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+            message.DeliveryTime = dispatchedAt.Ticks;
+            message.DeliveredAt = dispatchedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         }
 
         /// <summary>
@@ -348,7 +343,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
-        void IAmAnOutboxSync<Message>.Delete(params Guid[] messageIds)
+        public void Delete(params Guid[] messageIds)
         {
             throw new NotImplementedException();
         }
@@ -359,6 +354,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="millisecondsDispatchedSince">How long ago as the message sent?</param>
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
+        /// <param name="args"></param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
@@ -368,8 +364,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            var now = DateTime.UtcNow;
-            
             if (args == null)
             {
                 throw new ArgumentException("Missing required argument", nameof(args));
@@ -383,18 +377,18 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
+        public async Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
 
         public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
-        {
-            throw new NotImplementedException();
-        }
-
-        Task<IEnumerable<Message>> IAmAnOutboxAsync<Message>.DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize,
-            CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
