@@ -46,7 +46,7 @@
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Npgsql" Version="8.0.2" />
     <PackageVersion Include="NUnit" Version="4.0.1" />
-    <PackageVersion Include="NUnit.Analyzers" Version="4.0.0">
+    <PackageVersion Include="NUnit.Analyzers" Version="4.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
