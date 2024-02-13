@@ -6,7 +6,7 @@
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.svg)](https://www.nuget.org/packages/Paramore.Brighter/) |
 | Documentation  |  [Technical Documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/)  |
 | Source  |https://github.com/BrighterCommand/Brighter |
-| Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, sqs, sns, kakfa, redis, c#, command, command dispatcher, command  processor, queue, distributed |
+| Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, sqs, sns, kafka, redis, c#, command, command dispatcher, command  processor, queue, distributed |
 
 ## What Scenarios Can You Use Brighter in?
 * When implementing a clean architecture (ports & adapters), one question is how to implement the interactor or port layer (sometimes called a mediator).

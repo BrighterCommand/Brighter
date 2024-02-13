@@ -17,7 +17,7 @@ public class BrighterServiceActivatorHealthCheck : IHealthCheck
 
     public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = new())
     {
-        var expectedConsumers = ((Dispatcher)_dispatcher).Connections.Sum(c => c.NoOfPeformers);
+        var expectedConsumers = ((Dispatcher)_dispatcher).Connections.Sum(c => c.NoOfPerformers);
         var activeConsumers = _dispatcher.Consumers.Count();
 
         if (expectedConsumers != activeConsumers)
@@ -39,8 +39,8 @@ public class BrighterServiceActivatorHealthCheck : IHealthCheck
         foreach (var cfg in config)
         {
             var sub = _dispatcher.Consumers.Where(c => c.SubscriptionName == cfg.Name).ToArray();
-            if (sub.Count() != cfg?.NoOfPeformers)
-                unhealthyHosts.Add($"{cfg.Name} has {sub.Count()} of {cfg.NoOfPeformers} expected consumers");
+            if (sub.Length != cfg?.NoOfPerformers)
+                unhealthyHosts.Add($"{cfg.Name} has {sub.Count()} of {cfg.NoOfPerformers} expected consumers");
         }
 
         return string.Join(";", unhealthyHosts);

@@ -203,10 +203,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration
                 );
-            }
+        }
 
             if (hasEventBus && useRpc)
-            {
+         {
                 ret = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus,
@@ -219,10 +219,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
 
             return ret;
-            }
+             }
 
         private static IPolicyRegistry<string> AddDefaults(IPolicyRegistry<string> policyRegistry)
-        {
+             {
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException(
                     "The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
@@ -232,10 +232,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     "The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
 
             return policyRegistry;
-        }
+             }
 
         private static object BuildCommandProcessor(IServiceProvider provider)
-        {
+             {
             var loggerFactory = provider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;
 
@@ -266,7 +266,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .Build();
 
             return commandProcessor;
-        }
+         }
 
         private static IBrighterBuilder ExternalBusBuilder(
             IBrighterBuilder brighterBuilder,
@@ -286,7 +286,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (outbox == null)
             {
                 outbox = new InMemoryOutbox();
-            }
+        }
 
             //we create the outbox from interfaces from the determined transaction type to prevent the need
             //to pass generic types as we know the transaction provider type
@@ -296,7 +296,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             foreach (Type i in outbox.GetType().GetInterfaces())
             {
                 if (i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType)
-                {
+        {
                     var outboxDescriptor = new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
                     serviceCollection.Add(outboxDescriptor);
                 }
@@ -306,10 +306,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     var asyncOutboxdescriptor = new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
                     serviceCollection.Add(asyncOutboxdescriptor);
                 }
-            }
+        }
 
             if (externalBusConfiguration.UseRpc)
-            {
+        {
                 serviceCollection.TryAddSingleton<IUseRpc>(new UseRpc(externalBusConfiguration.UseRpc,
                     externalBusConfiguration.ReplyQueueSubscriptions));
             }
@@ -367,7 +367,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 messageMapperRegistry.Register(messageMapper.Key, messageMapper.Value);
             }
-            
+
             foreach (var messageMapper in serviceCollectionMessageMapperRegistry.AsyncMappers)
             {
                 messageMapperRegistry.RegisterAsync(messageMapper.Key, messageMapper.Value);
@@ -384,14 +384,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmADynamoDbConnectionProvider).IsAssignableFrom(connectionProvider))
-            {
+        {
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbConnectionProvider),
                     connectionProvider, serviceLifetime));
-            }
+        }
         
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmADynamoDbTransactionProvider).IsAssignableFrom(transactionProvider))
-            {
+        {
                 //register the combined interface just in case
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbTransactionProvider),
                     transactionProvider, serviceLifetime));
@@ -407,14 +407,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmARelationalDbConnectionProvider).IsAssignableFrom(connectionProvider))
-            {
+        {
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmARelationalDbConnectionProvider),
                     connectionProvider, serviceLifetime));
-            }
+        }
         
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmATransactionConnectionProvider).IsAssignableFrom(transactionProvider))
-            {
+        {
                 //register the combined interface just in case
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmATransactionConnectionProvider),
                     transactionProvider, serviceLifetime));
@@ -429,10 +429,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="provider">The IoC container to build the transform factory over</param>
         /// <returns></returns>
         public static ServiceProviderTransformerFactory TransformFactory(IServiceProvider provider)
-        {
+            {
             return new ServiceProviderTransformerFactory(provider);
-        }
-        
+            }
+
         /// <summary>
         /// Creates transforms. Normally you don't need to call this, it is called by the builder for Brighter or
         /// the Service Activator

@@ -32,7 +32,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// class WrapPipeline
-    /// A pipeline with a source of a <see cref="MessageMapper"/> that:
+    /// A pipeline with a source of a <see cref="TransformPipeline{TRequest}.MessageMapper"/> that:
     /// Takes a request and maps it to a message
     /// Runs transforms on that message
     /// </summary>

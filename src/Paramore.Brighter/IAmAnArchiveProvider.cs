@@ -22,7 +22,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Archive messages in Parallel
         /// </summary>
-        /// <param name="message">Message to send</param>
+        /// <param name="messages">Messages to send</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>IDs of successfully archived messages</returns>
         Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken);

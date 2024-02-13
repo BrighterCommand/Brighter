@@ -9,7 +9,7 @@ namespace Greetings.Adaptors.Services
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private static readonly SemaphoreSlim _transactionSempahore = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim _transactionSemaphore = new SemaphoreSlim(1, 1);
 
         private readonly GreetingsDataContext _dataContext;
         private IDbContextTransaction _transaction;
@@ -24,7 +24,7 @@ namespace Greetings.Adaptors.Services
             // Semaphore is implemented to protected against potential threading issues.
             if (_transaction == null)
             {
-                await _transactionSempahore.WaitAsync(cancellationToken);
+                await _transactionSemaphore.WaitAsync(cancellationToken);
                 try
                 {
                     if (_transaction == null)
@@ -34,7 +34,7 @@ namespace Greetings.Adaptors.Services
                 }
                 finally
                 {
-                    _transactionSempahore.Release();
+                    _transactionSemaphore.Release();
                 }
             }
         }
@@ -43,15 +43,15 @@ namespace Greetings.Adaptors.Services
         {
             if (_transaction != null)
             {
-                await _transactionSempahore.WaitAsync(cancellationToken);
+                await _transactionSemaphore.WaitAsync(cancellationToken);
                 try
                 {
-                    _transaction?.Commit();
+                    await (_transaction?.CommitAsync(cancellationToken) ?? Task.CompletedTask);
                     _transaction = null;
                 }
                 finally
                 {
-                    _transactionSempahore.Release();
+                    _transactionSemaphore.Release();
                 }
             }
         }
@@ -59,15 +59,15 @@ namespace Greetings.Adaptors.Services
         {
             if (_transaction != null)
             {
-                await _transactionSempahore.WaitAsync(cancellationToken);
+                await _transactionSemaphore.WaitAsync(cancellationToken);
                 try
                 {
-                    _transaction?.Rollback();
+                    await (_transaction?.RollbackAsync(cancellationToken) ?? Task.CompletedTask);
                     _transaction = null;
                 }
                 finally
                 {
-                    _transactionSempahore.Release();
+                    _transactionSemaphore.Release();
                 }
             }
         }
