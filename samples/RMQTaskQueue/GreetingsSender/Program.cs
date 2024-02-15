@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2017 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,72 +24,71 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Transactions;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Serilog;
-using Serilog.Extensions.Logging;
+using RabbitMQ.Client;
 
-namespace GreetingsSender
+
+//private static ActivitySource source = new ActivitySource("GreetingsSender", "1.0.0");
+
+
+HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+
+builder.AddServiceDefaults();
+builder.AddRabbitMQ("messaging");
+
+RmqMessagingGatewayConnection rmqConnection = new()
 {
-    class Program
+    AmpqUri = new AmqpUriSpecification(builder.Services.BuildServiceProvider().GetService<IConnectionFactory>().Uri),
+    Exchange = new Exchange("paramore.brighter.exchange")
+};
+
+IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
+    rmqConnection,
+    new RmqPublication[]
     {
-        static void Main(string[] args)
+        new()
         {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .CreateLogger();
-
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
-
-            var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
-            };
-
-            var producerRegistry = new RmqProducerRegistryFactory(
-                rmqConnection,
-                new RmqPublication[]
-                {
-                    new()
-                    {
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
-                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        MakeChannels =OnMissingChannel.Create,
-                        Topic = new RoutingKey("greeting.event")
-                    },
-                    new()
-                    {
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
-                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        MakeChannels =OnMissingChannel.Create,
-                        Topic = new RoutingKey("farewell.event")                            
-                    }
-                }).Create();
-            
-            serviceCollection.AddBrighter()
-                .UseExternalBus((configure) =>
-                {
-                    configure.ProducerRegistry = producerRegistry;
-                })
-                .AutoFromAssemblies();
-
-            var serviceProvider = serviceCollection.BuildServiceProvider();
-
-            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-
-            commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
-            commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
+            MaxOutStandingMessages = 5,
+            MaxOutStandingCheckIntervalMilliSeconds = 500,
+            WaitForConfirmsTimeOutInMilliseconds = 1000,
+            MakeChannels = OnMissingChannel.Create,
+            Topic = new RoutingKey("greeting.event")
+        },
+        new()
+        {
+            MaxOutStandingMessages = 5,
+            MaxOutStandingCheckIntervalMilliSeconds = 500,
+            WaitForConfirmsTimeOutInMilliseconds = 1000,
+            MakeChannels = OnMissingChannel.Create,
+            Topic = new RoutingKey("farewell.event")
         }
-    }
-}
+    }).Create();
+
+builder.Services.AddBrighter()
+    .UseExternalBus(configure =>
+    {
+        configure.ProducerRegistry = producerRegistry;
+    })
+    .AutoFromAssemblies();
+
+IHost host = builder.Build();
+
+IAmACommandProcessor commandProcessor = host.Services.GetService<IAmACommandProcessor>();
+
+Console.ReadKey();
+// using (var activity = source.StartActivity("Post"))
+//{
+commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
+//}
+
+//using (var activity = source.StartActivity("Post"))
+//{
+commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
+//}
+
+host.Run();

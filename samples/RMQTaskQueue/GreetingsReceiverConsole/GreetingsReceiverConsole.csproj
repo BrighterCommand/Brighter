@@ -5,8 +5,10 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
+    <ProjectReference Include="..\ServiceDefaults\ServiceDefaults.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Aspire.RabbitMQ.Client" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />

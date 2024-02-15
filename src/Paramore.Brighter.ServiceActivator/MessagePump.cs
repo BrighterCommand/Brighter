@@ -53,7 +53,7 @@ namespace Paramore.Brighter.ServiceActivator
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
 
         private static readonly ActivitySource _activitySource = new ActivitySource("Paramore.Brighter.ServiceActivator",
-            Assembly.GetAssembly(typeof(CommandProcessor)).GetName().Version.ToString());
+            Assembly.GetAssembly(typeof(CommandProcessor))?.GetName().Version?.ToString());
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private int _unacceptableMessageCount = 0;

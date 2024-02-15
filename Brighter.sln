@@ -337,6 +337,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.ServiceAc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Sqlite.Dapper", "src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj", "{3384FBF0-5DCB-452D-8288-FAD1D0023089}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AppHost", "samples\RMQTaskQueue\AppHost\AppHost.csproj", "{995A09D0-C440-4E88-A0C6-7AF93D82CA82}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceDefaults", "samples\RMQTaskQueue\ServiceDefaults\ServiceDefaults.csproj", "{69AF4ECC-FABB-431F-89CF-0AF972BF197F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1931,6 +1935,30 @@ Global
 		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|x86.ActiveCfg = Release|Any CPU
 		{3384FBF0-5DCB-452D-8288-FAD1D0023089}.Release|x86.Build.0 = Release|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Debug|x86.Build.0 = Debug|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Release|Any CPU.Build.0 = Release|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Release|x86.ActiveCfg = Release|Any CPU
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82}.Release|x86.Build.0 = Release|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Debug|x86.Build.0 = Debug|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Release|x86.ActiveCfg = Release|Any CPU
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2044,6 +2072,8 @@ Global
 		{D7361C21-AB4D-4E82-8094-FB86C2ED1800} = {65F8C2DE-0CB6-4102-8187-A247F1D5D3D7}
 		{18742337-075A-40D6-B67F-91F5894A50C3} = {65F8C2DE-0CB6-4102-8187-A247F1D5D3D7}
 		{AA2AA086-9B8A-4910-A793-E92B1E352351} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
+		{995A09D0-C440-4E88-A0C6-7AF93D82CA82} = {E9748DC0-6E72-4634-AF49-428F806E03B0}
+		{69AF4ECC-FABB-431F-89CF-0AF972BF197F} = {E9748DC0-6E72-4634-AF49-428F806E03B0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
