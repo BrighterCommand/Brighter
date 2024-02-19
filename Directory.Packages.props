@@ -4,7 +4,6 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    
     <PackageVersion Include="Aspire.Hosting" Version="8.0.0-preview.3.24105.21" />
     <PackageVersion Include="Aspire.RabbitMQ.Client" Version="8.0.0-preview.3.24105.21" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.9" />
@@ -30,6 +29,7 @@
     <PackageVersion Include="FluentMigrator" Version="5.0.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="5.0.0" />
     <PackageVersion Include="MessagePack" Version="2.5.140" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.1.5" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="8.0.1" />
@@ -41,10 +41,10 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="8.1.0"/>
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="8.1.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="8.0.0-preview.3.24105.21"/>
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="8.0.0-preview.3.24105.21" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageVersion Include="MySqlConnector" Version="2.3.5" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
@@ -60,13 +60,13 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.1" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0-alpha.1"/>
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0-alpha.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.Zipkin" Version="1.7.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0-alpha.1"/>
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0-alpha.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.6.0-beta.2"/>
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.6.0-beta.2"/>
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.5.1"/>
+    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.6.0-beta.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.6.0-beta.2" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.5.1" />
     <PackageVersion Include="Paramore.Darker" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="3.0.0" />
