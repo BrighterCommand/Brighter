@@ -8,10 +8,8 @@ namespace Paramore.Brighter.DynamoDb
     {
         public DynamoDBEntry ToEntry(object value)
         {
-            var uuid = value as Guid? ??
-                       throw new InvalidOperationException(
-                           $"Supplied type was of type {value.GetType().Name} not Guid");
 
+            var uuid = (Guid)value;
             var json = uuid.ToString();
 
             DynamoDBEntry entry = new Primitive

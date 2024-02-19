@@ -119,8 +119,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
             receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
             receivedMessage.Body.Value.Should().Be(message.Body.Value);
-            receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
+            receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ")
+                .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ"));
             receivedCommand.Id.Should().Be(command.Id);
             receivedCommand.Value.Should().Be(command.Value);
         }
