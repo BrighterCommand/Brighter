@@ -4,14 +4,14 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.9" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.13" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.300" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.24" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.49" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.300.48" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.48" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.28" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.53" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.301" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.52" />
     <PackageVersion Include="Azure.Identity" Version="1.10.4" />
-    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.17.2" />
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.17.3" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.19.1" />
     <PackageVersion Include="Confluent.Kafka" Version="2.3.0" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.3.0" />
@@ -28,13 +28,13 @@
     <PackageVersion Include="FluentMigrator.Runner" Version="5.0.0" />
     <PackageVersion Include="MessagePack" Version="2.5.140" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.1.5" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.0" />
@@ -46,7 +46,7 @@
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Npgsql" Version="8.0.2" />
     <PackageVersion Include="NUnit" Version="4.0.1" />
-    <PackageVersion Include="NUnit.Analyzers" Version="4.0.0">
+    <PackageVersion Include="NUnit.Analyzers" Version="4.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
@@ -57,7 +57,7 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.Zipkin" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.1" />
     <PackageVersion Include="Paramore.Darker" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="3.0.0" />
@@ -75,9 +75,9 @@
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.0" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
-    <PackageVersion Include="System.Text.Json" Version="8.0.1" />
-    <PackageVersion Include="xunit" Version="2.6.6" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.6">
+    <PackageVersion Include="System.Text.Json" Version="8.0.2" />
+    <PackageVersion Include="xunit" Version="2.7.0" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.7">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
@@ -101,22 +101,22 @@
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' ">
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="7.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="7.0.15" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.15" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="7.0.16" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.16" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.16" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.16" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="7.0.16" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.16" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.1" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0-beta.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.2" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.2" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>
     <GlobalPackageReference Include="MinVer" Version="4.3.0" />
