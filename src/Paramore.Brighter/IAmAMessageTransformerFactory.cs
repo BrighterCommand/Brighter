@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Releases the specified transformer.
         /// </summary>
-        /// <param name="transformerType">The transformer</param>
+        /// <param name="transformer">The transformer</param>
         void Release(IAmAMessageTransform transformer); 
     }
 }

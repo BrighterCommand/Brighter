@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _serviceCollection = serviceCollection;
             _lifetime = lifetime;
         }
-
+        
         /// <summary>
         /// Register a mapper with the collection (generic version)
         /// </summary>
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, _lifetime));
             Mappers.Add(message, mapper);
         }
-        
+
         /// <summary>
         /// Add a mapper to the collection
         /// </summary>

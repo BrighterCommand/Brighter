@@ -40,7 +40,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Class Dispatcher.
     /// The 'core' Service Activator class, the Dispatcher controls and co-ordinates the creation of readers from channels, and dispatching the commands and
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
-    /// the stop and start of individual connections through <see cref="Open"/> and <see cref="Shut"/>
+    /// the stop and start of individual connections through <see cref="Open(string)"/> and <see cref="Shut(string)"/>
     /// </summary>
     public class Dispatcher : IDispatcher
     {
@@ -252,7 +252,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Connections.Select(s => new DispatcherStateItem()
             {
                 Name = s.Name,
-                ExpectPerformers = s.NoOfPeformers,
+                ExpectPerformers = s.NoOfPerformers,
                 Performers = _consumers.Where(c => c.Value.SubscriptionName == s.Name).Select(c => new PerformerInformation()
                 {
                     Name = c.Value.Name,
@@ -264,7 +264,7 @@ namespace Paramore.Brighter.ServiceActivator
         public void SetActivePerformers(string connectionName, int numberOfPerformers)
         {
             var subscription = Connections.SingleOrDefault(c => c.Name == connectionName);
-            var currentPerformers = subscription.NoOfPeformers;
+            var currentPerformers = subscription.NoOfPerformers;
             if(currentPerformers == numberOfPerformers)
                 return;
 
@@ -360,7 +360,7 @@ namespace Paramore.Brighter.ServiceActivator
             var list = new List<Consumer>();
             subscriptions.Each(subscription =>
             {
-                for (var i = 0; i < subscription.NoOfPeformers; i++)
+                for (var i = 0; i < subscription.NoOfPerformers; i++)
                 {
                     list.Add(CreateConsumer(subscription, i + 1));
                 }

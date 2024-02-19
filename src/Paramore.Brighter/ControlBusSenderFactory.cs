@@ -37,7 +37,6 @@ namespace Paramore.Brighter
         /// <summary>
         /// Creates the specified configuration.
         /// </summary>
-        /// <param name="logger">The logger to use</param>
         /// <param name="outbox">The outbox for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
         public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry)

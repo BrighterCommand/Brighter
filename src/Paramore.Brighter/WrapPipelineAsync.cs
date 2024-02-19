@@ -79,7 +79,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public async Task<Message> WrapAsync(TRequest request, CancellationToken cancellationToken = default)
         {
-            var message = await MessageMapper.MapToMessage(request);
+            var message = await MessageMapper.MapToMessageAsync(request, cancellationToken);
             await Transforms.EachAsync(async transform => message = await transform.WrapAsync(message, cancellationToken));
             return message;
         }

@@ -18,7 +18,7 @@ public class AsyncLargeMessagePayloadWrapTests
     public AsyncLargeMessagePayloadWrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();
+        TransformPipelineBuilderAsync.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             null,

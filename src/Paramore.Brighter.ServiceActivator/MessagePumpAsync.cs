@@ -88,20 +88,21 @@ namespace Paramore.Brighter.ServiceActivator
             return RunTranslate(TranslateAsync, message);
         }
 
-        private static void RunDispatch(Action<TRequest> act, TRequest request)
+        private static void RunDispatch(Action<TRequest, CancellationToken> act, TRequest request, CancellationToken cancellationToken = default)
         {
             if (act == null) throw new ArgumentNullException(nameof(act));
 
             var prevCtx = SynchronizationContext.Current;
+            
             try
             {
                 // Establish the new context
                 var context = new BrighterSynchronizationContext();
                 SynchronizationContext.SetSynchronizationContext(context);
-
+                
                 context.OperationStarted();
-
-                act(request);
+                
+                act(request, cancellationToken);
 
                 context.OperationCompleted();
 
@@ -114,7 +115,7 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
         
-        private static TRequest RunTranslate(Func<Message, Task<TRequest>> act, Message message)
+        private static TRequest RunTranslate(Func<Message, CancellationToken, Task<TRequest>> act, Message message, CancellationToken cancellationToken = default)
         {
             if (act == null) throw new ArgumentNullException(nameof(act));
 
@@ -127,7 +128,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                 context.OperationStarted();
 
-                var future = act(message);
+                var future = act(message, cancellationToken);
                 
                 future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
 
@@ -150,21 +151,21 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
         
-        private async void PublishAsync(TRequest request)
+        private async void PublishAsync(TRequest request, CancellationToken cancellationToken = default)
         {
-            await CommandProcessorProvider.Get().PublishAsync(request, continueOnCapturedContext: true);
+            await CommandProcessorProvider.Get().PublishAsync(request, continueOnCapturedContext: true, cancellationToken);
         }
 
-        private async void SendAsync(TRequest request)
+        private async void SendAsync(TRequest request, CancellationToken cancellationToken = default)
         {
-            await CommandProcessorProvider.Get().SendAsync(request, continueOnCapturedContext: true);
+            await CommandProcessorProvider.Get().SendAsync(request, continueOnCapturedContext: true, cancellationToken);
         }
 
-        private async Task<TRequest> TranslateAsync(Message message)
+        private async Task<TRequest> TranslateAsync(Message message, CancellationToken cancellationToken = default)
         {
             try
             {
-                return await _unwrapPipeline.UnwrapAsync(message);
+                return await _unwrapPipeline.UnwrapAsync(message, cancellationToken);
             }
             catch (ConfigurationException)
             {

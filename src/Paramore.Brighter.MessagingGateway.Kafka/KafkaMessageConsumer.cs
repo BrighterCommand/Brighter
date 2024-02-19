@@ -34,7 +34,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    /// <inheritdoc />
+    /// <inheritdoc cref="Paramore.Brighter.IAmAMessageConsumer" />
     /// <summary>
     /// Class KafkaMessageConsumer is an implementation of <see cref="IAmAMessageConsumer"/>
     /// and provides the facilities to consume messages from a Kafka broker for a topic
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (configuration is null)
             {
-                throw new ConfigurationException("You must set a KafkaMessaginGatewayConfiguration to connect to a broker");
+                throw new ConfigurationException("You must set a KafkaMessagingGatewayConfiguration to connect to a broker");
             }
             
             if (routingKey is null)
@@ -178,7 +178,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 })
                 .SetPartitionsRevokedHandler((consumer, list) =>
                 {
-                    _consumer.Commit(list);
+                    consumer.Commit(list);
                     var revokedPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
                     s_logger.LogInformation("Partitions for consumer revoked {Channels}", string.Join(",", revokedPartitions));
@@ -200,7 +200,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 })
                 .Build();
 
-            s_logger.LogInformation("Kakfa consumer subscribing to {Topic}", Topic);
+            s_logger.LogInformation("Kafka consumer subscribing to {Topic}", Topic);
             _consumer.Subscribe(new []{ Topic.Value });
 
             _creator = new KafkaMessageCreator();
@@ -260,8 +260,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
         /// thus skipping over anything that exists at that point.
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         public void Purge()
         {
             if (!_consumer.Assignment.Any())
@@ -280,7 +278,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
-        // <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
+        /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
         public Message[] Receive(int timeoutInMilliseconds)
         {
             try
@@ -296,7 +294,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     CheckHasPartitions();
                     
-                    s_logger.LogDebug($"No messages available from Kafka stream");
+                    s_logger.LogDebug("No messages available from Kafka stream");
                     return new Message[] {new Message()};
                 }
 
@@ -344,7 +342,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Rejects the specified message. This is just a commit of the offset to move past the record without processing it
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         public void Reject(Message message)
         {
             Acknowledge(message);
@@ -552,7 +549,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch (Exception ex)
             {
                 //this may happen if the offset is already committed
-                s_logger.LogDebug("Error committing the current offset to Kakfa before closing: {ErrorMessage}", ex.Message);
+                s_logger.LogDebug("Error committing the current offset to Kafka before closing: {ErrorMessage}", ex.Message);
             }
         }
 

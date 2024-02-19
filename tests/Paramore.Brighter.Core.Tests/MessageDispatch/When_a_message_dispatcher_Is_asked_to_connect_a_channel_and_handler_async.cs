@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { connection }, null, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapperAsync().MapToMessage(@event).Result;
+            var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event).Result;
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
