@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Aspire.RabbitMQ.Client;
 using System;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
@@ -32,6 +33,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using RabbitMQ.Client;
 using Serilog;
 
 namespace GreetingsReceiverConsole
@@ -46,52 +48,56 @@ namespace GreetingsReceiverConsole
                 .WriteTo.Console()
                 .CreateLogger();
 
-            var host = new HostBuilder()
-                .ConfigureServices((hostContext, services) =>
+            var subscriptions = new Subscription[]
+            {
+                new RmqSubscription<GreetingEvent>(
+                    new SubscriptionName("paramore.example.greeting"),
+                    new ChannelName("greeting.event"),
+                    new RoutingKey("greeting.event"),
+                    timeoutInMilliseconds: 200,
+                    isDurable: true,
+                    highAvailability: true,
+                    makeChannels: OnMissingChannel
+                        .Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
+                new RmqSubscription<FarewellEvent>(
+                    new SubscriptionName(
+                        "paramore.example.farewell"), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
+                    new ChannelName("farewell.event"),
+                    new RoutingKey("farewell.event"),
+                    timeoutInMilliseconds: 200,
+                    isDurable: true,
+                    highAvailability: true,
+                    makeChannels: OnMissingChannel.Create)
+            };
 
+            var builder = new HostApplicationBuilder();
+
+
+            builder.AddServiceDefaults();
+            builder.AddRabbitMQ("messaging");
+            builder.Logging.AddSerilog();
+
+            var rmqConnection = new RmqMessagingGatewayConnection
+            {
+                AmpqUri = new AmqpUriSpecification(builder.Services.BuildServiceProvider()
+                    .GetService<IConnectionFactory>().Uri),
+                Exchange = new Exchange("paramore.brighter.exchange")
+            };
+
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+
+            builder.Services.AddServiceActivator(options =>
                 {
-                    var subscriptions = new Subscription[]
-                    {
-                        new RmqSubscription<GreetingEvent>(
-                            new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName("greeting.event"),
-                            new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 200,
-                            isDurable: true,
-                            highAvailability: true,
-                            makeChannels: OnMissingChannel.Create),   //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
-                        new RmqSubscription<FarewellEvent>(
-                            new SubscriptionName("paramore.example.farewell"), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
-                            new ChannelName("farewell.event"),
-                            new RoutingKey("farewell.event"),
-                            timeoutInMilliseconds: 200,
-                            isDurable: true,
-                            highAvailability: true,
-                            makeChannels: OnMissingChannel.Create)
-                        };
+                    options.Subscriptions = subscriptions;
+                    options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
 
-                    var rmqConnection = new RmqMessagingGatewayConnection
-                    {
-                        AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                        Exchange = new Exchange("paramore.brighter.exchange")
-                    };
 
-                    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
-                    services.AddServiceActivator(options =>
-                    {
-                        options.Subscriptions = subscriptions;
-                        options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                    })
-                    .AutoFromAssemblies();
-
-                    
-                    services.AddHostedService<ServiceActivatorHostedService>();
                 })
-                .UseConsoleLifetime()
-                .UseSerilog()
-                .Build();
+                .AutoFromAssemblies();
 
+            builder.Services.AddHostedService<ServiceActivatorHostedService>();
+
+            using var host = builder.Build();
             await host.RunAsync();
         }
     }
