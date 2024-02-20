@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             string tableName = GetTableName<T>(docType);
 
             var createTableRequest = new CreateTableRequest(tableName, GetPrimaryKey<T>(docType).ToList());
-            AddTableProvisionedThrougput<T>(provisionedThroughput, createTableRequest);
+            AddTableProvisionedThroughput<T>(provisionedThroughput, createTableRequest);
             createTableRequest.AttributeDefinitions.AddRange(GetAttributeDefinitions<T>(docType));
             createTableRequest.GlobalSecondaryIndexes.AddRange(GetGlobalSecondaryIndices<T>(docType).Select(entry => entry.Value));
             AddGSIProvisionedThroughput<T>(provisionedThroughput, createTableRequest);
@@ -119,9 +119,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
                 {
                     if (provisonedThroughput.GSIThroughputs.TryGetValue(globalSecondaryIndex.IndexName,
-                        out ProvisionedThroughput gsiProvisonedThroughput))
+                        out ProvisionedThroughput provisionedThroughput))
                     {
-                        globalSecondaryIndex.ProvisionedThroughput = gsiProvisonedThroughput;
+                        globalSecondaryIndex.ProvisionedThroughput = provisionedThroughput;
                     }
                     else
                     {
@@ -147,12 +147,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             gsiMap.Add(gsi.IndexName, gsi);
         }
          
-        private void AddTableProvisionedThrougput<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput,
+        private void AddTableProvisionedThroughput<T>(DynamoDbCreateProvisionedThroughput provisionedThroughput,
             CreateTableRequest createTableRequest)
         {
-            if (provisonedThroughput != null)
+            if (provisionedThroughput != null)
             {
-                createTableRequest.ProvisionedThroughput = provisonedThroughput.Table;
+                createTableRequest.ProvisionedThroughput = provisionedThroughput.Table;
             }
             else
             {

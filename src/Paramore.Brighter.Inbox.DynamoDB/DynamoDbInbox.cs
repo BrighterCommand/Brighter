@@ -45,8 +45,6 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <summary>
         ///     Initialises a new instance of the <see cref="DynamoDbInbox"/> class.
         /// </summary>
-        /// <param name="context">The DynamoDBContext</param>
-        /// <param name="configuration">The DynamoDB Operation Configuration</param>
         /// <param name="client">The Amazon Dynamo Db client to use</param>
         public DynamoDbInbox(IAmazonDynamoDB client, DynamoDbInboxConfiguration configuration)
         {
@@ -125,7 +123,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
+        /// <returns><see langword="true"/> if Command exists, otherwise <see langword="false"/></returns>
         public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
        {
            try
@@ -147,7 +145,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>        
         /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
+        /// <returns><see langword="true"/> if Command exists, otherwise <see langword="false"/></returns>
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             return ExistsAsync<T>(id, contextKey).Result;

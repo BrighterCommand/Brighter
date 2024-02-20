@@ -37,10 +37,10 @@ namespace Paramore.Brighter
     // Wrapping the Command Processor in this class helps to alleviate that issue, by taking a dependency on a seperate interface.
     // What goes over a control bus?
     // The Control Bus is used carry the following types of messages:
-    //      Configuration - Allows runtime configuration of a service activator node, including stopping and starting, adding and removing of channels, control of resources allocated to channels.
-    //      Heartbeat - A ping to service activator node to determine if it is still 'alive'. The node returns a message over a private queue established by the caller.The message also displays diagnostic information on the health of the node.
-    //      Exceptions— Any exceptions generated on the node may be sent by the Control Bus to monitoring systems.
-    //      Statistics— Each service activator node broadcasts statistics about the processing of messages which can be collated by a listener to the control bus to calculate the nunber of messages processes, average throughput, average time to process a message, and so on.This data is split out by message type, so we can aggregate results.
+    ///     Configuration - Allows runtime configuration of a service activator node, including stopping and starting, adding and removing of channels, control of resources allocated to channels.
+    ///     Heartbeat - A ping to service activator node to determine if it is still 'alive'. The node returns a message over a private queue established by the caller.The message also displays diagnostic information on the health of the node.
+    ///     Exceptions— Any exceptions generated on the node may be sent by the Control Bus to monitoring systems.
+    ///     Statistics— Each service activator node broadcasts statistics about the processing of messages which can be collated by a listener to the control bus to calculate the number of messages processes, average throughput, average time to process a message, and so on.This data is split out by message type, so we can aggregate results.
     /// 
     public class ControlBusSender : IAmAControlBusSender, IAmAControlBusSenderAsync, IDisposable
     {

@@ -50,7 +50,10 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
              //Assert
              foreach (var key in expectedBag.Keys)
              {
-                 if (key != "myArrayKey") deserializedHeader.Bag[key].Should().Be(expectedBag[key]);
+                 if (key != "myArrayKey")
+                 {
+                     deserializedHeader.Bag[key].Should().Be(expectedBag[key]);
+                 }
                  if (key == "myArrayKey")
                  {
                      var expectedVals = (int[])expectedBag[key];

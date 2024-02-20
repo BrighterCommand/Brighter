@@ -65,7 +65,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
             _messageQueue = new ConcurrentQueue<Message>();
         }
 
-        public virtual Message Receive(int timeoutinMilliseconds)
+        public virtual Message Receive(int timeoutInMilliseconds)
         {
             return _messageQueue.TryDequeue(out Message message) ? message : new Message();
         }

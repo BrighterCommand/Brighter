@@ -78,7 +78,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines the retry strategy when communication with the Work Queue fails.
-        /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
+        /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
         public const string RETRYPOLICY = "Paramore.Brighter.CommandProcessor.RetryPolicy";
@@ -744,7 +744,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Flushes the message box message given by <param name="posts"> to the broker.
+        /// Flushes the message box message given by <param name="posts"/> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="posts">The ids to flush</param>

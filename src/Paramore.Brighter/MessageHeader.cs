@@ -149,6 +149,7 @@ namespace Paramore.Brighter
         /// </summary>
         public MessageTelemetry Telemetry { get; private set; }
 
+        /// <summary>
         /// Intended for serialization, prefer a parameterized constructor in application code as a better 'pit of success'
         /// </summary>
         public MessageHeader() { }
@@ -275,6 +276,7 @@ namespace Paramore.Brighter
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageHeader other)
         {
+            if (ReferenceEquals(null, other)) return false;
             return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType;
         }
 
