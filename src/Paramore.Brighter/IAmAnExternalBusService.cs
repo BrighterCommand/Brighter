@@ -47,30 +47,6 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null);
 
         /// <summary>
-        /// Do we have an async outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        bool HasAsyncOutbox();
-
-        /// <summary>
-        /// Do we have an async bulk outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        bool HasAsyncBulkOutbox();
-
-        /// <summary>
-        /// Do we have a synchronous outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        bool HasOutbox();
-
-        /// <summary>
-        /// Do we have a synchronous bulk outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        bool HasBulkOutbox();
-
-        /// <summary>
         /// Retry an action via the policy engine
         /// </summary>
         /// <param name="action">The Action to try</param>

@@ -199,6 +199,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 //discard message
             }
 
+            public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
+            {
+               //discard message 
+            }
+
             public Message Get(Guid messageId, int outBoxTimeout = -1)
             {
                  return null;
@@ -212,18 +217,18 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
                 int outboxTimeout = -1, Dictionary<string, object> args = null)
             {
-                return new Message[0];
+                return Array.Empty<Message>();
             }
 
             public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
             {
-                return new Message[0]; 
+                return Array.Empty<Message>(); 
             }
 
             public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
                 Dictionary<string, object> args = null)
             {
-                return new Message[0]; 
+                return Array.Empty<Message>(); 
             }
 
             public void Delete(params Guid[] messageIds)
@@ -233,7 +238,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
             {
-               return new Message[0]; 
+               return Array.Empty<Message>(); 
             }
         }
     }

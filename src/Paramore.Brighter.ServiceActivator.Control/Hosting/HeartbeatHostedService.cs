@@ -9,7 +9,7 @@ public class HeartbeatHostedService : IHostedService
 {
     private readonly IDispatcher _dispatcher;
     private readonly ILogger _logger;
-    private Timer _timer;
+    private Timer? _timer;
 
     private int _heartbeatInterval = 5;
 
@@ -26,14 +26,14 @@ public class HeartbeatHostedService : IHostedService
         return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping heartbeat service");
-        _timer.DisposeAsync();
-        return Task.CompletedTask;
+        if (_timer != null)
+            await _timer.DisposeAsync();
     }
 
-    private void SendHeartbeat(object state)
+    private void SendHeartbeat(object? state)
     {
         _logger.LogInformation("Sending Heartbeat");
 

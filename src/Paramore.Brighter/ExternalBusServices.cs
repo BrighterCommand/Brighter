@@ -113,7 +113,7 @@ namespace Paramore.Brighter
             var written = await RetryAsync(
                 async ct =>
                 {
-                    await _asyncOutbox.AddAsync(message, _outboxTimeout, ct, overridingTransactionProvider)
+                    await _asyncOutbox.AddAsync(message, _outboxTimeout, overridingTransactionProvider, ct)
                         .ConfigureAwait(continueOnCapturedContext);
                 },
                 continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
@@ -133,7 +133,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allow cancellation of the message</param>
         /// <param name="overridingTransactionProvider ">The provider of the transaction for the outbox</param>
         /// <exception cref="ChannelFailureException">Thrown if we cannot write to the outbox</exception>
-        public async Task AddToOutboxAsync<TTransaction>(
+        public async Task AddToOutboxAsync(
             IEnumerable<TMessage> messages,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
             bool continueOnCapturedContext = false,
@@ -141,27 +141,17 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-#pragma warning disable CS0618
-            if (_asyncOutbox is IAmABulkOutboxAsync<TMessage, TTransaction> box)
-#pragma warning restore CS0618
+            foreach (var chunk in ChunkMessages(messages))
             {
-                foreach (var chunk in ChunkMessages(messages))
-                {
-                    var written = await RetryAsync(
-                        async ct =>
-                        {
-                            await box.AddAsync(chunk, _outboxTimeout, ct, overridingTransactionProvider)
-                                .ConfigureAwait(continueOnCapturedContext);
-                        },
-                        continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                var written = await RetryAsync(
+                    async ct =>
+                    {
+                        await _asyncOutbox.AddAsync(chunk, _outboxTimeout, overridingTransactionProvider, ct).ConfigureAwait(continueOnCapturedContext);
+                    },
+                    continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
-                    if (!written)
-                        throw new ChannelFailureException($"Could not write {chunk.Count()} requests to the outbox");
-                }
-            }
-            else
-            {
-                throw new InvalidOperationException($"{_asyncOutbox.GetType()} does not implement IAmABulkOutboxAsync");
+                if (!written)
+                    throw new ChannelFailureException($"Could not write {chunk.Count()} requests to the outbox");
             }
         }
 
@@ -190,29 +180,20 @@ namespace Paramore.Brighter
                 tags: new ActivityTagsCollection { { "MessageId", message.Id } }));
         }
 
-        public void AddToOutbox<TTransaction>(
+        public void AddToOutbox(
             IEnumerable<TMessage> messages,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
             )
         {
             CheckOutboxOutstandingLimit();
 
-#pragma warning disable CS0618
-            if (_outBox is IAmABulkOutboxSync<TMessage, TTransaction> box)
-#pragma warning restore CS0618
+            foreach (var chunk in ChunkMessages(messages))
             {
-                foreach (var chunk in ChunkMessages(messages))
-                {
-                    var written =
-                        Retry(() => { box.Add(chunk, _outboxTimeout, overridingTransactionProvider); });
+                var written =
+                    Retry(() => { _outBox.Add(chunk, _outboxTimeout, overridingTransactionProvider); });
 
-                    if (!written)
-                        throw new ChannelFailureException($"Could not write {chunk.Count()} messages to the outbox");
-                }
-            }
-            else
-            {
-                throw new InvalidOperationException($"{_outBox.GetType()} does not implement IAmABulkOutboxSync");
+                if (!written)
+                    throw new ChannelFailureException($"Could not write {chunk.Count()} messages to the outbox");
             }
         }
 
@@ -411,34 +392,12 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Do we have an async bulk outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        public bool HasAsyncBulkOutbox()
-        {
-#pragma warning disable CS0618
-            return _asyncOutbox is IAmABulkOutboxAsync<TMessage, TTransaction>;
-#pragma warning restore CS0618
-        }
-
-        /// <summary>
         /// Do we have a synchronous outbox defined?
         /// </summary>
         /// <returns>true if defined</returns>
         public bool HasOutbox()
         {
             return _outBox != null;
-        }
-
-        /// <summary>
-        /// Do we have a synchronous bulk outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        public bool HasBulkOutbox()
-        {
-#pragma warning disable CS0618
-            return _outBox is IAmABulkOutboxSync<TMessage,TTransaction>;
-#pragma warning restore CS0618
         }
 
         /// <summary>
@@ -464,7 +423,7 @@ namespace Paramore.Brighter
             return true;
         }
         
-        private IEnumerable<List<TMessage>> ChunkMessages(IEnumerable<TMessage> messages)
+        private IEnumerable<IEnumerable<TMessage>> ChunkMessages(IEnumerable<TMessage> messages)
         {
             return Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)_outboxBulkChunkSize)))
                 .Select(i => new List<TMessage>(messages

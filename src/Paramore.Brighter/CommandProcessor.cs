@@ -573,9 +573,6 @@ namespace Paramore.Brighter
             
             var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
             
-            if (!bus.HasBulkOutbox())
-                throw new InvalidOperationException("No Bulk outbox defined.");
-
             var successfullySentMessage = new List<Guid>();
 
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
@@ -707,9 +704,6 @@ namespace Paramore.Brighter
         {
             var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
             
-            if (!bus.HasAsyncBulkOutbox())
-                throw new InvalidOperationException("No bulk async outbox defined.");
-
             var successfullySentMessage = new List<Guid>();
 
             foreach (var batch in SplitRequestBatchIntoTypes(requests))

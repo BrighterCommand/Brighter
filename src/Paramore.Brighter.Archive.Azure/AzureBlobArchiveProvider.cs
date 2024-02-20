@@ -74,7 +74,9 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
         }
 
         var results = await Task.WhenAll(uploads);
+#pragma warning disable CS8629 // Nullable value type may be null.
         return results.Where(r => r.HasValue).Select(r => r.Value).ToArray();
+#pragma warning restore CS8629 // Nullable value type may be null.
 
     }
 

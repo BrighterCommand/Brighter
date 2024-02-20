@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter
 {
-    public abstract class RelationDatabaseOutbox : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>, IAmABulkOutboxAsync<Message, DbTransaction> 
+    public abstract class RelationDatabaseOutbox : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>
     {
         private readonly IRelationDatabaseOutboxQueries _queries;
         private readonly ILogger _logger;
@@ -30,8 +30,6 @@ namespace Paramore.Brighter
         ///     thread specific storage such as HTTPContext
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
-
-        #region Externals
 
         /// <summary>
         ///     Adds the specified message.
@@ -55,7 +53,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///     Adds the specified message.
+        /// Adds the specified message.
         /// </summary>
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout"></param>
@@ -83,19 +81,17 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///     Gets the specified message identifier.
+        /// Adds the specified message to the outbox 
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="cancellationToken">Cancellation Token</param>
         /// <param name="transactionProvider">Connection Provider to use for this call</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Task AddAsync(
-            Message message,
+        public Task AddAsync(Message message,
             int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null
-            )
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default)
         {
             var parameters = InitAddDbParameters(message);
             return WriteToStoreAsync(transactionProvider,
@@ -113,15 +109,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
-        public Task AddAsync(
-            IEnumerable<Message> messages, 
+        public Task AddAsync(IEnumerable<Message> messages,
             int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null
-            )
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default)
         {
             return WriteToStoreAsync(transactionProvider,
                 connection => InitBulkAddDbCommand(messages.ToList(), connection),
@@ -361,8 +355,6 @@ namespace Paramore.Brighter
                 dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
         }
 
-        #endregion
-
         protected abstract void WriteToStore(
             IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
@@ -386,8 +378,6 @@ namespace Paramore.Brighter
             Func<DbDataReader, Task<T>> resultFunc, 
             CancellationToken cancellationToken
             );
-
-        #region Things that Create Commands
 
         private DbCommand CreatePagedDispatchedCommand(
             DbConnection connection, 
@@ -474,16 +464,10 @@ namespace Paramore.Brighter
         protected abstract DbCommand CreateCommand(DbConnection connection, string sqlText, int outBoxTimeout,
             params IDbDataParameter[] parameters);
 
-        #endregion
-
-
-        #region Parameters
 
         protected abstract IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
             int pageSize, int pageNumber);      
 
-        #endregion
-        
         protected abstract IDbDataParameter CreateSqlParameter(string parameterName, object value);
         protected abstract IDbDataParameter[] InitAddDbParameters(Message message, int? position = null);
 

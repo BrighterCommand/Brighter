@@ -92,19 +92,27 @@ namespace Paramore.Brighter.Outbox.EventStore
             _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData).Wait();
         }
 
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
+        {
+            foreach (var message in messages)
+            {
+                Add(message, outBoxTimeout, transactionProvider);
+            } 
+        }
+
 
         /// <summary>
         /// Awaitable add the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <param name="transactionProvider">A transaction provider, leave null with an event store</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
         public async Task AddAsync(Message message,
             int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default)
         {
             s_logger.LogDebug("Adding message to Event Store Outbox: {Request}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
@@ -114,6 +122,17 @@ namespace Paramore.Brighter.Outbox.EventStore
             var eventData = EventStoreMessageWriter.CreateEventData(message);
 
             await _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData);
+        }
+
+        public async Task AddAsync(IEnumerable<Message> messages,
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default)
+        {
+            foreach (var message in messages)
+            {
+                await AddAsync(message, outBoxTimeout, transactionProvider, cancellationToken);
+            }
         }
 
         /// <summary>

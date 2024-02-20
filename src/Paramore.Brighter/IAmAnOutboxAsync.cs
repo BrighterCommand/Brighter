@@ -54,14 +54,25 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(
-            T message, 
-            int outBoxTimeout = -1, 
-            CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
+        Task AddAsync(T message,
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Awaitable add the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns><see cref="Task"/>.</returns>
+        Task AddAsync(IEnumerable<T> messages, int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Awaitable Get the specified message identifier.

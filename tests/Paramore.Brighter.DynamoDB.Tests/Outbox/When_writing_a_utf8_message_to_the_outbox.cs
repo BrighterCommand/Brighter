@@ -74,7 +74,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             _messageEarliest = new Message(messageHeader,
                 new MessageBody(body, "application/json", CharacterEncoding.UTF8));
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName));
         }
 
         [Fact]

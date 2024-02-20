@@ -46,8 +46,14 @@ builder.Services.AddBrighter()
 var app = builder.Build();
 
 var outBox = app.Services.GetService<IAmAnOutboxSync<Message, CommittableTransaction>>();
-outBox.Add(new Message(new MessageHeader(Guid.NewGuid(), "Test.Topic", MessageType.MT_COMMAND, DateTime.UtcNow),
-    new MessageBody("Hello")));
+if (outBox == null)
+    throw new InvalidOperationException("Outbox is null");
+
+outBox.Add(
+    new Message(
+        new MessageHeader(Guid.NewGuid(), "Test.Topic", MessageType.MT_COMMAND, DateTime.UtcNow),
+        new MessageBody("Hello"))
+    );
 
 app.Run();
 

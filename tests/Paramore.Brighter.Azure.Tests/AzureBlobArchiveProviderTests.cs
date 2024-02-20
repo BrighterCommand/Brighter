@@ -2,52 +2,55 @@ using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Paramore.Brighter.Azure.TestDoubles.Tests;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.Storage.Azure;
 
-namespace Paramore.Brighter.Azure.TestDoubles.Tests;
+namespace Paramore.Brighter.Azure.Tests;
 
 public class AzureBlobArchiveProviderTests
 {
-    private AzureBlobArchiveProvider _provider;
+    private AzureBlobArchiveProvider? _provider;
 
-    private SuperAwesomeCommand _command;
-    private SuperAwesomeEvent _event;
+    private readonly SuperAwesomeCommand _command;
+    private readonly SuperAwesomeEvent _event;
 
-    private JsonBodyMessageMapper<SuperAwesomeCommand> _commandMapper;
-    private JsonBodyMessageMapper<SuperAwesomeEvent> _eventMapper;
+    private readonly JsonBodyMessageMapper<SuperAwesomeCommand> _commandMapper;
+    private readonly JsonBodyMessageMapper<SuperAwesomeEvent> _eventMapper;
 
-    private Dictionary<string, string> _topicDirectory;
+    private readonly Func<Message, string> _storageLocationFunction;
 
-    private Func<Message, string> _storageLocatioFuncion;
-
-    [SetUp]
-    public void Setup()
+    public AzureBlobArchiveProviderTests()
     {
+        _command = new SuperAwesomeCommand($"do the thing {Guid.NewGuid()}");
+        _event = new SuperAwesomeEvent($"The thing was done {Guid.NewGuid()}");
 
-        _command = new SuperAwesomeCommand { Message = $"do the thing {Guid.NewGuid()}" };
-        _event = new SuperAwesomeEvent { Announcement = $"The thing was done {Guid.NewGuid()}" };
-
-        _topicDirectory = new Dictionary<string, string>
+        Dictionary<string, string> topicDirectory = new()
         {
-            { typeof(SuperAwesomeCommand).Name, $"{Guid.NewGuid()}-SuperAwesomeCommand" },
-            { typeof(SuperAwesomeEvent).Name, $"{Guid.NewGuid()}-SuperAwesomeEvent" }
+            { nameof(SuperAwesomeCommand), $"{Guid.NewGuid()}-SuperAwesomeCommand" },
+            { nameof(SuperAwesomeEvent), $"{Guid.NewGuid()}-SuperAwesomeEvent" }
         };
 
-        _commandMapper = new JsonBodyMessageMapper<SuperAwesomeCommand>(_topicDirectory);
-        _eventMapper = new JsonBodyMessageMapper<SuperAwesomeEvent>(_topicDirectory);
+        _commandMapper = new JsonBodyMessageMapper<SuperAwesomeCommand>(topicDirectory);
+        _eventMapper = new JsonBodyMessageMapper<SuperAwesomeEvent>(topicDirectory);
 
-        _storageLocatioFuncion = (message) => $"{message.Header.Topic}/{message.Id}".ToLower();
+        _storageLocationFunction = (message) => $"{message.Header.Topic}/{message.Id}".ToLower();
     }
     
     [Test]
     public async Task GivenARequestToArchiveAMessage_TheMessageIsArchived()
     {
-        var commandMessage = _commandMapper.MapToMessage(_command);
+        var commandMessage = _commandMapper?.MapToMessage(_command);
 
-        var blobClient = GetClient(AccessTier.Cool).GetBlobClient(_storageLocatioFuncion.Invoke(commandMessage));
+        if (commandMessage == null)
+        {
+            Assert.Fail("Failed to map command to message");
+            return;
+        }
+
+        var blobClient = GetClient(AccessTier.Cool).GetBlobClient(_storageLocationFunction?.Invoke(commandMessage));
         
-        _provider.ArchiveMessage(commandMessage);
+        _provider?.ArchiveMessage(commandMessage);
 
         Assert.That((bool)await blobClient.ExistsAsync(), Is.True);
 
@@ -68,9 +71,9 @@ public class AzureBlobArchiveProviderTests
     {
         var eventMessage = _eventMapper.MapToMessage(_event);
         
-        var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(_storageLocatioFuncion.Invoke(eventMessage));
+        var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(_storageLocationFunction.Invoke(eventMessage));
         
-        _provider.ArchiveMessage(eventMessage);
+        _provider?.ArchiveMessage(eventMessage);
         
         var tier = await blobClient.GetPropertiesAsync();
         Assert.That(tier.Value.AccessTier, Is.EqualTo(AccessTier.Hot.ToString()));
@@ -88,10 +91,16 @@ public class AzureBlobArchiveProviderTests
     public async Task GivenARequestToArchiveAMessageAsync_TheMessageIsArchived()
     {
         var commandMessage = _commandMapper.MapToMessage(_command);
-
-        var blobClient = GetClient(AccessTier.Cool).GetBlobClient(_storageLocatioFuncion.Invoke(commandMessage));
         
-        await _provider.ArchiveMessageAsync(commandMessage, CancellationToken.None);
+        if (commandMessage == null)
+        {
+            Assert.Fail("Failed to map command to message");
+            return;
+        }
+
+        var blobClient = GetClient(AccessTier.Cool).GetBlobClient(_storageLocationFunction.Invoke(commandMessage));
+        
+        await _provider?.ArchiveMessageAsync(commandMessage, CancellationToken.None)!;
 
         Assert.That((bool)await blobClient.ExistsAsync(), Is.True);
 
@@ -117,19 +126,19 @@ public class AzureBlobArchiveProviderTests
 
         for (var i = 0; i < 10; i++)
         {
-            superAwesomeCommands.Add(new SuperAwesomeCommand { Message = $"do the thing {Guid.NewGuid()}" });
-            superAwesomeEvents.Add(new SuperAwesomeEvent { Announcement = $"The thing was done {Guid.NewGuid()}" });
+            superAwesomeCommands.Add(new SuperAwesomeCommand($"do the thing {Guid.NewGuid()}"));
+            superAwesomeEvents.Add(new SuperAwesomeEvent($"The thing was done {Guid.NewGuid()}"));
         }
 
         var messages = new List<Message>();
         messages.AddRange(superAwesomeCommands.Select(c => _commandMapper.MapToMessage(c)));
         messages.AddRange(superAwesomeEvents.Select(c => _eventMapper.MapToMessage(c)));
 
-        await _provider.ArchiveMessagesAsync(messages.ToArray(), CancellationToken.None);
+        await _provider?.ArchiveMessagesAsync(messages.ToArray(), CancellationToken.None)!;
 
         foreach (var message in messages)
         {
-            var blobClient = containerClient.GetBlobClient(_storageLocatioFuncion.Invoke(message));
+            var blobClient = containerClient.GetBlobClient(_storageLocationFunction.Invoke(message));
             Assert.That((bool)await blobClient.ExistsAsync(), Is.True);
 
             var tags = (await blobClient.GetTagsAsync()).Value.Tags;
@@ -156,9 +165,9 @@ public class AzureBlobArchiveProviderTests
     {
         var eventMessage = _eventMapper.MapToMessage(_event);
         
-        var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(_storageLocatioFuncion.Invoke(eventMessage));
+        var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(_storageLocationFunction.Invoke(eventMessage));
         
-        await _provider.ArchiveMessageAsync(eventMessage, CancellationToken.None);
+        await _provider?.ArchiveMessageAsync(eventMessage, CancellationToken.None)!;
         
         var tier = await blobClient.GetPropertiesAsync();
         Assert.That(tier.Value.AccessTier, Is.EqualTo(AccessTier.Hot.ToString()));
@@ -175,21 +184,12 @@ public class AzureBlobArchiveProviderTests
     private BlobContainerClient GetClient(AccessTier tier , bool tags = false )
     {
         var options = new AzureBlobArchiveProviderOptions
-        {
-            BlobContainerUri = new Uri("https://brighterarchivertest.blob.core.windows.net/messagearchive"), 
-            TokenCredential = new AzureCliCredential(),
-            AccessTier = tier,
-            TagBlobs = tags,
-            TagsFunc = (message => new Dictionary<string, string>()
-            {
-                { "topic", message.Header.Topic },
-                { "correlationId", message.Header.CorrelationId.ToString() },
-                { "message_type", message.Header.MessageType.ToString() },
-                { "timestamp", message.Header.TimeStamp.ToString() },
-                { "content_type", message.Header.ContentType }
-            }),
-            StorageLocationFunc = _storageLocatioFuncion
-        };
+        (
+            new Uri("https://brighterarchivertest.blob.core.windows.net/messagearchive"), 
+            new AzureCliCredential(),
+            tier,
+            tags
+        );
         _provider = new AzureBlobArchiveProvider(options);
 
         return new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);

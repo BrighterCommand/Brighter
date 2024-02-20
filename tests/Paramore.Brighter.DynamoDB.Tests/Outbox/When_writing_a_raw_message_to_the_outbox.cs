@@ -65,7 +65,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 contentType: "text/plain");
 
             var dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName));
 
             var messageEarliest = new Message(
                 messageHeader,

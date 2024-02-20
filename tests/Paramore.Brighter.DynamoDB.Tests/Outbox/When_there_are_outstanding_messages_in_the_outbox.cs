@@ -18,7 +18,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     public DynamoDbOutboxOutstandingMessageTests()
     {
         _message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
+        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
     }
 
     [Fact]

@@ -163,7 +163,7 @@ static IAmazonDynamoDB CreateAndRegisterLocalClient(AWSCredentials credentials, 
     var dynamoDb = new AmazonDynamoDBClient(credentials, clientConfig);
     services.Add(new ServiceDescriptor(typeof(IAmazonDynamoDB), dynamoDb));
 
-    var dynamoDbConfiguration = new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1);
+    var dynamoDbConfiguration = new DynamoDbConfiguration();
     services.Add(new ServiceDescriptor(typeof(DynamoDbConfiguration), dynamoDbConfiguration));
 
     return dynamoDb;
@@ -242,12 +242,12 @@ static void CreateInbox(IAmazonDynamoDB client, IServiceCollection services)
 
 static IAmAnInbox ConfigureInbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
 {
-    return new DynamoDbInbox(dynamoDb, new DynamoDbInboxConfiguration(credentials, RegionEndpoint.EUWest1));
+    return new DynamoDbInbox(dynamoDb, new DynamoDbInboxConfiguration());
 }
 
 static IAmAnOutbox ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
 {
-    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1));
+    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration());
 }
 
 

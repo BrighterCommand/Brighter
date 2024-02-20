@@ -82,7 +82,7 @@ namespace Paramore.Brighter
     /// so you can use multiple instances safely as well
     /// </summary>
 #pragma warning disable CS0618
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmABulkOutboxSync<Message, CommittableTransaction>, IAmABulkOutboxAsync<Message, CommittableTransaction>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 #pragma warning restore CS0618
     {
         /// <summary>
@@ -141,14 +141,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="cancellationToken"></param>
         /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task AddAsync(
-            Message message,
+        public Task AddAsync(Message message,
             int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -163,21 +162,19 @@ namespace Paramore.Brighter
             tcs.SetResult(new object());
             return tcs.Task;
         }
-        
+
         /// <summary>
         /// Adds the specified message
         /// </summary>
         /// <param name="messages"></param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="cancellationToken"></param>
         /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task AddAsync(
-            IEnumerable<Message> messages, 
-            int outBoxTimeout = -1, 
-            CancellationToken cancellationToken = default, 
-            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null
-            )
+        public Task AddAsync(IEnumerable<Message> messages,
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 

@@ -120,7 +120,9 @@ namespace Paramore.Brighter.Sqlite
 #if NETSTANDARD2_0
                 ((SqliteTransaction)Transaction).Commit();
 #else
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 #endif         
             return Transaction;
         }

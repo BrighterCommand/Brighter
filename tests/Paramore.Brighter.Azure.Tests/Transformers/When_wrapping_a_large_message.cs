@@ -12,19 +12,17 @@ namespace Paramore.Brighter.Azure.Tests.Transformers;
 [Property("Fragile", "CI")]
 public class LargeMessagePayloadWrapTests : IDisposable
 {
-    private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
+    private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
     private readonly AzureBlobLuggageStore _luggageStore;
     private readonly BlobContainerClient _client;
-    private readonly string _bucketName;
-    private Uri _bucketUrl;
-    private string _id;
+    private string? _id;
 
     public LargeMessagePayloadWrapTests()
     {
         //arrange
-            TransformPipelineBuilder.ClearPipelineCache();
+        TransformPipelineBuilder.ClearPipelineCache();
 
             var mapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
@@ -33,14 +31,12 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
             _myCommand = new MyLargeCommand(6000);
 
-            _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-            _bucketUrl = new Uri($"{TestHelper.BlobLocation}{_bucketName}");
+            string bucketName = $"brightertestbucket-{Guid.NewGuid()}";
+            Uri bucketUrl = new($"{TestHelper.BlobLocation}{bucketName}");
 
-            _client = new BlobContainerClient(_bucketUrl, new AzureCliCredential());
+            _client = new BlobContainerClient(bucketUrl, new AzureCliCredential());
 
-            _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-
-            _luggageStore = new AzureBlobLuggageStore(_bucketUrl, new AzureCliCredential());
+            _luggageStore = new AzureBlobLuggageStore(bucketUrl, new AzureCliCredential());
 
             var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 

@@ -98,41 +98,38 @@ builder.Services.AddHealthChecks()
 var app = builder.Build();
 
 app.UseRouting();
-app.UseEndpoints(endpoints =>
+var jsonOptions = new JsonSerializerOptions
 {
-    var jsonOptions = new JsonSerializerOptions
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true
-    };
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    WriteIndented = true
+};
 
-    jsonOptions.Converters.Add(new JsonStringConverter());
-    jsonOptions.Converters.Add(new JsonStringEnumConverter());
+jsonOptions.Converters.Add(new JsonStringConverter());
+jsonOptions.Converters.Add(new JsonStringEnumConverter());
 
-    endpoints.MapHealthChecks("/health");
-    endpoints.MapHealthChecks("/health/detail", new HealthCheckOptions
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/detail", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
     {
-        ResponseWriter = async (context, report) =>
+        var content = new
         {
-            var content = new
+            Status = report.Status.ToString(),
+            Results = report.Entries.ToDictionary(e => e.Key, e => new
             {
-                Status = report.Status.ToString(),
-                Results = report.Entries.ToDictionary(e => e.Key, e => new
-                {
-                    Status = e.Value.Status.ToString(),
-                    Description = e.Value.Description,
-                    Duration = e.Value.Duration
-                }),
-                TotalDuration = report.TotalDuration
-            };
+                Status = e.Value.Status.ToString(),
+                Description = e.Value.Description,
+                Duration = e.Value.Duration
+            }),
+            TotalDuration = report.TotalDuration
+        };
 
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
-        }
-    });
-    endpoints.MapBrighterControlEndpoints();
-    
-    endpoints.Map("Dispatcher", (IDispatcher dispatcher) => { return dispatcher.Consumers.Count(); });
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
+    }
 });
+app.MapBrighterControlEndpoints();
+
+app.Map("Dispatcher", (IDispatcher dispatcher) => { return dispatcher.Consumers.Count(); });
 
 app.Run();

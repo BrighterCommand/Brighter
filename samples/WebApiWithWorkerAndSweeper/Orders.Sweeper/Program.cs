@@ -17,9 +17,6 @@ app.UseHttpsRedirection();
 
 app.UseRouting();
 
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapHealthChecks(HEALTH_PATH);
-});
+app.MapHealthChecks(HEALTH_PATH);
 
 app.Run();

@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -45,7 +47,15 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         void Add(T message, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
-
+        
+        /// <summary>
+        /// Awaitable add the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        void Add(IEnumerable<T> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
+        
         /// <summary>
         /// Gets the specified message identifier.
         /// </summary>

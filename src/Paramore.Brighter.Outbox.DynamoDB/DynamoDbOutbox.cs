@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -101,18 +100,22 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             AddAsync(message, outBoxTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
-        /// <inheritdoc />
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
-        ///     Adds a message to the store
+        /// Adds a message to the store
         /// </summary>
         /// <param name="message">The message to be stored</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <param name="transactionProvider"></param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task AddAsync(Message message,
             int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null)
+            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null,
+            CancellationToken cancellationToken = default)
         {
             var shard = GetShardNumber();
             var expiresAt = GetExpirationTime();
@@ -128,7 +131,25 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
         }
 
-       /// <summary>
+        /// <summary>
+        /// Adds messages to the store
+        /// </summary>
+        /// <param name="messages">The messages to be stored</param>
+        /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="transactionProvider"></param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param> 
+        public async Task AddAsync(IEnumerable<Message> messages,
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null,
+            CancellationToken cancellationToken = default)
+        {
+            foreach (var message in messages)
+            {
+                await AddAsync(message, outBoxTimeout, transactionProvider, cancellationToken);
+            }
+        }
+
+        /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
