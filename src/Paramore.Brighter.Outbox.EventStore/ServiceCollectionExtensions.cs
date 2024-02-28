@@ -19,11 +19,11 @@ namespace Paramore.Brighter.Outbox.EventStore
             return brighterBuilder;
         }
 
-        private static EventStoreOutboxSync BuildEventStoreOutbox(IServiceProvider provider)
+        private static EventStoreOutbox BuildEventStoreOutbox(IServiceProvider provider)
         {
             var connection = provider.GetService<IEventStoreConnection>();
 
-            return new EventStoreOutboxSync(connection);
+            return new EventStoreOutbox(connection);
         }
     }
 }

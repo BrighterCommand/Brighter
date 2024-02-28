@@ -41,7 +41,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async void When_there_is_an_outstanding_message_in_the_outbox()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
             
             var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
 
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_null_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
             
             // act
             Action getWithoutArgs = () => eventStoreOutbox.OutstandingMessages(500, 100, 1);
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_null_stream_arg_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
             var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
             
             // act
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_empty_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
             var args = new Dictionary<string, object>();
             
             // act
@@ -124,7 +124,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_wrong_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
             var args = new Dictionary<string, object> { { "Foo", "Bar" }};
             
             // act

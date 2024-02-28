@@ -231,28 +231,6 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="pageSize"></param>
-        /// <param name="pageNumber"></param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
-        {
-            ClearExpiredMessages();
-
-            if (pageNumber == 1)
-            {
-                return _requests.Values.Select(oe => oe.Message).Take(pageSize).ToList();
-            }
-            else
-            {
-                var skipMessageCount = (pageNumber-1) * pageSize;
-                return _requests.Values.Select(oe => oe.Message).Skip(skipMessageCount).Take(pageSize).ToList();
-            }
-        }
-         
-       /// <summary>
         /// Gets the specified message
         /// </summary>
         /// <param name="messageId"></param>
@@ -378,37 +356,16 @@ namespace Paramore.Brighter
             return outstandingMessages;
         }
 
-       /// <summary>
-       /// Delete the specified messages from the Outbox
-       /// </summary>
-       /// <param name="messageIds">The messages to delete</param>
-        public void Delete(params Guid[] messageIds)
+        /// <summary>
+        /// Delete the specified messages from the Outbox
+        /// </summary>
+        /// <param name="messageIds">The messages to delete</param>
+        public void Delete(Guid[] messageIds)
         {
             foreach (Guid messageId in messageIds)
             {
                 _requests.TryRemove(messageId.ToString(), out _);
             }
-        }
-
-       /// <summary>
-       /// Get messages from the Outbox
-       /// </summary>
-       /// <param name="pageSize">The number of messages to return on each page</param>
-       /// <param name="pageNumber">The page to return</param>
-       /// <param name="args">Additional parameters used to find messages, if any</param>
-       /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous process</param>
-       /// <returns></returns>
-        public Task<IList<Message>> GetAsync(
-            int pageSize = 100, 
-            int pageNumber = 1, 
-            Dictionary<string, object> args = null, 
-            CancellationToken cancellationToken = default)
-        {
-            var tcs = new TaskCompletionSource<IList<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            tcs.SetResult(Get(pageSize, pageNumber, args));
-
-            return tcs.Task;
         }
 
        /// <summary>
@@ -434,13 +391,13 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-       /// <summary>
-       /// Deletes the messages from the Outbox
-       /// </summary>
-       /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous operation</param>
-       /// <param name="messageIds">The ids of the messages to delete</param>
-       /// <returns></returns>
-        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        /// <summary>
+        /// Deletes the messages from the Outbox
+        /// </summary>
+        /// <param name="messageIds">The ids of the messages to delete</param>
+        /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous operation</param>
+        /// <returns></returns>
+        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
         {
             Delete(messageIds);
             return Task.CompletedTask;
@@ -460,11 +417,6 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(DispatchedMessages(hoursDispatchedSince, pageSize));
-        }
-
-        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
-        {
-            return Task.FromResult(_requests.Count(r => r.Value.TimeFlushed == DateTime.MinValue));
         }
     }
 }

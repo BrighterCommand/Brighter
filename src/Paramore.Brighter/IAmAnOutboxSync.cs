@@ -89,16 +89,6 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null);
 
         /// <summary>
-        /// Gets all messages in the OutBox, LIFO
-        /// </summary>
-        /// <param name="pageSize">Number of items on the page, default is 100</param>
-        /// <param name="pageNumber">Page number of results to return, default is first</param>
-        /// <param name="args">Additional parameters required for the search, if any</param>
-        /// <returns></returns>
-        [Obsolete("Removed in v10, Please use OutstandingMessages instead.")]
-        IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null);
-        
-        /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
@@ -116,6 +106,6 @@ namespace Paramore.Brighter
         /// Delete the specified messages
         /// </summary>
         /// <param name="messageIds">The id of the message to delete</param>
-        void Delete(params Guid[] messageIds);
+        void Delete(Guid[] messageIds);
     }
 }

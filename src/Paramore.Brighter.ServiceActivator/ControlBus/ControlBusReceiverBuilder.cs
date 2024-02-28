@@ -220,18 +220,13 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 return Array.Empty<Message>();
             }
 
-            public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
-            {
-                return Array.Empty<Message>(); 
-            }
-
             public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
                 Dictionary<string, object> args = null)
             {
                 return Array.Empty<Message>(); 
             }
 
-            public void Delete(params Guid[] messageIds)
+            public void Delete(Guid[] messageIds)
             {
                 //ignore
             }

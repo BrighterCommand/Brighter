@@ -42,9 +42,9 @@ namespace Paramore.Brighter.Outbox.EventStore
     /// <summary>
     ///     Class EventStoreOutbox.
     /// </summary>
-    public class EventStoreOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
+    public class EventStoreOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<EventStoreOutboxSync>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<EventStoreOutbox>();
 
         private readonly IEventStoreConnection _eventStore;
 
@@ -57,10 +57,10 @@ namespace Paramore.Brighter.Outbox.EventStore
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="EventStoreOutboxSync" /> class.
+        ///     Initializes a new instance of the <see cref="EventStoreOutbox" /> class.
         /// </summary>
         /// <param name="eventStore">The active subscription to an Event Store instance.</param>
-        public EventStoreOutboxSync(IEventStoreConnection eventStore)
+        public EventStoreOutbox(IEventStoreConnection eventStore)
         {
             _eventStore = eventStore;
         }
@@ -155,36 +155,6 @@ namespace Paramore.Brighter.Outbox.EventStore
         }
 
         /// <summary>
-        /// Gets all messages in the OutBox, LIFO
-        /// </summary>
-        /// <param name="pageSize">number of items on the page, default is 100</param>
-        /// <param name="pageNumber">page number of results to return, default is first</param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns></returns>
-        public IList<Message> Get(
-            int pageSize = 100,
-            int pageNumber = 1,
-            Dictionary<string, object> args = null)
-        {
-            return GetAsync(pageSize, pageNumber, args).Result;
-        }
-
-        public async Task<IList<Message>> GetAsync(
-            int pageSize = 100,
-            int pageNumber = 1,
-            Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default)
-        {
-            string stream = GetStreamFromArgs(args);
-
-            var fromEventNumber = pageSize * (pageNumber - 1);
-
-            var eventStreamSlice = await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, pageSize, true);
-
-            return eventStreamSlice.Events.Select(e => EventStoreMessageReader.ConvertEventToMessage(e.Event, stream)).ToList();
-        }
-
-        /// <summary>
         ///     Gets the specified message by identifier. Currently not implemented.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
@@ -223,29 +193,6 @@ namespace Paramore.Brighter.Outbox.EventStore
             CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
-        }
-
-        public Task<IEnumerable<Message>> GetAsync(
-            IEnumerable<Guid> messageIds, 
-            int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        ///     Returns multiple events from a given stream.
-        ///     If all the events do not exist, as many as can be found will be returned.
-        /// </summary>
-        /// <param name="stream">The stream name.</param>
-        /// <param name="fromEventNumber">The event number to start from (inclusive).</param>
-        /// <param name="numberOfEvents">The number of events to return.</param>
-        /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(string stream, int fromEventNumber, int numberOfEvents)
-        {
-            var eventStreamSlice =
-                await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, numberOfEvents, true);
-            return eventStreamSlice.Events.Select(e => EventStoreMessageReader.ConvertEventToMessage(e.Event, stream)).ToList();
         }
 
         /// <summary>
@@ -341,7 +288,7 @@ namespace Paramore.Brighter.Outbox.EventStore
             return OutstandingMessagesAsync(millSecondsSinceSent, pageSize, pageNumber, args).Result;
         }
 
-        public void Delete(params Guid[] messageIds)
+        public void Delete(Guid[] messageIds)
         {
             throw new NotImplementedException();
         }
@@ -405,7 +352,7 @@ namespace Paramore.Brighter.Outbox.EventStore
             return outstandingMessages.Where(om => !dispatchedIds.Contains(om.Id));
         }
 
-        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }
@@ -449,9 +396,5 @@ namespace Paramore.Brighter.Outbox.EventStore
             return stream;
         }
 
-        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

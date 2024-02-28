@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
@@ -37,14 +38,13 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async Task When_There_Is_No_Message_In_The_Outbox()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
             
             // act
-            var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 1);
+            var messages = await eventStoreOutbox.OutstandingMessagesAsync(0);
 
             // assert
-            //_returns_an_empty_list
-            messages.Count.Should().Be(0);
+            messages.Count().Should().Be(0);
         }
     }
 }

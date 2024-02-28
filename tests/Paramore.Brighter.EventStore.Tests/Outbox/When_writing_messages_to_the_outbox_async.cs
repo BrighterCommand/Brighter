@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -39,7 +40,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async Task When_Writing_Messages_To_The_Outbox_Async()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
 
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
@@ -66,7 +67,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             await eventStoreOutbox.AddAsync(message2);           
             
             // assert
-            var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 2);
+            var messages = (await eventStoreOutbox.OutstandingMessagesAsync(0)).ToArray();
             
             //should read the message from the outbox
             messages[0].Body.Value.Should().Be(message1.Body.Value);

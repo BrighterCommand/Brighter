@@ -155,29 +155,6 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             outstandingMessages.Any(msg => msg.Id == messageIds[1]).Should().BeTrue();
             outstandingMessages.Any(msg => msg.Id == messageIds[2]).Should().BeTrue();
             outstandingMessages.Any(msg => msg.Id == messageIds[3]).Should().BeTrue();
-
-
         }
-
-
-        [Fact]
-        public void When_paging_a_list_of_messages()
-        {
-           //Arrange
-           var outbox = new InMemoryOutbox();
-           
-           for(int i =0; i <= 8; i++) // -- nine items
-               outbox.Add(new MessageTestDataBuilder());
-
-           //Act 
-           var firstPage = outbox.Get(5, 1);
-           var secondPage = outbox.Get(5, 2);
-
-           //Assert
-           firstPage.Count().Should().Be(5);
-           secondPage.Count().Should().Be(4); // -- only 4 on the second page
-
-        }
-        
    }
 }
