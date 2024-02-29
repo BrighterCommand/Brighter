@@ -48,9 +48,18 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper.SetupMessageDb();
             _outbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
 
-            _firstMessage = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            _secondMessage = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            _thirdMessage = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            _firstMessage =
+                new Message(
+                    new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)),
+                    new MessageBody("Body"));
+            _secondMessage =
+                new Message(
+                    new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)),
+                    new MessageBody("Body2"));
+            _thirdMessage =
+                new Message(
+                    new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)),
+                    new MessageBody("Body3"));
         }
 
         [Fact]
@@ -60,13 +69,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _outbox.Add(_secondMessage);
             _outbox.Add(_thirdMessage);
 
-            _outbox.Delete(new Guid[]{ _firstMessage.Id, _thirdMessage.Id });
-            
-           _outbox.Get(_secondMessage.Id).Should().NotBeNull();
-           _outbox.Get(_firstMessage.Id).Should().BeNull();
-           _outbox.Get(_thirdMessage.Id).Should().BeNull();
-            
-            _outbox.Delete(new Guid[] {_secondMessage.Id});
+            _outbox.Delete(new Guid[] { _firstMessage.Id, _thirdMessage.Id });
+
+            _outbox.Get(_secondMessage.Id).Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+            _outbox.Get(_firstMessage.Id).Header.MessageType.Should().Be(MessageType.MT_NONE);
+            _outbox.Get(_thirdMessage.Id).Header.MessageType.Should().Be(MessageType.MT_NONE);
+
+            _outbox.Delete(new Guid[] { _secondMessage.Id });
 
             var messages = _outbox.Get(_secondMessage.Id).Should().NotBeNull();
         }

@@ -320,8 +320,8 @@ namespace Paramore.Brighter.Outbox.EventStore
                 .Select(e => EventStoreMessageReader.ConvertEventToMessage(e.Event, stream))
                 .ToList();
 
-            HashSet<Guid> dispatchedIds = new HashSet<Guid>();
-            List<Message> outstandingMessages = new List<Message>();
+            HashSet<Guid> dispatchedIds = new();
+            List<Message> outstandingMessages = new();
 
             foreach (var message in messages)
             {

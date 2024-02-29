@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             await _sqlOutbox.MarkDispatchedAsync(new []{_message1.Id, _message2.Id}, DateTime.UtcNow);
             
-            await Task.Delay(100);
+            await Task.Delay(200);
 
             var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0);
 

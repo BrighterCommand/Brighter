@@ -42,7 +42,6 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private readonly Message _firstMessage;
         private readonly Message _secondMessage;
         private readonly Message _thirdMessage;
-        private IEnumerable<Message> _retrievedMessages;
 
         public MySqlOutboxDeletingMessagesTests()
         {
@@ -90,8 +89,8 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var remainingMessages = await _mySqlOutbox.OutstandingMessagesAsync(0);
                                                                                                        
             remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            remainingMessages.Should().Contain(_secondMessage);
+            remainingMessages.Should().Contain(_thirdMessage);
             
             await _mySqlOutbox.DeleteAsync(new []{_secondMessage.Id, _thirdMessage.Id}, CancellationToken.None);
 

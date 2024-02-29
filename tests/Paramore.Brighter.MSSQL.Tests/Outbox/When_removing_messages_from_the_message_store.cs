@@ -41,7 +41,6 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly Message _firstMessage;
         private readonly Message _secondMessage;
         private readonly Message _thirdMessage;
-        private IEnumerable<Message> _retrievedMessages;
         private readonly MsSqlOutbox _outbox;
 
         public SqlOutboxDeletingMessagesTests()
@@ -68,8 +67,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             var remainingMessages = _outbox.OutstandingMessages(0);
 
             remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            remainingMessages.Should().Contain(_secondMessage);
+            remainingMessages.Should().Contain(_thirdMessage);
             
             _outbox.Delete(remainingMessages.Select(m => m.Id).ToArray());
 
@@ -86,8 +85,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             var remainingMessages = await _outbox.OutstandingMessagesAsync(0);
 
             remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            remainingMessages.Should().Contain(_secondMessage);
+            remainingMessages.Should().Contain(_thirdMessage);
             
             await _outbox.DeleteAsync(remainingMessages.Select(m => m.Id).ToArray(), CancellationToken.None);
 
