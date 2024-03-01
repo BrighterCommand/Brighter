@@ -171,7 +171,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="messageIds"></param>
         public void Delete(Guid[] messageIds)
         {
-            DeleteAsync(messageIds, new CancellationToken()).GetAwaiter().GetResult();
+            DeleteAsync(messageIds).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -183,7 +183,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             foreach (var messageId in messageIds)
             {
-                await _context.DeleteAsync<MessageItem>(messageId, _dynamoOverwriteTableConfig, cancellationToken);
+                await _context.DeleteAsync<MessageItem>(messageId.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
             }
         }
         

@@ -22,7 +22,7 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
 
         // assert
         var foundMessage = dynamoDbOutbox.Get(message.Id);
-        foundMessage.Should().BeNull();
+        foundMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
     }
     
     [Fact]
@@ -38,6 +38,6 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
 
         // assert
         var foundMessage = await dynamoDbOutbox.GetAsync(message.Id);
-        foundMessage.Should().BeNull();
+        foundMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
     }
 }
