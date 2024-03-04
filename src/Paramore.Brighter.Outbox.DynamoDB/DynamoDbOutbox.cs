@@ -153,7 +153,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="messages">The messages to be stored</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="transactionProvider"></param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param> 
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task AddAsync(IEnumerable<Message> messages,
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null,
