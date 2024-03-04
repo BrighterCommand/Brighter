@@ -44,7 +44,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly DynamoDBContext _context;
         private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
         private readonly Random _random = new Random();
-        private readonly IAmazonDynamoDB _client;
 
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -56,7 +55,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration)
         {
             _configuration = configuration;
-            _client = client;
             _context = new DynamoDBContext(client);
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
             {
@@ -225,7 +223,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var messages = PageAllMessagesAsync(queryConfig).Result.ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
-        
+
         /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
@@ -234,6 +232,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
         /// <param name="outboxTimeout"></param>
         /// <param name="args">Used to pass through the topic we are searching for messages in. Use Key: "Topic"</param>
+        /// <param name="cancellationToken">Cancel the running operation</param>
         /// <returns>A list of dispatched messages</returns>
         /// <exception cref="ArgumentException"></exception>
         public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
@@ -403,7 +402,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var topic = (string)args["Topic"];
 
             //block async to make this sync
-            var messages = QueryAllOutstandingShardsAsync(topic, dispatchedTime).Result.ToList();
+            IEnumerable<MessageItem> messages;
+            if(_configuration.NumberOfShards <= 1)
+               messages = QueryAllOutstandingAsync(topic, dispatchedTime).Result.ToList();
+            else
+                messages = QueryAllOutstandingShardsAsync(topic, dispatchedTime).Result.ToList();
+            
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
@@ -431,8 +435,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var minimumAge = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
-            //block async to make this sync
-            var messages = (await QueryAllOutstandingShardsAsync(topic, minimumAge, cancellationToken)).ToList();
+            IEnumerable<MessageItem> messages; 
+            if(_configuration.NumberOfShards <= 1)
+                messages = (await QueryAllOutstandingAsync(topic, minimumAge, cancellationToken)).ToList();
+            else
+                messages = (await QueryAllOutstandingShardsAsync(topic, minimumAge, cancellationToken)).ToList();
+            
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
@@ -459,12 +467,27 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             
             var messages = new List<MessageItem>();
             do
-            { 
-                messages.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext));
+            {
+                var items = await asyncSearch.GetNextSetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                messages.AddRange(items);
             } while (!asyncSearch.IsDone);
 
             return messages;
         }
+        
+        private async Task<IEnumerable<MessageItem>> QueryAllOutstandingAsync(string topic, DateTime dispatchedTime, CancellationToken cancellationToken = default)
+        {
+            var queryConfig = new QueryOperationConfig
+            {
+                IndexName = _configuration.OutstandingIndexName,
+                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, dispatchedTime, 0),
+                FilterExpression = new NoDispatchTimeExpression().Generate(),
+                ConsistentRead = false
+            };
+
+            return await PageAllMessagesAsync(queryConfig, cancellationToken);
+        }
+
         
         private async Task<IEnumerable<MessageItem>> QueryAllOutstandingShardsAsync(string topic, DateTime minimumAge, CancellationToken cancellationToken = default)
         {
@@ -504,11 +527,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         private int GetShardNumber()
         {
-            if (_configuration.NumberOfShards <= 0)
-            {
+            if (_configuration.NumberOfShards <= 1)
                 return 0;
-            }
 
+            //The rance is inclusive of 0 but exclusive of NumberOfShards i.e. 0, 4 produces values in range 0-3
             return _random.Next(0, _configuration.NumberOfShards);
         }
 
