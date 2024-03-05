@@ -2,7 +2,7 @@ version: '3'
 
 services:
   eventstoredb:
-    image: eventstore/eventstore:latest
+    image: eventstore/eventstore:23.10.1-alpha-arm64v8
     environment:
       - EVENTSTORE_INSECURE=true # let eventstore run without ceritficate
       - EVENTSTORE_EXT_TCP_PORT=1113 # set internal tcp port
