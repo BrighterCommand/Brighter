@@ -29,6 +29,7 @@ using EventStore.ClientAPI;
 using EventStore.ClientAPI.SystemData;
 using Xunit;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
@@ -36,6 +37,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
     {
         Initializing,
         Connected,
+        Closed,
         Failed
     }
     
@@ -51,15 +53,15 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
     {
         private EventStoreState _eventStoreConnectionStatus;
         private IEventStoreConnection _connection;
-        private readonly ITestOutputHelper _output;
+        private readonly IMessageSink _output;
         private readonly int _timeout;
         
         public IEventStoreConnection Connection { get; }
 
-        public EventStoreFixture(ITestOutputHelper output, int timeout = 10000)
+        public EventStoreFixture(IMessageSink output)
         {
             _output = output;
-            _timeout = timeout;
+            _timeout = 120000;
 
             //we need to do sync over async in a constructor - we don't have sync EventStore APIs
             Connection = ConnectAsync().GetAwaiter().GetResult();
@@ -86,15 +88,35 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             {
                 _eventStoreConnectionStatus = EventStoreState.Connected;
             };
+            _connection.Disconnected += (sender, e) =>
+            {
+                _eventStoreConnectionStatus = EventStoreState.Failed;
+                var message = new DiagnosticMessage("EventStore disconnected");
+                _output.OnMessage(message);
+            };
+            _connection.Reconnecting += (sender, e) =>
+            {
+                _eventStoreConnectionStatus = EventStoreState.Initializing;
+                var message = new DiagnosticMessage("EventStore reconnecting");
+                _output.OnMessage(message);
+            };
             _connection.AuthenticationFailed += (sender, e) =>
             {
                 _eventStoreConnectionStatus = EventStoreState.Failed;
-                _output.WriteLine($"EventStore authentication failed: {e.Reason}");
+                var message = new DiagnosticMessage("EventStore authentication failed", e.Reason);
+                _output.OnMessage(message);
             };
             _connection.ErrorOccurred += (sender, e) =>
             {
                 _eventStoreConnectionStatus = EventStoreState.Failed;
-                _output.WriteLine($"EventStore connection error: {e.Exception.Message}");
+                var message = new DiagnosticMessage("EventStore connection error", e.Exception);
+                _output.OnMessage(message);
+            };
+            _connection.Closed += (sender, e) =>
+            {
+                _eventStoreConnectionStatus = EventStoreState.Failed;
+                var message = new DiagnosticMessage("EventStore connection closed");
+                _output.OnMessage(message);
             };
 
             await _connection.ConnectAsync();
@@ -103,8 +125,6 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 
             return _connection;
         }
-        
- 
 
         private void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
         {
