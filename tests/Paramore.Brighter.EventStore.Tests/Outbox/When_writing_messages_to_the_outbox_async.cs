@@ -68,7 +68,8 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             await eventStoreOutbox.AddAsync(message2);           
             
             // assert
-            var messages = (await eventStoreOutbox.OutstandingMessagesAsync(0)).ToArray();
+            Dictionary<string,object> args = new(){{ Globals.StreamArg, streamName }};
+            var messages = (await eventStoreOutbox.OutstandingMessagesAsync(0, args: args)).ToArray();
             
             //should read the message from the outbox
             messages[0].Body.Value.Should().Be(message1.Body.Value);

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -43,8 +44,11 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             var connection = fixture.Connection;
             var eventStoreOutbox = new EventStoreOutbox(connection);
             
+            var streamName = $"{Guid.NewGuid()}";
+            
             // act
-            var messages = await eventStoreOutbox.OutstandingMessagesAsync(0);
+            Dictionary<string,object> args = new() { { Globals.StreamArg, streamName } };
+            var messages = await eventStoreOutbox.OutstandingMessagesAsync(0, args: args);
 
             // assert
             messages.Count().Should().Be(0);

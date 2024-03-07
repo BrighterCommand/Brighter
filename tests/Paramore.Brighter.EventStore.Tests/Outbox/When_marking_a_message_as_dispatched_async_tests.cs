@@ -60,7 +60,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             await eventStoreOutbox.MarkDispatchedAsync(messageToMarkAsDispatched.Id, dispatchedAt, args);
 
             // assert
-            var messages = await eventStoreOutbox.DispatchedMessagesAsync(0);
+            var messages = await eventStoreOutbox.DispatchedMessagesAsync(0, args: args);
 
             messages.Should().ContainSingle().Which.Header.Bag[Globals.DispatchedAtKey].Should().Be(dispatchedAt);
         }
