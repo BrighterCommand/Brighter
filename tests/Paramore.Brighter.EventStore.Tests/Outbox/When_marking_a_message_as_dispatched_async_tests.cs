@@ -35,7 +35,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class EventStoreOutboxMarkDispatchedAsyncTests(EventStoreFixture fixture) : IDisposable 
+    public class EventStoreOutboxMarkDispatchedAsyncTests(EventStoreFixture fixture) 
     {
         [Fact]
         public async Task When_marking_a_message_as_dispatched_async_tests()
@@ -121,11 +121,6 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             
             // assert
             getWithoutArgs.Should().ThrowAsync<ArgumentException>();
-        }
-        
-        public void Dispose()
-        {
-            fixture.Dispose();
         }
     }
 }

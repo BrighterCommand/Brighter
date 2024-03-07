@@ -34,7 +34,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class EventStoreOutboxAsyncTests(EventStoreFixture fixture) : IDisposable
+    public class EventStoreOutboxAsyncTests(EventStoreFixture fixture) 
     {
         [Fact]
         public async Task When_Writing_Messages_To_The_Outbox_Async()
@@ -96,11 +96,6 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             messages[1].Header.Bag["conversationId"].Should().Be(conversationId);
             messages[1].Header.Bag["timeStamp"].Should().Be(now);
  
-        }
-        
-        public void Dispose()
-        {
-            fixture.Dispose();
         }
     }
 }

@@ -35,7 +35,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class OutStandingMessageTests(EventStoreFixture fixture) : IDisposable
+    public class OutStandingMessageTests(EventStoreFixture fixture) 
     {
         [Fact]
         public async void When_there_is_an_outstanding_message_in_the_outbox()
@@ -133,11 +133,6 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             
             // assert
             getWithoutArgs.Should().Throw<ArgumentException>();
-        }
-        
-        public void Dispose()
-        {
-            fixture.Dispose();
         }
     }
 }

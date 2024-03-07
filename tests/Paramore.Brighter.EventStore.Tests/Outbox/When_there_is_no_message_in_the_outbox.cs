@@ -34,7 +34,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class EventStoreEmptyTests(EventStoreFixture fixture) : IDisposable
+    public class EventStoreEmptyTests(EventStoreFixture fixture) 
     {
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Outbox()
@@ -50,10 +50,6 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             //_returns_an_empty_list
             messages.Count.Should().Be(0);
         }
-        
-        public void Dispose()
-        {
-            fixture.Dispose();
-        }
+
     }
 }
