@@ -28,17 +28,49 @@ using System.Threading.Tasks;
 using EventStore.ClientAPI;
 using EventStore.ClientAPI.SystemData;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
-    public class EventStoreFixture : IAsyncLifetime
+    public enum EventStoreState
     {
-        protected IEventStoreConnection Connection { get; private set; }
-        protected bool EventStoreClientConnected { get; private set; }
+        Initializing,
+        Connected,
+        Failed
+    }
+    
+    [CollectionDefinition("EventStore")]
+    public class DatabaseCollection : ICollectionFixture<EventStoreFixture>
+    {
+        // This class has no code, and is never created. Its purpose is simply
+        // to be the place to apply [CollectionDefinition] and all the
+        // ICollectionFixture<> interfaces.
+    }
+    
+    public class EventStoreFixture : IDisposable
+    {
+        private EventStoreState _eventStoreConnectionStatus;
+        private IEventStoreConnection _connection;
+        private readonly ITestOutputHelper _output;
+        private readonly int _timeout;
         
-        protected string StreamName { get; private set; }
-        
-        public async Task InitializeAsync()
+        public IEventStoreConnection Connection { get; }
+
+        public EventStoreFixture(ITestOutputHelper output, int timeout = 10000)
+        {
+            _output = output;
+            _timeout = timeout;
+
+            //we need to do sync over async in a constructor - we don't have sync EventStore APIs
+            Connection = ConnectAsync().GetAwaiter().GetResult();
+        }
+
+        public void Dispose()
+        {
+            _connection?.Close();
+        }
+
+        private async Task<IEventStoreConnection> ConnectAsync()
         {
             var endpoint = new Uri("tcp://127.0.0.1:1113");
             var settings = ConnectionSettings
@@ -49,39 +81,53 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
                 .UseConsoleLogger();
             var connectionName = $"M={Environment.MachineName},P={Process.GetCurrentProcess().Id},T={DateTimeOffset.UtcNow.Ticks}";
 
-            Connection = EventStoreConnection.Create(settings, endpoint, connectionName);
-            Connection.Connected += (sender, e) =>
+            _connection = EventStoreConnection.Create(settings, endpoint, connectionName);
+            _connection.Connected += (sender, e) =>
             {
-                EventStoreClientConnected = true;
+                _eventStoreConnectionStatus = EventStoreState.Connected;
+            };
+            _connection.AuthenticationFailed += (sender, e) =>
+            {
+                _eventStoreConnectionStatus = EventStoreState.Failed;
+                _output.WriteLine($"EventStore authentication failed: {e.Reason}");
+            };
+            _connection.ErrorOccurred += (sender, e) =>
+            {
+                _eventStoreConnectionStatus = EventStoreState.Failed;
+                _output.WriteLine($"EventStore connection error: {e.Exception.Message}");
             };
 
-            await Connection.ConnectAsync();
+            await _connection.ConnectAsync();
             
             EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
 
-            StreamName = $"{Guid.NewGuid()}";
+            return _connection;
         }
         
-        protected void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
+ 
+
+        private void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
         {
             var timer = new Stopwatch();
             timer.Start();
             
-            while (!EventStoreClientConnected)
+            while (_eventStoreConnectionStatus  == EventStoreState.Initializing)
+                if (timer.ElapsedMilliseconds > _timeout)
+                    break;
+                else
+                    Task.Delay(100).Wait();
+            
+            
+            timer.Stop();
+            
+            switch (_eventStoreConnectionStatus)
             {
-                if (timer.ElapsedMilliseconds > 10000)
-                {
-                    throw new TimeoutException();
-                }
+                case EventStoreState.Failed:
+                    throw new Exception("EventStore connection failed, see console output for details");
+                case EventStoreState.Initializing:
+                    throw new Exception("EventStore connection timed out");
             }
-        }
-
-        public async Task DisposeAsync()
-        {
-            Connection.Close();
-            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            completionSource.SetResult(null);
-            await completionSource.Task;
+            
         }
     }
 }

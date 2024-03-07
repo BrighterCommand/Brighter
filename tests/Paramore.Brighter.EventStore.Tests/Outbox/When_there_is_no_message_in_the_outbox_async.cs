@@ -22,29 +22,37 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class EventStoreEmptyAsyncTests : EventStoreFixture
+    public class EventStoreEmptyAsyncTests(EventStoreFixture fixture) : IDisposable 
     {
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Outbox()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var connection = fixture.Connection;
+            var eventStoreOutbox = new EventStoreOutbox(connection);
             
             // act
             var messages = await eventStoreOutbox.OutstandingMessagesAsync(0);
 
             // assert
             messages.Count().Should().Be(0);
+        }
+
+        public void Dispose()
+        {
+            fixture.Dispose();
         }
     }
 }

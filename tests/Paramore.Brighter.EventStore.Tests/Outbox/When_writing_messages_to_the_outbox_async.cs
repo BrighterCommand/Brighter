@@ -34,19 +34,20 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class EventStoreOutboxAsyncTests : EventStoreFixture
+    public class EventStoreOutboxAsyncTests(EventStoreFixture fixture) : IDisposable
     {
         [Fact]
         public async Task When_Writing_Messages_To_The_Outbox_Async()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(fixture.Connection);
+            var streamName = $"{Guid.NewGuid()}";
 
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
             header.Bag.Add("impersonatorId", 123);
             header.Bag.Add("eventNumber", 0);
-            header.Bag.Add("streamId", StreamName);
+            header.Bag.Add("streamId", streamName);
             var conversationId = Guid.NewGuid();
             header.Bag.Add("conversationId", conversationId);
             var now = DateTime.UtcNow;
@@ -57,7 +58,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             var header1 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
             header1.Bag.Add("impersonatorId", 123);
             header1.Bag.Add("eventNumber", 1);
-            header1.Bag.Add("streamId", StreamName);
+            header1.Bag.Add("streamId", streamName);
             header1.Bag.Add("conversationId", conversationId);
             header1.Bag.Add("timeStamp", now);
             var message2 = new Message(header1, body1);
@@ -85,16 +86,21 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             //Bag serialization
             messages[0].Header.Bag["impersonatorId"].Should().Be(123);
             messages[0].Header.Bag["eventNumber"].Should().Be(0);
-            messages[0].Header.Bag["streamId"].Should().Be(StreamName);
+            messages[0].Header.Bag["streamId"].Should().Be(streamName);
             messages[0].Header.Bag["conversationId"].Should().Be(conversationId);
             messages[0].Header.Bag["timeStamp"].Should().Be(now);
             
             messages[1].Header.Bag["impersonatorId"].Should().Be(123);
             messages[1].Header.Bag["eventNumber"].Should().Be(1);
-            messages[1].Header.Bag["streamId"].Should().Be(StreamName);
+            messages[1].Header.Bag["streamId"].Should().Be(streamName);
             messages[1].Header.Bag["conversationId"].Should().Be(conversationId);
             messages[1].Header.Bag["timeStamp"].Should().Be(now);
  
+        }
+        
+        public void Dispose()
+        {
+            fixture.Dispose();
         }
     }
 }

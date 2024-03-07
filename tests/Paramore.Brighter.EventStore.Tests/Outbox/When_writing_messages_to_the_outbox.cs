@@ -32,13 +32,14 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class EventStoreOutboxTests : EventStoreFixture
+    public class EventStoreOutboxTests(EventStoreFixture fixture) : IDisposable
     {
         [Fact]
         public void When_Writing_Messages_To_The_Outbox()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(fixture.Connection);
+            var streamName = $"{Guid.NewGuid()}";
 
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(
@@ -51,7 +52,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
                 contentType: "text/plain");
             header.Bag.Add("impersonatorId", 123);
             header.Bag.Add("eventNumber", 0);
-            header.Bag.Add("streamId", StreamName);
+            header.Bag.Add("streamId", streamName);
             var conversationId = Guid.NewGuid();
             header.Bag.Add("conversationId", conversationId);
             var now = DateTime.UtcNow;
@@ -70,7 +71,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
                 contentType: "text/plain");
             header1.Bag.Add("impersonatorId", 123);
             header1.Bag.Add("eventNumber", 1);
-            header1.Bag.Add("streamId", StreamName);
+            header1.Bag.Add("streamId", streamName);
             header1.Bag.Add("conversationId", conversationId);
             header1.Bag.Add("timeStamp", now);
             
@@ -81,7 +82,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             eventStoreOutbox.Add(message2);   
             
             // assert
-            var messages = eventStoreOutbox.Get(StreamName, 0, 2);
+            var messages = eventStoreOutbox.Get(streamName, 0, 2);
             
             //should read the message from the outbox
             messages[0].Body.Value.Should().Be(message1.Body.Value);
@@ -99,16 +100,21 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             //Bag serialization
             messages[0].Header.Bag["impersonatorId"].Should().Be(123);
             messages[0].Header.Bag["eventNumber"].Should().Be(0);
-            messages[0].Header.Bag["streamId"].Should().Be(StreamName);
+            messages[0].Header.Bag["streamId"].Should().Be(streamName);
             messages[0].Header.Bag["conversationId"].Should().Be(conversationId);
             messages[0].Header.Bag["timeStamp"].Should().Be(now);
             
             messages[1].Header.Bag["impersonatorId"].Should().Be(123);
             messages[1].Header.Bag["eventNumber"].Should().Be(1);
-            messages[1].Header.Bag["streamId"].Should().Be(StreamName);
+            messages[1].Header.Bag["streamId"].Should().Be(streamName);
             messages[1].Header.Bag["conversationId"].Should().Be(conversationId);
             messages[1].Header.Bag["timeStamp"].Should().Be(now);
 
+        }
+        
+        public void Dispose()
+        {
+            fixture.Dispose();
         }
     }
 }

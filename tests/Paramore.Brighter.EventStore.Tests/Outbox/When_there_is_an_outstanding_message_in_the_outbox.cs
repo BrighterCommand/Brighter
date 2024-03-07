@@ -35,35 +35,36 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class OutStandingMessageTests : EventStoreFixture
+    public class OutStandingMessageTests(EventStoreFixture fixture) : IDisposable
     {
         [Fact]
         public async void When_there_is_an_outstanding_message_in_the_outbox()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(fixture.Connection);
+            var streamName = $"{Guid.NewGuid()}";
             
-            var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, streamName}};
 
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
             header.Bag.Add("impersonatorId", 123);
             header.Bag.Add("eventNumber", 0);
-            header.Bag.Add("streamId", StreamName);
+            header.Bag.Add("streamId", streamName);
             var outstandingMessage = new Message(header, body);
             
             var body1 = new MessageBody("{companyId:123}");
             var header1 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
             header1.Bag.Add("impersonatorId", 123);
             header1.Bag.Add("eventNumber", 1);
-            header1.Bag.Add("streamId", StreamName);
+            header1.Bag.Add("streamId", streamName);
             var dispatchedMessage = new Message(header1, body1);
             var body2 = new MessageBody("{companyId:123}");
             
             var header2 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
             header2.Bag.Add("impersonatorId", 123);
             header2.Bag.Add("eventNumber", 3);
-            header2.Bag.Add("streamId", StreamName);
+            header2.Bag.Add("streamId", streamName);
             var outstandingRecentMessage = new Message(header2, body2);
             
             eventStoreOutbox.Add(outstandingMessage);
@@ -83,7 +84,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_null_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(fixture.Connection);
             
             // act
             Action getWithoutArgs = () => eventStoreOutbox.OutstandingMessages(500, 100, 1);
@@ -96,7 +97,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_null_stream_arg_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(fixture.Connection);
             var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
             
             // act
@@ -110,7 +111,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_empty_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(fixture.Connection);
             var args = new Dictionary<string, object>();
             
             // act
@@ -124,7 +125,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_wrong_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutbox(fixture.Connection);
             var args = new Dictionary<string, object> { { "Foo", "Bar" }};
             
             // act
@@ -132,6 +133,11 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             
             // assert
             getWithoutArgs.Should().Throw<ArgumentException>();
+        }
+        
+        public void Dispose()
+        {
+            fixture.Dispose();
         }
     }
 }
