@@ -64,16 +64,6 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Delete the specified messages
-        /// </summary>
-        /// <param name="messageIds">The id of the message to delete</param>
-        public void Delete(Guid[] messageIds)
-        {
-            if(messageIds.Any())
-                WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
-        }
-
-        /// <summary>
         /// Adds the specified message to the outbox 
         /// </summary>
         /// <param name="message">The message.</param>
@@ -117,6 +107,56 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Delete the specified messages
+        /// </summary>
+        /// <param name="messageIds">The id of the message to delete</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
+        {
+            if(messageIds.Any())
+                WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+        }
+        
+        /// <summary>
+        /// Delete the specified messages
+        /// </summary>
+        /// <param name="messageIds">The id of the message to delete</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        public Task DeleteAsync(Guid[] messageIds, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        {
+            if(!messageIds.Any())
+                return Task.CompletedTask;
+            
+            return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null,
+                cancellationToken);
+        }
+        
+        /// <summary>
+        /// Retrieves messages that have been sent within the window
+        /// </summary>
+        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="pageSize">How many messages in a page</param>
+        /// <param name="pageNumber">Which page of messages to get</param>
+        /// <param name="outboxTimeout"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>A list of dispatched messages</returns>
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            double millisecondsDispatchedSince,
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
+        {
+            return ReadFromStoreAsync(
+                connection =>
+                    CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber),
+                dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+        }
+
+        /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
@@ -137,14 +177,34 @@ namespace Paramore.Brighter
                     CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber),
                 dr => MapListFunction(dr));
         }
+        
+        /// <summary>
+        /// Get the messages that have been dispatched
+        /// </summary>
+        /// <param name="hoursDispatchedSince">The number of hours since the message was dispatched</param>
+        /// <param name="pageSize">The amount to return</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Messages that have already been dispatched</returns>
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            int hoursDispatchedSince, 
+            int pageSize = 100,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
+        {
+            return ReadFromStoreAsync(connection => CreateDispatchedCommand(connection, hoursDispatchedSince, pageSize),
+                dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+        }
+
 
         /// <summary>
         /// Gets the specified message
         /// </summary>
         /// <param name="messageId">The id of the message to get</param>
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             return ReadFromStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
                 dr => MapFunction(dr));
@@ -155,11 +215,12 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
-        public Task<Message> GetAsync(
-            Guid messageId, 
+        public Task<Message> GetAsync(Guid messageId,
             int outBoxTimeout = -1,
+            Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
             return ReadFromStoreAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
@@ -216,6 +277,19 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Get the number of messages in the Outbox that are not dispatched
+        /// </summary>
+        /// <param name="cancellationToken">Cancel the async operation</param>
+        /// <returns></returns>
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            return ReadFromStoreAsync(
+                connection => CreateRemainingOutstandingCommand(connection),
+                dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
+        }
+
+
+        /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
         /// <param name="id">The id of the message to update</param>
@@ -251,28 +325,7 @@ namespace Paramore.Brighter
                 cancellationToken);
         }
 
-        /// <summary>
-        /// Retrieves messages that have been sent within the window
-        /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
-        /// <param name="pageSize">How many messages in a page</param>
-        /// <param name="pageNumber">Which page of messages to get</param>
-        /// <param name="outboxTimeout"></param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <param name="cancellationToken">The Cancellation Token</param>
-        /// <returns>A list of dispatched messages</returns>
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince,
-            int pageSize = 100, int pageNumber = 1,
-            int outboxTimeout = -1, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default)
-        {
-            return ReadFromStoreAsync(
-                connection =>
-                    CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber),
-                dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
-        }
-
-        /// <summary>
+         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
         /// <param name="id">The id of the message to update</param>
@@ -322,41 +375,6 @@ namespace Paramore.Brighter
             return ReadFromStoreAsync(
                 connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber),
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
-        }
-
-        /// <summary>
-        /// Delete the specified messages
-        /// </summary>
-        /// <param name="messageIds">The id of the message to delete</param>
-        /// <param name="cancellationToken">The Cancellation Token</param>
-        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
-        {
-            if(!messageIds.Any())
-                return Task.CompletedTask;
-            
-            return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null,
-                cancellationToken);
-        }
-
-        /// <summary>
-        /// Get the messages that have been dispatched
-        /// </summary>
-        /// <param name="hoursDispatchedSince">The number of hours since the message was dispatched</param>
-        /// <param name="pageSize">The amount to return</param>
-        /// <param name="cancellationToken">The Cancellation Token</param>
-        /// <returns>Messages that have already been dispatched</returns>
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
-            CancellationToken cancellationToken = default)
-        {
-            return ReadFromStoreAsync(connection => CreateDispatchedCommand(connection, hoursDispatchedSince, pageSize),
-                dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
-        }
-
-        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
-        {
-            return ReadFromStoreAsync(
-                connection => CreateRemainingOutstandingCommand(connection),
-                dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
         }
 
         protected abstract void WriteToStore(

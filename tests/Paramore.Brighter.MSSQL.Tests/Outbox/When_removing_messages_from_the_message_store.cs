@@ -80,7 +80,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public async Task When_Removing_Messages_From_The_OutboxAsync()
         {
-            await _outbox.DeleteAsync(new Guid[] {_firstMessage.Id}, CancellationToken.None);
+            await _outbox.DeleteAsync(new Guid[] {_firstMessage.Id}, cancellationToken: CancellationToken.None);
 
             var remainingMessages = await _outbox.OutstandingMessagesAsync(0);
 
@@ -88,7 +88,10 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             remainingMessages.Should().Contain(_secondMessage);
             remainingMessages.Should().Contain(_thirdMessage);
             
-            await _outbox.DeleteAsync(remainingMessages.Select(m => m.Id).ToArray(), CancellationToken.None);
+            await _outbox.DeleteAsync(
+                remainingMessages.Select(m => m.Id).ToArray(), 
+                cancellationToken: CancellationToken.None
+                );
 
             var messages = await _outbox.OutstandingMessagesAsync(0);
 

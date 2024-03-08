@@ -124,7 +124,8 @@ namespace Paramore.Brighter.Outbox.EventStore
             await _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData);
         }
 
-        public async Task AddAsync(IEnumerable<Message> messages,
+        public async Task AddAsync(
+            IEnumerable<Message> messages,
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
             CancellationToken cancellationToken = default)
@@ -133,6 +134,30 @@ namespace Paramore.Brighter.Outbox.EventStore
             {
                 await AddAsync(message, outBoxTimeout, transactionProvider, cancellationToken);
             }
+        }
+
+        /// <summary>
+        /// Delete messages 
+        /// </summary>
+        /// <param name="messageIds">The messages to delete</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <exception cref="NotImplementedException"></exception>
+        public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
+        {
+            throw new NotImplementedException();
+        }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="messageIds">The messages to delete</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Cancels an in-flight operation</param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public Task DeleteAsync(Guid[] messageIds, Dictionary<string, object> args, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -153,14 +178,26 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             throw new NotImplementedException();
         }
+        
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
-        ///     Gets the specified message by identifier. Currently not implemented.
+        ///  Gets the specified message by identifier. Currently not implemented.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">The outBoxTimeout.</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             throw new NotImplementedException();
         }
@@ -181,18 +218,32 @@ namespace Paramore.Brighter.Outbox.EventStore
         }
 
         /// <summary>
-        /// Awaitable Get the specified message identifier.
+        /// Awaitable Get the specified message identifier. Assume we only have one event for that message in the
+        /// stream, You need to pass in the stream name, first event to search, and number of events to search
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
-        public Task<Message> GetAsync(
-            Guid messageId,
+        public async Task<Message> GetAsync(Guid messageId,
             int outBoxTimeout = -1,
+            Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var stream = GetStreamFromArgs(args);
+            var (fromEventNumber, numberOfEvents) = GetEventNumberAndCountFromArgs(args);
+
+            var eventStreamSlice = 
+                await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, numberOfEvents, true);
+            
+            var messages = from e in eventStreamSlice.Events
+                let message = EventStoreMessageReader.ConvertEventToMessage(e.Event, stream)
+                where message.Id == messageId
+                select message;
+
+            return messages.FirstOrDefault();
+
         }
 
         /// <summary>
@@ -242,21 +293,11 @@ namespace Paramore.Brighter.Outbox.EventStore
         }
 
         public Task MarkDispatchedAsync(
-            IEnumerable<Guid> ids, DateTime? dispatchedAt = null, 
+            IEnumerable<Guid> ids, 
+            DateTime? dispatchedAt = null, 
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default
             )
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
-            double millisecondsDispatchedSince, 
-            int pageSize = 100, 
-            int pageNumber = 1,
-            int outboxTimeout = -1, 
-            Dictionary<string, object> args = null, 
-            CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
@@ -288,10 +329,6 @@ namespace Paramore.Brighter.Outbox.EventStore
             return OutstandingMessagesAsync(millSecondsSinceSent, pageSize, pageNumber, args).Result;
         }
 
-        public void Delete(Guid[] messageIds)
-        {
-            throw new NotImplementedException();
-        }
 
         /// <summary>
         /// Returns messages that have yet to be dispatched
@@ -352,16 +389,7 @@ namespace Paramore.Brighter.Outbox.EventStore
             return outstandingMessages.Where(om => !dispatchedIds.Contains(om.Id));
         }
 
-        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
 
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
-            CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
 
         private static int ExtractEventNumberFromHeader(Dictionary<string, object> headerBag, Guid messageId)
         {
@@ -395,6 +423,23 @@ namespace Paramore.Brighter.Outbox.EventStore
                 throw new ArgumentException($"{Globals.StreamArg} value must not be null or empty", nameof(args));
             return stream;
         }
+        
+        private (int fromEventNumber, int numberOfEvents) GetEventNumberAndCountFromArgs(Dictionary<string,object> args)
+        {
+            if (args is null)
+                throw new ArgumentNullException(nameof(args));
 
+            if (!args.ContainsKey(Globals.FromEventNumberArg))
+                throw new ArgumentException($"{Globals.FromEventNumberArg} missing", nameof(args));
+            
+            if (!args.ContainsKey(Globals.NumberOfEventsArg))
+                throw new ArgumentException($"{Globals.NumberOfEventsArg} missing", nameof(args));
+
+
+            var fromEventNumber = Convert.ToInt32(args[Globals.FromEventNumberArg]);
+            var numberOfEvents = Convert.ToInt32(args[Globals.NumberOfEventsArg]);
+
+              return (fromEventNumber, numberOfEvents);
+        }
     }
 }

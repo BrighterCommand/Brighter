@@ -15,25 +15,30 @@ namespace Paramore.Brighter
         /// <typeparam name="TResponse">The type of the response</typeparam>
         void CallViaExternalBus<T, TResponse>(Message outMessage)
             where T : class, ICall where TResponse : class, IResponse;
-        
+
         /// <summary>
         /// This is the clear outbox for explicit clearing of messages.
         /// </summary>
         /// <param name="posts">The ids of the posts that you would like to clear</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        void ClearOutbox(params Guid[] posts);
+        void ClearOutbox(Guid[] posts, Dictionary<string, object> args = null);
 
         /// <summary>
         /// This is the clear outbox for explicit clearing of messages.
         /// </summary>
         /// <param name="posts">The ids of the posts that you would like to clear</param>
         /// <param name="continueOnCapturedContext">Should we use the same thread in the callback</param>
+        /// <param name="args"></param>
         /// <param name="cancellationToken">Allow cancellation of the operation</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext,
-            CancellationToken cancellationToken);
+        Task ClearOutboxAsync(
+            IEnumerable<Guid> posts,
+            bool continueOnCapturedContext = false,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// This is the clear outbox for explicit clearing of messages.

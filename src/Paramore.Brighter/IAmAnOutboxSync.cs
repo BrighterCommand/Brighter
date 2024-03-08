@@ -24,9 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -55,22 +52,13 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         void Add(IEnumerable<T> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
-        
-        /// <summary>
-        /// Gets the specified message identifier.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        Message Get(Guid messageId, int outBoxTimeout = -1);
 
         /// <summary>
-        /// Update a message to show it is dispatched
+        /// Delete the specified messages
         /// </summary>
-        /// <param name="id">The id of the message to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
-        void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
+        /// <param name="messageIds">The id of the message to delete</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        void Delete(Guid[] messageIds, Dictionary<string, object> args = null);
         
         /// <summary>
         /// Retrieves messages that have been sent within the window
@@ -87,6 +75,23 @@ namespace Paramore.Brighter
             int pageNumber = 1, 
             int outboxTimeout = -1,
             Dictionary<string, object> args = null);
+        
+        /// <summary>
+        /// Gets the specified message identifier.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <returns>Task&lt;Message&gt;.</returns>
+        Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null);
+
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
+        void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
 
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
@@ -101,11 +106,5 @@ namespace Paramore.Brighter
             int pageSize = 100, 
             int pageNumber = 1,
             Dictionary<string, object> args = null);
-
-        /// <summary>
-        /// Delete the specified messages
-        /// </summary>
-        /// <param name="messageIds">The id of the message to delete</param>
-        void Delete(Guid[] messageIds);
     }
 }

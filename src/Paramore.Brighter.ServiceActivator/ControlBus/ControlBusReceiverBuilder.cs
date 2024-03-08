@@ -203,8 +203,13 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             {
                //discard message 
             }
+            
+            public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
+            {
+                //ignore
+            }
 
-            public Message Get(Guid messageId, int outBoxTimeout = -1)
+            public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
             {
                  return null;
             }
@@ -226,10 +231,6 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 return Array.Empty<Message>(); 
             }
 
-            public void Delete(Guid[] messageIds)
-            {
-                //ignore
-            }
 
             public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
             {

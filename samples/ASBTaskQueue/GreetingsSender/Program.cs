@@ -63,7 +63,7 @@ namespace GreetingsSender
                 commandProcessor.Post(new GreetingEvent("Paul"));
                 commandProcessor.Post(new GreetingAsyncEvent("Paul - Async"));
 
-                commandProcessor.ClearOutbox(distroGreeting.Id);
+                commandProcessor.ClearOutbox(new []{distroGreeting.Id});
                 
                 Console.WriteLine("Press q to Quit or any other key to continue");
 

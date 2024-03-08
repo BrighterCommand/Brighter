@@ -30,5 +30,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         public static readonly string StreamArg = "streamid";
         public static readonly string DispatchedAtKey = "dispatchedAt";
         public static readonly string PreviousEventIdKey = "previousEventId";
+        public static readonly string FromEventNumberArg  = "fromEventNumber";
+        public static readonly string NumberOfEventsArg = "numberOfEventsArg ";
     }
 }

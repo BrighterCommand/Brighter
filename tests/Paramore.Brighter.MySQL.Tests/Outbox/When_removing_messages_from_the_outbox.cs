@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlOutbox.Add(_secondMessage);
             _mySqlOutbox.Add(_thirdMessage);
 
-            await _mySqlOutbox.DeleteAsync(new []{_firstMessage.Id}, CancellationToken.None);
+            await _mySqlOutbox.DeleteAsync(new []{_firstMessage.Id}, cancellationToken: CancellationToken.None);
 
             var remainingMessages = await _mySqlOutbox.OutstandingMessagesAsync(0);
                                                                                                        
@@ -92,7 +92,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             remainingMessages.Should().Contain(_secondMessage);
             remainingMessages.Should().Contain(_thirdMessage);
             
-            await _mySqlOutbox.DeleteAsync(new []{_secondMessage.Id, _thirdMessage.Id}, CancellationToken.None);
+            await _mySqlOutbox.DeleteAsync(new []{_secondMessage.Id, _thirdMessage.Id}, cancellationToken: CancellationToken.None);
 
             var finalMessages = await _mySqlOutbox.OutstandingMessagesAsync(0);
 

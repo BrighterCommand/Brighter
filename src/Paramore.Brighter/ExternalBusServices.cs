@@ -216,9 +216,10 @@ namespace Paramore.Brighter
         /// This is the clear outbox for explicit clearing of messages.
         /// </summary>
         /// <param name="posts">The ids of the posts that you would like to clear</param>
+        /// <param name="args"></param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        public void ClearOutbox(params Guid[] posts)
+        public void ClearOutbox(Guid[] posts, Dictionary<string, object> args = null)
         {
             if (!HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
@@ -233,7 +234,7 @@ namespace Paramore.Brighter
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    Dispatch(new[] { message });
+                    Dispatch(new[] { message }, args);
                 }
             }
             finally
@@ -249,12 +250,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="posts">The ids of the posts that you would like to clear</param>
         /// <param name="continueOnCapturedContext">Should we use the same thread in the callback</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allow cancellation of the operation</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
         public async Task ClearOutboxAsync(
             IEnumerable<Guid> posts,
             bool continueOnCapturedContext = false,
+            Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
             if (!HasAsyncOutbox())
@@ -265,7 +268,7 @@ namespace Paramore.Brighter
             {
                 foreach (var messageId in posts)
                 {
-                    var message = await _asyncOutbox.GetAsync(messageId, _outboxTimeout, cancellationToken);
+                    var message = await _asyncOutbox.GetAsync(messageId, _outboxTimeout, args, cancellationToken);
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
@@ -475,8 +478,11 @@ namespace Paramore.Brighter
         }
 
 
-        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge,
-            Dictionary<string, object> args)
+        private async Task BackgroundDispatchUsingSync(
+            int amountToClear, 
+            int minimumAge,
+            Dictionary<string, object> args
+            )
         {
             var span = Activity.Current;
             if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
@@ -489,7 +495,7 @@ namespace Paramore.Brighter
                         tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } }));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
-                    Dispatch(messages);
+                    Dispatch(messages, args);
                     s_logger.LogInformation("Messages have been cleared");
                     span?.SetStatus(ActivityStatusCode.Ok);
                 }
@@ -565,7 +571,7 @@ namespace Paramore.Brighter
             }
         }
 
-        private void Dispatch(IEnumerable<Message> posts)
+        private void Dispatch(IEnumerable<Message> posts, Dictionary<string, object> args = null)
         {
             foreach (var message in posts)
             {
@@ -590,7 +596,7 @@ namespace Paramore.Brighter
                     {
                         var sent = Retry(() => { producerSync.Send(message); });
                         if (sent)
-                            Retry(() => _outBox.MarkDispatched(message.Id, DateTime.UtcNow));
+                            Retry(() => _outBox.MarkDispatched(message.Id, DateTime.UtcNow, args));
                     }
                 }
                 else

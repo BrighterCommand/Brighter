@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             _fakeOutbox.Add(_message);
             
-            _commandProcessor.ClearOutbox(_message.Id);
+            _commandProcessor.ClearOutbox(new []{_message.Id});
 
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();

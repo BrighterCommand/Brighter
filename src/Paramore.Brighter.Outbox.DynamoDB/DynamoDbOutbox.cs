@@ -166,8 +166,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// Delete messages from the Outbox
         /// </summary>
-        /// <param name="messageIds"></param>
-        public void Delete(Guid[] messageIds)
+        /// <param name="messageIds">The messages to delete</param>
+        /// <param name="args">Additional parameters required to search if needed</param>
+        public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
         {
             DeleteAsync(messageIds).GetAwaiter().GetResult();
         }
@@ -176,8 +177,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Delete messages from the Outbox
         /// </summary>
         /// <param name="messageIds">The messages to delete</param>
+        /// <param name="args">Additional parameters required to search if needed</param>
         /// <param name="cancellationToken">Should the operation be cancelled</param>
-        public async Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(Guid[] messageIds, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             foreach (var messageId in messageIds)
             {
@@ -290,26 +292,28 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="messageId">The identifier.</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="args"></param>
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             return GetMessage(messageId)
                 .ConfigureAwait(ContinueOnCapturedContext)
                 .GetAwaiter()
                 .GetResult();
         }
-        
+
 
         /// <summary>
         /// Finds a message with the specified identifier.
         /// </summary>
         /// <param name="messageId">The identifier.</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken"></param>
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
-        public async Task<Message> GetAsync(
-            Guid messageId, 
-            int outBoxTimeout = -1, 
+        public async Task<Message> GetAsync(Guid messageId,
+            int outBoxTimeout = -1,
+            Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
             return await GetMessage(messageId, cancellationToken)

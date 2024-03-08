@@ -107,7 +107,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return _posts.Where(oe => oe.TimeFlushed >= messagesSince).Select(oe => oe.Message).Take(pageSize).ToArray();
         }
 
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             foreach (var outboxEntry in _posts)
             {
@@ -128,7 +128,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return _posts.Select(outboxEntry => outboxEntry.Message).Take(pageSize).ToList();
         }
 
-        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default)
+        public Task<Message> GetAsync(
+            Guid messageId, 
+            int outBoxTimeout = -1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled<Message>(cancellationToken);
@@ -136,14 +140,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(Get(messageId, outBoxTimeout));
         }
 
-        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,
+        public Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Get(pageSize, pageNumber, args));
         }
 
-        public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
+        public Task<IEnumerable<Message>> GetAsync(
+            IEnumerable<Guid> messageIds, 
+            int outBoxTimeout = -1,
             CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<IEnumerable<Message>>();
@@ -152,7 +160,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
             return tcs.Task;
         }
-
+        
         public Task MarkDispatchedAsync(
             Guid id, 
             DateTime? dispatchedAt = null, 
@@ -201,13 +209,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
         }
 
-        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken = default)
+        public Task DeleteAsync(Guid[] messageIds,  Dictionary<string, object> args, CancellationToken cancellationToken = default)
         {
             Delete(messageIds);
             return Task.CompletedTask;
         }
 
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            int hoursDispatchedSince, 
+            int pageSize = 100,
+            Dictionary<string, object> args = null ,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(DispatchedMessages(hoursDispatchedSince, pageSize));
@@ -243,19 +254,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 .ToArray();
         }
 
-        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
-        {
-            var tcs = new TaskCompletionSource<int>();
-            var sentAfter = DateTime.UtcNow.AddMilliseconds(-1 * 500);
-            tcs.SetResult(_posts
-                .Where(oe => oe.TimeDeposited.HasValue && oe.TimeDeposited.Value < sentAfter && oe.TimeFlushed == null)
-                .Select(oe => oe.Message)
-                .Take(100)
-                .Count());
-            return tcs.Task;
-        }
-
-       public void Delete(params Guid[] messageIds)
+       public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
        {
            foreach (Guid messageId in messageIds)
            {
