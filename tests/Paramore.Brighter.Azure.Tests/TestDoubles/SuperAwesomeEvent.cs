@@ -1,10 +1,6 @@
 namespace Paramore.Brighter.Azure.Tests.TestDoubles;
 
-public class SuperAwesomeEvent : Event
+public class SuperAwesomeEvent(string announcement) : Event(Guid.NewGuid())
 {
-    public string Announcement { get; set; }
-
-    public SuperAwesomeEvent() : base(Guid.NewGuid())
-    {
-    }
+    public string Announcement { get; set; } = announcement;
 }

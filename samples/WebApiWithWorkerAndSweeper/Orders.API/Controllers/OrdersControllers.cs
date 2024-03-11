@@ -17,9 +17,8 @@ public class OrdersControllers : ControllerBase
     }
     
     [HttpGet("{orderId}")]
-    public async Task<IActionResult> GetOrder(int orderId, CancellationToken cancellationToken)
+    public IActionResult GetOrder(int orderId, CancellationToken cancellationToken)
     {
-    
         return Ok();
     }
 

@@ -29,12 +29,17 @@ public class SqlUnitOfWork : IUnitOfWork
 
     public Task CommitAsync(CancellationToken cancellationToken)
     {
-        return Transaction?.CommitAsync(cancellationToken);
+        if (Transaction == null)
+            throw new InvalidOperationException("Transaction has not been started");
+        return Transaction.CommitAsync(cancellationToken);
     }
 
     public Task RollbackAsync(CancellationToken cancellationToken)
     {
-        return Transaction?.RollbackAsync(cancellationToken);
+        if (Transaction == null)
+            throw new InvalidOperationException("Transaction has not been started");
+        
+        return Transaction.RollbackAsync(cancellationToken);
     }
     
     public async Task<SqlCommand> CreateSqlCommandAsync(string sql, SqlParameter[] parameters, CancellationToken cancellationToken)

@@ -43,7 +43,7 @@ public static class DispatcherExtensions
                     Performers = c.Performers,
                     ExpectedPerformers = c.ExpectedPerformers,
                     ActivePerformers = c.ActivePerformers,
-                    IsHealty = c.IsHealty
+                    IsHealthy = c.IsHealthy
                 })
                 .ToArray()
         };

@@ -19,6 +19,8 @@ public class MyLargeCommandMessageMapper : IAmAMessageMapper<MyLargeCommand>
     [RetrieveClaim(0, retain:false)]
     public MyLargeCommand MapToRequest(Message message)
     {
+#pragma warning disable CS8603 // Possible null reference return.
         return JsonSerializer.Deserialize<MyLargeCommand>(message.Body.Value);
+#pragma warning restore CS8603 // Possible null reference return.
     }
 }

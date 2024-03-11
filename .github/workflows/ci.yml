@@ -250,40 +250,6 @@ jobs:
       - name: Postgres Tests
         run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
-  eventstore-ci:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [build]
-    
-    services:
-      evenstore: 
-       image: eventstore/eventstore:release-5.0.9
-       ports: 
-         - 1113:1113
-         - 2113:2113
-       env:
-         EVENTSTORE_RUN_PROJECTIONS: ALL
-         EVENTSTORE_START_STANDARD_PROJECTIONS: true
-         EVENTSTORE_CLUSTER_SIZE: 1
-         EVENTSTORE_EXT_TCP_PORT: 1113
-         EVENTSTORE_EXT_HTTP_PORT: 2113 
-         EVENTSTORE_INSECURE: true
-         EVENTSTORE_ENABLE_EXTERNAL_TCP: true
-         EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true   
-     
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup dotnet 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            6.0.x
-            8.0.x
-      - name: Install dependencies
-        run: dotnet restore
-      - name: EventStore Tests
-        run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj  --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
-  
   sqlserver-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5

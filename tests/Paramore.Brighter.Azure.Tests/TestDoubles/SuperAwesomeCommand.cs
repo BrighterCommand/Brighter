@@ -1,10 +1,6 @@
 namespace Paramore.Brighter.Azure.Tests.TestDoubles;
 
-public class SuperAwesomeCommand : Command
+public class SuperAwesomeCommand(string message) : Command(Guid.NewGuid())
 {
-    public string Message { get; set; }
-
-    public SuperAwesomeCommand() : base(Guid.NewGuid())
-    {
-    }
+    public string Message { get; set; } = message;
 }

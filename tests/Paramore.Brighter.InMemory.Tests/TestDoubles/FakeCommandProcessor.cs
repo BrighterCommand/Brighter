@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 {
@@ -55,18 +56,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
               return tcs.Task;
         }
 
-        public void Post<T>(T request) where T : class, IRequest
+        public void Post<T>(T request, Dictionary<string, object> args = null) where T : class, IRequest
         {
-            ClearOutbox(DepositPost(request));
+            ClearOutbox([DepositPost(request, (IAmABoxTransactionProvider<Transaction>)null, args)], args);
         }
         
-        public void Post<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
-        {
-            Post(request);
-        }
-        
-
-        public Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task PostAsync<T>(T request, Dictionary<string, object> args = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
               var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
@@ -78,46 +73,53 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
               return tcs.Task;
         }
         
-        public Task PostAsync<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            return PostAsync(request, continueOnCapturedContext, cancellationToken);
-        }
-
-        public Guid DepositPost<T>(T request) where T : class, IRequest
+        public Guid DepositPost<T>(T request, Dictionary<string, object> args = null) where T : class, IRequest
         {
             Deposited.Enqueue(new DepositedMessage(request));
             return request.Id;
         }
         
-        public Guid DepositPost<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
+        public Guid DepositPost<T, TTransaction>(
+            T request, 
+            IAmABoxTransactionProvider<TTransaction> provider,
+            Dictionary<string, object> args = null) where T : class, IRequest
         {
             return DepositPost(request);
         }
 
-        public Guid[] DepositPost<T>(IEnumerable<T> request) where T : class, IRequest
+        public Guid[] DepositPost<T>(IEnumerable<T> request, Dictionary<string, object> args = null) where T : class, IRequest
         {
             var ids = new List<Guid>();
             foreach (T r in request)
             {
-                ids.Add(DepositPost(r));
+                ids.Add(DepositPost(r, (IAmABoxTransactionProvider<Transaction>)null, args));
             }
 
             return ids.ToArray();
         }
         
-        public Guid[] DepositPost<T, TTransaction>(IEnumerable<T> request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
+        public Guid[] DepositPost<T, TTransaction>(
+            IEnumerable<T> request, 
+            IAmABoxTransactionProvider<TTransaction> provider, 
+            Dictionary<string, object> args = null) 
+            where T : class, IRequest
         {
-            return DepositPost(request);
+            return DepositPost(request, args);
         }
 
-        public Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task<Guid> DepositPostAsync<T>(
+            T request, 
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = false, 
+            CancellationToken cancellationToken = default) 
+            where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if(cancellationToken.IsCancellationRequested)
                 tcs.SetCanceled(cancellationToken);
             
-            DepositPost(request);
+            DepositPost(request, (IAmABoxTransactionProvider<Transaction>)null, args);
             
             tcs.SetResult(request.Id);
 
@@ -125,12 +127,21 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         }
         
-        public Task<Guid> DepositPostAsync<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task<Guid> DepositPostAsync<T, TTransaction>(
+            T request,
+            IAmABoxTransactionProvider<TTransaction> provider, 
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = false, 
+            CancellationToken cancellationToken = default) 
+            where T : class, IRequest
         {
-            return DepositPostAsync(request, continueOnCapturedContext, cancellationToken);
+            return DepositPostAsync(request, args, continueOnCapturedContext, cancellationToken);
         }
 
-        public async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
+        public async Task<Guid[]> DepositPostAsync<T>(
+            IEnumerable<T> requests,
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var ids = new List<Guid>();
@@ -142,13 +153,17 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return ids.ToArray();
         }
         
-        public async Task<Guid[]> DepositPostAsync<T, TTransaction>(IEnumerable<T> requests, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false,
+        public async Task<Guid[]> DepositPostAsync<T, TTransaction>(
+            IEnumerable<T> requests, 
+            IAmABoxTransactionProvider<TTransaction> provider, 
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
-            return await DepositPostAsync(requests, continueOnCapturedContext, cancellationToken);
+            return await DepositPostAsync(requests, args, continueOnCapturedContext, cancellationToken);
         }
 
-        public void ClearOutbox(params Guid[] posts)
+        public void ClearOutbox(Guid[] posts, Dictionary<string, object> args = null)
         {
             foreach (var post in posts)
             {
@@ -169,7 +184,11 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             ClearOutbox(depositedMessages);
         }
 
-        public Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public Task ClearOutboxAsync(
+            IEnumerable<Guid> posts, 
+            Dictionary<string, object> args = null, 
+            bool continueOnCapturedContext = false, 
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             
@@ -183,15 +202,21 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
         }
 
-        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null)
+        public void ClearAsyncOutbox(
+            int amountToClear = 100, 
+            int minimumAge = 5000, 
+            bool useBulk = false, 
+            Dictionary<string, object> args = null)
         {
             ClearOutbox(amountToClear, minimumAge);
         }
 
-        public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+        public Task BulkClearOutboxAsync(
+            IEnumerable<Guid> posts, 
+            bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {
-            return ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken);
+            return ClearOutboxAsync(posts, null, continueOnCapturedContext, cancellationToken);
         }
 
         public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds) where T : class, ICall where TResponse : class, IResponse

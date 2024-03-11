@@ -37,6 +37,8 @@ public class JsonBodyMessageMapper<T> : IAmAMessageMapper<T> where T : class, IR
 
     public T MapToRequest(Message message)
     {
+#pragma warning disable CS8603 // Possible null reference return.
         return JsonSerializer.Deserialize<T>(message.Body.Value, JsonSerialisationOptions.Options);
+#pragma warning restore CS8603 // Possible null reference return.
     }
 }

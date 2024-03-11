@@ -76,7 +76,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default)
             where TRequest : class, IRequest
         {
-            await _commandProcessor.PostAsync(request, continueOnCapturedContext, cancellationToken)
+            await _commandProcessor.PostAsync(request, null, continueOnCapturedContext, cancellationToken)
                 .ConfigureAwait(continueOnCapturedContext);
         }
 

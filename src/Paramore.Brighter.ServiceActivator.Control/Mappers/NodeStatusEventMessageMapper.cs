@@ -18,6 +18,8 @@ public class NodeStatusEventMessageMapper : IAmAMessageMapper<NodeStatusEvent>
 
     public NodeStatusEvent MapToRequest(Message message)
     {
+#pragma warning disable CS8603 // Possible null reference return.
         return JsonSerializer.Deserialize<NodeStatusEvent>(message.Body.Value, JsonSerialisationOptions.Options);
+#pragma warning restore CS8603 // Possible null reference return.
     }
 }

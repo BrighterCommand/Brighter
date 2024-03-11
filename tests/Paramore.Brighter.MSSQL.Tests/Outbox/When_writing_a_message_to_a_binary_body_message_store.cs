@@ -6,7 +6,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
-    public class SqlBinaryPayloadOutboxWritingMessageTests
+    public class SqlBinaryPayloadOutboxWritingMessageTests : IDisposable
     {
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";

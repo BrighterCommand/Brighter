@@ -10,7 +10,7 @@ public class GetStatusResponseSubscriptionInformation
         Performers = subscriptionInformation.Performers;
         ActivePerformers = subscriptionInformation.ActivePerformers;
         ExpectedPerformers = subscriptionInformation.ExpectedPerformers;
-        IsHealthy = subscriptionInformation.IsHealty;
+        IsHealthy = subscriptionInformation.IsHealthy;
 
     }
 

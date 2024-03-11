@@ -122,25 +122,6 @@ namespace Paramore.Brighter.ServiceActivator
             return this;
         }
         
-        
-        /// <summary>
-        /// A list of connections i.e. mappings of channels to commands or events
-        /// </summary>
-        /// <param name="connections">The connections.</param>
-        /// <returns>IAmADispatchBuilder.</returns>
-        [Obsolete("This will be replaced in v10. Please use Subscriptions, which is functionally equivalent")]
-        public IAmADispatchBuilder Connections(IEnumerable<Subscription> connections)
-        {
-            _subscriptions = connections;
-
-            foreach (var connection in _subscriptions.Where(c => c.ChannelFactory == null))
-            {
-                connection.ChannelFactory = _defaultChannelFactory;
-            }
-
-            return this;
-        }
-
         /// <summary>
         /// Builds this instance.
         /// </summary>
@@ -211,10 +192,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// A list of connections i.e. mappings of channels to commands or events
         /// </summary>
         /// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subsriptions);
-        // TODO: Remove in V10
-        [Obsolete("Will be removed in V10, use Subscriptions instead")]
-        IAmADispatchBuilder Connections(IEnumerable<Subscription> connections);
+        IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subscriptions);
     }
 
     /// <summary>

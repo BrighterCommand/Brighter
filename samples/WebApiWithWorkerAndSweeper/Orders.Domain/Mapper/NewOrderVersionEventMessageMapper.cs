@@ -16,6 +16,8 @@ public class NewOrderVersionEventMessageMapper : IAmAMessageMapper<NewOrderVersi
 
     public NewOrderVersionEvent MapToRequest(Message message)
     {
+#pragma warning disable CS8603 // Possible null reference return.
         return JsonSerializer.Deserialize<NewOrderVersionEvent>(message.Body.Value, JsonSerialisationOptions.Options);
+#pragma warning restore CS8603 // Possible null reference return.
     }
 }

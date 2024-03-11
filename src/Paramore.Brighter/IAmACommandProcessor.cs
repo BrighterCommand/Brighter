@@ -82,7 +82,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <param name="request">The request.</param>
-        void Post<TRequest>(TRequest request) where TRequest : class, IRequest;
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        void Post<TRequest>(TRequest request, Dictionary<string, object> args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Posts the specified request with async/await support.
@@ -90,14 +91,16 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <param name="request">The request.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task PostAsync<TRequest>(
             TRequest request, 
+            Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false, 
             CancellationToken cancellationToken = default
         ) where TRequest : class, IRequest;
-        
+
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
@@ -106,10 +109,10 @@ namespace Paramore.Brighter
         /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutbox"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
-        Guid DepositPost<TRequest>(TRequest request) where TRequest : class, IRequest;
+        Guid DepositPost<TRequest>(TRequest request, Dictionary<string, object> args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
@@ -120,14 +123,17 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
         Guid DepositPost<TRequest, TTransaction>(
-            TRequest request, 
-            IAmABoxTransactionProvider<TTransaction> transactionProvider
-            ) where TRequest : class, IRequest;
-        
+            TRequest request,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider, 
+            Dictionary<string, object> args = null
+            ) 
+            where TRequest : class, IRequest;
+
         /// <summary>
         /// Adds a messages into the outbox, and returns the id of the saved message.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
@@ -136,9 +142,10 @@ namespace Paramore.Brighter
         /// Pass deposited Guid to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        Guid[] DepositPost<TRequest>(IEnumerable<TRequest> requests) where TRequest : class, IRequest;
+        Guid[] DepositPost<TRequest>(IEnumerable<TRequest> requests, Dictionary<string, object> args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Adds a messages into the outbox, and returns the id of the saved message.
@@ -149,14 +156,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
         Guid[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider 
-            ) where TRequest : class, IRequest;
-        
+            IAmABoxTransactionProvider<TTransaction> transactionProvider,
+            Dictionary<string, object> args = null) where TRequest : class, IRequest;
+
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
@@ -166,11 +174,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
         Task<Guid> DepositPostAsync<TRequest>(
             TRequest request, 
+            Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false, 
             CancellationToken cancellationToken = default
         ) where TRequest : class, IRequest;
@@ -185,6 +195,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -193,6 +204,7 @@ namespace Paramore.Brighter
         Task<Guid> DepositPostAsync<T, TTransaction>(
             T request, 
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
+            Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false, 
             CancellationToken cancellationToken = default
             ) where T : class, IRequest;
@@ -205,6 +217,7 @@ namespace Paramore.Brighter
         /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
@@ -212,6 +225,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         Task<Guid[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests, 
+            Dictionary<string, object> args,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default
         ) where TRequest : class, IRequest;
@@ -225,6 +239,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -233,6 +248,7 @@ namespace Paramore.Brighter
         Task<Guid[]> DepositPostAsync<T, TTransaction>(
             IEnumerable<T> requests, 
             IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
+            Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default
             ) where T : class, IRequest;
@@ -240,9 +256,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Flushes the message box message given by <param name="ids"> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
-        /// <param name="ids">The ids to flush</param>
         /// </summary>
-        void ClearOutbox(params Guid[] ids);
+        /// <param name="ids">The ids to flush</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>       
+        void ClearOutbox(Guid[] ids, Dictionary<string, object> args = null);
 
         /// <summary>
         /// Flushes any outstanding message box message to the broker.
@@ -250,7 +267,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
-        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null);
 
         /// <summary>
@@ -258,7 +275,14 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="posts">The ids to flush</param>
-        Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default);
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="continueOnCapturedContext"></param>
+        /// <param name="cancellationToken"></param>
+        Task ClearOutboxAsync(
+            IEnumerable<Guid> posts, 
+            Dictionary<string, object> args = null, 
+            bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Flushes any outstanding message box message to the broker.
@@ -267,8 +291,13 @@ namespace Paramore.Brighter
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
-        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null);
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        void ClearAsyncOutbox(
+            int amountToClear = 100, 
+            int minimumAge = 5000, 
+            bool useBulk = false, 
+            Dictionary<string, object> args = null
+            );
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.

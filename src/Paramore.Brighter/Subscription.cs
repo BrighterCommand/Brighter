@@ -82,9 +82,6 @@ namespace Paramore.Brighter
         /// <value>The name.</value>
         public SubscriptionName Name { get; }
 
-        [Obsolete("Use NoOfPerformers")]
-        public int NoOfPeformers { get => NoOfPerformers; }
-        
         /// <summary>
         /// Gets the no of threads that we will use to read from  this channel.
         /// </summary>
@@ -115,9 +112,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
         public bool RunAsync { get; }
-
-        [Obsolete("Use TimeoutInMilliseconds")]
-        public int TimeoutInMiliseconds { get => TimeoutInMilliseconds; }
 
         /// <summary>
         /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty

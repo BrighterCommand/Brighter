@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
     /// <summary>
     /// Class DynamoDbStoreConfiguration
     /// </summary>
-    public class DynamoDbInboxConfiguration
+    public class DynamoDbInboxConfiguration(string tableName = null)
     {
         //What AWS Credentials to use
         public AWSCredentials Credentials { get; }
@@ -42,22 +42,6 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <summary>
         /// The table that forms the Outbox
         /// </summary>
-        public string TableName { get; set; }
-
-        [Obsolete("Use the DynamoDbConfiguration without AWSCredentials and without RegionEndpoint")]
-        public DynamoDbInboxConfiguration(
-            AWSCredentials credentials, 
-            RegionEndpoint region,
-            string tableName = null)
-        {
-            Credentials = credentials;
-            Region = region;
-            TableName = tableName ?? "brighter_inbox";
-        }
-        
-        public DynamoDbInboxConfiguration(string tableName = null)
-        {
-            TableName = tableName ?? "brighter_inbox";
-        }
-   }     
+        public string TableName { get; set; } = tableName ?? "brighter_inbox";
+    }     
 }

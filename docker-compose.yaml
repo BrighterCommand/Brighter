@@ -9,23 +9,6 @@ services:
     volumes:
       - rabbitmq-home:/var/lib/rabbitmq
 
-  eventstore:
-    image: eventstore/eventstore:release-5.0.9
-    ports:
-      - "1113:1113" # TCP (default 1113)
-      - "2113:2113" # HTTP (default 2113)
-    volumes:
-      - eventstore-data:/var/lib/eventstore
-    environment:
-      - EVENTSTORE_RUN_PROJECTIONS=ALL
-        - EVENTSTORE_START_STANDARD_PROJECTIONS=true
-        - EVENTSTORE_CLUSTER_SIZE=1
-        - EVENTSTORE_EXT_TCP_PORT=1113
-        - EVENTSTORE_EXT_HTTP_PORT=2113
-        - EVENTSTORE_INSECURE=true
-        - EVENTSTORE_ENABLE_EXTERNAL_TCP=true
-        - EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true
-    
   # Need to give 2GB of memory to Docker for SQL
   sqlserver:
     image: mcr.microsoft.com/mssql/server
@@ -108,9 +91,9 @@ networks:
     driver: bridge
 
 volumes:
-  rabbitmq-home:
-    driver: local
   eventstore-data:
+  eventstore-logs:
+  rabbitmq-home:
     driver: local
   mysql-data:
     driver: local

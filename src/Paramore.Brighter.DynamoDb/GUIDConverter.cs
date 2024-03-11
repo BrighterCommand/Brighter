@@ -8,7 +8,6 @@ namespace Paramore.Brighter.DynamoDb
     {
         public DynamoDBEntry ToEntry(object value)
         {
-
             var uuid = (Guid)value;
             var json = uuid.ToString();
 

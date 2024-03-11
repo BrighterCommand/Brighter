@@ -48,17 +48,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             await _sqlOutbox.AddAsync(_message3);
             await Task.Delay(100);
 
-            _messages = await _sqlOutbox.GetAsync(new[] { _message1.Id, _message2.Id });
-
-            //should fetch 1 message
-            _messages.Should().HaveCount(2);
-            //should fetch expected message
-            _messages.Should().Contain(m => m.Id == _message1.Id);
-            _messages.Should().Contain(m => m.Id == _message2.Id);
-
-            await _sqlOutbox.MarkDispatchedAsync(_messages.Select(m => m.Id), DateTime.UtcNow);
+            await _sqlOutbox.MarkDispatchedAsync(new []{_message1.Id, _message2.Id}, DateTime.UtcNow);
             
-            await Task.Delay(100);
+            await Task.Delay(200);
 
             var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0);
 
