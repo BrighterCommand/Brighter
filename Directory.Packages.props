@@ -4,30 +4,33 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.13" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.19" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.300" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.28" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.53" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.301" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.52" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.31" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.56" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.301.3" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.55" />
     <PackageVersion Include="Azure.Identity" Version="1.10.4" />
-    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.17.3" />
+    <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.17.4" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.19.1" />
     <PackageVersion Include="Confluent.Kafka" Version="2.3.0" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.3.0" />
     <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.3.0" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
-    <PackageVersion Include="Dapper" Version="2.1.28" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageVersion>
+    <PackageVersion Include="Dapper" Version="2.1.35" />
     <PackageVersion Include="Dapper.Contrib" Version="2.0.78" />
     <PackageVersion Include="DapperExtensions" Version="1.7.0" />
     <PackageVersion Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
     <PackageVersion Include="FakeItEasy" Version="8.1.0" />
     <PackageVersion Include="FakeItEasy.Analyzer.CSharp" Version="6.1.1" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
-    <PackageVersion Include="FluentMigrator" Version="5.0.0" />
-    <PackageVersion Include="FluentMigrator.Runner" Version="5.0.0" />
+    <PackageVersion Include="FluentMigrator" Version="5.1.0" />
+    <PackageVersion Include="FluentMigrator.Runner" Version="5.1.0" />
     <PackageVersion Include="MessagePack" Version="2.5.140" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.1.5" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.0" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
@@ -45,7 +48,7 @@
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Npgsql" Version="8.0.2" />
-    <PackageVersion Include="NUnit" Version="4.0.1" />
+    <PackageVersion Include="NUnit" Version="4.1.0" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -62,7 +65,7 @@
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.QueryLogging" Version="3.0.0" />
-    <PackageVersion Include="Polly" Version="8.3.0" />
+    <PackageVersion Include="Polly" Version="8.3.1" />
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
@@ -71,7 +74,7 @@
     <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="3.2.0" />
-    <PackageVersion Include="ServiceStack.Redis.Core" Version="8.1.2" />
+    <PackageVersion Include="ServiceStack.Redis.Core" Version="8.2.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.0" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
@@ -116,10 +119,10 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.2" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.1" />
   </ItemGroup>
   <ItemGroup>
-    <GlobalPackageReference Include="MinVer" Version="4.3.0" />
+    <GlobalPackageReference Include="MinVer" Version="5.0.0" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
   </ItemGroup>
 </Project>
