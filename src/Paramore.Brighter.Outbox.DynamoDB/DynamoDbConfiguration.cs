@@ -7,18 +7,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     public class DynamoDbConfiguration
     {   
         /// <summary>
-        /// What AWS Credentials to use
-        /// </summary>
-        [Obsolete("This property is not being used")]
-        public AWSCredentials Credentials { get; }
-        
-        /// <summary>
-        /// Which AWS region
-        /// </summary>
-        [Obsolete("This property is not being used")]
-        public RegionEndpoint Region { get; }
-        
-        /// <summary>
         /// The table that forms the Outbox
         /// </summary>
         public string TableName { get; set; }
