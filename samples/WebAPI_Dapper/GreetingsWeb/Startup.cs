@@ -189,7 +189,7 @@ namespace GreetingsWeb
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
                 .UseExternalBus((configure) =>
-                        {
+                {
                     configure.ProducerRegistry = ConfigureProducerRegistry(messagingTransport);
                     configure.Outbox = makeOutbox.outbox;
                     configure.TransactionProvider = makeOutbox.transactionProvider;
