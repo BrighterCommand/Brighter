@@ -46,7 +46,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 onceOnly: true, 
                 actionOnExists: OnceOnlyAction.Throw);
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, _inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(
+                new PayloadTypeRouter(), registry, (IAmAHandlerFactoryAsync)handlerFactory, _inboxConfiguration
+            );
             
         }
 

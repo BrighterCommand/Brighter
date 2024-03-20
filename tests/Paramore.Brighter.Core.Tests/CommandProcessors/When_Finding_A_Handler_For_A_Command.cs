@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             registry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new TestHandlerFactorySync<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(new PayloadTypeRouter(), registry, handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

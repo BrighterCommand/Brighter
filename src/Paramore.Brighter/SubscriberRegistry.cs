@@ -25,9 +25,12 @@ THE SOFTWARE. */
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter
 {
+    public record KeyedType(string Key, Type Type);
+    
     /// <summary>
     /// Class SubscriberRegistry.
     /// In order to map an <see cref="IHandleRequests"/> or an <see cref="IHandleRequestsAsync"/> 
@@ -39,46 +42,77 @@ namespace Paramore.Brighter
     public class SubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry,
         IEnumerable<KeyValuePair<Type, List<Type>>>
     {
-        private readonly Dictionary<Type, List<Type>> _observers = new Dictionary<Type, List<Type>>();
+        private readonly Dictionary<Type, List<KeyedType>> _observers = new Dictionary<Type, List<KeyedType>>();
 
         /// <summary>
         /// Gets this instance.
         /// </summary>
-        /// <typeparam name="TRequest">The type of the t request.</typeparam>
+        /// <typeparam name="TRequest">The type of the request.</typeparam>
         /// <returns>IEnumerable&lt;Type&gt;.</returns>
         public IEnumerable<Type> Get<TRequest>() where TRequest : class, IRequest
         {
             var observed = _observers.ContainsKey(typeof(TRequest));
-            return observed ? _observers[typeof(TRequest)] : new List<Type>();
+            return observed ? _observers[typeof(TRequest)].Select(kt => kt.Type) : new List<Type>();
         }
 
         /// <summary>
         /// Registers this instance.
         /// </summary>
-        /// <typeparam name="TRequest">The type of the t request.</typeparam>
-        /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
-        public void Register<TRequest, TImplementation>() where TRequest : class, IRequest where TImplementation : class, IHandleRequests<TRequest>
+        /// <typeparam name="TRequest">The type of the request.</typeparam>
+        /// <typeparam name="THandleRequests">The type of the handler.</typeparam>
+        public void Register<TRequest, THandleRequests>() where TRequest : class, IRequest where THandleRequests : class, IHandleRequests<TRequest>
         {
-            Add(typeof(TRequest), typeof(TImplementation));
+            Add(typeof(TRequest), typeof(THandleRequests));
         }
 
         /// <summary>
         /// Registers this instance.
         /// </summary>
-        /// <typeparam name="TRequest">The type of the t request.</typeparam>
-        /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
-        public void RegisterAsync<TRequest, TImplementation>() where TRequest : class, IRequest where TImplementation : class, IHandleRequestsAsync<TRequest>
+        /// <param name="contextBagKey">The key to use to retrieve this handler</param>
+        /// <typeparam name="TRequest">The type of the request.</typeparam>
+        /// <typeparam name="THandleRequests">The type of the handler.</typeparam>
+        public void Register<TRequest, THandleRequests>(string contextBagKey) where TRequest : class, IRequest where THandleRequests : class, IHandleRequests<TRequest>
         {
-            Add(typeof(TRequest), typeof(TImplementation));
+            Add(typeof(TRequest), typeof(THandleRequests));
         }
 
+        /// <summary>
+        /// Registers this instance.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request.</typeparam>
+        /// <typeparam name="THandleRequestsAsync">The type of the handler.</typeparam>
+        public void RegisterAsync<TRequest, THandleRequestsAsync>() where TRequest : class, IRequest where THandleRequestsAsync : class, IHandleRequestsAsync<TRequest>
+        {
+            Add(typeof(TRequest), typeof(THandleRequestsAsync));
+        }
+        
+        /// <summary>
+        /// Registers a request type and handler type
+        /// </summary>
+        /// <param name="requestType">The type of the request</param>
+        /// <param name="handlerType">The typd of the handler</param>
         public void Add(Type requestType, Type handlerType)
         {
             var observed = _observers.ContainsKey(requestType);
             if (!observed)
-                _observers.Add(requestType, new List<Type> { handlerType });
+                _observers.Add(requestType, new List<KeyedType> { new KeyedType(null, handlerType) });
             else
-                _observers[requestType].Add(handlerType);
+                _observers[requestType].Add(new KeyedType(null, handlerType));
+        }
+
+        /// <summary>
+        /// Registers a request type and handler type against a key
+        /// </summary>
+        /// <param name="key">The key used to find the request and handler type</param>
+        /// <param name="requestType">The type of the request</param>
+        /// <param name="handlerType">The typd of the handler</param>
+        public void Add(string key, Type requestType, Type handlerType)
+        {
+            var observed = _observers.ContainsKey(requestType);
+            if (!observed)
+                _observers.Add(requestType, new List<KeyedType> {new KeyedType(null, handlerType) });
+            else
+                _observers[requestType].Add(new KeyedType(null, handlerType));
         }
 
         /// <summary>
@@ -87,12 +121,15 @@ namespace Paramore.Brighter
         /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
         public IEnumerator<KeyValuePair<Type, List<Type>>> GetEnumerator()
         {
-            return _observers.GetEnumerator();
+            return _observers.Select(kv => new KeyValuePair<Type, List<Type>>(kv.Key, kv.Value.Select(kt => kt.Type).ToList()))
+                .GetEnumerator()  ;
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
         }
+
+
     }
 }

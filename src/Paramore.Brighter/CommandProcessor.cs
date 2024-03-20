@@ -59,6 +59,7 @@ namespace Paramore.Brighter
         private readonly IEnumerable<Subscription> _replySubscriptions;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
+        private readonly IAmARequestRouter _router;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -111,6 +112,7 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="router">The routing algorithm to use to map requests to handlers</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         public CommandProcessor(
@@ -118,6 +120,7 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            IAmARequestRouter router,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null)
         {
@@ -134,6 +137,7 @@ namespace Paramore.Brighter
 
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
+            _router = router;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
         }
@@ -147,9 +151,9 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="router">The routing algorithm to use to map requests to handlers</param>
+        /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over</param>
-        /// <param name="mapperRegistry">The mapper registry; it should also implement IAmAMessageMapperRegistryAsync</param>
-        /// <param name="mapperRegistryAsync">The async mapper registry</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
@@ -161,6 +165,7 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            IAmARequestRouter router,
             IAmAnExternalBusService bus,
             IAmAMessageMapperRegistry mapperRegistry = null,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
@@ -168,9 +173,8 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactory messageTransformerFactory = null,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync = null,
             IEnumerable<Subscription> replySubscriptions = null,
-            IAmAChannelFactory responseChannelFactory = null
-            )
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
+            IAmAChannelFactory responseChannelFactory = null)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, router, featureSwitchRegistry, inboxConfiguration)
         {
             _responseChannelFactory = responseChannelFactory;
             _replySubscriptions = replySubscriptions;
@@ -191,6 +195,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="router">The routing algorithm to use to map requests to handlers</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -201,8 +206,9 @@ namespace Paramore.Brighter
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            IAmARequestRouter router,
+            IAmAMessageMapperRegistry mapperRegistry,
             IAmAnExternalBusService bus,
-            IAmAMessageMapperRegistry mapperRegistry = null,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IAmAMessageTransformerFactory messageTransformerFactory = null,
@@ -211,6 +217,7 @@ namespace Paramore.Brighter
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
+            _router = router;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _replySubscriptions = replySubscriptions;
@@ -221,6 +228,7 @@ namespace Paramore.Brighter
                 throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
             _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+            _replySubscriptions = replySubscriptions; 
             
             InitExtServiceBus(bus); 
         }
@@ -245,7 +253,7 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_router, _subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
             {
                 try
                 {
@@ -290,7 +298,7 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_router,_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
             {
                 try
                 {
@@ -336,7 +344,7 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_router, _subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
                     @event.Id);
@@ -402,7 +410,7 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_router, _subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
                     @event.Id);

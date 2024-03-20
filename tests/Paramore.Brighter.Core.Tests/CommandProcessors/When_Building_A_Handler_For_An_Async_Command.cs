@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(_receivedMessages));
             _requestContext = new RequestContext();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, asyncHandlerFactory: handlerFactory);
+            _chainBuilder = new PipelineBuilder<MyCommand>(new PayloadTypeRouter(), registry, asyncHandlerFactory: handlerFactory);
         }
 
         [Fact]

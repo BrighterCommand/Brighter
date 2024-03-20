@@ -87,10 +87,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 subscriberRegistry: subscriberRegistry,
                 handlerFactory: new QuickHandlerFactory(() => handler),
                 requestContextFactory: new InMemoryRequestContextFactory(),
-                policyRegistry: new PolicyRegistry()
-            );
-            var provider = new CommandProcessorProvider(_commandProcessor);
+                policyRegistry: new PolicyRegistry(), router: new PayloadTypeRouter());
 
+            var provider = new CommandProcessorProvider(_commandProcessor);
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)),
                 null

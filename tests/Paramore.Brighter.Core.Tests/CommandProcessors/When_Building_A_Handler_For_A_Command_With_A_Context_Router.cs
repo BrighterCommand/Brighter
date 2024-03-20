@@ -31,20 +31,22 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineForCommandTests : IDisposable
+    public class ContextPipelineForCommandTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private IHandleRequests<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
 
-        public PipelineForCommandTests()
+        public ContextPipelineForCommandTests()
         {
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyCommandHandler>();
+            registry.Register<MyCommand, MyCommandHandler>("MyValue");
+            registry.Register<MyCommand, MyCommandInboxedHandler>("AnotherValue");
             var handlerFactory = new TestHandlerFactorySync<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
             _requestContext = new RequestContext();
+            _requestContext.Bag["MyKey"] = "MyValue";
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(new PayloadTypeRouter(), registry, handlerFactory);
+            _chainBuilder = new PipelineBuilder<MyCommand>(new ContextKeyRouter("MyKey"), registry, handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

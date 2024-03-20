@@ -89,6 +89,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 handlerFactory,
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
+                new PayloadTypeRouter(),
                 bus,
                 messageMapperRegistry,
                 replySubscriptions:replySubs,

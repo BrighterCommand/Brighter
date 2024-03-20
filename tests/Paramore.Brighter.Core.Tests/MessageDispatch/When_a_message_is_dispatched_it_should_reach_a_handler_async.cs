@@ -25,7 +25,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry());
+                new PolicyRegistry(),
+                new PayloadTypeRouter());
             
             var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 

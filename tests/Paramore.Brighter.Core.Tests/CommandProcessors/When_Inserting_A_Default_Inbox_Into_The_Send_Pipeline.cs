@@ -52,6 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new PayloadTypeRouter(),
                 inboxConfiguration: inboxConfiguration
             );
 
