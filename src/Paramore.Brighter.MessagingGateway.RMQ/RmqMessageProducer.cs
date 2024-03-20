@@ -42,7 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// </summary>
     public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
-        public event Action<bool, Guid> OnMessagePublished;
+        public event Action<bool, string> OnMessagePublished;
 
         /// <summary>
         /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         static readonly object _lock = new object();
         private readonly RmqPublication _publication;
-        private readonly ConcurrentDictionary<ulong, Guid> _pendingConfirmations = new ConcurrentDictionary<ulong, Guid>();
+        private readonly ConcurrentDictionary<ulong, string> _pendingConfirmations = new ConcurrentDictionary<ulong, string>();
         private bool _confirmsSelected = false;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
 
@@ -209,20 +209,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void OnPublishFailed(object sender, BasicNackEventArgs e)
         {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out Guid messageId))
+            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string messageId))
             {
                 OnMessagePublished?.Invoke(false, messageId);
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out string msgId);
                 s_logger.LogDebug("Failed to publish message: {MessageId}", messageId);
             }
         }
 
         private void OnPublishSucceeded(object sender, BasicAckEventArgs e)
         {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out Guid messageId))
+            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string messageId))
             {
                 OnMessagePublished?.Invoke(true, messageId);
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out string msgId);
                 s_logger.LogInformation("Published message: {MessageId}", messageId);
             }
         }

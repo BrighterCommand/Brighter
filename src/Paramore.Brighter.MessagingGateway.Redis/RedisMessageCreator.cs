@@ -180,10 +180,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="topic"></param>
         /// <param name="messageId"></param>
         /// <returns></returns>
-        private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<Guid> messageId)
+        private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<string> messageId)
         {
             return new MessageHeader(
-                messageId.Success ? messageId.Result : Guid.Empty,
+                messageId.Success ? messageId.Result : string.Empty,
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
         }
@@ -270,19 +270,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
-        private HeaderResult<Guid> ReadMessageId(IDictionary<string, string> headers)
+        private HeaderResult<string> ReadMessageId(IDictionary<string, string> headers)
         {
-            var messageId = Guid.Empty;
-            
             if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string header))
             {
-                if (Guid.TryParse(header, out messageId))
-                {
-                    return new HeaderResult<Guid>(messageId, true);
-                }
+                    return new HeaderResult<string>(header, true);
             }
             
-            return new HeaderResult<Guid>(messageId, false);
+            return new HeaderResult<string>(string.Empty, false);
         }
         
         private HeaderResult<string> ReadReplyTo(Dictionary<string, string> headers)

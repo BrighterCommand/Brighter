@@ -103,7 +103,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     public class ExampleCommand : ICommand
     {
 
-        public Guid Id { get; set; }
+        public string Id { get; set; }
 
         public ExampleCommand()
         {

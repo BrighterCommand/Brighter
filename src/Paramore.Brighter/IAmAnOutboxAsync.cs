@@ -75,14 +75,18 @@ namespace Paramore.Brighter
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
             CancellationToken cancellationToken = default);
-        
+
         /// <summary>
         /// Delete the specified messages
         /// </summary>
         /// <param name="messageIds">The id of the message to delete</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        Task DeleteAsync(Guid[] messageIds, Dictionary<string, object> args = null, CancellationToken cancellationToken = default);
+        Task DeleteAsync(
+            string[] messageIds, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default
+            );
         
         /// <summary>
         /// Retrieves messages that have been sent within the window
@@ -111,7 +115,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
         Task<Message> GetAsync(
-            Guid messageId, 
+            string messageId, 
             int outBoxTimeout = -1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default);
@@ -124,7 +128,7 @@ namespace Paramore.Brighter
         /// <param name="args">A dictionary of provider specific arguments</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         Task MarkDispatchedAsync(
-            Guid id, 
+            string id, 
             DateTime? dispatchedAt = null, 
             Dictionary<string, object> args = null, 
             CancellationToken cancellationToken = default);
@@ -137,9 +141,9 @@ namespace Paramore.Brighter
         /// <param name="args">A dictionary of provider specfic arguments</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         Task MarkDispatchedAsync(
-            IEnumerable<Guid> ids, 
-            DateTime? dispatchedAt = null, 
-            Dictionary<string, object> args = null, 
+            IEnumerable<string> ids,
+            DateTime? dispatchedAt = null,
+            Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default);
  
         /// <summary>

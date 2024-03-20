@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public string LockToken => _brokeredMessage.LockToken;
 
-        public Guid Id => Guid.Parse(_brokeredMessage.MessageId);
+        public string Id => _brokeredMessage.MessageId;
 
         public Guid CorrelationId
         {

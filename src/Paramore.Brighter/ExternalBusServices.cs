@@ -219,7 +219,7 @@ namespace Paramore.Brighter
         /// <param name="args"></param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        public void ClearOutbox(Guid[] posts, Dictionary<string, object> args = null)
+        public void ClearOutbox(string[] posts, Dictionary<string, object> args = null)
         {
             if (!HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
@@ -254,8 +254,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allow cancellation of the operation</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        public async Task ClearOutboxAsync(
-            IEnumerable<Guid> posts,
+        public async Task ClearOutboxAsync(IEnumerable<string> posts,
             bool continueOnCapturedContext = false,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
@@ -345,11 +344,11 @@ namespace Paramore.Brighter
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
-                producerSync.OnMessagePublished += async delegate(bool success, Guid id)
+                producerSync.OnMessagePublished += async delegate(bool success, string id)
                 {
                     if (success)
                     {
-                        s_logger.LogInformation("Sent message: Id:{Id}", id.ToString());
+                        s_logger.LogInformation("Sent message: Id:{Id}", id);
                         if (_asyncOutbox != null)
                             await RetryAsync(async ct =>
                                 await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow, cancellationToken: ct));
@@ -370,11 +369,11 @@ namespace Paramore.Brighter
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
-                producerSync.OnMessagePublished += delegate(bool success, Guid id)
+                producerSync.OnMessagePublished += delegate(bool success, string id)
                 {
                     if (success)
                     {
-                        s_logger.LogInformation("Sent message: Id:{Id}", id.ToString());
+                        s_logger.LogInformation("Sent message: Id:{Id}", id);
                         if (_outBox != null)
                             Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
                     }
@@ -674,12 +673,12 @@ namespace Paramore.Brighter
                         }));
                     var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
 
-                    await foreach (var successfulMessage in dispatchesMessages.WithCancellation(cancellationToken))
+                    await foreach (var successfulMessage in dispatchesMessages)
                     {
                         if (!(producer is ISupportPublishConfirmation))
                         {
-                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(successfulMessage,
-                                    DateTime.UtcNow, cancellationToken: cancellationToken),
+                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(
+                                    successfulMessage, DateTime.UtcNow, cancellationToken: cancellationToken),
                                 cancellationToken: cancellationToken);
                         }
                     }

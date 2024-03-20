@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private readonly string _queueName;
         
-        private readonly Dictionary<Guid, string> _inflight = new Dictionary<Guid, string>();
+        private readonly Dictionary<string, string> _inflight = new Dictionary<string, string>();
  
         /// <summary>
         /// Creates a consumer that reads from a List in Redis via a BLPOP (so will block).

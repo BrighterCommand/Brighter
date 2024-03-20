@@ -33,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
-        public event Action<bool, Guid> OnMessagePublished;
+        public event Action<bool, string> OnMessagePublished;
         /// <summary>
         /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
         /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
@@ -309,15 +309,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
                 {
                     var val = messageIdBytes.FromByteArray();
-                    if (!string.IsNullOrEmpty(val) && (Guid.TryParse(val, out Guid messageId)))
+                    if (!string.IsNullOrEmpty(val))
                     {
-                        Task.Run(() => OnMessagePublished?.Invoke(true, messageId));
+                        Task.Run(() => OnMessagePublished?.Invoke(true, val));
                         return;
                     }
                 }
             }
             
-            Task.Run((() =>OnMessagePublished?.Invoke(false, Guid.Empty)));
+            Task.Run((() =>OnMessagePublished?.Invoke(false, string.Empty)));
         }
     }
 }

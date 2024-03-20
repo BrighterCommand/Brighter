@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
             var topic = HeaderResult<string>.Empty();
-            var messageId = HeaderResult<Guid>.Empty();
+            var messageId = HeaderResult<string>.Empty();
             var contentType = HeaderResult<string>.Empty();
             var correlationId = HeaderResult<Guid>.Empty();
             var handledCount = HeaderResult<int>.Empty();
@@ -201,16 +201,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<string>(String.Empty, true);
         }
 
-        private HeaderResult<Guid> ReadMessageId(Amazon.SQS.Model.Message sqsMessage)
+        private HeaderResult<string> ReadMessageId(Amazon.SQS.Model.Message sqsMessage)
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Id, out MessageAttributeValue value))
             {
-                if (Guid.TryParse(value.StringValue, out Guid messageId))
-                {
-                    return new HeaderResult<Guid>(messageId, true);
-                }
+                return new HeaderResult<string>(value.StringValue, true);
             }
-            return new HeaderResult<Guid>(Guid.Empty, true);
+            return new HeaderResult<string>(string.Empty, true);
         }
 
         private HeaderResult<string> ReadTopic(Amazon.SQS.Model.Message sqsMessage)

@@ -47,6 +47,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messages">The messages.</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
-        IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, CancellationToken cancellationToken);
+        IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages, CancellationToken cancellationToken);
     }
 }

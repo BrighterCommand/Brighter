@@ -64,7 +64,7 @@ namespace Paramore.Brighter
             where T : Message
         {
             IEnumerable<Message> foundMessages = messageIds 
-                .Select(messageId => outBox.Get(Guid.Parse(messageId)))
+                .Select(messageId => outBox.Get(messageId))
                 .Where(fm => fm != null)
                 .ToList();
 

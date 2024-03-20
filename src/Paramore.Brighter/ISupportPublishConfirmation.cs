@@ -15,6 +15,6 @@ namespace Paramore.Brighter
         /// bool => was the message published
         /// Guid => what was the id of the published message
         /// </summary>
-        event Action<bool, Guid> OnMessagePublished;
+        event Action<bool, string> OnMessagePublished;
    }
 }

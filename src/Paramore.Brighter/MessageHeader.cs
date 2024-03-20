@@ -85,7 +85,7 @@ namespace Paramore.Brighter
         /// Gets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// Gets the topic.
@@ -165,7 +165,7 @@ namespace Paramore.Brighter
         /// <param name="contentType">The type of the payload of the message</param>
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
         public MessageHeader(
-            Guid messageId,
+            string messageId,
             string topic,
             MessageType messageType,
             Guid? correlationId = null,
@@ -197,8 +197,7 @@ namespace Paramore.Brighter
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
-        public MessageHeader(
-            Guid messageId,
+        public MessageHeader(string messageId,
             string topic,
             MessageType messageType,
             DateTime timeStamp,
@@ -206,7 +205,7 @@ namespace Paramore.Brighter
             string replyTo = null,
             string contentType = "text/plain",
             string partitionKey = "")
-            : this(messageId, topic, messageType, correlationId, replyTo, contentType, partitionKey)
+            : this((string)messageId, topic, messageType, correlationId, replyTo, contentType, partitionKey)
         {
             TimeStamp = timeStamp;
         }
@@ -224,8 +223,7 @@ namespace Paramore.Brighter
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
-        public MessageHeader(
-            Guid messageId,
+        public MessageHeader(string messageId,
             string topic,
             MessageType messageType,
             DateTime timeStamp,
@@ -235,7 +233,7 @@ namespace Paramore.Brighter
             string replyTo = null,
             string contentType = "text/plain",
             string partitionKey = "")
-            : this(messageId, topic, messageType, timeStamp, correlationId, replyTo, contentType, partitionKey)
+            : this((string)messageId, topic, messageType, timeStamp, correlationId, replyTo, contentType, partitionKey)
         {
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;

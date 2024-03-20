@@ -152,8 +152,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 timeStamp: timestamp,
                 correlationId: correlationId,
                 replyTo: ReplyTo,
-                partitionKey: PartitionKey,
-                contentType: ContentType);
+                contentType: ContentType, partitionKey: PartitionKey);
 
             foreach (var key in bag.Keys)
             {

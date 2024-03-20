@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<string>.Empty();
-            var messageId = HeaderResult<Guid>.Empty();
+            var messageId = HeaderResult<string>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var handledCount = HeaderResult<int>.Empty();
             var delayedMilliseconds = HeaderResult<int>.Empty();
@@ -73,8 +73,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 else
                 {
                     var messageHeader = timeStamp.Success
-                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result,
-                            delayedMilliseconds.Result)
+                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, 
+                            handledCount.Result, delayedMilliseconds.Result)
                         : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
                     //this effectively transfers ownership of our buffer 
@@ -130,10 +130,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
+        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<string> messageId)
         {
             var header = new MessageHeader(
-                messageId.Success ? messageId.Result : Guid.Empty,
+                messageId.Success ? messageId.Result : string.Empty,
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
             var message = new Message(header, new MessageBody(string.Empty));
@@ -228,23 +228,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             });
         }
 
-        private HeaderResult<Guid> ReadMessageId(string messageId)
+        private HeaderResult<string> ReadMessageId(string messageId)
         {
-            var newMessageId = Guid.NewGuid();
+            var newMessageId = Guid.NewGuid().ToString();
 
             if (string.IsNullOrEmpty(messageId))
             {
                 s_logger.LogDebug("No message id found in message MessageId, new message id is {Id}", newMessageId);
-                return new HeaderResult<Guid>(newMessageId, true);
+                return new HeaderResult<string>(newMessageId, true);
             }
 
-            if (Guid.TryParse(messageId, out newMessageId))
-            {
-                return new HeaderResult<Guid>(newMessageId, true);
-            }
-
-            s_logger.LogDebug("Could not parse message MessageId, new message id is {Id}", Guid.Empty);
-            return new HeaderResult<Guid>(Guid.Empty, false);
+            return new HeaderResult<string>(newMessageId, true);
         }
 
         private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)

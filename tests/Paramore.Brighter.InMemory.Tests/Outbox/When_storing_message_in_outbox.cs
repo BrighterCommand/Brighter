@@ -42,7 +42,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             var outbox = new InMemoryOutbox();
             
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             var outbox = new InMemoryOutbox();
             
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             var outbox = new InMemoryOutbox();
             
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             var outbox = new InMemoryOutbox();
 
-            var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
+            var messageIds = new string[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
             for(int i =0; i <= 4; i++)
                 outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
 
@@ -133,7 +133,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             var outbox = new InMemoryOutbox();
 
-            var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
+            var messageIds = new string[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
             for(int i =0; i <= 4; i++)
                 outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
 

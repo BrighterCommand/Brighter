@@ -51,7 +51,7 @@ if (outBox == null)
 
 outBox.Add(
     new Message(
-        new MessageHeader(Guid.NewGuid(), "Test.Topic", MessageType.MT_COMMAND, DateTime.UtcNow),
+        new MessageHeader(Guid.NewGuid().ToString(), "Test.Topic", MessageType.MT_COMMAND, DateTime.UtcNow),
         new MessageBody("Hello"))
     );
 

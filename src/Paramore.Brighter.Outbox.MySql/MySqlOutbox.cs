@@ -459,9 +459,9 @@ namespace Paramore.Brighter.Outbox.MySql
             return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static Guid GetMessageId(IDataReader dr)
+        private static string GetMessageId(IDataReader dr)
         {
-            return dr.GetGuid(0);
+            return dr.GetString(0);
         }
 
         private string GetPartitionKey(IDataReader dr)

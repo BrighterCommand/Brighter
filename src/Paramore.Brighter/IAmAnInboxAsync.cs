@@ -49,20 +49,24 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task{T}"/>.</returns>
-        Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest;
+        Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest;
 
         /// <summary>
         /// Checks whether a command with the specified identifier exists in the store
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns>True if it exists, False otherwise</returns>
-        Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest;
+        Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest;
 
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.

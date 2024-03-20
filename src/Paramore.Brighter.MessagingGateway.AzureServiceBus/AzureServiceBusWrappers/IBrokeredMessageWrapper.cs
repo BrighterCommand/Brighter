@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <summary>
         /// The message Id.
         /// </summary>
-        Guid Id { get; }
+        string Id { get; }
 
         /// <summary>
         /// The Correlation Id.
