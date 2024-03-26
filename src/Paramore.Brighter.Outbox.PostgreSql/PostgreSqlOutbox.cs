@@ -244,7 +244,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 new NpgsqlParameter
                 {
-                    ParameterName = $"{prefix}MessageId", NpgsqlDbType = NpgsqlDbType.Uuid, Value = message.Id
+                    ParameterName = $"{prefix}MessageId", NpgsqlDbType = NpgsqlDbType.Text, Value = message.Id
                 },
                 new NpgsqlParameter
                 {
@@ -267,7 +267,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 new NpgsqlParameter
                 {
                     ParameterName = $"{prefix}CorrelationId",
-                    NpgsqlDbType = NpgsqlDbType.Uuid,
+                    NpgsqlDbType = NpgsqlDbType.Text,
                     Value = message.Header.CorrelationId
                 },
                 new NpgsqlParameter

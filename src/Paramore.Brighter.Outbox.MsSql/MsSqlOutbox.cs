@@ -247,7 +247,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}MessageId", 
-                    DbType = DbType.Guid,
+                    DbType = DbType.String,
                     Value = (object)message.Id ?? DBNull.Value
                 },
                 new SqlParameter
@@ -271,7 +271,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}CorrelationId",
-                    DbType = DbType.Guid,
+                    DbType = DbType.String,
                     Value = (object)message.Header.CorrelationId ?? DBNull.Value
                 },
                 new SqlParameter

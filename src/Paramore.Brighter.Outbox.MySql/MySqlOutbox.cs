@@ -226,7 +226,7 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 new MySqlParameter
                 {
-                    ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id.ToString()
+                    ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id
                 },
                 new MySqlParameter
                 {
@@ -248,7 +248,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 {
                     ParameterName = $"@{prefix}CorrelationId",
                     DbType = DbType.String,
-                    Value = message.Header.CorrelationId.ToString()
+                    Value = message.Header.CorrelationId
                 },
                 new MySqlParameter
                 {
