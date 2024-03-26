@@ -15,20 +15,13 @@ using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers
 {
-    public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
+    public class GreetingMadeHandlerAsync(
+        IAmADynamoDbTransactionProvider transactionProvider,
+        IAmACommandProcessor postBox,
+        ILogger<GreetingMadeHandlerAsync> logger)
+        : RequestHandlerAsync<GreetingMade>
     {
-        private readonly IAmADynamoDbTransactionProvider _transactionProvider;
-        private readonly IAmACommandProcessor _postBox;
-        private readonly ILogger<GreetingMadeHandlerAsync> _logger;
-
-        public GreetingMadeHandlerAsync(IAmADynamoDbTransactionProvider transactionProvider,
-            IAmACommandProcessor postBox,
-            ILogger<GreetingMadeHandlerAsync> logger)
-        {
-            _transactionProvider = transactionProvider;
-            _postBox = postBox;
-            _logger = logger;
-        }
+        private readonly IAmADynamoDbTransactionProvider _transactionProvider = transactionProvider;
 
         [UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] 
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
@@ -50,13 +43,13 @@ namespace SalutationPorts.Handlers
                     Put = new Put { TableName = "Salutations", Item = attributes }
                 });
 
-                posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), _transactionProvider, cancellationToken: cancellationToken));
+                posts.Add(await postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), _transactionProvider, cancellationToken: cancellationToken));
 
                 await _transactionProvider.CommitAsync(cancellationToken);
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Could not save salutation");
+                logger.LogError(e, "Could not save salutation");
                 await _transactionProvider.RollbackAsync(cancellationToken);
 
                 return await base.HandleAsync(@event, cancellationToken);
@@ -66,7 +59,7 @@ namespace SalutationPorts.Handlers
                 _transactionProvider.Close();
             }
 
-            await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
+            await postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
             
             return await base.HandleAsync(@event,cancellationToken);
         }
