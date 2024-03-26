@@ -260,7 +260,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 return new HeaderResult<string>(newMessageId, true);
             }
 
-            return new HeaderResult<string>(newMessageId, true);
+            return new HeaderResult<string>(messageId, true);
         }
 
         private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)

@@ -199,14 +199,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private HeaderResult<string> ReadCorrelationId(Dictionary<string, string> headers)
         {
-            var messageId = string.Empty;
+            var newCorrelationId = string.Empty;
             
-            if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string header))
+            if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string correlatonId))
             {
-                return new HeaderResult<string>(messageId, true);
+                return new HeaderResult<string>(correlatonId, true);
             }
             
-            return new HeaderResult<string>(messageId, false);
+            return new HeaderResult<string>(newCorrelationId, false);
         }
 
          private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
