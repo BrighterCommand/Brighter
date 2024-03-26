@@ -279,8 +279,11 @@ namespace Paramore.Brighter.Outbox.MySql
             };
         }
 
-        protected override IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
-            int pageSize, int pageNumber)
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
+            double milliSecondsSinceAdded,
+            int pageSize, 
+            int pageNumber
+            )
         {
             var offset = (pageNumber - 1) * pageSize;
             var parameters = new IDbDataParameter[3];
@@ -461,7 +464,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private static string GetMessageId(IDataReader dr)
         {
-            return dr.GetString(0);
+            return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
         private string GetPartitionKey(IDataReader dr)
