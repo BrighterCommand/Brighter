@@ -43,7 +43,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         [Fact]
         public void When_checking_a_command_does_not_exist()
         {
-            var commandExists = _dynamoDbInbox.Exists<MyCommand>(string.Empty, _contextKey);
+            var commandExists = _dynamoDbInbox.Exists<MyCommand>(Guid.NewGuid().ToString(), _contextKey);
 
             commandExists.Should().BeFalse("because the command doesn't exists.", commandExists);
         }

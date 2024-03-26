@@ -43,9 +43,9 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         [Fact]
         public async Task When_checking_a_command_does_not_exist()
         {
-            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(string.Empty, _contextKey);
+            var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(Guid.NewGuid().ToString(), _contextKey);
 
-            commandExists.Should().BeFalse("because the command doesn't exists.", commandExists);
+            commandExists.Should().BeFalse("because the command doesn't exist.", commandExists);
         }
     }
 }

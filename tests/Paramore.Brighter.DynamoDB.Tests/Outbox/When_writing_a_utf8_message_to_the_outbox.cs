@@ -46,7 +46,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private readonly string _value2 = "value2";
         private readonly int _value3 = 123;
         private readonly DateTime _value4 = DateTime.UtcNow;
-        private readonly string _value5 = Guid.NewGuid().ToString();
+        private readonly Guid _value5 = Guid.NewGuid();
         private Message _storedMessage;
         private readonly DynamoDbOutbox _dynamoDbOutbox;
 

@@ -110,8 +110,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task{T}"/></returns>
-        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {                
             return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
         }
@@ -125,8 +124,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
         /// <returns><see langword="true"/> if Command exists, otherwise <see langword="false"/></returns>
-        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
        {
            try
            {
@@ -178,8 +176,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             
             var messages = new List<CommandItem<T>>();
             do
-            {
-              messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(false));
+            { 
+                messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(false));
             } while (!asyncSearch.IsDone);
 
             return messages;
