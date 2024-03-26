@@ -13,14 +13,20 @@ using Paramore.Darker.QueryLogging;
 
 namespace GreetingsPorts.Handlers
 {
-    public class FIndGreetingsForPersonHandlerAsync(IAmADynamoDbConnectionProvider dynamoDbConnectionProvider)
-        : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
+    public class FIndGreetingsForPersonHandlerAsync : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
     {
+        private readonly IAmADynamoDbConnectionProvider _dynamoDbConnectionProvider;
+
+        public FIndGreetingsForPersonHandlerAsync(IAmADynamoDbConnectionProvider dynamoDbConnectionProvider)
+        {
+            _dynamoDbConnectionProvider = dynamoDbConnectionProvider;
+        }
+
         [QueryLogging(0)]
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
         {
-            var context = new DynamoDBContext(dynamoDbConnectionProvider.DynamoDb);
+            var context = new DynamoDBContext(_dynamoDbConnectionProvider.DynamoDb);
 
             var person = await context.LoadAsync<Person>(query.Name, cancellationToken);
 

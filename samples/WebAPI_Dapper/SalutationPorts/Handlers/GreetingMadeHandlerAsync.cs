@@ -14,12 +14,21 @@ using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers
 {
-    public class GreetingMadeHandlerAsync(
-        IAmABoxTransactionProvider<DbTransaction> transactionConnectionProvider,
-        IAmACommandProcessor postBox,
-        ILogger<GreetingMadeHandlerAsync> logger)
-        : RequestHandlerAsync<GreetingMade>
+    public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
     {
+        private readonly IAmABoxTransactionProvider<DbTransaction> _transactionConnectionProvider;
+        private readonly IAmACommandProcessor _postBox;
+        private readonly ILogger<GreetingMadeHandlerAsync> _logger;
+
+        public GreetingMadeHandlerAsync(IAmABoxTransactionProvider<DbTransaction> transactionConnectionProvider,
+            IAmACommandProcessor postBox,
+            ILogger<GreetingMadeHandlerAsync> logger)
+        {
+            _transactionConnectionProvider = transactionConnectionProvider;
+            _postBox = postBox;
+            _logger = logger;
+        }
+
         [UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] 
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
         [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
@@ -27,7 +36,7 @@ namespace SalutationPorts.Handlers
         {
             var posts = new List<string>();
             
-            var tx = await transactionConnectionProvider.GetTransactionAsync(cancellationToken);
+            var tx = await _transactionConnectionProvider.GetTransactionAsync(cancellationToken);
             var conn = tx.Connection; 
             try
             {
@@ -38,21 +47,21 @@ namespace SalutationPorts.Handlers
                    new {greeting = salutation.Greeting}, 
                    tx); 
                 
-                posts.Add(await postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), transactionConnectionProvider, cancellationToken: cancellationToken));
+                posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), _transactionConnectionProvider, cancellationToken: cancellationToken));
                 
-                await transactionConnectionProvider.CommitAsync(cancellationToken);
+                await _transactionConnectionProvider.CommitAsync(cancellationToken);
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Could not save salutation");
+                _logger.LogError(e, "Could not save salutation");
                 
                 //if it went wrong rollback entity write and Outbox write
-                await transactionConnectionProvider.RollbackAsync(cancellationToken);
+                await _transactionConnectionProvider.RollbackAsync(cancellationToken);
                 
                 return await base.HandleAsync(@event, cancellationToken);
             }
 
-            postBox.ClearOutbox(posts.ToArray());
+            _postBox.ClearOutbox(posts.ToArray());
             
             return await base.HandleAsync(@event, cancellationToken);
         }

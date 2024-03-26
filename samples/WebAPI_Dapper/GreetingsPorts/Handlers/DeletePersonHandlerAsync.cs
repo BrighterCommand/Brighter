@@ -12,16 +12,23 @@ using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
-    public class DeletePersonHandlerAsync(
-        IAmARelationalDbConnectionProvider relationalDbConnectionProvider,
-        ILogger<DeletePersonHandlerAsync> logger)
-        : RequestHandlerAsync<DeletePerson>
+    public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
+        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider;
+        private readonly ILogger<DeletePersonHandlerAsync> _logger;
+
+        public DeletePersonHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider,
+            ILogger<DeletePersonHandlerAsync> logger)
+        {
+            _relationalDbConnectionProvider = relationalDbConnectionProvider;
+            _logger = logger;
+        }
+
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default)
         {
-            var connection = await relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
+            var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
             var tx = await connection.BeginTransactionAsync(cancellationToken);
             try
             {
@@ -48,7 +55,7 @@ namespace GreetingsPorts.Handlers
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Exception thrown handling Add Greeting request");
+                _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(deletePerson, cancellationToken);
