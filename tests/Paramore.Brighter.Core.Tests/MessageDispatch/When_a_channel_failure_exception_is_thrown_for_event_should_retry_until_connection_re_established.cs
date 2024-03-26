@@ -57,13 +57,19 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var @event = new MyEvent();
 
             //Two events will be received when channel fixed
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+            var message1 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
+            );
+            var message2 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
+            );
             channel.Enqueue(message1);
             channel.Enqueue(message2);
             
             //Quit the message pump
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             channel.Enqueue(quitMessage);
         }
 

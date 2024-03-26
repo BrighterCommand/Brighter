@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _mapper = new ConfigurationCommandMessageMapper();
 
             _message = new Message(
-                new MessageHeader(Guid.NewGuid(), "myTopic", MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), "myTopic", MessageType.MT_COMMAND), 
                 new MessageBody(string.Format("{{\"Type\":1,\"SubscriptionName\":\"getallthethings\",\"Id\":\"{0}\"}}", Guid.NewGuid()))
                 );
         }

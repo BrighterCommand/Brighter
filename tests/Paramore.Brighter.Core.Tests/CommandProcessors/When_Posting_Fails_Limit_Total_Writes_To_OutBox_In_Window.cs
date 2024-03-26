@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer.MaxOutStandingMessages = 3;
             _fakeMessageProducer.MaxOutStandingCheckIntervalMilliSeconds = 250;
 
-            var sentList = new List<Guid>(); 
+            var sentList = new List<string>(); 
             bool shouldThrowException = false;
             try
             {

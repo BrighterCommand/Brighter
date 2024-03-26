@@ -50,10 +50,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             var groupId = Guid.NewGuid().ToString();
             
             //send x messages to Kafka
-            var sentMessages = new Guid[10];
+            var sentMessages = new string[10];
             for (int i = 0; i < 10; i++)
             {
-                var msgId = Guid.NewGuid();
+                var msgId = Guid.NewGuid().ToString();
                 SendMessage(msgId);
                 sentMessages[i] = msgId;
             }
@@ -81,11 +81,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             }
         }
 
-        private void SendMessage(Guid messageId)
+        private void SendMessage(string messageId)
         {
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
-                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
-                new MessageBody($"test content [{_queueName}]")));
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(
+                new Message(
+                    new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
+                    new MessageBody($"test content [{_queueName}]")
+                )
+            );
         }
 
         private Message[] ConsumeMessages(string groupId, int batchLimit)

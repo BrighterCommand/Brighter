@@ -287,7 +287,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr, Guid commandId) where TResult : class, IRequest
+        private TResult ReadCommand<TResult>(IDataReader dr, string commandId) where TResult : class, IRequest
         {
             if (dr.Read())
             {

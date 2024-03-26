@@ -427,13 +427,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return dictionaryBag;
         }
 
-        private Guid? GetCorrelationId(DbDataReader dr)
+        private string GetCorrelationId(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal))
                 return null;
 
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 
@@ -447,9 +447,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static Guid GetMessageId(DbDataReader dr)
+        private static string GetMessageId(DbDataReader dr)
         {
-            return dr.GetGuid(dr.GetOrdinal("MessageId"));
+            return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
         private string GetPartitionKey(DbDataReader dr)

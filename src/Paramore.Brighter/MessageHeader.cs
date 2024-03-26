@@ -122,7 +122,7 @@ namespace Paramore.Brighter
         /// allows the originator to match responses to requests
         /// </summary>
         /// <value>The correlation identifier.</value>
-        public Guid CorrelationId { get; set; }
+        public string CorrelationId { get; set; }
 
         /// <summary>
         /// Gets or sets the ContentType used to describe how the message payload
@@ -164,11 +164,10 @@ namespace Paramore.Brighter
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="contentType">The type of the payload of the message</param>
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
-        public MessageHeader(
-            string messageId,
+        public MessageHeader(string messageId,
             string topic,
             MessageType messageType,
-            Guid? correlationId = null,
+            string correlationId = null,
             string replyTo = "",
             string contentType = "",
             string partitionKey = "")
@@ -179,7 +178,7 @@ namespace Paramore.Brighter
             TimeStamp = DateTime.UtcNow;
             HandledCount = 0;
             DelayedMilliseconds = 0;
-            CorrelationId = correlationId ?? Guid.Empty;
+            CorrelationId = correlationId ?? string.Empty;
             ReplyTo = replyTo;
             ContentType = contentType;
             PartitionKey = partitionKey;
@@ -201,11 +200,11 @@ namespace Paramore.Brighter
             string topic,
             MessageType messageType,
             DateTime timeStamp,
-            Guid? correlationId = null,
+            string correlationId = null,
             string replyTo = null,
             string contentType = "text/plain",
             string partitionKey = "")
-            : this((string)messageId, topic, messageType, correlationId, replyTo, contentType, partitionKey)
+            : this((string)messageId, topic, messageType, (string)correlationId, replyTo, contentType, partitionKey)
         {
             TimeStamp = timeStamp;
         }
@@ -229,7 +228,7 @@ namespace Paramore.Brighter
             DateTime timeStamp,
             int handledCount,
             int delayedMilliseconds,
-            Guid? correlationId = null,
+            string correlationId = null,
             string replyTo = null,
             string contentType = "text/plain",
             string partitionKey = "")

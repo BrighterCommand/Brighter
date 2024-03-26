@@ -47,10 +47,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public Message CreateMessage(ConsumeResult<string, byte[]> consumeResult)
         {
             var topic = HeaderResult<string>.Empty();
-            var messageId = HeaderResult<Guid>.Empty();
+            var messageId = HeaderResult<string>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var messageType = HeaderResult<MessageType>.Empty();
-            var correlationId = HeaderResult<Guid>.Empty();
+            var correlationId = HeaderResult<string>.Empty();
             var partitionKey = HeaderResult<string>.Empty();
             var replyTo = HeaderResult<string>.Empty();
             var contentType = HeaderResult<string>.Empty();
@@ -123,10 +123,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return message;
         }
 
-        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
+        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<string> messageId)
         {
             var header = new MessageHeader(
-                messageId.Success ? messageId.Result : Guid.Empty,
+                messageId.Success ? messageId.Result : string.Empty,
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
             var message = new Message(header, new MessageBody(string.Empty));
@@ -138,24 +138,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return ReadHeader(headers, HeaderNames.CONTENT_TYPE, false);
         }
 
-        private HeaderResult<Guid> ReadCorrelationId(Headers headers)
+        private HeaderResult<string> ReadCorrelationId(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.CORRELATION_ID)
-                .Map(s =>
+                .Map(correlationId =>
                 {
-                    if (string.IsNullOrEmpty(s))
+                    if (string.IsNullOrEmpty(correlationId))
                     {
                         s_logger.LogDebug("No correlation id found in message");
-                        return new HeaderResult<Guid>(Guid.Empty, true);
+                        return new HeaderResult<string>(string.Empty, true);
                     }
 
-                    if (Guid.TryParse(s, out Guid correlationId))
-                    {
-                        return new HeaderResult<Guid>(correlationId, true);
-                    }
+                    return new HeaderResult<string>(correlationId, true);
 
-                    s_logger.LogDebug("Could not parse message correlation id: {CorrelationValue}", s);
-                    return new HeaderResult<Guid>(Guid.Empty, false);
                 });
         }
 
@@ -261,27 +256,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return new HeaderResult<string>(topic, true);
         }
 
-        private HeaderResult<Guid> ReadMessageId(Headers headers)
+        private HeaderResult<string> ReadMessageId(Headers headers)
         {
-            var newMessageId = Guid.NewGuid();
+            var newMessageId = Guid.NewGuid().ToString();
 
             return ReadHeader(headers, HeaderNames.MESSAGE_ID)
-                .Map(s =>
+                .Map(messageId =>
                 {
-                    if (string.IsNullOrEmpty(s))
+                    if (string.IsNullOrEmpty(messageId))
                     {
-                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}",
-                            newMessageId);
-                        return new HeaderResult<Guid>(newMessageId, true);
+                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}", newMessageId);
+                        return new HeaderResult<string>(newMessageId, true);
                     }
 
-                    if (Guid.TryParse(s, out Guid messageId))
-                    {
-                        return new HeaderResult<Guid>(messageId, true);
-                    }
-
-                    s_logger.LogDebug("Could not parse message MessageId, new message id is {Id}", Guid.Empty);
-                    return new HeaderResult<Guid>(Guid.Empty, false);
+                    return new HeaderResult<string>(messageId, true);
                 });
         }
 

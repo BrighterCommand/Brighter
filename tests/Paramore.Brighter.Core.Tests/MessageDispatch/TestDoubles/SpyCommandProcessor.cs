@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
     internal class SpyCommandProcessor : IAmACommandProcessor
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
-        private readonly Dictionary<Guid, IRequest> _postBox = new Dictionary<Guid, IRequest>();
+        private readonly Dictionary<string, IRequest> _postBox = new();
 
         public IList<CommandType> Commands { get; } = new List<CommandType>();
         public List<ClearParams> ClearParamsList { get; } = new List<ClearParams>();
@@ -123,7 +123,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             await completionSource.Task;
         }
 
-        public Guid DepositPost<TRequest>(
+        public string DepositPost<TRequest>(
             TRequest request, 
             Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return request.Id;
         }
 
-        public Guid DepositPost<TRequest, TTransaction>(
+        public string DepositPost<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> provider,
             Dictionary<string, object> args = null) 
@@ -142,12 +142,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
 
 
-        public Guid[] DepositPost<TRequest>(
+        public string[] DepositPost<TRequest>(
             IEnumerable<TRequest> request, 
             Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
         {
-            var ids = new List<Guid>();
+            var ids = new List<string>();
             foreach (TRequest r in request)
             {
                 ids.Add(DepositPost(r));
@@ -156,7 +156,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return ids.ToArray();
         }
 
-        public Guid[] DepositPost<TRequest, TTransaction>(
+        public string[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> request, 
             IAmABoxTransactionProvider<TTransaction> provider,
             Dictionary<string, object> args = null)
@@ -165,7 +165,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return DepositPost(request);
         }
 
-        public async Task<Guid> DepositPostAsync<TRequest>(
+        public async Task<string> DepositPostAsync<TRequest>(
             TRequest request,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
@@ -174,12 +174,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _postBox.Add(request.Id, request);
 
-            var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs.SetResult(request.Id);
             return await tcs.Task;
         }
 
-        public async Task<Guid> DepositPostAsync<TRequest, TTransaction>(
+        public async Task<string> DepositPostAsync<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> provider,
             Dictionary<string, object> args = null,
@@ -189,19 +189,19 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _postBox.Add(request.Id, request);
 
-            var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs.SetResult(request.Id);
             return await tcs.Task;
         }
 
-        public async Task<Guid[]> DepositPostAsync<TRequest>(
+        public async Task<string[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
-            var ids = new List<Guid>();
+            var ids = new List<string>();
             foreach (TRequest r in requests)
             {
                 ids.Add(await DepositPostAsync(r, cancellationToken: cancellationToken));
@@ -210,7 +210,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return ids.ToArray();
         }
 
-        public async Task<Guid[]> DepositPostAsync<TRequest, TTransaction>(
+        public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> provider,
             Dictionary<string, object> args = null,
@@ -220,7 +220,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return await DepositPostAsync(requests, cancellationToken: cancellationToken);
         }
 
-        public void ClearOutbox(Guid[] posts, Dictionary<string, object> args = null)
+        public void ClearOutbox(string[] posts, Dictionary<string, object> args = null)
         {
             foreach (var messageId in posts)
             {
@@ -244,7 +244,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
 
         public async Task ClearOutboxAsync(
-            IEnumerable<Guid> posts, 
+            IEnumerable<string> posts, 
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
@@ -270,7 +270,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
 
         public Task BulkClearOutboxAsync(
-            IEnumerable<Guid> posts, 
+            IEnumerable<string> posts, 
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {

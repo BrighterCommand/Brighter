@@ -26,7 +26,7 @@ public class AsyncClaimCheckSmallPayloadTests
         //but create a string that is just under 5K long - assuming string is 26 + length *2 to allow for 64-bit platform
         string body = DataGenerator.CreateString(2485);
         _message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
             new MessageBody(body));
     }
 

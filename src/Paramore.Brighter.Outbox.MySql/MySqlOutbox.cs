@@ -445,12 +445,12 @@ namespace Paramore.Brighter.Outbox.MySql
             return contentType;
         }
 
-        private Guid? GetCorrelationId(IDataReader dr)
+        private string GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 

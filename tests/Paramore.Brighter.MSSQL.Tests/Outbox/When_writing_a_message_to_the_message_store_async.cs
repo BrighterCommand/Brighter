@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
         private readonly int _value3 = 123;
-        private readonly Guid _value4 = Guid.NewGuid();
+        private readonly string _value4 = Guid.NewGuid().ToString();
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly MsSqlTestHelper _msSqlTestHelper;
 
@@ -55,13 +55,13 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid(),
+                messageId:Guid.NewGuid().ToString(),
                 topic: "test_topic", 
                 messageType: MessageType.MT_DOCUMENT, 
                 timeStamp: DateTime.UtcNow.AddDays(-1), 
                 handledCount:5, 
                 delayedMilliseconds:5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);

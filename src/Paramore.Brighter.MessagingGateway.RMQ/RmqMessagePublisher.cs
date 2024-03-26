@@ -96,8 +96,8 @@ internal class RmqMessagePublisher
                 { HeaderNames.HANDLED_COUNT, message.Header.HandledCount }
             };
 
-            if (message.Header.CorrelationId != Guid.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString());
+            if (message.Header.CorrelationId != string.Empty)
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
 
             message.Header.Bag.Each(header =>
             {
@@ -145,8 +145,8 @@ internal class RmqMessagePublisher
                 {HeaderNames.HANDLED_COUNT, message.Header.HandledCount},
              };
 
-            if (message.Header.CorrelationId != Guid.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString());
+            if (message.Header.CorrelationId != string.Empty)
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
 
             message.Header.Bag.Each((header) =>
             {

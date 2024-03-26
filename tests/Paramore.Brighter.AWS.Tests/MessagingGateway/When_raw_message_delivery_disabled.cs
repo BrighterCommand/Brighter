@@ -52,10 +52,11 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public void When_raw_message_delivery_disabled()
         {
             //arrange
-            var messageHeader = new MessageHeader(Guid.NewGuid(), 
+            var messageHeader = new MessageHeader(
+                Guid.NewGuid().ToString(), 
                 _topicName, 
                 MessageType.MT_COMMAND, 
-                correlationId: Guid.NewGuid(), 
+                correlationId: Guid.NewGuid().ToString(), 
                 replyTo: string.Empty, 
                 contentType: "text\\plain");
 

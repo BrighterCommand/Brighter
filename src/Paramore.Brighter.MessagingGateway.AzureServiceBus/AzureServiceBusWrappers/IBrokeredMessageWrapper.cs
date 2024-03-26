@@ -31,7 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <summary>
         /// The Correlation Id.
         /// </summary>
-        Guid CorrelationId { get; }
+        string CorrelationId { get; }
 
         /// <summary>
         /// The Mime Type.

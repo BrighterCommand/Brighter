@@ -18,11 +18,11 @@ public class KafkaDefaultMessageHeaderBuilderTests
         //arrange
         var message = new Message(
             new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test",
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "test",
                 contentType: "application/octet",
                 partitionKey: "mykey"

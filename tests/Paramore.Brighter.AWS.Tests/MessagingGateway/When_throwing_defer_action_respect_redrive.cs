@@ -33,7 +33,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public SnsReDrivePolicySDlqTests()
         {
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
             var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -138,7 +138,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             await Task.Delay(5000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message

@@ -26,7 +26,7 @@ namespace SalutationPorts.Handlers
         [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY_ASYNC)]
         public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
         {
-            var posts = new List<Guid>();
+            var posts = new List<string>();
             var context = new DynamoDBContext(transactionProvider.DynamoDb);
             var tx = await transactionProvider.GetTransactionAsync(cancellationToken);
             try

@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 );
 
             _message2 = new Message(
-                new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND),
+                new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
 

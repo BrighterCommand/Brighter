@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
                 await Task.Delay(1000);
 
-                var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT),
+                var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT),
                     new MessageBody(""));
                 _channel.Enqueue(quitMessage);
 

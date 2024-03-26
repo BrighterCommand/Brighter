@@ -43,8 +43,10 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
-                new MessageBody("message body"));
+            _messageEarliest = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT),
+                new MessageBody("message body")
+            );
         }
 
         [Fact]

@@ -388,7 +388,9 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false,
+        public async Task PublishAsync<T>(
+            T @event,
+            bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
@@ -521,7 +523,8 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of Db transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string DepositPost<TRequest, TTransaction>(TRequest request,
+        public string DepositPost<TRequest, TTransaction>(
+            TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
@@ -572,7 +575,8 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string[] DepositPost<TRequest, TTransaction>(IEnumerable<TRequest> requests,
+        public string[] DepositPost<TRequest, TTransaction>(
+            IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             Dictionary<string, object> args = null) where TRequest : class, IRequest
         {
@@ -611,7 +615,8 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        public async Task<string> DepositPostAsync<TRequest>(TRequest request,
+        public async Task<string> DepositPostAsync<TRequest>(
+            TRequest request,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
@@ -639,7 +644,8 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of the transaction used by the Outbox</typeparam>
         /// <returns></returns>
-        public async Task<string> DepositPostAsync<TRequest, TTransaction>(TRequest request,
+        public async Task<string> DepositPostAsync<TRequest, TTransaction>(
+            TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
@@ -675,8 +681,9 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        public async Task<string[]> DepositPostAsync<TRequest>(IEnumerable<TRequest> requests,
-            Dictionary<string, object> args,
+        public async Task<string[]> DepositPostAsync<TRequest>(
+            IEnumerable<TRequest> requests,
+            Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
@@ -703,7 +710,8 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used with the Outbox</typeparam>
         /// <returns></returns>
-        public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(IEnumerable<TRequest> requests,
+        public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(
+            IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
@@ -824,7 +832,7 @@ namespace Paramore.Brighter
             {
                 s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
                 request.ReplyAddress.Topic = routingKey;
-                request.ReplyAddress.CorrelationId = channelName;
+                request.ReplyAddress.CorrelationId = channelName.ToString();
 
                 //we do this to create the channel on the broker, or we won't have anything to send to; we 
                 //retry in case the subscription is poor. An alternative would be to extract the code from

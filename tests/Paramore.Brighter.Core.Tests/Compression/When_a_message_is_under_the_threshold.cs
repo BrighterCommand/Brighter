@@ -23,7 +23,7 @@ public class SmallPayloadNotCompressedTests
 
         _body = "small message";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON),
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON),
             new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));      
     }
     

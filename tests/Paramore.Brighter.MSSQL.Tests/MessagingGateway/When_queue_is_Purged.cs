@@ -64,9 +64,9 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             }
         }
 
-        private Guid SendMessage()
+        private string SendMessage()
         {
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
 
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
                 new MessageHeader(messageId, _topic, MessageType.MT_COMMAND),
@@ -107,7 +107,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
         public ExampleCommand()
         {
-            Id = new Guid();
+            Id = Guid.NewGuid().ToString();
         }
         
         /// <summary>

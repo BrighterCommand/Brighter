@@ -319,7 +319,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         private static MessageType GetMessageType(DbDataReader dr) =>
             (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
 
-        private static Guid GetMessageId(DbDataReader dr) => dr.GetGuid(dr.GetOrdinal("MessageId"));
+        private static string GetMessageId(DbDataReader dr) => dr.GetString(dr.GetOrdinal("MessageId"));
 
         private string GetContentType(DbDataReader dr)
         {
@@ -348,12 +348,12 @@ namespace Paramore.Brighter.Outbox.MsSql
             return dictionaryBag;
         }
 
-        private Guid? GetCorrelationId(DbDataReader dr)
+        private string GetCorrelationId(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null; 
             
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 

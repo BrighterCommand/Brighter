@@ -17,7 +17,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly ASBTestCommand _command;
-        private readonly Guid _correlationId;
+        private readonly string _correlationId;
         private readonly string _contentType;
         private readonly string _topicName;
         private readonly IAdministrationClientWrapper _administrationClient;
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 CommandNumber = 26
             };
 
-            _correlationId = Guid.NewGuid();
+            _correlationId = Guid.NewGuid().ToString();
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid()}".Truncate(50);
             _topicName = $"Producer-Send-Tests-{Guid.NewGuid()}";
             var routingKey = new RoutingKey(_topicName);

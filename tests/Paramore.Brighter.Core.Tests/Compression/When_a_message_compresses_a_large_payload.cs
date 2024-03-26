@@ -22,7 +22,7 @@ public class CompressLargePayloadTests
         
         _body = DataGenerator.CreateString(6000);
         _message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
             new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));        
     }
 

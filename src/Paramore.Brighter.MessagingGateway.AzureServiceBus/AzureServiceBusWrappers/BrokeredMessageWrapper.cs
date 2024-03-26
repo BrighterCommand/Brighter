@@ -21,13 +21,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public string Id => _brokeredMessage.MessageId;
 
-        public Guid CorrelationId
+        public string CorrelationId
         {
             get
             {
                 return string.IsNullOrEmpty(_brokeredMessage.CorrelationId)
-                    ? Guid.Empty
-                    : Guid.Parse(_brokeredMessage.CorrelationId);
+                    ? string.Empty
+                    : _brokeredMessage.CorrelationId;
             }
         }
 

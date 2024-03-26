@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public CommandProcessorBuildDefaultInboxSendAsyncTests()
         {
-             var handler = new MyCommandHandlerAsync(new Dictionary<string, Guid>());
+             var handler = new MyCommandHandlerAsync(new Dictionary<string, string>());
             
              var subscriberRegistry = new SubscriberRegistry();
              //This handler has no Inbox attribute
