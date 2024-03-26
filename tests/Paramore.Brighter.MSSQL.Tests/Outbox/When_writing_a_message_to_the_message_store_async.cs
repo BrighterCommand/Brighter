@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
         private readonly int _value3 = 123;
-        private readonly string _value4 = Guid.NewGuid().ToString();
+        private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly MsSqlTestHelper _msSqlTestHelper;
 
