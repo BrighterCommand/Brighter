@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

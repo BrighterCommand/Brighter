@@ -143,6 +143,11 @@ namespace Paramore.Brighter
         public IAmAMessageTransformerFactory TransformerFactory { get; set; }
         
         /// <summary>
+        /// Sets up an async transformer factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
+        /// </summary>
+        public IAmAMessageTransformerFactoryAsync TransformerFactoryAsync { get; set; }
+        
+        /// <summary>
         /// The transaction provider for the outbox
         /// NOTE: Must implement IAmABoxTransactionProvider&lt; &gt;
         /// </summary>

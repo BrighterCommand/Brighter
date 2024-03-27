@@ -57,8 +57,6 @@ namespace Paramore.Brighter
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
-        private readonly TransformPipelineBuilder _transformPipelineBuilder;
-        private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -67,7 +65,6 @@ namespace Paramore.Brighter
 
         private const string PROCESSCOMMAND = "Process Command";
         private const string PROCESSEVENT = "Process Event";
-        private const string DEPOSITPOST = "Deposit Post";
 
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -162,11 +159,8 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAnExternalBusService bus,
-            IAmAMessageMapperRegistry mapperRegistry = null,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmAMessageTransformerFactory messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync = null,
             IEnumerable<Subscription> replySubscriptions = null,
             IAmAChannelFactory responseChannelFactory = null
             )
@@ -174,13 +168,6 @@ namespace Paramore.Brighter
         {
             _responseChannelFactory = responseChannelFactory;
             _replySubscriptions = replySubscriptions;
-
-            if (mapperRegistry == null) 
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
-            if (!(mapperRegistry is IAmAMessageMapperRegistryAsync mapperRegistryAsync))
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
             InitExtServiceBus(bus); 
         }
@@ -202,11 +189,8 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAnExternalBusService bus,
-            IAmAMessageMapperRegistry mapperRegistry = null,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmAMessageTransformerFactory messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync = null,
             IEnumerable<Subscription> replySubscriptions = null)
         {
             _requestContextFactory = requestContextFactory;
@@ -215,16 +199,8 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
             _replySubscriptions = replySubscriptions;
             
-            if (mapperRegistry == null) 
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
-            if (!(mapperRegistry is IAmAMessageMapperRegistryAsync mapperRegistryAsync))
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
-            
             InitExtServiceBus(bus); 
         }
-
         
         /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.
@@ -531,14 +507,12 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
-            var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
+            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
             
             if (!bus.HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            var message = MapMessage<TRequest, TTransaction>(request, new CancellationToken()).GetAwaiter().GetResult();
-
-            AddTelemetryToMessage<TRequest>(message);
+            Message message = bus.CreateMessageFromRequest(request);
 
             bus.AddToOutbox(request, message, transactionProvider);
 
@@ -582,13 +556,13 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save bulk requests request: {RequestType}", typeof(TRequest));
             
-            var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
+            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
             
             var successfullySentMessage = new List<string>();
 
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
             {
-                var messages = MapMessages(batch.Key, batch, new CancellationToken()).GetAwaiter().GetResult();
+                var messages = bus.CreateMessagesFromRequests(batch.Key, batch, new CancellationToken()).GetAwaiter().GetResult();
 
                 s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
@@ -653,20 +627,17 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
             
-            var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
+            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
 
             if (!bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            Message message = await MapMessage<TRequest, TTransaction>(request, cancellationToken);
-
-            AddTelemetryToMessage<TRequest>(message);
+            Message message = await bus.CreateMessageFromRequestAsync(request, cancellationToken);
 
             await bus.AddToOutboxAsync(request, message, transactionProvider, continueOnCapturedContext, cancellationToken);
 
             return message.Id;
         }
-
 
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
@@ -717,13 +688,13 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
+            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
             
             var successfullySentMessage = new List<string>();
 
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
             {
-                var messages = await MapMessages(batch.Key, batch.ToArray(), cancellationToken);
+                var messages = await bus.CreateMessagesFromRequests(batch.Key, batch.ToArray(), cancellationToken);
 
                 s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
@@ -814,8 +785,6 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
             }
 
-            var outWrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
-
             var subscription = _replySubscriptions.FirstOrDefault(s => s.DataType == typeof(TResponse));
 
             if (subscription is null)
@@ -839,7 +808,7 @@ namespace Paramore.Brighter
                 //the channel to create the subscription, but this does not do much on a new queue
                 _bus.Retry(() => responseChannel.Purge());
 
-                var outMessage = outWrapPipeline.Wrap(request);
+                var outMessage = _bus.CreateMessageFromRequest(request);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
@@ -857,9 +826,7 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogDebug("Reply received from {ChannelName}", channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                    //TODO: this only handles a synchronous unwrap pipeline, we need to handle async too
-                    var inUnwrapPipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TResponse>();
-                    response = inUnwrapPipeline.Unwrap(responseMessage);
+                    _bus.CreateRequestFromMessage(responseMessage, out response);
                     Send(response);
                 }
 
@@ -874,7 +841,7 @@ namespace Paramore.Brighter
         /// This method clears the external service bus, so that the next attempt to use it will create a fresh one
         /// It is mainly intended for testing, to allow the external service bus to be reset between tests
         /// </summary>
-        public static void ClearExtServiceBus()
+        public static void ClearServiceBus()
         {
             if (_bus != null)
             {
@@ -886,17 +853,6 @@ namespace Paramore.Brighter
                         _bus = null;
                     }
                 }
-            }
-        }
-        
-        private void AddTelemetryToMessage<T>(Message message)
-        {
-            var activity = Activity.Current ??
-                           ApplicationTelemetry.ActivitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
-
-            if (activity != null)
-            {
-                message.Header.AddTelemetryInformation(activity, typeof(T).ToString());
             }
         }
 
@@ -913,33 +869,7 @@ namespace Paramore.Brighter
                     $"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
         
-        private List<Message> BulkMapMessages<T>(IEnumerable<IRequest> requests) where T : class, IRequest
-        {
-            return requests.Select(r =>
-            {
-                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
-                var message = wrapPipeline.Wrap((T)r);
-                AddTelemetryToMessage<T>(message);
-                return message;
-            }).ToList();
-        }
-
-        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<IRequest> requests,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var messages = new List<Message>();
-            foreach (var request in requests)
-            {
-                var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
-                var message = await wrapPipeline.WrapAsync((T)request, cancellationToken);
-                AddTelemetryToMessage<T>(message);
-                messages.Add(message);
-            }
-
-            return messages;
-        }
-        
-        // Create an instance of the ExternalBusServices if one not already set for this app. Note that we do not support reinitialization here, so once you have
+        // Create an instance of the ExternalBusService if one not already set for this app. Note that we do not support reinitialization here, so once you have
         // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         // if needed as a "get out of gaol" card.
         private static void InitExtServiceBus(IAmAnExternalBusService bus)
@@ -985,58 +915,6 @@ namespace Paramore.Brighter
                 default:
                     return true;
             }
-        }
-        
-        private async Task<Message> MapMessage<TRequest, TTransaction>(TRequest request, CancellationToken cancellationToken)
-            where TRequest : class, IRequest
-        {
-            Message message;
-            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
-            {
-                message = await _transformPipelineBuilderAsync
-                    .BuildWrapPipeline<TRequest>()
-                    .WrapAsync(request, cancellationToken);
-            }
-            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
-            {
-                message = _transformPipelineBuilder
-                    .BuildWrapPipeline<TRequest>()
-                    .Wrap(request);
-
-            } 
-            else
-            {
-                throw new ArgumentOutOfRangeException("No message mapper defined for request");
-            }
-
-            return message;
-        }
-
-        private Task<List<Message>> MapMessages(Type requestType, IEnumerable<IRequest> requests,
-            CancellationToken cancellationToken)
-        {
-            var parameters = new object[] { requests, cancellationToken };
-
-            var hasAsyncPipeline = (bool) typeof(TransformPipelineBuilderAsync)
-                    .GetMethod(nameof(TransformPipelineBuilderAsync.HasPipeline),
-                        BindingFlags.Instance | BindingFlags.Public)
-                .MakeGenericMethod(requestType)
-                .Invoke(this._transformPipelineBuilderAsync, null);
-            
-            if (hasAsyncPipeline)
-            {
-                return (Task<List<Message>>) GetType()
-                    .GetMethod(nameof(BulkMapMessagesAsync), BindingFlags.Instance | BindingFlags.NonPublic)
-                    .MakeGenericMethod(requestType)
-                    .Invoke(this, parameters); 
-            }
-            
-            var tcs = new TaskCompletionSource<List<Message>>();
-            tcs.SetResult((List<Message>)GetType()
-                .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
-                .MakeGenericMethod(requestType)                                                             
-                .Invoke(this, new[] { requests }));
-            return tcs.Task;
         }
         
         private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)

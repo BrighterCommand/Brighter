@@ -59,17 +59,24 @@ public class ImplicitClearingObservabilityTests : IDisposable
         });
         producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
         
-        IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, outbox);
+        IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+            producerRegistry, 
+            policyRegistry, 
+            messageMapperRegistry, 
+            new EmptyMessageTransformerFactory(), 
+            new EmptyMessageTransformerFactoryAsync(),
+            outbox
+        );
 
-        CommandProcessor.ClearExtServiceBus();
+        CommandProcessor.ClearServiceBus();
         
         _commandProcessor = new CommandProcessor(
             registry, 
             handlerFactory, 
-            new InMemoryRequestContextFactory(), 
+            new InMemoryRequestContextFactory(),
             policyRegistry, 
-            bus,
-            messageMapperRegistry);
+            bus
+        );
     }
 
     [Fact]
@@ -97,7 +104,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
 
     public void Dispose()
     {
-        CommandProcessor.ClearExtServiceBus();
+        CommandProcessor.ClearServiceBus();
         _traceProvider?.Dispose();
     }
 }

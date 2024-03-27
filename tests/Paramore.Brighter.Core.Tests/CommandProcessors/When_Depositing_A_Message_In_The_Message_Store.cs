@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -61,14 +62,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             }; 
             
-            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, _fakeOutbox);
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry,
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
         
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                bus,
-                messageMapperRegistry);
+                bus
+            );
         }
 
 
@@ -98,7 +106,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

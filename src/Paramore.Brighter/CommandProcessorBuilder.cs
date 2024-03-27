@@ -71,8 +71,6 @@ namespace Paramore.Brighter
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private IAmAMessageMapperRegistry _messageMapperRegistry;
-        private IAmAMessageTransformerFactory _transformerFactory;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
@@ -167,15 +165,11 @@ namespace Paramore.Brighter
         public INeedARequestContext ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory transformerFactory,
             IAmAChannelFactory responseChannelFactory = null, 
             IEnumerable<Subscription> subscriptions = null,
             InboxConfiguration inboxConfiguration = null
         )
         {
-            _messageMapperRegistry = messageMapperRegistry;
-            _transformerFactory = transformerFactory;
             _inboxConfiguration = inboxConfiguration;
                     
             switch (busType)
@@ -213,13 +207,14 @@ namespace Paramore.Brighter
             IAmAnOutbox outbox,
             IAmABoxTransactionProvider<TTransaction> transactionProvider)
         {
-            _messageMapperRegistry = configuration.MessageMapperRegistry;
             _responseChannelFactory = configuration.ResponseChannelFactory;
-            _transformerFactory = configuration.TransformerFactory;
             
-            _bus = new ExternalBusServices<Message, TTransaction>(
+            _bus = new ExternalBusService<Message, TTransaction>(
                 configuration.ProducerRegistry,
                 _policyRegistry,
+                configuration.MessageMapperRegistry,
+                configuration.TransformerFactory,
+                configuration.TransformerFactoryAsync,
                 outbox, 
                 configuration.OutboxBulkChunkSize,
                 configuration.OutboxTimeout);
@@ -262,19 +257,28 @@ namespace Paramore.Brighter
             }
 
             if (!_useRequestReplyQueues)
-                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry, bus: _bus,
-                    featureSwitchRegistry: _featureSwitchRegistry, inboxConfiguration: _inboxConfiguration,
-                    messageTransformerFactory: _transformerFactory);
+                return new CommandProcessor(
+                    subscriberRegistry: _registry, 
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory, 
+                    policyRegistry: _policyRegistry,
+                    bus: _bus,
+                    featureSwitchRegistry: _featureSwitchRegistry, 
+                    inboxConfiguration: _inboxConfiguration
+                );
             
             if (_useRequestReplyQueues)
-                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry, bus: _bus,
-                    featureSwitchRegistry: _featureSwitchRegistry, inboxConfiguration: _inboxConfiguration,
-                    messageTransformerFactory: _transformerFactory, replySubscriptions: _replySubscriptions,
-                    responseChannelFactory: _responseChannelFactory);
+                return new CommandProcessor(
+                    subscriberRegistry: _registry, 
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory, 
+                    policyRegistry: _policyRegistry,
+                    bus: _bus,
+                    featureSwitchRegistry: _featureSwitchRegistry, 
+                    inboxConfiguration: _inboxConfiguration,
+                    replySubscriptions: _replySubscriptions,
+                    responseChannelFactory: _responseChannelFactory
+                );
 
             throw new ConfigurationException(
                 "The configuration options chosen cannot be used to construct a command processor");
@@ -343,8 +347,6 @@ namespace Paramore.Brighter
         INeedARequestContext ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory transformerFactory,
             IAmAChannelFactory responseChannelFactory = null, 
             IEnumerable<Subscription> subscriptions = null,
             InboxConfiguration inboxConfiguration = null

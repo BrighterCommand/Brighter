@@ -60,14 +60,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 { topic, _fakeMessageProducerWithPublishConfirmation },
             });
             
-            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, _fakeOutbox);
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry, 
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
         
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                bus,
-                messageMapperRegistry);
+                bus
+            );
         }
 
         [Fact]
@@ -101,7 +108,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
      }
 }

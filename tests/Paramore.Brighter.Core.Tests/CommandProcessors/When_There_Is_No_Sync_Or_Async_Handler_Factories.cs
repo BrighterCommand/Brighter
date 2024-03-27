@@ -55,7 +55,7 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
     
     public void Dispose()
     {
-        CommandProcessor.ClearExtServiceBus();
+        CommandProcessor.ClearServiceBus();
     }
 
     class DummyHandlerFactory : IAmAHandlerFactory

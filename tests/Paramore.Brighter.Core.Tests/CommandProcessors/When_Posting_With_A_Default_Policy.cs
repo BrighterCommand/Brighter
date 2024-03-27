@@ -66,7 +66,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 {
                     { topic, _fakeMessageProducerWithPublishConfirmation },
                 }),
-                MessageMapperRegistry = messageMapperRegistry
+                MessageMapperRegistry = messageMapperRegistry,
+                TransformerFactory = new EmptyMessageTransformerFactory(),
+                TransformerFactoryAsync = new EmptyMessageTransformerFactoryAsync()
             };
             
             _commandProcessor = CommandProcessorBuilder.With()
@@ -98,7 +100,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
 
         internal class EmptyHandlerFactorySync : IAmAHandlerFactorySync

@@ -75,17 +75,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         [Fact]
         public void When_Creating_A_Command_Processor_Without_Producer_Registry()
-        {
+        {                                             
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, _retryPolicy }, { CommandProcessor.CIRCUITBREAKER, _circuitBreakerPolicy } };
 
-            _exception = Catch.Exception(() => new ExternalBusServices<Message, CommittableTransaction>(null, policyRegistry, _fakeOutbox));               
+            _exception = Catch.Exception(() => new ExternalBusService<Message, CommittableTransaction>(
+                null, 
+                policyRegistry,
+                _messageMapperRegistry,
+                 new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox)
+            );               
 
             _exception.Should().BeOfType<ConfigurationException>();
         }
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

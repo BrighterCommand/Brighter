@@ -50,6 +50,9 @@ namespace Paramore.Brighter
             var busConfiguration = new ExternalBusConfiguration();
             busConfiguration.ProducerRegistry = producerRegistry;
             busConfiguration.MessageMapperRegistry = mapper;
+            busConfiguration.TransformerFactory = new EmptyMessageTransformerFactory();
+            busConfiguration.TransformerFactoryAsync = new EmptyMessageTransformerFactoryAsync();
+            
             return new ControlBusSender(
                 CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
