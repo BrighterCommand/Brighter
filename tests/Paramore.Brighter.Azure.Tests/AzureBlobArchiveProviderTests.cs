@@ -81,7 +81,7 @@ public class AzureBlobArchiveProviderTests
         var tags = (await blobClient.GetTagsAsync()).Value.Tags;
 
         Assert.That(tags["topic"], Is.EqualTo(eventMessage.Header.Topic));
-        Assert.That(Guid.Parse(tags["correlationId"]), Is.EqualTo(eventMessage.Header.CorrelationId));
+        Assert.That(tags["correlationId"], Is.EqualTo(eventMessage.Header.CorrelationId));
         Assert.That(tags["message_type"], Is.EqualTo(eventMessage.Header.MessageType.ToString()));
         Assert.That(DateTime.Parse(tags["timestamp"]), Is.EqualTo(eventMessage.Header.TimeStamp));
         Assert.That(tags["content_type"], Is.EqualTo(eventMessage.Header.ContentType));
@@ -175,7 +175,7 @@ public class AzureBlobArchiveProviderTests
         var tags = (await blobClient.GetTagsAsync()).Value.Tags;
 
         Assert.That(tags["topic"], Is.EqualTo(eventMessage.Header.Topic));
-        Assert.That(Guid.Parse(tags["correlationId"]), Is.EqualTo(eventMessage.Header.CorrelationId));
+        Assert.That(tags["correlationId"], Is.EqualTo(eventMessage.Header.CorrelationId));
         Assert.That(tags["message_type"], Is.EqualTo(eventMessage.Header.MessageType.ToString()));
         Assert.That(DateTime.Parse(tags["timestamp"]), Is.EqualTo(eventMessage.Header.TimeStamp));
         Assert.That(tags["content_type"], Is.EqualTo(eventMessage.Header.ContentType));

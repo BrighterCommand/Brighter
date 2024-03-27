@@ -18,6 +18,7 @@ namespace SalutationPorts.Handlers
     public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
     {
         private readonly IAmADynamoDbTransactionProvider _transactionProvider;
+        private readonly IAmADynamoDbTransactionProvider _transactionProvider1;
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<GreetingMadeHandlerAsync> _logger;
 
@@ -25,9 +26,10 @@ namespace SalutationPorts.Handlers
             IAmACommandProcessor postBox,
             ILogger<GreetingMadeHandlerAsync> logger)
         {
-            _transactionProvider = transactionProvider;
+            _transactionProvider1 = transactionProvider;
             _postBox = postBox;
             _logger = logger;
+            _transactionProvider = transactionProvider;
         }
 
         [UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] 
@@ -35,9 +37,11 @@ namespace SalutationPorts.Handlers
         [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY_ASYNC)]
         public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
         {
-            var posts = new List<Guid>();
-            var context = new DynamoDBContext(_transactionProvider.DynamoDb);
-            var tx = await _transactionProvider.GetTransactionAsync(cancellationToken);
+
+            var posts = new List<string>();
+            var context = new DynamoDBContext(_transactionProvider1.DynamoDb);
+            var tx = await _transactionProvider1.GetTransactionAsync(cancellationToken);
+
             try
             {
                 var salutation = new Salutation { Greeting = @event.Greeting };

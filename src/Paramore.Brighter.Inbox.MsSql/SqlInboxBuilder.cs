@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                     CREATE TABLE {0}
                         (
                             [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
-                            [CommandId] [UNIQUEIDENTIFIER] NOT NULL ,
+                            [CommandId] [NVARCHAR](256) NOT NULL ,
                             [CommandType] [NVARCHAR](256) NULL ,
                             [CommandBody] [NVARCHAR](MAX) NULL ,
                             [Timestamp] [DATETIME] NULL ,

@@ -204,17 +204,17 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                //discard message 
             }
             
-            public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
+            public void Delete(string[] messageIds, Dictionary<string, object> args = null)
             {
                 //ignore
             }
 
-            public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
+            public Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
             {
                  return null;
             }
 
-            public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+            public void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
             {
                 //ignore
             }

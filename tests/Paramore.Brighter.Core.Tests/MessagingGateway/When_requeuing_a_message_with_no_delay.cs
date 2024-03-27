@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
+using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
@@ -41,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             _channel = new Channel("test", _consumer);
 
             _requeueMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
         }
 

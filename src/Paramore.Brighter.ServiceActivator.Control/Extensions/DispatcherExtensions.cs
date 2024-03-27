@@ -29,7 +29,7 @@ public static class DispatcherExtensions
     {
         return new NodeStatusEvent()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.NewGuid().ToString(),
             AvailableTopics = nodeStatus.AvailableTopics,
             ExecutingAssemblyVersion = nodeStatus.ExecutingAssemblyVersion,
             NodeName = nodeStatus.NodeName,

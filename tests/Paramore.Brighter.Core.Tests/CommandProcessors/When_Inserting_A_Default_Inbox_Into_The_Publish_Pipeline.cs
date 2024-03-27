@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public CommandProcessorBuildDefaultInboxPublishTests()
         {
-            var handler = new MyGlobalInboxEventHandler(new Dictionary<string, Guid>());
+            var handler = new MyGlobalInboxEventHandler(new Dictionary<string, string>());
 
             var subscriberRegistry = new SubscriberRegistry();
             //This handler has no Inbox attribute

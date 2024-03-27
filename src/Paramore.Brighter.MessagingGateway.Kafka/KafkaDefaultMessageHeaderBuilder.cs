@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
                 new Header(HeaderNames.TOPIC, message.Header.Topic.ToByteArray()),
-                new Header(HeaderNames.MESSAGE_ID, message.Header.Id.ToString().ToByteArray()),
+                new Header(HeaderNames.MESSAGE_ID, message.Header.Id.ToByteArray()),
             };
 
             if (message.Header.TimeStamp != default)
@@ -52,8 +52,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             else
                 headers.Add(HeaderNames.TIMESTAMP, DateTimeOffset.UtcNow.ToString().ToByteArray());
             
-            if (message.Header.CorrelationId != Guid.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString().ToByteArray());
+            if (message.Header.CorrelationId != string.Empty)
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToByteArray());
 
             if (!string.IsNullOrEmpty(message.Header.PartitionKey))
                 headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.ToByteArray());

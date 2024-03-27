@@ -19,7 +19,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
-        private readonly Guid _correlationId;
+        private readonly string _correlationId;
         private readonly string _replyTo;
         private readonly string _contentType;
         private readonly string _topicName;
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public SqsMessageProducerSendTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
-            _correlationId = Guid.NewGuid();
+            _correlationId = Guid.NewGuid().ToString();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

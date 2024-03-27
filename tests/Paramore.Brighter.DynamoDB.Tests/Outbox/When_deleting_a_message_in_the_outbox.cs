@@ -13,12 +13,15 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
     public void When_deleting_a_message_in_the_outbox()
     {
         // arrange
-        var message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+        var message = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+            new MessageBody("message body")
+            );
         var dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
         dynamoDbOutbox.Add(message);
 
         // act
-        dynamoDbOutbox.Delete(new Guid[] {message.Id});
+        dynamoDbOutbox.Delete([message.Id]);
 
         // assert
         var foundMessage = dynamoDbOutbox.Get(message.Id);
@@ -29,12 +32,12 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
     public async Task When_deleting_a_message_in_the_outbox_async()
     {
         // arrange
-        var message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+        var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         var dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
         await dynamoDbOutbox.AddAsync(message);
 
         // act
-        await dynamoDbOutbox.DeleteAsync(new Guid[] {message.Id});
+        await dynamoDbOutbox.DeleteAsync([message.Id]);
 
         // assert
         var foundMessage = await dynamoDbOutbox.GetAsync(message.Id);

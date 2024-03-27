@@ -61,12 +61,12 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
     /// <summary>
     /// Archive messages in Parallel
     /// </summary>
-    /// <param name="message">Message to send</param>
+    /// <param name="messages">Messages to send</param>
     /// <param name="cancellationToken">The Cancellation Token</param>
     /// <returns>IDs of successfully archived messages</returns>
-    public async Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+    public async Task<string[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
     {
-        var uploads = new Queue<Task<Guid?>>();
+        var uploads = new Queue<Task<string>>();
 
         foreach (var message in messages)
         {
@@ -75,12 +75,12 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
 
         var results = await Task.WhenAll(uploads);
 #pragma warning disable CS8629 // Nullable value type may be null.
-        return results.Where(r => r.HasValue).Select(r => r.Value).ToArray();
+        return results.Where(r => !string.IsNullOrEmpty(r)).Select(r => r).ToArray();
 #pragma warning restore CS8629 // Nullable value type may be null.
 
     }
 
-    private async Task<Guid?> UploadSafe(Message message, CancellationToken cancellationToken)
+    private async Task<string> UploadSafe(Message message, CancellationToken cancellationToken)
     {
         try
         {

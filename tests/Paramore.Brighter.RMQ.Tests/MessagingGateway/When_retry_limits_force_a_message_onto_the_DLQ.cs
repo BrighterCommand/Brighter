@@ -27,7 +27,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RMQMessageConsumerRetryDLQTests()
         {
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string contentType = "text\\plain";
             var channelName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
             _topicName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
@@ -123,7 +123,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             await Task.Delay(20000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message

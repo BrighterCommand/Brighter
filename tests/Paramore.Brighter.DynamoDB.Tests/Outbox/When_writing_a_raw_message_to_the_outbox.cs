@@ -54,13 +54,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             var serdesBody = payload.Concat(Encoding.ASCII.GetBytes(body)).ToArray();
 
             var messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayedMilliseconds: 5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
 

@@ -25,7 +25,7 @@ namespace Greetings.Ports.Mappers
             var replyAddress = new ReplyAddress(topic: message.Header.ReplyTo, correlationId: message.Header.CorrelationId);
             var reply = new GreetingReply(replyAddress);
             var body = JsonSerializer.Deserialize<GreetingsReplyBody>(message.Body.Value);
-            reply.Id = Guid.Parse(body.Id);
+            reply.Id = body.Id;
             reply.Salutation = body.Salutation;
 
             return reply;

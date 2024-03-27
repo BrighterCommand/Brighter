@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private Message _message;
         private readonly HeartbeatReply _request;
         private const string TOPIC = "test.topic";
-        private readonly Guid _correlationId = Guid.NewGuid();
+        private readonly string _correlationId = Guid.NewGuid().ToString();
 
         public HeartbeatReplyToMessageMapperTests()
         {

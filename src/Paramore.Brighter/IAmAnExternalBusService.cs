@@ -23,7 +23,7 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        void ClearOutbox(Guid[] posts, Dictionary<string, object> args = null);
+        void ClearOutbox(string[] posts, Dictionary<string, object> args = null);
 
         /// <summary>
         /// This is the clear outbox for explicit clearing of messages.
@@ -34,8 +34,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allow cancellation of the operation</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        Task ClearOutboxAsync(
-            IEnumerable<Guid> posts,
+        Task ClearOutboxAsync(IEnumerable<string> posts,
             bool continueOnCapturedContext = false,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default);

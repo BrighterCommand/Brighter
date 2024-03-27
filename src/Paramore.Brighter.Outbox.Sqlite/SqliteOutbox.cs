@@ -452,14 +452,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var contentType = dr.GetString(ordinal);
             return contentType;
         }
-
-
-        private Guid? GetCorrelationId(IDataReader dr)
+        
+        private string GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 
@@ -468,9 +467,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static Guid GetMessageId(IDataReader dr)
+        private static string GetMessageId(IDataReader dr)
         {
-            return Guid.Parse(dr.GetString(dr.GetOrdinal("MessageId")));
+            return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
         private string GetPartitionKey(IDataReader dr)

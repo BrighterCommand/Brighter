@@ -17,11 +17,11 @@ public class KafkaHeaderToBrighterTests
         
         var message = new Message(
             new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test",
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "test",
                 contentType: "application/octet",
                 partitionKey: "mykey"
@@ -33,7 +33,7 @@ public class KafkaHeaderToBrighterTests
         message.Header.HandledCount = 2;
 
         Dictionary<string,object> bag = message.Header.Bag;
-        bag.Add("myguid", Guid.NewGuid());
+        bag.Add("myguid", Guid.NewGuid().ToString());
         bag.Add("mystring", "string value");
         bag.Add("myint", 7);
         bag.Add("mydouble", 3.56);

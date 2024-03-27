@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return tcs.Task;
         }
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             var msgs = messages as Message[] ?? messages.ToArray();

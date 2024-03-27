@@ -107,7 +107,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return _posts.Where(oe => oe.TimeFlushed >= messagesSince).Select(oe => oe.Message).Take(pageSize).ToArray();
         }
 
-        public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
+        public Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             foreach (var outboxEntry in _posts)
             {
@@ -129,7 +129,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public Task<Message> GetAsync(
-            Guid messageId, 
+            string messageId, 
             int outBoxTimeout = -1, 
             Dictionary<string, object> args = null, 
             CancellationToken cancellationToken = default)
@@ -150,7 +150,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public Task<IEnumerable<Message>> GetAsync(
-            IEnumerable<Guid> messageIds, 
+            IEnumerable<string> messageIds, 
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default)
         {
@@ -162,7 +162,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
         
         public Task MarkDispatchedAsync(
-            Guid id, 
+            string id, 
             DateTime? dispatchedAt = null, 
             Dictionary<string, object> args = null, 
             CancellationToken cancellationToken = default)
@@ -177,7 +177,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public async Task MarkDispatchedAsync(
-            IEnumerable<Guid> ids, DateTime? dispatchedAt = null, 
+            IEnumerable<string> ids, DateTime? dispatchedAt = null, 
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default
             )
@@ -209,7 +209,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
         }
 
-        public Task DeleteAsync(Guid[] messageIds,  Dictionary<string, object> args, CancellationToken cancellationToken = default)
+        public Task DeleteAsync(string[] messageIds,  Dictionary<string, object> args, CancellationToken cancellationToken = default)
         {
             Delete(messageIds);
             return Task.CompletedTask;
@@ -233,7 +233,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return _posts.Where(oe => oe.TimeFlushed >= messagesSince).Select(oe => oe.Message).Take(pageSize).ToArray();
         }
 
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+        public void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
            var entry = _posts.Single(oe => oe.Message.Id == id);
            entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
@@ -254,9 +254,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 .ToArray();
         }
 
-       public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
+       public void Delete(string[] messageIds, Dictionary<string, object> args = null)
        {
-           foreach (Guid messageId in messageIds)
+           foreach (string messageId in messageIds)
            {
                var message = _posts.First(e => e.Message.Id == messageId);
                _posts.Remove(message);

@@ -112,20 +112,6 @@ namespace Paramore.Brighter
 
                 if (!messages.Any()) return;
 
-                Guid[] successfullyArchivedMessages;
-                if (parallelArchiving)
-                {
-                    successfullyArchivedMessages = await _archiveProvider.ArchiveMessagesAsync(messages.ToArray(), cancellationToken);
-                }
-                else
-                {
-                    foreach (var message in messages)
-                    {
-                        await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
-                    }
-                    successfullyArchivedMessages = messages.Select(m => m.Id).ToArray();
-                }
-
                 await _outboxAsync.DeleteAsync(
                     messages.Select(e => e.Id).ToArray(), cancellationToken: cancellationToken);
             }

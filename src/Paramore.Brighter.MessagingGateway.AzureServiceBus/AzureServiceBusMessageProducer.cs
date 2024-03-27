@@ -111,11 +111,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Sends a Batch of Messages
         /// </summary>
         /// <param name="messages">The messages to send.</param>
-        /// <param name="batchSize">The size of batches to send messages in.</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <param name="batchSize">The size of batches to send messages in.</param>
         /// <returns>List of Messages successfully sent.</returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var topics = messages.Select(m => m.Header.Topic).Distinct();
             if (topics.Count() != 1)

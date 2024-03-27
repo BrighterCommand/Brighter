@@ -38,13 +38,13 @@ namespace Paramore.Brighter
         /// The default constructor is mainly intended to use for 
         /// </summary>
         public ReplyAddress() { }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplyAddress"/> class.
         /// </summary>
         /// <param name="topic">The topic.</param>
         /// <param name="correlationId">The correlation identifier.</param>
-        public ReplyAddress(string topic, Guid correlationId)
+        public ReplyAddress(string topic, string correlationId)
         {
             Topic = topic;
             CorrelationId = correlationId;
@@ -60,6 +60,6 @@ namespace Paramore.Brighter
         /// Gets the correlation identifier.
         /// </summary>
         /// <value>The correlation identifier.</value>
-        public Guid CorrelationId { get; set; }
+        public string CorrelationId { get; set; }
     }
 }

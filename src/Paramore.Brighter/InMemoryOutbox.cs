@@ -57,21 +57,6 @@ namespace Paramore.Brighter
         /// The message to be dispatched
         /// </summary>
         public Message Message { get; set; }
-
-        /// <summary>
-        /// The Id of the message as a string key
-        /// </summary>
-        public string Key => Message.Id.ToString();
-
-        /// <summary>
-        /// Turn a Guid into an inbox key - convenience wrapper
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public static string ConvertKey(Guid id)
-        {
-            return $"{id}";
-        }
     }
 
 
@@ -105,10 +90,9 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             EnforceCapacityLimit();
 
-            var key = OutboxEntry.ConvertKey(message.Id);
-            if (!_requests.ContainsKey(key))
+            if (!_requests.ContainsKey(message.Id))
             {
-                if (!_requests.TryAdd(key, new OutboxEntry {Message = message, WriteTime = DateTime.UtcNow}))
+                if (!_requests.TryAdd(message.Id, new OutboxEntry {Message = message, WriteTime = DateTime.UtcNow}))
                 {
                     throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                 }
@@ -200,9 +184,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageIds">The messages to delete</param>
         /// <param name="args"></param>
-        public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
+        public void Delete(string[] messageIds, Dictionary<string, object> args = null)
         {
-            foreach (Guid messageId in messageIds)
+            foreach (string messageId in messageIds)
             {
                 _requests.TryRemove(messageId.ToString(), out _);
             }
@@ -216,7 +200,8 @@ namespace Paramore.Brighter
         /// <param name="args">Additional arguments needed to find a message, if any</param>
         /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous operation</param>
         /// <returns></returns>
-        public Task DeleteAsync(Guid[] messageIds, Dictionary<string, object> args, CancellationToken cancellationToken)
+        public Task DeleteAsync(string[] messageIds, Dictionary<string, object> args,
+            CancellationToken cancellationToken = default)
         {
             Delete(messageIds, args);
             return Task.CompletedTask;
@@ -276,11 +261,11 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
+        public Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
             
-            return _requests.TryGetValue(OutboxEntry.ConvertKey(messageId), out OutboxEntry entry) ? entry.Message : null;
+            return _requests.TryGetValue(messageId, out OutboxEntry entry) ? entry.Message : null;
         }
 
         /// <summary>
@@ -291,7 +276,8 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">A cancellation token for the async operation</param>
         /// <returns></returns>
-        public Task<Message> GetAsync(Guid messageId,
+        public Task<Message> GetAsync(
+            string messageId,
             int outBoxTimeout = -1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
@@ -318,11 +304,10 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">A cancellation token for the async operation</param>
         public Task MarkDispatchedAsync(
-           Guid id, 
-           DateTime? dispatchedAt = null, 
-           Dictionary<string, object> args = null, 
-           CancellationToken cancellationToken = default
-           )
+            string id,
+            DateTime? dispatchedAt = null,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             
@@ -341,11 +326,10 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">A cancellation token for the async operation</param>
         public Task MarkDispatchedAsync(
-           IEnumerable<Guid> ids, 
-           DateTime? dispatchedAt = null, 
-           Dictionary<string, object> args = null,
-           CancellationToken cancellationToken = default
-           )
+            IEnumerable<string> ids,
+            DateTime? dispatchedAt = null,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
        {
            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             
@@ -356,18 +340,18 @@ namespace Paramore.Brighter
            return tcs.Task;
        }
 
- 
-       /// <summary>
-       /// Mark the message as dispatched
-       /// </summary>
-       /// <param name="id">The message to mark as dispatched</param>
-       /// <param name="dispatchedAt">The time that the message was dispatched</param>
-       /// <param name="args">Allows passing arbitrary arguments for searching for a message - not used</param>
-       public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+
+        /// <summary>
+        /// Mark the message as dispatched
+        /// </summary>
+        /// <param name="id">The message to mark as dispatched</param>
+        /// <param name="dispatchedAt">The time that the message was dispatched</param>
+        /// <param name="args">Allows passing arbitrary arguments for searching for a message - not used</param>
+        public void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
             
-            if (_requests.TryGetValue(OutboxEntry.ConvertKey(id), out OutboxEntry entry))
+            if (_requests.TryGetValue(id, out OutboxEntry entry))
             {
                 entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
             }

@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             var replyAddress = new ReplyAddress(topic: message.Header.ReplyTo, correlationId: message.Header.CorrelationId);
             var command = new MyResponse(replyAddress);
             var messageBody = JsonSerializer.Deserialize<MyResponseObject>(message.Body.Value, JsonSerialisationOptions.Options);
-            command.Id = Guid.Parse(messageBody.Id);
+            command.Id = messageBody.Id;
             command.ReplyValue = messageBody.ReplyValue;
             return command;
         }

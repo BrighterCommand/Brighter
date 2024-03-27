@@ -32,7 +32,7 @@ namespace GreetingsPorts.Handlers
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default)
         {
-            var posts = new List<Guid>();
+            var posts = new List<string>();
             
             await _provider.GetTransactionAsync(cancellationToken);
             try

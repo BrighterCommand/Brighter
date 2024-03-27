@@ -109,16 +109,19 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             }
         }
 
-        private Guid SendMessage()
+        private string SendMessage()
         {
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
 
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
-                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND)
-                {
-                    PartitionKey = _partitionKey
-                },
-                new MessageBody($"test content [{_queueName}]")));
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(
+                new Message(
+                    new MessageHeader(messageId, _topic, MessageType.MT_COMMAND)
+                    {
+                        PartitionKey = _partitionKey
+                    },
+                    new MessageBody($"test content [{_queueName}]")
+                    )
+            );
 
             return messageId;
         }

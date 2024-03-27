@@ -44,7 +44,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                 ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
             };
             
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                    ExpirationScanInterval = TimeSpan.FromMilliseconds(10000)
                };
                
-               var messageId = Guid.NewGuid();
+               var messageId = Guid.NewGuid().ToString();
                var messageToAdd = new Message(
                    new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
                    new MessageBody("message body"));

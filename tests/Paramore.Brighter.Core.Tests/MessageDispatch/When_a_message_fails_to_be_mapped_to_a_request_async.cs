@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
             };
 
-            var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
+            var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
 
             _channel.Enqueue(unmappableMessage);
         }

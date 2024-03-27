@@ -46,7 +46,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private readonly string _value2 = "value2";
         private readonly int _value3 = 123;
         private readonly DateTime _value4 = DateTime.UtcNow;
-        private readonly Guid _value5 = new Guid();
+        private readonly Guid _value5 = Guid.NewGuid();
         private Message _storedMessage;
         private readonly DynamoDbOutbox _dynamoDbOutbox;
 
@@ -56,13 +56,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
             var messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayedMilliseconds: 5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
