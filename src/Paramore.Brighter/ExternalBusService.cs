@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -15,12 +16,17 @@ namespace Paramore.Brighter
     /// Provide services to CommandProcessor that persist across the lifetime of the application. Allows separation from elements that have a lifetime linked
     /// to the scope of a request, or are transient for DI purposes
     /// </summary>
-    public class ExternalBusServices<TMessage, TTransaction> : IAmAnExternalBusService
+    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService
         where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         private readonly IPolicyRegistry<string> _policyRegistry;
+        private readonly IAmAMessageMapperRegistry _mapperRegistry;
+        private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
+        private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private readonly TransformPipelineBuilder _transformPipelineBuilder;
+        private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction> _outBox;
         private readonly IAmAnOutboxAsync<TMessage, TTransaction> _asyncOutbox;
         private readonly int _outboxTimeout;
@@ -33,9 +39,10 @@ namespace Paramore.Brighter
         private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
 
         private const string ADDMESSAGETOOUTBOX = "Add message to outbox";
-        private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the outbox";
-        private const string DISPATCHMESSAGE = "Dispatching message";
         private const string BULKDISPATCHMESSAGE = "Bulk dispatching messages";
+        private const string DEPOSITPOST = "Deposit Post";
+        private const string DISPATCHMESSAGE = "Dispatching message";
+        private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the outbox";
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
 
@@ -48,12 +55,18 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="producerRegistry">A registry of producers</param>
         /// <param name="policyRegistry">A registry for reliability policies</param>
+        /// <param name="mapperRegistry">The mapper registry; it should also implement IAmAMessageMapperRegistryAsync</param>
+        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
+        /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
         /// <param name="outboxBulkChunkSize">The size of a chunk for bulk work</param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
-        public ExternalBusServices(
+        public ExternalBusService(
             IAmAProducerRegistry producerRegistry,  
             IPolicyRegistry<string> policyRegistry,
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             IAmAnOutbox outbox = null,
             int outboxBulkChunkSize = 100,
             int outboxTimeout = 300
@@ -61,9 +74,22 @@ namespace Paramore.Brighter
         {
             _producerRegistry = producerRegistry ?? throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _policyRegistry = policyRegistry?? throw new ConfigurationException("Missing Policy Registry for External Bus Services");
+            _mapperRegistry = mapperRegistry;
+            _messageTransformerFactory = messageTransformerFactory;
+            _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
             
+            if (mapperRegistry is null) 
+                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
+            if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
+                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
+            if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
+                throw new ConfigurationException("A Command Processor with an external bus must have a message transformer factory");
+            
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+
             //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
-            if (outbox == null) outbox = new InMemoryOutbox() as IAmAnOutbox;
+            if (outbox is null) outbox = new InMemoryOutbox();
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
             _outboxBulkChunkSize = outboxBulkChunkSize;
@@ -320,7 +346,117 @@ namespace Paramore.Brighter
                 Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, args));
             }
         }
+        
+        /// <summary>
+        /// Given a request, run the transformation pipeline to create a message
+        /// </summary>
+        /// <param name="request">The request</param>
+        /// <typeparam name="TRequest">the type of the request</typeparam>
+        /// <typeparam name="TTransaction"></typeparam>
+        /// <returns></returns>
+        public Message CreateMessageFromRequest<TRequest>(TRequest request) where TRequest : class, IRequest
+        {
+            var message = MapMessage<TRequest>(request, new CancellationToken()).GetAwaiter().GetResult();
 
+            AddTelemetryToMessage<TRequest>(message);
+            return message;
+        }
+
+        /// <summary>
+        /// Given a request, run the transformation pipeline to create a message 
+        /// </summary>
+        /// <param name="request">The request</param>
+        /// <param name="cancellationToken">Cancel the in-flight operation</param>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <typeparam name="TTransaction"></typeparam>
+        /// <returns></returns>
+        public async Task<Message> CreateMessageFromRequestAsync<TRequest>(TRequest request,
+            CancellationToken cancellationToken) where TRequest : class, IRequest
+        {
+            Message message = await MapMessage<TRequest>(request, cancellationToken);
+
+            AddTelemetryToMessage<TRequest>(message);
+            return message;
+        }
+        
+        /// <summary>
+        /// Given a set of messages, map them to requests
+        /// </summary>
+        /// <param name="requestType">The type of the request</param>
+        /// <param name="requests">The list of requests</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public Task<List<Message>> CreateMessagesFromRequests(
+            Type requestType, 
+            IEnumerable<IRequest> requests,
+            CancellationToken cancellationToken)
+        {
+            var parameters = new object[] { requests, cancellationToken };
+
+            var hasAsyncPipeline = (bool) typeof(TransformPipelineBuilderAsync)
+                .GetMethod(nameof(TransformPipelineBuilderAsync.HasPipeline),
+                    BindingFlags.Instance | BindingFlags.Public)
+                .MakeGenericMethod(requestType)
+                .Invoke(this._transformPipelineBuilderAsync, null);
+            
+            if (hasAsyncPipeline)
+            {
+                return (Task<List<Message>>) GetType()
+                    .GetMethod(nameof(BulkMapMessagesAsync), BindingFlags.Instance | BindingFlags.NonPublic)
+                    .MakeGenericMethod(requestType)
+                    .Invoke(this, parameters); 
+            }
+            
+            var tcs = new TaskCompletionSource<List<Message>>();
+            tcs.SetResult((List<Message>)GetType()
+                .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
+                .MakeGenericMethod(requestType)                                                             
+                .Invoke(this, new[] { requests }));
+            return tcs.Task;
+        }
+
+        /// <summary>
+        /// Intended for usage with the CommandProcessor's Call method, this method will create a request from a message
+        /// </summary>
+        /// <param name="message">The message that forms a reply to a call</param>
+        /// <param name="request">The request constructed from that message</param>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
+        public void CreateRequestFromMessage<TRequest>(Message message, out TRequest request)
+            where TRequest : class, IRequest
+        {
+            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
+            {
+                request = _transformPipelineBuilderAsync
+                    .BuildUnwrapPipeline<TRequest>()
+                    .UnwrapAsync(message)
+                    .GetAwaiter()
+                    .GetResult();
+            }
+            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
+            {
+                request = _transformPipelineBuilder
+                    .BuildUnwrapPipeline<TRequest>()
+                    .Unwrap(message);
+
+            } 
+            else
+            {
+                throw new ArgumentOutOfRangeException("No message mapper defined for request");
+            }
+        } 
+
+        private void AddTelemetryToMessage<T>(Message message)
+        {
+            var activity = Activity.Current ??
+                           ApplicationTelemetry.ActivitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
+
+            if (activity != null)
+            {
+                message.Header.AddTelemetryInformation(activity, typeof(T).ToString());
+            }
+        }
+        
         /// <summary>
         /// Configure the callbacks for the producers 
         /// </summary>
@@ -383,7 +519,7 @@ namespace Paramore.Brighter
 
             return false;
         }
-
+        
         /// <summary>
         /// Do we have an async outbox defined?
         /// </summary>
@@ -423,6 +559,99 @@ namespace Paramore.Brighter
             }
 
             return true;
+        }
+  
+        private async Task BackgroundDispatchUsingSync(
+            int amountToClear, 
+            int minimumAge,
+            Dictionary<string, object> args
+            )
+        {
+            var span = Activity.Current;
+            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
+            {
+                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
+                try
+                {
+                    var messages = _outBox.OutstandingMessages(minimumAge, amountToClear, args: args);
+                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX,
+                        tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } }));
+                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
+                        messages.Count(), amountToClear);
+                    Dispatch(messages, args);
+                    s_logger.LogInformation("Messages have been cleared");
+                    span?.SetStatus(ActivityStatusCode.Ok);
+                }
+                catch (Exception e)
+                {
+                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
+                    s_logger.LogError(e, "Error while dispatching from outbox");
+                }
+                finally
+                {
+                    span?.Dispose();
+                    s_clearSemaphoreToken.Release();
+                    s_backgroundClearSemaphoreToken.Release();
+                }
+
+                CheckOutstandingMessages();
+            }
+            else
+            {
+                span?.SetStatus(ActivityStatusCode.Error)
+                    .Dispose();
+                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
+            }
+        }
+        
+        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk,
+            Dictionary<string, object> args)
+        {
+            var span = Activity.Current;
+            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
+            {
+                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
+                try
+                {
+                    var messages =
+                        await _asyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear, args: args);
+                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
+
+                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
+                        messages.Count(), amountToClear);
+
+                    if (useBulk)
+                    {
+                        await BulkDispatchAsync(messages, CancellationToken.None);
+                    }
+                    else
+                    {
+                        await DispatchAsync(messages, false, CancellationToken.None);
+                    }
+
+                    span?.SetStatus(ActivityStatusCode.Ok);
+                    s_logger.LogInformation("Messages have been cleared");
+                }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e, "Error while dispatching from outbox");
+                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
+                }
+                finally
+                {
+                    span?.Dispose();
+                    s_clearSemaphoreToken.Release();
+                    s_backgroundClearSemaphoreToken.Release();
+                }
+
+                CheckOutstandingMessages();
+            }
+            else
+            {
+                span?.SetStatus(ActivityStatusCode.Error)
+                    .Dispose();
+                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
+            }
         }
         
         private IEnumerable<IEnumerable<TMessage>> ChunkMessages(IEnumerable<TMessage> messages)
@@ -475,101 +704,7 @@ namespace Paramore.Brighter
             //This is expensive, so use a background thread
             Task.Run(() => OutstandingMessagesCheck());
         }
-
-
-        private async Task BackgroundDispatchUsingSync(
-            int amountToClear, 
-            int minimumAge,
-            Dictionary<string, object> args
-            )
-        {
-            var span = Activity.Current;
-            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
-            {
-                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
-                try
-                {
-                    var messages = _outBox.OutstandingMessages(minimumAge, amountToClear, args: args);
-                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX,
-                        tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } }));
-                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
-                        messages.Count(), amountToClear);
-                    Dispatch(messages, args);
-                    s_logger.LogInformation("Messages have been cleared");
-                    span?.SetStatus(ActivityStatusCode.Ok);
-                }
-                catch (Exception e)
-                {
-                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
-                    s_logger.LogError(e, "Error while dispatching from outbox");
-                }
-                finally
-                {
-                    span?.Dispose();
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
-                }
-
-                CheckOutstandingMessages();
-            }
-            else
-            {
-                span?.SetStatus(ActivityStatusCode.Error)
-                    .Dispose();
-                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
-            }
-        }
-
-        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk,
-            Dictionary<string, object> args)
-        {
-            var span = Activity.Current;
-            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
-            {
-                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
-                try
-                {
-                    var messages =
-                        await _asyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear, args: args);
-                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
-
-                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
-                        messages.Count(), amountToClear);
-
-                    if (useBulk)
-                    {
-                        await BulkDispatchAsync(messages, CancellationToken.None);
-                    }
-                    else
-                    {
-                        await DispatchAsync(messages, false, CancellationToken.None);
-                    }
-
-                    span?.SetStatus(ActivityStatusCode.Ok);
-                    s_logger.LogInformation("Messages have been cleared");
-                }
-                catch (Exception e)
-                {
-                    s_logger.LogError(e, "Error while dispatching from outbox");
-                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
-                }
-                finally
-                {
-                    span?.Dispose();
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
-                }
-
-                CheckOutstandingMessages();
-            }
-            else
-            {
-                span?.SetStatus(ActivityStatusCode.Error)
-                    .Dispose();
-                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
-            }
-        }
-
+ 
         private void Dispatch(IEnumerable<Message> posts, Dictionary<string, object> args = null)
         {
             foreach (var message in posts)
@@ -601,6 +736,71 @@ namespace Paramore.Brighter
                 else
                     throw new InvalidOperationException("No sync message producer defined.");
             }
+        }
+ 
+        private async Task BulkDispatchAsync(IEnumerable<Message> posts, CancellationToken cancellationToken)
+        {
+            var span = Activity.Current;
+            //Chunk into Topics
+            var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
+
+            foreach (var topicBatch in messagesByTopic)
+            {
+                var producer = _producerRegistry.LookupByOrDefault(topicBatch.Key);
+
+                if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
+                {
+                    var messages = topicBatch.ToArray();
+                    s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}",
+                        messages.Length, topicBatch.Key);
+                    span?.AddEvent(new ActivityEvent(BULKDISPATCHMESSAGE,
+                        tags: new ActivityTagsCollection
+                        {
+                            { "Topic", topicBatch.Key }, { "Number Of Messages", messages.Length }
+                        }));
+                    var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
+
+                    await foreach (var successfulMessage in dispatchesMessages)
+                    {
+                        if (!(producer is ISupportPublishConfirmation))
+                        {
+                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(
+                                    successfulMessage, DateTime.UtcNow, cancellationToken: cancellationToken),
+                                cancellationToken: cancellationToken);
+                        }
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("No async bulk message producer defined.");
+                }
+            }
+        }
+        
+        private List<Message> BulkMapMessages<T>(IEnumerable<IRequest> requests) where T : class, IRequest
+        {
+            return requests.Select(r =>
+            {
+                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
+                var message = wrapPipeline.Wrap((T)r);
+                AddTelemetryToMessage<T>(message);
+                return message;
+            }).ToList();
+        }
+
+        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<IRequest> requests,
+            CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            var messages = new List<Message>();
+            foreach (var request in requests)
+            {
+                var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
+                var message = await wrapPipeline.WrapAsync((T)request, cancellationToken);
+                AddTelemetryToMessage<T>(message);
+                messages.Add(message);
+            }
+
+            return messages;
         }
 
         private async Task DispatchAsync(IEnumerable<Message> posts, bool continueOnCapturedContext,
@@ -651,43 +851,29 @@ namespace Paramore.Brighter
             }
         }
 
-        private async Task BulkDispatchAsync(IEnumerable<Message> posts, CancellationToken cancellationToken)
+        private async Task<Message> MapMessage<TRequest>(TRequest request, CancellationToken cancellationToken)
+            where TRequest : class, IRequest
         {
-            var span = Activity.Current;
-            //Chunk into Topics
-            var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
-
-            foreach (var topicBatch in messagesByTopic)
+            Message message;
+            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
-                var producer = _producerRegistry.LookupByOrDefault(topicBatch.Key);
-
-                if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
-                {
-                    var messages = topicBatch.ToArray();
-                    s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}",
-                        messages.Length, topicBatch.Key);
-                    span?.AddEvent(new ActivityEvent(BULKDISPATCHMESSAGE,
-                        tags: new ActivityTagsCollection
-                        {
-                            { "Topic", topicBatch.Key }, { "Number Of Messages", messages.Length }
-                        }));
-                    var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
-
-                    await foreach (var successfulMessage in dispatchesMessages)
-                    {
-                        if (!(producer is ISupportPublishConfirmation))
-                        {
-                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(
-                                    successfulMessage, DateTime.UtcNow, cancellationToken: cancellationToken),
-                                cancellationToken: cancellationToken);
-                        }
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException("No async bulk message producer defined.");
-                }
+                message = await _transformPipelineBuilderAsync
+                    .BuildWrapPipeline<TRequest>()
+                    .WrapAsync(request, cancellationToken);
             }
+            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
+            {
+                message = _transformPipelineBuilder
+                    .BuildWrapPipeline<TRequest>()
+                    .Wrap(request);
+
+            } 
+            else
+            {
+                throw new ArgumentOutOfRangeException("No message mapper defined for request");
+            }
+
+            return message;
         }
 
         private void OutstandingMessagesCheck()

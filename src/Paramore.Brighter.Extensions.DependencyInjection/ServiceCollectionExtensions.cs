@@ -185,8 +185,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var eventBus = provider.GetService<IAmAnExternalBusService>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
-            var messageMapperRegistry = MessageMapperRegistry(provider);
-            var messageTransformFactory = TransformFactory(provider);
 
             INeedARequestContext ret = null;
             var hasEventBus = eventBus != null;
@@ -199,8 +197,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 ret = messagingBuilder.ExternalBus(
                     ExternalBusType.FireAndForget,
                     eventBus,
-                    messageMapperRegistry,
-                    messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration
@@ -212,8 +208,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 ret = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus,
-                    messageMapperRegistry,
-                    messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration
@@ -320,7 +314,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
-            var busType = typeof(ExternalBusServices<,>).MakeGenericType(typeof(Message), transactionType);
+            var busType = typeof(ExternalBusService<,>).MakeGenericType(typeof(Message), transactionType);
 
             IAmAnExternalBusService bus = (IAmAnExternalBusService)Activator.CreateInstance(busType,
                 externalBusConfiguration.ProducerRegistry,

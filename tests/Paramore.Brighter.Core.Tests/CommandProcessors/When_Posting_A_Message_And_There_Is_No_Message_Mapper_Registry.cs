@@ -76,18 +76,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             }; 
 
-            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, _fakeOutbox);
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry,
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
         
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                bus,
-                messageMapperRegistry); 
+                bus
+            ); 
         }
 
         [Fact]
-        public void When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry()
+        public void When_Posting_A_Message_And_There_Is_No_Message_Mapper_Factory()
         {
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
@@ -97,7 +104,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

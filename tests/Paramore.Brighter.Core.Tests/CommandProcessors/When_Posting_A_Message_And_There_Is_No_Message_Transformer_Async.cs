@@ -25,77 +25,74 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Registry;
+using Polly.Retry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorNoMessageMapperAsyncTests : IDisposable
+    public class CommandProcessorPostMissingMessageTransformerTestsAsync : IDisposable
     {
-        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
         private Exception _exception;
+        private readonly MessageMapperRegistry _messageMapperRegistry;
+        private readonly ProducerRegistry _producerRegistry;
+        private readonly PolicyRegistry _policyRegistry;
 
-        public CommandProcessorNoMessageMapperAsyncTests()
+        public CommandProcessorPostMissingMessageTransformerTestsAsync()
         {
             _myCommand.Value = "Hello World";
 
             _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
-            const string topic = "MyCommand";
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
+                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
+                );
 
-
-            var messageMapperRegistry = new MessageMapperRegistry(
+            _messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
                 null);
+            _messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var retryPolicy = Policy
+            RetryPolicy retryPolicy = Policy
                 .Handle<Exception>()
-                .RetryAsync();
+                .Retry();
 
-            var circuitBreakerPolicy = Policy
+            CircuitBreakerPolicy circuitBreakerPolicy = Policy
                 .Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
             
-            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},});
-            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
-                producerRegistry, 
-                policyRegistry, 
-                messageMapperRegistry,
-                new EmptyMessageTransformerFactory(),
-                new EmptyMessageTransformerFactoryAsync(),
-                _fakeOutbox
-            );
+            _producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                {"MyTopic", new FakeMessageProducerWithPublishConfirmation()},
+            });
 
-            _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                policyRegistry,
-                bus
-            );
-        }
+            _policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
+         }
 
         [Fact]
-        public async Task When_Posting_A_Message_And_There_Is_No_Message_Mapper_Factory_Async()
-        {
-            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
+        public void When_Creating_A_Command_Processor_Without_Message_Transformer_Async()
+        {                                             
+            _exception = Catch.Exception(() => new ExternalBusService<Message, CommittableTransaction>(
+                _producerRegistry, 
+                _policyRegistry,
+                _messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                null,
+                _fakeOutbox)
+            );               
 
-            //_should_throw_an_exception
-            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
+            _exception.Should().BeOfType<ConfigurationException>();
         }
 
         public void Dispose()
