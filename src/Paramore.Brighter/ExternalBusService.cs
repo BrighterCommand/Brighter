@@ -356,8 +356,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Message CreateMessageFromRequest<TRequest>(TRequest request) where TRequest : class, IRequest
         {
-            var message = MapMessage<TRequest>(request, new CancellationToken()).GetAwaiter().GetResult();
-
+            var message = MapMessage<TRequest>(request);
             AddTelemetryToMessage<TRequest>(message);
             return message;
         }
@@ -373,8 +372,7 @@ namespace Paramore.Brighter
         public async Task<Message> CreateMessageFromRequestAsync<TRequest>(TRequest request,
             CancellationToken cancellationToken) where TRequest : class, IRequest
         {
-            Message message = await MapMessage<TRequest>(request, cancellationToken);
-
+            Message message = await MapMessageAsync<TRequest>(request, cancellationToken);
             AddTelemetryToMessage<TRequest>(message);
             return message;
         }
@@ -850,8 +848,26 @@ namespace Paramore.Brighter
                     throw new InvalidOperationException("No async message producer defined.");
             }
         }
+        
+        private Message MapMessage<TRequest>(TRequest request)
+            where TRequest : class, IRequest
+        {
+            Message message;
+            if (_transformPipelineBuilder.HasPipeline<TRequest>())
+            {
+                message = _transformPipelineBuilder
+                    .BuildWrapPipeline<TRequest>()
+                    .Wrap(request);
+            } 
+            else
+            {
+                throw new ArgumentOutOfRangeException("No message mapper defined for request");
+            }
 
-        private async Task<Message> MapMessage<TRequest>(TRequest request, CancellationToken cancellationToken)
+            return message;
+        }
+
+        private async Task<Message> MapMessageAsync<TRequest>(TRequest request, CancellationToken cancellationToken)
             where TRequest : class, IRequest
         {
             Message message;
@@ -861,13 +877,6 @@ namespace Paramore.Brighter
                     .BuildWrapPipeline<TRequest>()
                     .WrapAsync(request, cancellationToken);
             }
-            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
-            {
-                message = _transformPipelineBuilder
-                    .BuildWrapPipeline<TRequest>()
-                    .Wrap(request);
-
-            } 
             else
             {
                 throw new ArgumentOutOfRangeException("No message mapper defined for request");

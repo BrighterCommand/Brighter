@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -32,9 +31,10 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
         registry.Register<MyEvent, MyEventHandler>();
 
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            null,
+            new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync())
+            );
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
         
         var container = new ServiceCollection();
         container.AddTransient<MyEvent>();
