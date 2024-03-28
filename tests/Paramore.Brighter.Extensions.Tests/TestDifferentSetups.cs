@@ -34,6 +34,10 @@ namespace Tests
         {
             var serviceCollection = new ServiceCollection();
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { "MyTopic", new FakeProducer() }, });
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(type => new TestEventMessageMapper()), 
+                new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
+            );
 
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
@@ -42,6 +46,7 @@ namespace Tests
                 .UseExternalBus((config) =>
                 {
                     config.ProducerRegistry = producerRegistry;
+                    config.MessageMapperRegistry = messageMapperRegistry;
                 })
                 .AutoFromAssemblies();
 

@@ -213,8 +213,8 @@ namespace Paramore.Brighter
                 configuration.ProducerRegistry,
                 _policyRegistry,
                 configuration.MessageMapperRegistry,
-                configuration.TransformerFactory,
-                configuration.TransformerFactoryAsync,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
                 outbox, 
                 configuration.OutboxBulkChunkSize,
                 configuration.OutboxTimeout);

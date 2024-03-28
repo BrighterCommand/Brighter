@@ -67,8 +67,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     { topic, _fakeMessageProducerWithPublishConfirmation },
                 }),
                 MessageMapperRegistry = messageMapperRegistry,
-                TransformerFactory = new EmptyMessageTransformerFactory(),
-                TransformerFactoryAsync = new EmptyMessageTransformerFactoryAsync()
             };
             
             _commandProcessor = CommandProcessorBuilder.With()

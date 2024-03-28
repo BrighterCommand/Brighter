@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Transactions;
 using FakeItEasy;
@@ -6,7 +7,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    public class ControlBusSenderFactoryTests
+    [Collection("CommandProcessor")]
+    public class ControlBusSenderFactoryTests : IDisposable
     {
         private IAmAControlBusSender _sender;
         private readonly IAmAControlBusSenderFactory _senderFactory;
@@ -30,6 +32,11 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
 
             //_should_create_a_control_bus_sender
             _sender.Should().NotBeNull();
+        }
+        
+        public void Dispose()
+        {
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

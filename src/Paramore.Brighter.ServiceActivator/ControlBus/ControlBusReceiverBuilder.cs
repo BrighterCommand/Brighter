@@ -158,8 +158,6 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var externalBusConfiguration = new ExternalBusConfiguration();
             externalBusConfiguration.ProducerRegistry = producerRegistry;
             externalBusConfiguration.MessageMapperRegistry = outgoingMessageMapperRegistry;
-            externalBusConfiguration.TransformerFactory = new EmptyMessageTransformerFactory();
-            externalBusConfiguration.TransformerFactoryAsync = new EmptyMessageTransformerFactoryAsync();
             
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))

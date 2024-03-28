@@ -65,12 +65,6 @@ namespace Paramore.Brighter
         IAmAChannelFactory ResponseChannelFactory { get; set; }
 
         /// <summary>
-        /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
-        /// of your MessageMappers
-        /// </summary>
-        IAmAMessageTransformerFactory TransformerFactory { get; set; }
-
-        /// <summary>
         /// If we are using Rpc, what are the subscriptions for the reply queue?
         /// </summary>
         IEnumerable<Subscription> ReplyQueueSubscriptions { get; set; }
@@ -84,6 +78,13 @@ namespace Paramore.Brighter
         /// Do we want to support RPC on an external bus?
         /// </summary>
         bool UseRpc { get; set; }
+
+        /// <summary>
+        /// How do obtain a connection to the Outbox that is not part of a shared transaction.
+        /// NOTE: Must implement IAmARelationalDbConnectionProvider
+        /// </summary>
+        Type ConnectionProvider { get; set; }
+
     }
 
     /// <summary>
@@ -136,16 +137,6 @@ namespace Paramore.Brighter
         /// </summary>
         public IAmAChannelFactory ResponseChannelFactory { get; set; }
         
-        /// <summary>
-        /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
-        /// of your MessageMappers
-        /// </summary>
-        public IAmAMessageTransformerFactory TransformerFactory { get; set; }
-        
-        /// <summary>
-        /// Sets up an async transformer factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
-        /// </summary>
-        public IAmAMessageTransformerFactoryAsync TransformerFactoryAsync { get; set; }
         
         /// <summary>
         /// The transaction provider for the outbox

@@ -34,7 +34,8 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    public class ControlBusTests
+    [Collection("CommandProcessor")]
+    public class ControlBusTests : IDisposable
     {
         private readonly IDispatcher _dispatcher;
         private readonly Dispatcher _controlBus;
@@ -68,6 +69,11 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _exception.Should().BeNull();
             //should_call_the_dispatcher_to_start_it
             A.CallTo(() => _dispatcher.Receive()).MustHaveHappened();
+        }
+        
+        public void Dispose()
+        {
+            CommandProcessor.ClearServiceBus();
         }
     }
 }
