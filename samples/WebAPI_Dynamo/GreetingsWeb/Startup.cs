@@ -167,10 +167,8 @@ namespace GreetingsWeb
                     new RmqPublication
                     {
                         Topic = new RoutingKey("GreetingMade"),
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
-                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        OutBoxBag = new Dictionary<string, object> {{"Topic", "GreetingMade"}},
+                         WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        
                         MakeChannels = OnMissingChannel.Create
                     }}
             ).Create();
@@ -189,6 +187,9 @@ namespace GreetingsWeb
                  configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration());
                  configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                  configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
+                 configure.MaxOutStandingMessages = 5;
+                 configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+                 configure.OutBoxBag = new Dictionary<string, object> { { "Topic", "GreetingMade" } };
              })
              .UseOutboxSweeper(options => { options.Args.Add("Topic", "GreetingMade"); })
              .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);

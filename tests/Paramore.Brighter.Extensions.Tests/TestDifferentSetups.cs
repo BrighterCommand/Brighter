@@ -110,10 +110,7 @@ namespace Tests
     {
         public List<Message> SentMessages { get; } = new List<Message>();
         
-        public int MaxOutStandingMessages { get; set; } = -1;
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+        public Publication Publication { get; } = new Publication();
 
         public void Dispose()
         {

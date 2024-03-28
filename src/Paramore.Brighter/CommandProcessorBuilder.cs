@@ -217,7 +217,10 @@ namespace Paramore.Brighter
                 new EmptyMessageTransformerFactoryAsync(),
                 outbox, 
                 configuration.OutboxBulkChunkSize,
-                configuration.OutboxTimeout);
+                configuration.OutboxTimeout,
+                configuration.MaxOutStandingMessages,
+                configuration.MaxOutStandingCheckIntervalMilliSeconds,
+                configuration.OutBoxBag);
             
             return this;
         }

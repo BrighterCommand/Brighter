@@ -118,6 +118,8 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             config.Outbox = makeOutbox.outbox;
             config.ConnectionProvider = makeOutbox.connectionProvider;
             config.TransactionProvider = makeOutbox.transactionProvider;
+            config.MaxOutStandingMessages = 5;
+            config.MaxOutStandingCheckIntervalMilliSeconds = 500;
         })
         .AutoFromAssemblies();
 
@@ -393,8 +395,7 @@ static IAmAProducerRegistry GetRmqProducerRegistry()
             new RmqPublication
             {
                 Topic = new RoutingKey("SalutationReceived"),
-                MaxOutStandingMessages = 5,
-                MaxOutStandingCheckIntervalMilliSeconds = 500,
+ 
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }

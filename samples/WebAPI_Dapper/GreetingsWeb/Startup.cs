@@ -194,6 +194,8 @@ namespace GreetingsWeb
                     configure.Outbox = makeOutbox.outbox;
                     configure.TransactionProvider = makeOutbox.transactionProvider;
                     configure.ConnectionProvider = makeOutbox.connectionProvider;
+                    configure.MaxOutStandingMessages = 5;
+                    configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
                 })
                 .UseOutboxSweeper(options => {
                     options.TimerInterval = 5;
@@ -295,8 +297,6 @@ namespace GreetingsWeb
                     new RmqPublication
                     {
                         Topic = new RoutingKey("GreetingMade"),
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels = OnMissingChannel.Create
                     }

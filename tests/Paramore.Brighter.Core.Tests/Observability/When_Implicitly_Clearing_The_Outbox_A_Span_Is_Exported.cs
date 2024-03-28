@@ -57,7 +57,6 @@ public class ImplicitClearingObservabilityTests : IDisposable
         {
             {MyEvent.Topic, new FakeMessageProducer()}
         });
-        producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -65,7 +64,8 @@ public class ImplicitClearingObservabilityTests : IDisposable
             messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
-            outbox
+            outbox,
+            maxOutStandingMessages: -1
         );
 
         CommandProcessor.ClearServiceBus();

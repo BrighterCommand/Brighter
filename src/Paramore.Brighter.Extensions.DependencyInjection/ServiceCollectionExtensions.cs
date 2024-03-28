@@ -328,7 +328,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactoryAsync(serviceProvider),
                 outbox,
                 busConfiguration.OutboxBulkChunkSize,
-                busConfiguration.OutboxTimeout);
+                busConfiguration.OutboxTimeout,
+                busConfiguration.MaxOutStandingMessages,
+                busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
+                busConfiguration.OutBoxBag);
         }
 
         /// <summary>

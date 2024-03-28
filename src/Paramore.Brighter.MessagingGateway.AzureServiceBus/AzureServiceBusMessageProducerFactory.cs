@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var nameSpaceManagerWrapper = new AdministrationClientWrapper(clientProvider);
             var topicClientProvider = new ServiceBusSenderProvider(clientProvider);
 
-            return new AzureServiceBusMessageProducer(nameSpaceManagerWrapper, topicClientProvider, asbPublication.MakeChannels, bulkSendBatchSize);
+            return new AzureServiceBusMessageProducer(nameSpaceManagerWrapper, topicClientProvider, asbPublication, bulkSendBatchSize);
         }
     }
 }

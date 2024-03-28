@@ -57,7 +57,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     { "MyCommand", _fakeMessageProducer },
                 }),
                 MessageMapperRegistry = messageMapperRegistry,
-                Outbox = _outbox
+                Outbox = _outbox,
+                MaxOutStandingMessages = 3,
+                MaxOutStandingCheckIntervalMilliSeconds = 250
             };
 
             _commandProcessor = CommandProcessorBuilder.With()
@@ -74,10 +76,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         [Fact]
         public async void When_Posting_Fails_Limit_Total_Writes_To_OutBox_In_Window()
         {
-            //We are only going to allow 50 erroring messages
-            _fakeMessageProducer.MaxOutStandingMessages = 3;
-            _fakeMessageProducer.MaxOutStandingCheckIntervalMilliSeconds = 250;
-
             var sentList = new List<string>(); 
             bool shouldThrowException = false;
             try

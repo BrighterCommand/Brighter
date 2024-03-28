@@ -48,7 +48,10 @@ namespace Paramore.Brighter
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
-        private bool _disposed; 
+        private bool _disposed;
+        private readonly int _maxOutStandingMessages;
+        private readonly double _maxOutStandingCheckIntervalMilliSeconds;
+        private readonly Dictionary<string, object> _outBoxBag;
 
         /// <summary>
         /// Creates an instance of External Bus Services
@@ -61,6 +64,9 @@ namespace Paramore.Brighter
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
         /// <param name="outboxBulkChunkSize">The size of a chunk for bulk work</param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
+        /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
+        /// <param name="maxOutStandingCheckIntervalMilliSeconds">How long before we check for maxOutStandingMessages</param>
+        /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         public ExternalBusService(
             IAmAProducerRegistry producerRegistry,  
             IPolicyRegistry<string> policyRegistry,
@@ -69,8 +75,10 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             IAmAnOutbox outbox = null,
             int outboxBulkChunkSize = 100,
-            int outboxTimeout = 300
-            )
+            int outboxTimeout = 300,
+            int maxOutStandingMessages = -1,
+            int maxOutStandingCheckIntervalMilliSeconds = 1000,
+            Dictionary<string, object> outBoxBag = null)
         {
             _producerRegistry = producerRegistry ?? throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _policyRegistry = policyRegistry?? throw new ConfigurationException("Missing Policy Registry for External Bus Services");
@@ -92,8 +100,12 @@ namespace Paramore.Brighter
             if (outbox is null) outbox = new InMemoryOutbox();
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+            
             _outboxBulkChunkSize = outboxBulkChunkSize;
             _outboxTimeout = outboxTimeout;
+            _maxOutStandingMessages = maxOutStandingMessages;
+            _maxOutStandingCheckIntervalMilliSeconds = maxOutStandingCheckIntervalMilliSeconds;
+            _outBoxBag = outBoxBag;
 
             ConfigureCallbacks();
         }
@@ -233,7 +245,7 @@ namespace Paramore.Brighter
             where T : class, ICall where TResponse : class, IResponse
         {
             //We assume that this only occurs over a blocking producer
-            var producer = _producerRegistry.LookupByOrDefault(outMessage.Header.Topic);
+            var producer = _producerRegistry.LookupBy(outMessage.Header.Topic);
             if (producer is IAmAMessageProducerSync producerSync)
                 Retry(() => producerSync.Send(outMessage));
         }
@@ -666,25 +678,21 @@ namespace Paramore.Brighter
             bool hasOutBox = (_outBox != null || _asyncOutbox != null);
             if (!hasOutBox)
                 return;
-
-            int maxOutStandingMessages = _producerRegistry.GetDefaultProducer().MaxOutStandingMessages;
-
+            
             s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", _outStandingCount);
             // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
-            bool exceedsOutstandingMessageLimit =
-                maxOutStandingMessages != -1 && _outStandingCount > maxOutStandingMessages;
+            bool exceedsOutstandingMessageLimit = _maxOutStandingMessages != -1 && _outStandingCount > _maxOutStandingMessages;
 
             if (exceedsOutstandingMessageLimit)
                 throw new OutboxLimitReachedException(
-                    $"The outbox limit of {maxOutStandingMessages} has been exceeded");
+                    $"The outbox limit of {_maxOutStandingMessages} has been exceeded");
         }
 
         private void CheckOutstandingMessages()
         {
             var now = DateTime.UtcNow;
             var checkInterval =
-                TimeSpan.FromMilliseconds(_producerRegistry.GetDefaultProducer()
-                    .MaxOutStandingCheckIntervalMilliSeconds);
+                TimeSpan.FromMilliseconds(_maxOutStandingCheckIntervalMilliSeconds);
 
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
@@ -715,7 +723,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic,
                     message.Id.ToString());
 
-                var producer = _producerRegistry.LookupByOrDefault(message.Header.Topic);
+                var producer = _producerRegistry.LookupBy(message.Header.Topic);
 
                 if (producer is IAmAMessageProducerSync producerSync)
                 {
@@ -744,7 +752,7 @@ namespace Paramore.Brighter
 
             foreach (var topicBatch in messagesByTopic)
             {
-                var producer = _producerRegistry.LookupByOrDefault(topicBatch.Key);
+                var producer = _producerRegistry.LookupBy(topicBatch.Key);
 
                 if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
                 {
@@ -814,7 +822,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic,
                     message.Id.ToString());
 
-                var producer = _producerRegistry.LookupByOrDefault(message.Header.Topic);
+                var producer = _producerRegistry.LookupBy(message.Header.Topic);
 
                 if (producer is IAmAMessageProducerAsync producerAsync)
                 {
@@ -893,13 +901,12 @@ namespace Paramore.Brighter
             s_logger.LogDebug("Begin count of outstanding messages");
             try
             {
-                var producer = _producerRegistry.GetDefaultProducer();
                 if (_outBox != null)
                 {
                     _outStandingCount = _outBox
                         .OutstandingMessages(
-                            producer.MaxOutStandingCheckIntervalMilliSeconds,
-                            args: producer.OutBoxBag
+                            _maxOutStandingCheckIntervalMilliSeconds,
+                            args: _outBoxBag 
                         )
                         .Count();
                     return;

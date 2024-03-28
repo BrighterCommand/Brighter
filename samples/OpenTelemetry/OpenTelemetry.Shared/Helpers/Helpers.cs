@@ -12,24 +12,18 @@ public static class Helpers
             {
                 new()
                 {
-                    MaxOutStandingMessages = 5,
-                    MaxOutStandingCheckIntervalMilliSeconds = 500,
                     WaitForConfirmsTimeOutInMilliseconds = 1000,
                     MakeChannels = OnMissingChannel.Create,
                     Topic = new RoutingKey("MyDistributedEvent")
                 },
                 new()
                 {
-                    MaxOutStandingMessages = 5,
-                    MaxOutStandingCheckIntervalMilliSeconds = 500,
                     WaitForConfirmsTimeOutInMilliseconds = 1000,
                     MakeChannels = OnMissingChannel.Create,
                     Topic = new RoutingKey("ProductUpdatedEvent")
                 },
                 new()
                 {
-                    MaxOutStandingMessages = 5,
-                    MaxOutStandingCheckIntervalMilliSeconds = 500,
                     WaitForConfirmsTimeOutInMilliseconds = 1000,
                     MakeChannels = OnMissingChannel.Create,
                     Topic = new RoutingKey("UpdateProductCommand")
