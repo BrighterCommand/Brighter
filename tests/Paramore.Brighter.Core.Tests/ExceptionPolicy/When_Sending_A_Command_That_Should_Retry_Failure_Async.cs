@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
         public void Dispose()
         {
             _provider?.Dispose();
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

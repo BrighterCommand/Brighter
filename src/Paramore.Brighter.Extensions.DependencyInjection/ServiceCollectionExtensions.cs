@@ -147,7 +147,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var busConfiguration = new ExternalBusConfiguration();
             configure?.Invoke(busConfiguration);
-            brighterBuilder.Services.TryAddSingleton<IAmExternalBusConfiguration>(busConfiguration);
+            
+            if (busConfiguration.ProducerRegistry == null)
+                throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
+            
+            brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
             Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(CommittableTransactionProvider);
@@ -173,10 +177,52 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 transactionProvider, serviceLifetime);
             RegisterDynamoProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider,
                 transactionProvider, serviceLifetime);
+            
+            //we always need an outbox in case of producer callbacks
+            var outbox = busConfiguration.Outbox;
+            if (outbox == null)
+            {
+                outbox = new InMemoryOutbox();
+            }
 
-            return ExternalBusBuilder(brighterBuilder, busConfiguration, transactionType);
+            //we create the outbox from interfaces from the determined transaction type to prevent the need
+            //to pass generic types as we know the transaction provider type
+            var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
+            var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
+
+            foreach (Type i in outbox.GetType().GetInterfaces())
+            {
+                if (i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType)
+                {
+                    var outboxDescriptor =
+                        new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                    brighterBuilder.Services.Add(outboxDescriptor);
+                }
+
+                if (i.IsGenericType && i.GetGenericTypeDefinition() == asyncOutboxType)
+                {
+                    var asyncOutboxdescriptor =
+                        new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                    brighterBuilder.Services.Add(asyncOutboxdescriptor);
+                }
+            }
+
+            if (busConfiguration.UseRpc)
+            {
+                brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions));
+            }
+            
+            brighterBuilder.Services.TryAddSingleton<IAmExternalBusConfiguration>(busConfiguration);
+           
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnExternalBusService),
+               (serviceProvider) => BuildExternalBus(
+                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
+                   ),
+               ServiceLifetime.Singleton));
+
+            return brighterBuilder;
         }
-
+        
         private static INeedARequestContext AddEventBus(
             IServiceProvider provider,
             INeedMessaging messagingBuilder,
@@ -185,8 +231,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var eventBus = provider.GetService<IAmAnExternalBusService>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
-            var messageMapperRegistry = MessageMapperRegistry(provider);
-            var messageTransformFactory = TransformFactory(provider);
 
             INeedARequestContext ret = null;
             var hasEventBus = eventBus != null;
@@ -199,8 +243,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 ret = messagingBuilder.ExternalBus(
                     ExternalBusType.FireAndForget,
                     eventBus,
-                    messageMapperRegistry,
-                    messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration
@@ -212,8 +254,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 ret = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus,
-                    messageMapperRegistry,
-                    messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration
@@ -269,69 +309,29 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return commandProcessor;
         }
-
-        private static IBrighterBuilder ExternalBusBuilder(
-            IBrighterBuilder brighterBuilder,
-            IAmExternalBusConfiguration externalBusConfiguration,
-            Type transactionType)
+        
+        private static IAmAnExternalBusService BuildExternalBus(IServiceProvider serviceProvider,
+            Type transactionType,
+            ExternalBusConfiguration busConfiguration,
+            IPolicyRegistry<string> policyRegistry,
+            IAmAnOutbox outbox) 
         {
-            if (externalBusConfiguration.ProducerRegistry == null)
-                throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
-
-            var serviceCollection = brighterBuilder.Services;
-
-            serviceCollection.TryAddSingleton<IAmExternalBusConfiguration>(externalBusConfiguration);
-            serviceCollection.TryAddSingleton<IAmAProducerRegistry>(externalBusConfiguration.ProducerRegistry);
-
-            //we always need an outbox in case of producer callbacks
-            var outbox = externalBusConfiguration.Outbox;
-            if (outbox == null)
-            {
-                outbox = new InMemoryOutbox();
-            }
-
-            //we create the outbox from interfaces from the determined transaction type to prevent the need
-            //to pass generic types as we know the transaction provider type
-            var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
-            var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
-
-            foreach (Type i in outbox.GetType().GetInterfaces())
-            {
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType)
-                {
-                    var outboxDescriptor =
-                        new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
-                    serviceCollection.Add(outboxDescriptor);
-                }
-
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == asyncOutboxType)
-                {
-                    var asyncOutboxdescriptor =
-                        new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
-                    serviceCollection.Add(asyncOutboxdescriptor);
-                }
-            }
-
-            if (externalBusConfiguration.UseRpc)
-            {
-                serviceCollection.TryAddSingleton<IUseRpc>(new UseRpc(externalBusConfiguration.UseRpc,
-                    externalBusConfiguration.ReplyQueueSubscriptions));
-            }
-
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
-            var busType = typeof(ExternalBusServices<,>).MakeGenericType(typeof(Message), transactionType);
+            var busType = typeof(ExternalBusService<,>).MakeGenericType(typeof(Message), transactionType);
 
-            IAmAnExternalBusService bus = (IAmAnExternalBusService)Activator.CreateInstance(busType,
-                externalBusConfiguration.ProducerRegistry,
-                brighterBuilder.PolicyRegistry,
+            return (IAmAnExternalBusService)Activator.CreateInstance(busType,
+                busConfiguration.ProducerRegistry,
+                policyRegistry,
+                busConfiguration.MessageMapperRegistry,
+                TransformFactory(serviceProvider),
+                TransformFactoryAsync(serviceProvider),
                 outbox,
-                externalBusConfiguration.OutboxBulkChunkSize,
-                externalBusConfiguration.OutboxTimeout);
-
-            serviceCollection.TryAddSingleton<IAmAnExternalBusService>(bus);
-
-            return brighterBuilder;
+                busConfiguration.OutboxBulkChunkSize,
+                busConfiguration.OutboxTimeout,
+                busConfiguration.MaxOutStandingMessages,
+                busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
+                busConfiguration.OutBoxBag);
         }
 
         /// <summary>

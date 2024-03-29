@@ -29,7 +29,7 @@ using var tracerProvider = Sdk.CreateTracerProviderBuilder()
 
 IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
 {
-    {"default", new FakeMessageProducer()}
+    {"default", new FakeMessageProducer{Publication = {  }}}
 });
 
 builder.Services.AddBrighter()

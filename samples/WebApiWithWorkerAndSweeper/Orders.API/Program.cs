@@ -33,7 +33,13 @@ var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTable
 
 var producerRegistry = new AzureServiceBusProducerRegistryFactory(
         asbConnection,
-        new AzureServiceBusPublication[] { new() { Topic = new RoutingKey(NewOrderVersionEvent.Topic) }, }
+        new AzureServiceBusPublication[] { 
+            new()
+            {
+                Topic = new RoutingKey("Orders.NewOrderVersionEvent"),
+                RequestType = typeof(NewOrderVersionEvent)
+            }, 
+        }
     )
     .Create();
 

@@ -58,9 +58,10 @@ namespace Paramore.Brighter
         /// A Wrap always runs after you map the <see cref="IRequest"/> to a <see cref="Message"/>
         /// </summary>
         /// <param name="message">The original message</param>
+        /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The modified message</returns>
-        Task<Message> WrapAsync(Message message, CancellationToken cancellationToken);
+        Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken);
 
         /// <summary>
         /// An Unwrap modifies an incoming message by altering its header or body

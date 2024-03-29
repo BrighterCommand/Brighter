@@ -26,16 +26,17 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyCommandMessageMapperAsync : IAmAMessageMapperAsync<MyCommand>
     {
-        public async Task<Message> MapToMessageAsync(MyCommand request, CancellationToken cancellationToken = default)
+        public async Task<Message> MapToMessageAsync(MyCommand request, Publication publication, CancellationToken cancellationToken = default)
         {
             using MemoryStream stream = new MemoryStream();
             await JsonSerializer.SerializeAsync(stream, request, JsonSerialisationOptions.Options, cancellationToken);
-            var header = new MessageHeader(request.Id, "MyCommand", MessageType.MT_COMMAND);
+            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());
             var body = new MessageBody(stream.ToArray());
             return new Message(header, body);
         }

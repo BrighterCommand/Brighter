@@ -59,16 +59,31 @@ namespace Paramore.Brighter
         int OutboxTimeout { get; set; }
         
         /// <summary>
+        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
+        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
+        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
+        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
+        /// </summary>
+        public int MaxOutStandingMessages { get; set; } 
+
+        /// <summary>
+        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
+        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
+        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
+        /// </summary>
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } 
+        
+        /// <summary>
+        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
+        /// This bag provides the args required
+        /// </summary>
+        Dictionary<string, object> OutBoxBag { get; set; }
+        
+        /// <summary>
         /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
         /// this tends to he handled by a Dispatcher not a Command Processor. 
         /// </summary>
         IAmAChannelFactory ResponseChannelFactory { get; set; }
-
-        /// <summary>
-        /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
-        /// of your MessageMappers
-        /// </summary>
-        IAmAMessageTransformerFactory TransformerFactory { get; set; }
 
         /// <summary>
         /// If we are using Rpc, what are the subscriptions for the reply queue?
@@ -84,6 +99,13 @@ namespace Paramore.Brighter
         /// Do we want to support RPC on an external bus?
         /// </summary>
         bool UseRpc { get; set; }
+
+        /// <summary>
+        /// How do obtain a connection to the Outbox that is not part of a shared transaction.
+        /// NOTE: Must implement IAmARelationalDbConnectionProvider
+        /// </summary>
+        Type ConnectionProvider { get; set; }
+
     }
 
     /// <summary>
@@ -119,6 +141,27 @@ namespace Paramore.Brighter
         /// This is to stop insert statements getting too big
         /// </summary>
         public int OutboxBulkChunkSize { get; set; }
+        
+        /// <summary>
+        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
+        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
+        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
+        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
+        /// </summary>
+        public int MaxOutStandingMessages { get; set; } = -1;
+
+        /// <summary>
+        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
+        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
+        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
+        /// </summary>
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+        
+        /// <summary>
+        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
+        /// This bag provides the args required
+        /// </summary>
+        public Dictionary<string, object> OutBoxBag { get; set; }
 
         /// <summary>
         /// When do we timeout writing to the outbox
@@ -136,11 +179,6 @@ namespace Paramore.Brighter
         /// </summary>
         public IAmAChannelFactory ResponseChannelFactory { get; set; }
         
-        /// <summary>
-        /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
-        /// of your MessageMappers
-        /// </summary>
-        public IAmAMessageTransformerFactory TransformerFactory { get; set; }
         
         /// <summary>
         /// The transaction provider for the outbox

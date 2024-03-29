@@ -12,6 +12,7 @@ public class AsyncMessageWrapRequestWithAttributesTests
     private WrapPipelineAsync<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
+    private readonly Publication _publication;
 
     public AsyncMessageWrapRequestWithAttributesTests()
     {
@@ -28,6 +29,11 @@ public class AsyncMessageWrapRequestWithAttributesTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => new MyParameterizedTransformAsync()));
 
+        _publication = new Publication
+        {
+            Topic = new RoutingKey("MyTransformableCommand"), RequestType = typeof(MyTransformableCommand)
+        };
+
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
     
@@ -36,7 +42,7 @@ public class AsyncMessageWrapRequestWithAttributesTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = await _transformPipeline.WrapAsync(_myCommand);
+        var message = await _transformPipeline.WrapAsync(_myCommand, _publication);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

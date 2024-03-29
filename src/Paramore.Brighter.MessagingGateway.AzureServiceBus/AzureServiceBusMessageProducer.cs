@@ -43,29 +43,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// </summary>
     public class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
-        /// <summary>
-        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
-        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
-        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
-        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
-        /// </summary>
-        public int MaxOutStandingMessages { get; set; } = -1;
-
-        /// <summary>
-        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
-        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
-        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
-        /// </summary>
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        /// <summary>
-        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
-        /// This bag provides the args required
-        /// </summary>
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
-
         private readonly IAdministrationClientWrapper _administrationClientWrapper;
         private readonly IServiceBusSenderProvider _serviceBusSenderProvider;
+        private readonly AzureServiceBusPublication _publication;
         private bool _topicCreated;
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMessageProducer>();
@@ -74,18 +54,26 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private readonly OnMissingChannel _makeChannel;
         private readonly int _bulkSendBatchSize;
 
+        public Publication Publication { get { return _publication; } }
+
         /// <summary>
         /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
         /// </summary>
         /// <param name="administrationClientWrapper">The administrative client.</param>
         /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
-        /// <param name="makeChannel">Behaviour to use when verifying Channels <see cref="OnMissingChannel"/>.</param>
+        /// <param name="publication">Configuration of a producer</param>
         /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
-        public AzureServiceBusMessageProducer(IAdministrationClientWrapper administrationClientWrapper, IServiceBusSenderProvider serviceBusSenderProvider, OnMissingChannel makeChannel = OnMissingChannel.Create, int bulkSendBatchSize = 10)
+        public AzureServiceBusMessageProducer(
+            IAdministrationClientWrapper administrationClientWrapper, 
+            IServiceBusSenderProvider serviceBusSenderProvider, 
+            AzureServiceBusPublication publication, 
+            int bulkSendBatchSize = 10
+            )
         {
             _administrationClientWrapper = administrationClientWrapper;
             _serviceBusSenderProvider = serviceBusSenderProvider;
-            _makeChannel = makeChannel;
+            _publication = publication;
+            _makeChannel = _publication.MakeChannels;
             _bulkSendBatchSize = bulkSendBatchSize;
         }
 

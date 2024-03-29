@@ -69,7 +69,15 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
             //how do we send to the queue
-            _sender = new SqsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+            _sender = new SqsMessageProducer(
+                _awsConnection, 
+                new SnsPublication 
+                    { 
+                        Topic = new RoutingKey(_topicName), 
+                        RequestType = typeof(MyDeferredCommand), 
+                        MakeChannels = OnMissingChannel.Create 
+                    }
+                );
 
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);
@@ -92,7 +100,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var provider = new CommandProcessorProvider(_commandProcessor);
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)),
+                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
                 null
                 ); 
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();

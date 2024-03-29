@@ -87,6 +87,7 @@ var host = Host.CreateDefaultBuilder(args)
                     new KafkaPublication
                     {
                         Topic = new RoutingKey("greeting.event"),
+                        RequestType = typeof(GreetingEvent),
                         NumPartitions = 3,
                         MessageSendMaxRetries = 3,
                         MessageTimeoutMs = 1000,

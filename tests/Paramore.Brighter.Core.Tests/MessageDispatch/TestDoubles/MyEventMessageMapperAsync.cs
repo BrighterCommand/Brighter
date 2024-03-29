@@ -27,15 +27,16 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
     internal class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
     {
-        public Task<Message> MapToMessageAsync(MyEvent request, CancellationToken cancellationToken = default)
+        public Task<Message> MapToMessageAsync(MyEvent request, Publication publication, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<Message>();
-            var header = new MessageHeader(request.Id, "MyEvent", MessageType.MT_EVENT);
+            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             tcs.SetResult(message);

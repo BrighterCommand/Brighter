@@ -1,19 +1,13 @@
 ﻿using System.Text.Json;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
     internal class MyDeferredCommandMessageMapper : IAmAMessageMapper<MyDeferredCommand>
     {
-        private readonly string _topicName;
-
-        public MyDeferredCommandMessageMapper(string topicName)
+        public Message MapToMessage(MyDeferredCommand request, Publication publication)
         {
-            _topicName = topicName;
-        }
-
-        public Message MapToMessage(MyDeferredCommand request)
-        {
-            var header = new MessageHeader(messageId: request.Id, topic: _topicName, messageType: MessageType.MT_COMMAND);
+            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
             var body = new MessageBody(System.Text.Json.JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)));
             var message = new Message(header, body);
             return message;

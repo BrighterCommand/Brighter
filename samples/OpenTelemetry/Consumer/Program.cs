@@ -88,8 +88,6 @@ builder.Services.AddServiceActivator(options =>
         options.MinimumMessageAge = 500;
     });
 
-
-builder.Services.AddSingleton<TopicDictionary>();
 builder.Services.AddSingleton(typeof(IAmAMessageMapper<>), typeof(MessageMapper<>));
 
 builder.Services.AddHealthChecks()

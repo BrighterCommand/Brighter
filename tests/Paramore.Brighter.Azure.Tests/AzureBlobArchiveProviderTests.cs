@@ -2,7 +2,6 @@ using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Paramore.Brighter.Azure.TestDoubles.Tests;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.Storage.Azure;
 
@@ -25,14 +24,8 @@ public class AzureBlobArchiveProviderTests
         _command = new SuperAwesomeCommand($"do the thing {Guid.NewGuid()}");
         _event = new SuperAwesomeEvent($"The thing was done {Guid.NewGuid()}");
 
-        Dictionary<string, string> topicDirectory = new()
-        {
-            { nameof(SuperAwesomeCommand), $"{Guid.NewGuid()}-SuperAwesomeCommand" },
-            { nameof(SuperAwesomeEvent), $"{Guid.NewGuid()}-SuperAwesomeEvent" }
-        };
-
-        _commandMapper = new JsonBodyMessageMapper<SuperAwesomeCommand>(topicDirectory);
-        _eventMapper = new JsonBodyMessageMapper<SuperAwesomeEvent>(topicDirectory);
+        _commandMapper = new JsonBodyMessageMapper<SuperAwesomeCommand>();
+        _eventMapper = new JsonBodyMessageMapper<SuperAwesomeEvent>();
 
         _storageLocationFunction = (message) => $"{message.Header.Topic}/{message.Id}".ToLower();
     }
@@ -40,7 +33,13 @@ public class AzureBlobArchiveProviderTests
     [Test]
     public async Task GivenARequestToArchiveAMessage_TheMessageIsArchived()
     {
-        var commandMessage = _commandMapper?.MapToMessage(_command);
+        var publication = new Publication
+        {
+            Topic = new RoutingKey($"{Guid.NewGuid()}-SuperAwesomeCommand"), 
+            RequestType = typeof(SuperAwesomeCommand)
+        };
+        
+        var commandMessage = _commandMapper?.MapToMessage(_command, publication);
 
         if (commandMessage == null)
         {
@@ -69,7 +68,13 @@ public class AzureBlobArchiveProviderTests
     [Test]
     public async Task GivenARequestToArchiveAMessage_WhenTagsAreTurnedOn_ThenTagsAreWritten()
     {
-        var eventMessage = _eventMapper.MapToMessage(_event);
+        var publication = new Publication
+        {
+            Topic = new RoutingKey($"{Guid.NewGuid()}-SuperAwesomeEvent"), 
+            RequestType = typeof(SuperAwesomeEvent)
+        };
+        
+        var eventMessage = _eventMapper.MapToMessage(_event, publication);
         
         var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(_storageLocationFunction.Invoke(eventMessage));
         
@@ -90,7 +95,13 @@ public class AzureBlobArchiveProviderTests
     [Test]
     public async Task GivenARequestToArchiveAMessageAsync_TheMessageIsArchived()
     {
-        var commandMessage = _commandMapper.MapToMessage(_command);
+        var publication = new Publication
+        {
+            Topic = new RoutingKey($"{Guid.NewGuid()}-SuperAwesomeCommand"),
+            RequestType = typeof(SuperAwesomeCommand)
+        };
+        
+        var commandMessage = _commandMapper.MapToMessage(_command, publication);
         
         if (commandMessage == null)
         {
@@ -119,6 +130,18 @@ public class AzureBlobArchiveProviderTests
     [Test]
     public async Task GivenARequestToArchiveAMessageAsync_WhenParallel_TheMessageIsArchived()
     {
+        var cmdPublication = new Publication
+        {
+            Topic = new RoutingKey($"{Guid.NewGuid()}-SuperAwesomeCommand"), 
+            RequestType = typeof(SuperAwesomeCommand)
+        };
+        
+        var evtPublication = new Publication
+        {
+            Topic = new RoutingKey($"{Guid.NewGuid()}-SuperAwesomeEvent"), 
+            RequestType = typeof(SuperAwesomeEvent)
+        };
+        
         var superAwesomeCommands = new List<SuperAwesomeCommand>();
         var superAwesomeEvents = new List<SuperAwesomeEvent>();
 
@@ -131,8 +154,8 @@ public class AzureBlobArchiveProviderTests
         }
 
         var messages = new List<Message>();
-        messages.AddRange(superAwesomeCommands.Select(c => _commandMapper.MapToMessage(c)));
-        messages.AddRange(superAwesomeEvents.Select(c => _eventMapper.MapToMessage(c)));
+        messages.AddRange(superAwesomeCommands.Select(c => _commandMapper.MapToMessage(c, cmdPublication)));
+        messages.AddRange(superAwesomeEvents.Select(c => _eventMapper.MapToMessage(c, evtPublication)));
 
         await _provider?.ArchiveMessagesAsync(messages.ToArray(), CancellationToken.None)!;
 
@@ -163,7 +186,13 @@ public class AzureBlobArchiveProviderTests
     [Test]
     public async Task GivenARequestToArchiveAMessageAsync_WhenTagsAreTurnedOn_ThenTagsAreWritten()
     {
-        var eventMessage = _eventMapper.MapToMessage(_event);
+        var publication = new Publication
+        {
+            Topic = new RoutingKey($"{Guid.NewGuid()}-SuperAwesomeEvent"), 
+            RequestType = typeof(SuperAwesomeEvent)
+        };
+        
+        var eventMessage = _eventMapper.MapToMessage(_event, publication);
         
         var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(_storageLocationFunction.Invoke(eventMessage));
         

@@ -78,6 +78,7 @@ namespace GreetingsServer
                             {
                                 //TODO: We don't know the reply routing key, but need a topic name, we could make this simpler
                                 Topic = new RoutingKey("Reply"),
+                                RequestType = typeof(GreetingReply),
                                 MakeChannels = OnMissingChannel.Assume
                             }
                         }).Create();

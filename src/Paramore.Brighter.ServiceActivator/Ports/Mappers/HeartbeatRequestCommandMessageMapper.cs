@@ -5,7 +5,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
 {
     public class HeartbeatRequestCommandMessageMapper : IAmAMessageMapper<HeartbeatRequest>
     {
-        public Message MapToMessage(HeartbeatRequest request)
+        public Message MapToMessage(HeartbeatRequest request, Publication publication)
         {
             var header = new MessageHeader(
                 messageId: request.Id, 

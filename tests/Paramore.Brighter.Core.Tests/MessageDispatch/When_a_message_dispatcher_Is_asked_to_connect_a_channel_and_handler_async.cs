@@ -36,11 +36,19 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 channelFactory: new InMemoryChannelFactory(_channel),
                 channelName: new ChannelName("fakeChannel"), 
                 routingKey: new RoutingKey("fakekey"),
-                runAsync: true);
-            _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { connection }, null, messageMapperRegistry);
+                runAsync: true
+            );
+
+            _dispatcher = new Dispatcher(
+                _commandProcessor, 
+                new List<Subscription> { connection }, 
+                null, 
+                messageMapperRegistry
+            );
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event).Result;
+            var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new() { Topic = connection.RoutingKey }).Result;
+            
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);

@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 new AzureServiceBusMessageProducer(
                     nameSpaceManagerWrapper,
                     new ServiceBusSenderProvider(_clientProvider), 
-                    subscription.MakeChannels), 
+                    new AzureServiceBusPublication{MakeChannels = subscription.MakeChannels}), 
                 nameSpaceManagerWrapper,
                 new ServiceBusReceiverProvider(_clientProvider),
                 makeChannels: subscription.MakeChannels,

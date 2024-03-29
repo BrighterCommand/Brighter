@@ -21,25 +21,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
 
         public CommandProcessorDepositPostTestsAsync()
         {
+            var topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new FakeMessageProducerWithPublishConfirmation
+            {
+                Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyCommand) }
+            };
 
-            var topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync())
+                );
+            messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -57,17 +60,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _fakeMessageProducerWithPublishConfirmation },
+                { topic, _producer },
             });
             
-            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, _fakeOutbox);
+            _fakeOutbox = new FakeOutbox();
+            
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry, 
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
         
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                bus,
-                messageMapperRegistry);
+                bus
+            );
         }
 
         [Fact]
@@ -78,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             //assert
             //message should not be posted
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
+            _producer.MessageWasSent.Should().BeFalse();
             
             //message should be in the store
             var depositedPost = _fakeOutbox
@@ -101,7 +113,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
      }
 }

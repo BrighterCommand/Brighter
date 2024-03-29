@@ -56,24 +56,32 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 {CommandProcessor.RETRYPOLICY, retryPolicy},
                 {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
-            
+
+            const string topic = "MyRequest";
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyRequest", new FakeMessageProducerWithPublishConfirmation() }
+                { topic, new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}} }
             });
             
-            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, new InMemoryOutbox());
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry, 
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                new InMemoryOutbox()
+            );
 
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
                 bus,
-                messageMapperRegistry,
                 replySubscriptions:replySubs,
-                responseChannelFactory: new InMemoryChannelFactory());
+                responseChannelFactory: new InMemoryChannelFactory()
+            );
            
             PipelineBuilder<MyRequest>.ClearPipelineCache();
 
@@ -92,7 +100,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

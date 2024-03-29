@@ -23,7 +23,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _topicClientProvider = A.Fake<IServiceBusSenderProvider>();
             _topicClient = A.Fake<IServiceBusSenderWrapper>();
 
-            _producer = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper, _topicClientProvider, OnMissingChannel.Create);
+            _producer = new AzureServiceBusMessageProducer(
+                _nameSpaceManagerWrapper, 
+                _topicClientProvider, 
+                new AzureServiceBusPublication{MakeChannels = OnMissingChannel.Create}
+            );
         }
 
         [Fact]
@@ -235,7 +239,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            var producerValidate = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper, _topicClientProvider, OnMissingChannel.Validate);
+            var producerValidate = new AzureServiceBusMessageProducer(
+                _nameSpaceManagerWrapper, 
+                _topicClientProvider, 
+                new AzureServiceBusPublication{MakeChannels = OnMissingChannel.Validate})
+            ;
 
             await Assert.ThrowsAsync<ChannelFailureException>(() => producerValidate.SendAsync(
                 new Message(

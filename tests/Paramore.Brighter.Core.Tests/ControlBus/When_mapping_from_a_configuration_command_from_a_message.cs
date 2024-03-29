@@ -30,7 +30,7 @@ using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    public class ConfigurationCommandMessageMapperTests
+    public class ConfigurationCommandMessageMapperTests 
     {
         private readonly IAmAMessageMapper<ConfigurationCommand> _mapper;
         private readonly Message _message;

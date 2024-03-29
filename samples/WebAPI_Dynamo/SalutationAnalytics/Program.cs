@@ -89,8 +89,7 @@ static void ConfigureBrighter(
             new RmqPublication
             {
                 Topic = new RoutingKey("SalutationReceived"),
-                MaxOutStandingMessages = 5,
-                MaxOutStandingCheckIntervalMilliSeconds = 500,
+                RequestType = typeof(SalutationReceived),
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }
@@ -124,6 +123,8 @@ static void ConfigureBrighter(
                 configure.Outbox = ConfigureOutbox(awsCredentials, dynamoDb);
                 configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                 configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
+                configure.MaxOutStandingMessages = 5;
+                configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
             }
         )
         .AutoFromAssemblies();

@@ -39,23 +39,29 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
-        private readonly IAmACommandProcessor _commandProcessor;
 
         public MessageDispatcherMultiplePerformerTests()
         {
             _channel = new FakeChannel();
-            _commandProcessor = new SpyCommandProcessor();
+            IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var connection = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 3, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { connection }, messageMapperRegistry);
+            var connection = new Subscription<MyEvent>(
+                new SubscriptionName("test"), 
+                noOfPerformers: 3, 
+                timeoutInMilliseconds: 100, 
+                channelFactory: new InMemoryChannelFactory(_channel), 
+                channelName: new ChannelName("fakeChannel"), 
+                routingKey: new RoutingKey("fakekey")
+            );
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { connection }, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = connection.RoutingKey});
             for (var i = 0; i < 6; i++)
                 _channel.Enqueue(message);
 

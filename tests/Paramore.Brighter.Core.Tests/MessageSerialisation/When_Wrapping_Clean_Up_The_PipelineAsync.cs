@@ -14,6 +14,7 @@ public class AsyncMessageWrapCleanupTests
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
     public static string s_released;
+    private readonly Publication _publication;
 
     public AsyncMessageWrapCleanupTests()
     {
@@ -27,6 +28,8 @@ public class AsyncMessageWrapCleanupTests
 
         _myCommand = new MyTransformableCommand();
         
+        _publication = new Publication{Topic = new RoutingKey("MyTransformableCommand"), RequestType= typeof(MyTransformableCommand)};
+        
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, new MyReleaseTrackingTransformFactoryAsync());
     }
     
@@ -35,7 +38,7 @@ public class AsyncMessageWrapCleanupTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = await _transformPipeline.WrapAsync(_myCommand);
+        var message = await _transformPipeline.WrapAsync(_myCommand, _publication);
         _transformPipeline.Dispose();
         
         //assert

@@ -23,14 +23,15 @@ THE SOFTWARE. */
 #endregion
 
 using System.Text.Json;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
     internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
     {
-        public Message MapToMessage(MyEvent request)
+        public Message MapToMessage(MyEvent request, Publication publication)
         {
-            var header = new MessageHeader(request.Id, "MyEvent", MessageType.MT_EVENT);
+            var header = new MessageHeader(request.Id, topic:publication.Topic, request.RequestToMessageType());
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;

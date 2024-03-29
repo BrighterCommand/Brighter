@@ -7,7 +7,7 @@ public class NodeStatusEventMessageMapper : IAmAMessageMapper<NodeStatusEvent>
 {
     private readonly string topicName = "control.heartbeat";
     
-    public Message MapToMessage(NodeStatusEvent request)
+    public Message MapToMessage(NodeStatusEvent request, Publication publication)
     {
         var header = new MessageHeader(messageId: request.Id, topic: topicName, messageType: MessageType.MT_EVENT);
         header.Bag["NodeName"] = request.NodeName;
