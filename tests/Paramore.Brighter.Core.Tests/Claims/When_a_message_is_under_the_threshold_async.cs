@@ -13,6 +13,7 @@ public class AsyncClaimCheckSmallPayloadTests
     private readonly ClaimCheckTransformerAsync _transformerAsync;
     private readonly Message _message;
     private readonly InMemoryStorageProviderAsync _store;
+    private string _topic;
 
     public AsyncClaimCheckSmallPayloadTests()
     {
@@ -25,15 +26,16 @@ public class AsyncClaimCheckSmallPayloadTests
 
         //but create a string that is just under 5K long - assuming string is 26 + length *2 to allow for 64-bit platform
         string body = DataGenerator.CreateString(2485);
+        _topic = "test_topic";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, DateTime.UtcNow),
             new MessageBody(body));
     }
 
     [Fact]
     public async Task When_a_message_is_under_the_threshold()
     {
-        var luggageCheckedMessage = await _transformerAsync.WrapAsync(_message);
+        var luggageCheckedMessage = await _transformerAsync.WrapAsync(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //assert
         bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _);

@@ -9,7 +9,7 @@ public class MySimpleTransform : Transform
     public static readonly string HEADER_KEY = "MySimpleTransformTest";
     public static readonly string TRANSFORM_VALUE = "I am a transformed value";
 
-    public override Message Wrap(Message message)
+    public override Message Wrap(Message message, Publication publication)
     {
         message.Header.Bag.Add(HEADER_KEY, TRANSFORM_VALUE);
         return message;

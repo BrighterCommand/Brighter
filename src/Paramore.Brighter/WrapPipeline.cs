@@ -80,7 +80,7 @@ namespace Paramore.Brighter
         public Message Wrap(TRequest request, Publication publication)
         {
             var message = MessageMapper.MapToMessage(request, publication);
-            Transforms.Each(transform => message = transform.Wrap(message));
+            Transforms.Each(transform => message = transform.Wrap(message, publication));
             return message;
         }
     }

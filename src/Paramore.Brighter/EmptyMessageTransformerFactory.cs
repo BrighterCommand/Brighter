@@ -45,7 +45,7 @@ namespace Paramore.Brighter
         public void Dispose() {GC.SuppressFinalize(this);}
         public void InitializeWrapFromAttributeParams(params object[] initializerList) { }
         public void InitializeUnwrapFromAttributeParams(params object[] initializerList) { }
-        public Message Wrap(Message message) { return message; }
+        public Message Wrap(Message message, Publication publication) { return message; }
         public Message Unwrap(Message message) { return message; }
     }
 }
