@@ -12,6 +12,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     private WrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
+    private readonly Publication _publication;
 
     public TransformPipelineMissingFactoryWrapTests()
     {
@@ -24,6 +25,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
+
+        _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
     }
@@ -38,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper");
 
         //wrap should just do message mapper                                          
-        var message = _transformPipeline.Wrap(_myCommand);
+        var message = _transformPipeline.Wrap(_myCommand, _publication);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

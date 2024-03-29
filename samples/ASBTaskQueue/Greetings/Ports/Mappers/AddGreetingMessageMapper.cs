@@ -6,11 +6,9 @@ namespace Greetings.Ports.Mappers
 {
     public class AddGreetingMessageMapper : IAmAMessageMapper<AddGreetingCommand>
     {
-        public const string Topic = "greeting.addGreetingCommand";
-        
-        public Message MapToMessage(AddGreetingCommand request)
+        public Message MapToMessage(AddGreetingCommand request, Publication publication)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: Topic, messageType: MessageType.MT_COMMAND);
+            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: MessageType.MT_COMMAND);
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;

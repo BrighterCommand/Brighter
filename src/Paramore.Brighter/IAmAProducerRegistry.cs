@@ -22,7 +22,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Looks up the Publication used to build a given producer; useful for obtaining CloudEvents metadata
         /// </summary> 
-        Publication LookupPublication(string topic);
+        Publication LookupPublication<TRequest>() where TRequest : class, IRequest;
 
         /// <summary>
         /// An iterable list of all the producers in the registry

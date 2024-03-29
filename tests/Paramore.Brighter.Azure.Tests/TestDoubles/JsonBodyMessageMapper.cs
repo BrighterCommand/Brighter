@@ -1,14 +1,10 @@
-﻿using System.Text.Json;
-using OpenTelemetry.Shared.Commands;
-using OpenTelemetry.Shared.Events;
-using Paramore.Brighter;
+using System.Text.Json;
 using Paramore.Brighter.Extensions;
 
-namespace OpenTelemetry.Shared.Mappers;
+namespace Paramore.Brighter.Azure.Tests.TestDoubles;
 
-public class MessageMapper<T> : IAmAMessageMapper<T> where T : class, IRequest
+public class JsonBodyMessageMapper<T> : IAmAMessageMapper<T> where T : class, IRequest
 {
-  
     public Message MapToMessage(T request, Publication publication)
     {
         var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
@@ -17,8 +13,6 @@ public class MessageMapper<T> : IAmAMessageMapper<T> where T : class, IRequest
         return message;
     }
 
- 
-
     public T MapToRequest(Message message)
     {
 #pragma warning disable CS8603 // Possible null reference return.
@@ -26,4 +20,3 @@ public class MessageMapper<T> : IAmAMessageMapper<T> where T : class, IRequest
 #pragma warning restore CS8603 // Possible null reference return.
     }
 }
-

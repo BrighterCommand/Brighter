@@ -31,9 +31,9 @@ namespace Greetings.Ports.Mappers
 {
     public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
     {
-        public Message MapToMessage(GreetingEvent request)
+        public Message MapToMessage(GreetingEvent request, Publication publication)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: typeof(GreetingEvent).FullName.ToValidSNSTopicName(), messageType: MessageType.MT_EVENT);
+            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: MessageType.MT_EVENT);
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;

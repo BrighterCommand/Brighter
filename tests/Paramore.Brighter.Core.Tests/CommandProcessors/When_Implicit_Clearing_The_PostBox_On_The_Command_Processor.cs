@@ -43,16 +43,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly Message _message;
         private readonly Message _message2;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducer _producer;
 
         public CommandProcessorPostBoxImplicitClearTests()
         {
+            var topic = "MyCommand";
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _producer = new FakeMessageProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            var topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
@@ -84,8 +83,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _fakeMessageProducer },
+                { topic, _producer },
             }); 
+            
+            _fakeOutbox = new FakeOutbox();
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -114,7 +115,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             for (var i = 1; i <= 10; i++)
             {
-                if (_fakeMessageProducer.SentMessages.Count == 1)
+                if (_producer.SentMessages.Count == 1)
                     break;
                 Thread.Sleep(i * 100);
             }
@@ -122,22 +123,22 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //Try again and kick off another background thread
             for (var i = 1; i <= 10; i++)
             {
-                if (_fakeMessageProducer.SentMessages.Count == 2)
+                if (_producer.SentMessages.Count == 2)
                     break;
                 Thread.Sleep(i * 100);
                 _commandProcessor.ClearOutbox(1, 1);
             }
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            _producer.MessageWasSent.Should().BeTrue();
 
-            var sentMessage = _fakeMessageProducer.SentMessages.FirstOrDefault(m => m.Id == _message.Id);
+            var sentMessage = _producer.SentMessages.FirstOrDefault(m => m.Id == _message.Id);
             sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
             sentMessage.Body.Value.Should().Be(_message.Body.Value);
             
-            var sentMessage2 = _fakeMessageProducer.SentMessages.FirstOrDefault(m => m.Id == _message2.Id);
+            var sentMessage2 = _producer.SentMessages.FirstOrDefault(m => m.Id == _message2.Id);
             sentMessage2.Should().NotBeNull();
             sentMessage2.Id.Should().Be(_message2.Id);
             sentMessage2.Header.Topic.Should().Be(_message2.Header.Topic);

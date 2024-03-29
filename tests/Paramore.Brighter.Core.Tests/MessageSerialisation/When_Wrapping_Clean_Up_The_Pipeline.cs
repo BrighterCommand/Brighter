@@ -14,6 +14,7 @@ public class MessageWrapCleanupTests
     private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
     public static string s_released;
+    private readonly Publication _publication;
 
     public MessageWrapCleanupTests()
     {
@@ -27,6 +28,8 @@ public class MessageWrapCleanupTests
 
         _myCommand = new MyTransformableCommand();
         
+        _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
+        
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory());
     }
     
@@ -35,7 +38,7 @@ public class MessageWrapCleanupTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = _transformPipeline.Wrap(_myCommand);
+        var message = _transformPipeline.Wrap(_myCommand, _publication);
         _transformPipeline.Dispose();
         
         //assert

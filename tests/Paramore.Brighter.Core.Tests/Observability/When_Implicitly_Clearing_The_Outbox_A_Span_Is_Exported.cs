@@ -24,6 +24,8 @@ public class ImplicitClearingObservabilityTests : IDisposable
 
     public ImplicitClearingObservabilityTests()
     {
+        const string topic = "MyEvent";
+        
         IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox();
         _event = new MyEvent("TestEvent");
 
@@ -55,7 +57,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
         var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}};
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {MyEvent.Topic, new FakeMessageProducer()}
+            {topic, new FakeMessageProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(

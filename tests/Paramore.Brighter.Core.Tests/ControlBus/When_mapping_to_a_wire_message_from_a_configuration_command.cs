@@ -34,6 +34,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private readonly IAmAMessageMapper<ConfigurationCommand> _mapper;
         private Message _message;
         private readonly ConfigurationCommand _command;
+        private readonly Publication _publication;
 
         public ConfigurationCommandToMessageMapperTests()
         {
@@ -41,13 +42,15 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
 
             //"{\"Type\":1,\"SubscriptionName\":\"getallthethings\",\"Id\":\"XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\"}"
             _command = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL) {SubscriptionName = "getallthethings"};
+            
+            _publication = new Publication { Topic = new RoutingKey("ConfigurationCommand") };
         }
 
 
         [Fact]
         public void When_mapping_to_a_wire_message_from_a_configuration_command()
         {
-            _message = _mapper.MapToMessage(_command);
+            _message = _mapper.MapToMessage(_command, _publication);
 
             // _should_serialize_the_command_type_to_the_message_body
             _message.Body.Value.Should().Contain("\"type\":\"CM_STARTALL");

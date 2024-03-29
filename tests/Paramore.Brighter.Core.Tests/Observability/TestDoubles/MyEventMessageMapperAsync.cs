@@ -1,16 +1,15 @@
 ﻿using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 
 public class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
 {
-    public Task<Message> MapToMessageAsync(MyEvent request, CancellationToken ct = default)
+    public Task<Message> MapToMessageAsync(MyEvent request, Publication publication, CancellationToken ct = default)
     {
-        MessageType messageType = MessageType.MT_EVENT;
-
-        var header = new MessageHeader(messageId: request.Id, topic: MyEvent.Topic, messageType: messageType);
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
         var body = new MessageBody(JsonSerializer.Serialize(request));
         var message = new Message(header, body);
         return Task.FromResult(message);

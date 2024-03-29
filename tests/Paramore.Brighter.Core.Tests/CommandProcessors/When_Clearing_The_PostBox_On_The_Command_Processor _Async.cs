@@ -42,16 +42,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
 
         public CommandProcessorPostBoxClearAsyncTests()
         {
+            const string topic = "MyCommand";
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            const string topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
@@ -73,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _fakeMessageProducerWithPublishConfirmation },
+                    { topic, _producer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -81,6 +80,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
             };
+            
+            _fakeOutbox = new FakeOutbox();
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -109,9 +110,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             await _commandProcessor.ClearOutboxAsync(new []{_message.Id});
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
+            _producer.MessageWasSent.Should().BeTrue();
 
-            var sentMessage = _fakeMessageProducerWithPublishConfirmation.SentMessages.FirstOrDefault();
+            var sentMessage = _producer.SentMessages.FirstOrDefault();
             sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);

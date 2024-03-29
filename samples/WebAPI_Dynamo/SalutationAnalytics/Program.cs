@@ -89,6 +89,7 @@ static void ConfigureBrighter(
             new RmqPublication
             {
                 Topic = new RoutingKey("SalutationReceived"),
+                RequestType = typeof(SalutationReceived),
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }

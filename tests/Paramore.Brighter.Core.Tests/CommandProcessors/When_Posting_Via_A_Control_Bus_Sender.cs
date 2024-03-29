@@ -43,16 +43,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducer _producer;
 
         public ControlBusSenderPostMessageTests()
         {
+            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _producer = new FakeMessageProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            const string topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
@@ -72,7 +71,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
+            
+            _fakeOutbox = new FakeOutbox();
+            
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 

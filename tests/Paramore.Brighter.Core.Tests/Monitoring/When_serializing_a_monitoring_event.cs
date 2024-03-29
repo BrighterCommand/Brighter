@@ -54,8 +54,9 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
 
             _originalRequestAsJson = JsonSerializer.Serialize(new MyCommand(), JsonSerialisationOptions.Options);
             _elapsedMilliseconds = 34;
+            
             var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, _originalRequestAsJson, _at, _elapsedMilliseconds);
-            _message = _monitorEventMessageMapper.MapToMessage(@event);
+            _message = _monitorEventMessageMapper.MapToMessage(@event, new Publication{Topic = new RoutingKey("paramore.monitoring.event")});
        }
 
         [Fact]

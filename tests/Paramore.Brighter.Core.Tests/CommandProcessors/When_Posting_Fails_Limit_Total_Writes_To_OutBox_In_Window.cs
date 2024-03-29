@@ -37,13 +37,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     public class PostFailureLimitCommandTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private IAmAMessageProducer _fakeMessageProducer;
+        private IAmAMessageProducer _producer;
         private InMemoryOutbox _outbox;
 
         public PostFailureLimitCommandTests()
         {
-            _outbox = new InMemoryOutbox();
-            _fakeMessageProducer = new FakeErroringMessageProducerSync();
+            const string topic = "MyCommand";
+            
+            _producer = new FakeErroringMessageProducerSync{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
             var messageMapperRegistry =
                 new MessageMapperRegistry(
@@ -54,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var busConfiguration = new ExternalBusConfiguration { 
                 ProducerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { "MyCommand", _fakeMessageProducer },
+                    { topic, _producer },
                 }),
                 MessageMapperRegistry = messageMapperRegistry,
                 Outbox = _outbox,
@@ -62,6 +63,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 MaxOutStandingCheckIntervalMilliSeconds = 250
             };
 
+            _outbox = new InMemoryOutbox();
+            
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()

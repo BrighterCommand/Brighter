@@ -15,18 +15,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     public class CommandProcessorCallTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly MyRequest _myRequest = new MyRequest();
+        private readonly MyRequest _myRequest = new();
         private readonly Message _message;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
 
 
         public CommandProcessorCallTests()
         {
+            const string topic = "MyRequest";
             _myRequest.RequestValue = "Hello World";
 
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new FakeMessageProducerWithPublishConfirmation();
+            _producer.Publication = new Publication{Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)};
 
-            const string topic = "MyRequest";
             var header = new MessageHeader(
                 messageId: _myRequest.Id, 
                 topic: topic, 
@@ -78,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _fakeMessageProducerWithPublishConfirmation },
+                    { topic, _producer },
                 });
         
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -111,10 +112,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 500);
             
             //should send a message via the messaging gateway
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
+            _producer.MessageWasSent.Should().BeTrue();
 
             //should convert the command into a message
-            _fakeMessageProducerWithPublishConfirmation.SentMessages[0].Should().Be(_message);
+            _producer.SentMessages[0].Should().Be(_message);
             
             //should forward response to a handler
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});

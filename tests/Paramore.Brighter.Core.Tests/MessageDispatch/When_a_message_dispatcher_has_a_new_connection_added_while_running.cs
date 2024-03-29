@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { _subscription }, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = new RoutingKey("MyEvent")});
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Open(_newSubscription);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = new RoutingKey("MyEvent")});
             _channel.Enqueue(message);
 
             await Task.Delay(1000);

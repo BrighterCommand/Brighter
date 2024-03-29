@@ -22,16 +22,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
 
         public CommandProcessorDepositPostTests()
         {
+            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            const string topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
@@ -53,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _fakeMessageProducerWithPublishConfirmation },
+                    { topic, _producer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -61,6 +60,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 { CommandProcessor.RETRYPOLICY, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             }; 
+            
+            _fakeOutbox = new FakeOutbox();
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -89,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //assert
             
             //message should not be posted
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
+            _producer.MessageWasSent.Should().BeFalse();
             
             //message should correspond to the command
             var depositedPost = _fakeOutbox.Get(postedMessageId);

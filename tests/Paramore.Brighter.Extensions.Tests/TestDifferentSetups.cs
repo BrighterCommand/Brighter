@@ -33,7 +33,13 @@ namespace Tests
         public void WithExternalBus()
         {
             var serviceCollection = new ServiceCollection();
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { "MyTopic", new FakeProducer() }, });
+            const string mytopic = "MyTopic";
+            var producerRegistry = new ProducerRegistry(
+                new Dictionary<string, IAmAMessageProducer>
+                {
+                    { mytopic, new FakeProducer{ Publication = { Topic = new RoutingKey(mytopic)}} },
+                });
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(type => new TestEventMessageMapper()), 
                 new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
@@ -74,7 +80,6 @@ namespace Tests
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
             };
-
             
             serviceCollection
                 .AddBrighter(options => options.PolicyRegistry = policyRegistry)
@@ -108,9 +113,9 @@ namespace Tests
 
     internal class FakeProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
-        public List<Message> SentMessages { get; } = new List<Message>();
+        public List<Message> SentMessages { get; } = new();
         
-        public Publication Publication { get; } = new Publication();
+        public Publication Publication { get; } = new();
 
         public void Dispose()
         {

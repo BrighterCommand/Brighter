@@ -1,7 +1,7 @@
 ﻿using Azure.Identity;
 using Azure.Storage.Blobs;
 using FluentAssertions;
-using Paramore.Brighter.Azure.TestDoubles.Tests;
+using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.Azure;
 using Paramore.Brighter.Transforms.Transformers;
@@ -14,6 +14,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
 {
     private WrapPipelineAsync<MyLargeCommand>? _transformPipeline;
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
+    private readonly Publication _publication;
     private readonly MyLargeCommand _myCommand;
     private readonly AzureBlobLuggageStore _luggageStore;
     private readonly BlobContainerClient _client;
@@ -28,6 +29,8 @@ public class LargeMessagePayloadWrapTests : IDisposable
                 new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
                 null);
             mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();    
+            
+            _publication = new Publication{ Topic = new RoutingKey("transform.event") };
 
             _myCommand = new MyLargeCommand(6000);
 
@@ -50,7 +53,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = _transformPipeline.WrapAsync(_myCommand).Result;
+        var message = _transformPipeline.WrapAsync(_myCommand, _publication).Result;
 
         //assert
         message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();

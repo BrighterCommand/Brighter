@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter
@@ -38,11 +39,15 @@ namespace Paramore.Brighter
         /// </summary>
         public OnMissingChannel MakeChannels { get; set; }
         
-         /// <summary>
+        /// <summary>
         /// The topic this publication is for
         /// </summary>
         public RoutingKey Topic { get; set; }
-         
+        
+        /// <summary>
+        /// The type of the request that we expect to publish on this channel
+        /// </summary>
+        public Type RequestType { get; set; }
          
     }
 }

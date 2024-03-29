@@ -6,9 +6,9 @@ namespace Orders.Domain.Mapper;
 
 public class NewOrderVersionEventMessageMapper : IAmAMessageMapper<NewOrderVersionEvent>
 {
-    public Message MapToMessage(NewOrderVersionEvent request)
+    public Message MapToMessage(NewOrderVersionEvent request, Publication publication)
     {
-        var header = new MessageHeader(messageId: request.Id, topic: NewOrderVersionEvent.Topic, messageType: MessageType.MT_EVENT);
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: MessageType.MT_EVENT);
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);
         return message;

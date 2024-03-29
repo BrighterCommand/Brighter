@@ -6,7 +6,7 @@ namespace Events.Ports.Mappers
 {
     public class CompetingConsumerCommandMessageMapper : IAmAMessageMapper<CompetingConsumerCommand>
     {
-        public Message MapToMessage(CompetingConsumerCommand request)
+        public Message MapToMessage(CompetingConsumerCommand request, Publication publication)
         {
             var header = new MessageHeader(messageId: request.Id, topic: "multipleconsumer.command", messageType: MessageType.MT_COMMAND);
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));

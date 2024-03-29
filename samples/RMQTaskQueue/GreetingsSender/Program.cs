@@ -62,13 +62,15 @@ namespace GreetingsSender
                     {
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels =OnMissingChannel.Create,
-                        Topic = new RoutingKey("greeting.event")
+                        Topic = new RoutingKey("greeting.event"),
+                        RequestType = typeof(GreetingEvent)
                     },
                     new()
                     {
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels =OnMissingChannel.Create,
-                        Topic = new RoutingKey("farewell.event")                            
+                        Topic = new RoutingKey("farewell.event"),
+                        RequestType = typeof(FarewellEvent)
                     }
                 }).Create();
             

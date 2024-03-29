@@ -368,7 +368,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Message CreateMessageFromRequest<TRequest>(TRequest request) where TRequest : class, IRequest
         {
-            var message = MapMessage<TRequest>(request);
+            var message = MapMessage(request);
             AddTelemetryToMessage<TRequest>(message);
             return message;
         }
@@ -384,7 +384,7 @@ namespace Paramore.Brighter
         public async Task<Message> CreateMessageFromRequestAsync<TRequest>(TRequest request,
             CancellationToken cancellationToken) where TRequest : class, IRequest
         {
-            Message message = await MapMessageAsync<TRequest>(request, cancellationToken);
+            Message message = await MapMessageAsync(request, cancellationToken);
             AddTelemetryToMessage<TRequest>(message);
             return message;
         }
@@ -486,7 +486,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="producer">The producer to add a callback for</param>
         /// <returns></returns>
-        private bool ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducer producer)
+        private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducer producer)
         {
             if (producer is ISupportPublishConfirmation producerSync)
             {
@@ -500,10 +500,7 @@ namespace Paramore.Brighter
                                 await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow, cancellationToken: ct));
                     }
                 };
-                return true;
             }
-
-            return false;
         }
 
         /// <summary>
@@ -787,8 +784,9 @@ namespace Paramore.Brighter
         {
             return requests.Select(r =>
             {
+                var publication = _producerRegistry.LookupPublication<T>();
                 var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
-                var message = wrapPipeline.Wrap((T)r);
+                var message = wrapPipeline.Wrap((T)r, publication);
                 AddTelemetryToMessage<T>(message);
                 return message;
             }).ToList();
@@ -800,8 +798,9 @@ namespace Paramore.Brighter
             var messages = new List<Message>();
             foreach (var request in requests)
             {
+                var publication = _producerRegistry.LookupPublication<T>();
                 var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
-                var message = await wrapPipeline.WrapAsync((T)request, cancellationToken);
+                var message = await wrapPipeline.WrapAsync((T)request,publication, cancellationToken);
                 AddTelemetryToMessage<T>(message);
                 messages.Add(message);
             }
@@ -860,13 +859,18 @@ namespace Paramore.Brighter
         private Message MapMessage<TRequest>(TRequest request)
             where TRequest : class, IRequest
         {
+            var publication = _producerRegistry.LookupPublication<TRequest>();
+            if (publication == null)
+                throw new ConfigurationException(
+                    $"No publication found for request {request.GetType().Name}");
+            
             Message message;
             if (_transformPipelineBuilder.HasPipeline<TRequest>())
             {
                 message = _transformPipelineBuilder
                     .BuildWrapPipeline<TRequest>()
-                    .Wrap(request);
-            } 
+                    .Wrap(request, publication);
+            }                                                
             else
             {
                 throw new ArgumentOutOfRangeException("No message mapper defined for request");
@@ -878,12 +882,17 @@ namespace Paramore.Brighter
         private async Task<Message> MapMessageAsync<TRequest>(TRequest request, CancellationToken cancellationToken)
             where TRequest : class, IRequest
         {
+            var publication = _producerRegistry.LookupPublication<TRequest>();
+            if (publication == null)
+                throw new ConfigurationException(
+                    $"No publication found for request {request.GetType().Name}");
+            
             Message message;
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
                 message = await _transformPipelineBuilderAsync
                     .BuildWrapPipeline<TRequest>()
-                    .WrapAsync(request, cancellationToken);
+                    .WrapAsync(request, publication, cancellationToken);
             }
             else
             {

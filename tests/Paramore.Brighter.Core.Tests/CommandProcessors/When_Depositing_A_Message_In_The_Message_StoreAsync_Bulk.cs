@@ -26,25 +26,38 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly Message _message2;
         private readonly Message _message3;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeMessageProducerWithPublishConfirmation _commandProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _eventProducer;
 
         public CommandProcessorBulkDepositPostTestsAsync()
         {
+            const string commandTopic = "MyCommand";
+            
             _myCommand.Value = "Hello World";
             _myCommand2.Value = "Update World";
 
-            _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _commandProducer = new FakeMessageProducerWithPublishConfirmation();
+            _commandProducer.Publication = new Publication
+            {
+                Topic =  new RoutingKey(commandTopic),
+                RequestType = typeof(MyCommand)
+            };
 
-            var topic = "MyCommand";
-            var eventTopic = "MyEvent";
+            const string eventTopic = "MyEvent";
+            _eventProducer = new FakeMessageProducerWithPublishConfirmation();
+            _eventProducer.Publication = new Publication
+            {
+                Topic =  new RoutingKey(eventTopic),
+                RequestType = typeof(MyEvent)
+            };
+            
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
             
             _message2 = new Message(
-                new MessageHeader(_myCommand2.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand2.Id, commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand2, JsonSerialisationOptions.Options))
             );
             
@@ -59,10 +72,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             {
                 if (type == typeof(MyCommandMessageMapperAsync))
                     return new MyCommandMessageMapperAsync();
-                else
-                {
+                else                              
                     return new MyEventMessageMapperAsync();
-                }
             }));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
@@ -84,8 +95,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _fakeMessageProducerWithPublishConfirmation },
+                    { commandTopic, _commandProducer },
+                    { eventTopic, _eventProducer }
                 }); 
+            
+            _fakeOutbox = new FakeOutbox();
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -114,7 +128,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             //assert
             //message should not be posted
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
+            _commandProducer.MessageWasSent.Should().BeFalse();
+            _eventProducer.MessageWasSent.Should().BeFalse();
             
             //message should be in the store
             var depositedPost = _fakeOutbox

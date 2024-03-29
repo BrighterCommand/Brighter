@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     public class FakeMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
-        public Publication Publication { get; } = new();
+        public Publication Publication { get; set; } = new();
         public readonly List<Message> SentMessages = new();
         public bool MessageWasSent { get; set; }
 

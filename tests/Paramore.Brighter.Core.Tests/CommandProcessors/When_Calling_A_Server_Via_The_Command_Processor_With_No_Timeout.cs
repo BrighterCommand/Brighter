@@ -56,10 +56,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 {CommandProcessor.RETRYPOLICY, retryPolicy},
                 {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
-            
+
+            const string topic = "MyRequest";
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyRequest", new FakeMessageProducerWithPublishConfirmation() }
+                { topic, new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}} }
             });
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(

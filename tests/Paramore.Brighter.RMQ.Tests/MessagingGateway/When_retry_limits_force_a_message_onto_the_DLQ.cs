@@ -64,7 +64,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             //how do we send to the queue
-            _sender = new RmqMessageProducer(rmqConnection, new RmqPublication());
+            _sender = new RmqMessageProducer(rmqConnection, new RmqPublication
+            {
+                Topic = routingKey, 
+                RequestType = typeof(MyDeferredCommand)
+            });
 
             //set up our receiver
             _channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
@@ -88,7 +92,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)),
+                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             

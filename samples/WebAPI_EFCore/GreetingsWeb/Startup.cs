@@ -2,6 +2,7 @@ using System;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
+using GreetingsPorts.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -194,6 +195,7 @@ namespace GreetingsWeb
                     new RmqPublication
                     {
                         Topic = new RoutingKey("GreetingMade"),
+                        RequestType = typeof(GreetingMade),
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels = OnMissingChannel.Create
                     }

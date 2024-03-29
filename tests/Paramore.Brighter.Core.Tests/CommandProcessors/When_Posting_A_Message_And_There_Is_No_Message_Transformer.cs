@@ -74,7 +74,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             _producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                {"MyTopic", new FakeMessageProducerWithPublishConfirmation()},
+                {"MyTopic", new FakeMessageProducerWithPublishConfirmation
+                {
+                    Publication = {Topic = new RoutingKey("MyTopic"), RequestType = typeof(MyCommand) }
+                }},
             });
 
             _policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };

@@ -46,9 +46,27 @@ namespace Paramore.Brighter
             return messageProducers[topic];
         }
 
-        public Publication LookupPublication(string topic)
+        /// <summary>
+        /// Find the publication for a given request type
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <returns></returns>
+        /// <exception cref="ConfigurationException">Thrown if we have too many publications or none at all</exception>
+        public Publication LookupPublication<TRequest>() where TRequest : class, IRequest
         {
-            return LookupBy(topic).Publication;
+            var publications = from producer in messageProducers
+            where producer.Value.Publication.RequestType == typeof(TRequest)
+                select producer.Value.Publication;
+
+            if (publications.Count() > 1)
+                throw new ConfigurationException("Only one producer per request type is supported. Have you added the request type to multiple Publications?");
+            
+            var publication = publications.FirstOrDefault();
+            
+            if (publication is null)
+                throw new ConfigurationException("No producer found for request type. Have you set the request type on the Publication?");
+
+            return publication;
         }
 
         /// <summary>

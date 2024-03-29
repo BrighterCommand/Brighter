@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null);
 
             var msg = transformPipelineBuilder.BuildWrapPipeline<MyEvent>()
-                .Wrap(new MyEvent());
+                .Wrap(new MyEvent(), new Publication{Topic = new RoutingKey("MyEvent")});
             
             _channel.Enqueue(msg);
         }

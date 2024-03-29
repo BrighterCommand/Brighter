@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Text.Json;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     public class MyResponseMessageMapper : IAmAMessageMapper<MyResponse>
     {
-        public Message MapToMessage(MyResponse request)
+        public Message MapToMessage(MyResponse request, Publication publication)
         {
             var header = new MessageHeader(
                 messageId: request.Id,
                 topic: request.SendersAddress.Topic,
-                messageType: MessageType.MT_COMMAND,
+                messageType: request.RequestToMessageType(),
                 correlationId: request.SendersAddress.CorrelationId);
 
             var body = new MessageBody(JsonSerializer.Serialize(new MyResponseObject(request.Id.ToString(), request.ReplyValue), JsonSerialisationOptions.Options));

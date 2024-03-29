@@ -37,8 +37,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     [Collection("CommandProcessor")]
     public class MessageDispatcherShutConnectionTests : IDisposable
     {
-        private static Dispatcher _dispatcher;
-        private static Subscription _subscription;
+        private readonly Dispatcher _dispatcher;
+        private readonly Subscription _subscription;
 
         public MessageDispatcherShutConnectionTests()
         {
@@ -50,11 +50,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            _subscription = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            _subscription = new Subscription<MyEvent>(
+                new SubscriptionName("test"), 
+                noOfPerformers: 3, 
+                timeoutInMilliseconds: 1000, 
+                channelFactory: new InMemoryChannelFactory(channel), 
+                channelName: new ChannelName("fakeChannel"), 
+                routingKey: new RoutingKey("fakekey")
+            );
             _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { _subscription }, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{ Topic = _subscription.RoutingKey});
             for (var i = 0; i < 6; i++)
                 channel.Enqueue(message);
 

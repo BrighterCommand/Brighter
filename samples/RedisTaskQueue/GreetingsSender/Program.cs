@@ -96,9 +96,10 @@ namespace GreetingsSender
                         redisConnection,
                         new RedisMessagePublication[]
                         {
-                            new RedisMessagePublication
+                            new()
                             {
-                                Topic = new RoutingKey("greeting.event")
+                                Topic = new RoutingKey("greeting.event"),
+                                RequestType = typeof(GreetingEvent)
                             }
                         }
                     ).Create();

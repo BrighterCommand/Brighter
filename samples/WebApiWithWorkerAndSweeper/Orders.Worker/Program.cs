@@ -31,9 +31,9 @@ var subscriptionName = "paramore.example.worker";
 var subscriptions = new Subscription[]
 {
     new AzureServiceBusSubscription<NewOrderVersionEvent>(
-        new SubscriptionName(NewOrderVersionEvent.Topic),
+        new SubscriptionName("Orders.NewOrderVersionEvent"),
         new ChannelName(subscriptionName),
-        new RoutingKey(NewOrderVersionEvent.Topic),
+        new RoutingKey("Orders.NewOrderVersionEvent"),
         timeoutInMilliseconds: 400,
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,

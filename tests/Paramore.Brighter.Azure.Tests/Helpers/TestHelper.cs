@@ -1,4 +1,4 @@
-﻿namespace Paramore.Brighter.Azure.TestDoubles.Tests;
+﻿namespace Paramore.Brighter.Azure.Tests.Helpers;
 
 public class TestHelper
 {

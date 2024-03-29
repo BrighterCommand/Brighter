@@ -6,6 +6,7 @@ using Amazon.Runtime;
 using GreetingsEntities;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
+using GreetingsPorts.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -167,8 +168,8 @@ namespace GreetingsWeb
                     new RmqPublication
                     {
                         Topic = new RoutingKey("GreetingMade"),
-                         WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        
+                        RequestType = typeof(GreetingMade),
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels = OnMissingChannel.Create
                     }}
             ).Create();

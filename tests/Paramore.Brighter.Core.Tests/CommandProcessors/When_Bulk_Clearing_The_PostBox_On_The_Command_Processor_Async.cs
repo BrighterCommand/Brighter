@@ -45,18 +45,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly Message _message;
         private readonly Message _message2;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly FakeMessageProducerWithPublishConfirmation _producerTwo;
 
         public CommandProcessorPostBoxBulkClearAsyncTests()
         {
+            var topic = "MyCommand";
+            var topic2 = "MyCommand2";
+            
             var myCommand = new MyCommand{ Value = "Hello World"};
             var myCommand2 = new MyCommand { Value = "Hello World 2" };
 
-            _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
-
-            var topic = "MyCommand";
-            var topic2 = "MyCommand2";
+            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            _producerTwo = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic2), RequestType = typeof(MyCommand)}};
 
             _message = new Message(
                 new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
@@ -84,9 +85,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _fakeMessageProducerWithPublishConfirmation },
-                { topic2, _fakeMessageProducerWithPublishConfirmation }
+                { topic, _producer },
+                { topic2, _producerTwo }
             });
+            
+            _fakeOutbox = new FakeOutbox();
         
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -117,15 +120,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             await Task.Delay(3000);
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
+            _producer.MessageWasSent.Should().BeTrue();
 
-            var sentMessage = _fakeMessageProducerWithPublishConfirmation.SentMessages[0];
+            var sentMessage = _producer.SentMessages[0];
             sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
             sentMessage.Body.Value.Should().Be(_message.Body.Value);
 
-            var sentMessage2 = _fakeMessageProducerWithPublishConfirmation.SentMessages[1];
+            var sentMessage2 = _producer.SentMessages[1];
             sentMessage2.Should().NotBeNull();
             sentMessage2.Id.Should().Be(_message2.Id);
             sentMessage2.Header.Topic.Should().Be(_message2.Header.Topic);

@@ -30,6 +30,7 @@ using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 
 namespace Greetings.Ports.Mappers
@@ -41,9 +42,9 @@ namespace Greetings.Ports.Mappers
         private readonly SerializationContext _serializationContext = new(MessageComponentType.Value, Topic);
         private const string Topic = "greeting.event";
 
-        public async Task<Message> MapToMessageAsync(GreetingEvent request, CancellationToken cancellationToken = default)
+        public async Task<Message> MapToMessageAsync(GreetingEvent request, Publication publication, CancellationToken cancellationToken = default)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: Topic, messageType: MessageType.MT_EVENT);
+            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
             //This uses the Confluent JSON serializer, which wraps Newtonsoft but also performs schema registration and validation
             var serializer = new JsonSerializer<GreetingEvent>(
                 schemaRegistryClient, 

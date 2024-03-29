@@ -43,21 +43,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
         private Exception _exception;
 
         public CommandProcessorNoMessageMapperAsyncTests()
         {
+            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            const string topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
-
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -72,7 +70,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
             
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
+            
+            _fakeOutbox = new FakeOutbox();
+            
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 

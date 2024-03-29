@@ -45,7 +45,6 @@ builder.Services.AddBrighter(options =>
         configure.ProducerRegistry = producerRegistry;
     });
 
-builder.Services.AddSingleton<TopicDictionary>();
 builder.Services.AddSingleton(typeof(IAmAMessageMapper<>), typeof(MessageMapper<>));
 
 var app = builder.Build();

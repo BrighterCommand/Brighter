@@ -12,6 +12,7 @@ public class MessageWrapRequestTests
     private WrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
+    private readonly Publication _publication;
 
     public MessageWrapRequestTests()
     {
@@ -26,6 +27,8 @@ public class MessageWrapRequestTests
         _myCommand = new MyTransformableCommand();
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
+        
+        _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
@@ -35,7 +38,7 @@ public class MessageWrapRequestTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = _transformPipeline.Wrap(_myCommand);
+        var message = _transformPipeline.Wrap(_myCommand, _publication);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

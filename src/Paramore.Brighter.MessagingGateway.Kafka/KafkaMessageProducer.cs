@@ -91,6 +91,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 EnableDeliveryReports = true,   //don't change this, we need it for the callback
                 MaxInFlight = publication.MaxInFlightRequestsPerConnection,
                 LingerMs = publication.LingerMs,
+                MessageTimeoutMs = publication.MessageTimeoutMs,
+                MessageSendMaxRetries = publication.MessageSendMaxRetries,
                 Partitioner = (Confluent.Kafka.Partitioner)((int)publication.Partitioner),
                 QueueBufferingMaxMessages = publication.QueueBufferingMaxMessages,
                 QueueBufferingMaxKbytes = publication.QueueBufferingMaxKbytes,

@@ -361,6 +361,7 @@ static IAmAProducerRegistry GetKafkaProducerRegistry()
                 new KafkaPublication
                 {
                     Topic = new RoutingKey("SalutationReceived"),
+                    RequestType = typeof(SalutationReceived),
                     MessageSendMaxRetries = 3,
                     MessageTimeoutMs = 1000,
                     MaxInFlightRequestsPerConnection = 1,
@@ -395,7 +396,7 @@ static IAmAProducerRegistry GetRmqProducerRegistry()
             new RmqPublication
             {
                 Topic = new RoutingKey("SalutationReceived"),
- 
+                RequestType = typeof(SalutationReceived),
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }
