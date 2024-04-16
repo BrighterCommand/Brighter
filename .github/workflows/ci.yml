@@ -10,11 +10,11 @@ name: CI
 
 on:
   push:
-    branches: [ master, release/9 ]
+    branches: [ master, release/9X ]
     tags:
       - '*.*.*'
   pull_request:
-    branches: [ master, release/9 ]
+    branches: [ master, release/9X ]
   
 env:
  # Stop wasting time caching packages
