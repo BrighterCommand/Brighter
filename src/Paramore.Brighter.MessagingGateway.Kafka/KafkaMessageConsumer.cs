@@ -226,7 +226,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 s_logger.LogInformation("Storing offset {Offset} to topic {Topic} for partition {ChannelName}",
                     new Offset(topicPartitionOffset.Offset + 1).Value, topicPartitionOffset.TopicPartition.Topic,
                     topicPartitionOffset.TopicPartition.Partition.Value);
-                _consumer.StoreOffset(offset);
                 _offsetStorage.Add(offset);
 
                 if (_offsetStorage.Count % _maxBatchSize == 0)
