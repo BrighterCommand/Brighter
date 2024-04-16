@@ -36,46 +36,42 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
     public class SqlOutboxDeletingMessagesTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
-        private readonly Message _messageEarliest;
-        private readonly Message _message2;
-        private readonly Message _messageLatest;
+        private readonly Message _firstMessage;
+        private readonly Message _secondMessage;
+        private readonly Message _thirdMessage;
         private IEnumerable<Message> _retrievedMessages;
-        private readonly PostgreSqlOutboxSync _sqlOutboxSync;
+        private readonly PostgreSqlOutbox _sqlOutbox;
 
         public SqlOutboxDeletingMessagesTests()
         {
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new PostgreSqlOutboxSync(_postgresSqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
+            _firstMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
+            _secondMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
+            _thirdMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
             
         }
 
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            _sqlOutboxSync.Add(_messageEarliest);
-            _sqlOutboxSync.Add(_message2);
-            _sqlOutboxSync.Add(_messageLatest);
+            _sqlOutbox.Add(_firstMessage);
+            _sqlOutbox.Add(_secondMessage);
+            _sqlOutbox.Add(_thirdMessage);
             
-            _retrievedMessages = _sqlOutboxSync.Get();
+            _sqlOutbox.Delete([_firstMessage.Id]);
 
-            _sqlOutboxSync.Delete(_retrievedMessages.First().Id);
-
-            var remainingMessages = _sqlOutboxSync.Get();
+            var remainingMessages = _sqlOutbox.OutstandingMessages(0);
 
             remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            remainingMessages.Should().Contain(_secondMessage);
+            remainingMessages.Should().Contain(_thirdMessage);
             
-            _sqlOutboxSync.Delete(remainingMessages.Select(m => m.Id).ToArray());
+            _sqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id});
 
-            var messages = _sqlOutboxSync.Get();
+            var messages = _sqlOutbox.OutstandingMessages(0);
 
             messages.Should().HaveCount(0);
         }

@@ -7,10 +7,10 @@ namespace SalutationPorts.Policies
 {
     public static class Retry
     {
-        public const string RETRYPOLICYASYNC = "SalutationPorts.Policies.RetryPolicyAsync";
-        public const string EXPONENTIAL_RETRYPOLICYASYNC = "SalutationPorts.Policies.ExponenttialRetryPolicyAsync";
+        public const string RETRYPOLICYASYNC = "SalutationPorts.Policies.RetryPolicy";
+        public const string EXPONENTIAL_RETRYPOLICYASYNC = "SalutationPorts.Policies.ExponenttialRetryPolicy";
 
-        public static AsyncRetryPolicy GetSimpleHandlerRetryPolicy()
+        public static AsyncRetryPolicy GetSimpleHandlerRetryPolicyAsync()
         {
             return Policy.Handle<Exception>().WaitAndRetryAsync(new[]
             {
@@ -18,7 +18,7 @@ namespace SalutationPorts.Policies
             });
         }
 
-        public static AsyncRetryPolicy GetExponentialHandlerRetryPolicy()
+        public static AsyncRetryPolicy GetExponentialHandlerRetryPolicyAsync()
         {
             var delay = Backoff.ExponentialBackoff(TimeSpan.FromMilliseconds(100), retryCount: 5, fastFirst: true);
             return Policy.Handle<Exception>().WaitAndRetryAsync(delay);

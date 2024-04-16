@@ -55,13 +55,13 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid(),
+                messageId:Guid.NewGuid().ToString(),
                 topic: "test_topic", 
                 messageType: MessageType.MT_DOCUMENT, 
                 timeStamp: DateTime.UtcNow.AddDays(-1), 
                 handledCount:5, 
                 delayedMilliseconds:5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
@@ -85,7 +85,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
-            _storedMessage.Header.TimeStamp.Should().Be(_message.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
+                .Should().Be(_message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_message.Header.CorrelationId);

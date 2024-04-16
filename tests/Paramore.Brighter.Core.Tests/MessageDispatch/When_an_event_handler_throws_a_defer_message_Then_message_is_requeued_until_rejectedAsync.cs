@@ -43,17 +43,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpEventProcessingDeferMessageActionTestsAsync()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
+            var commandProcessorProvider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
              
-            _messagePump = new MessagePumpAsync<MyEvent>(_commandProcessor, messageMapperRegistry) 
+            _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
 
-            var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
-                .BuildWrapPipeline<MyEvent>().WrapAsync(new MyEvent())
-                .GetAwaiter().GetResult();
+            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
+                .BuildWrapPipeline<MyEvent>()
+                .WrapAsync(new MyEvent(), new Publication{Topic = new RoutingKey("MyEvent")})
+                .Result;
             _channel.Enqueue(msg);
         }
 
@@ -63,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(task);

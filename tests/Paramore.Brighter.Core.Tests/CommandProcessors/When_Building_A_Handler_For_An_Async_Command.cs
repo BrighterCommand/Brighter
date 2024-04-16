@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private static PipelineBuilder<MyCommand> _chainBuilder;
         private static IHandleRequestsAsync<MyCommand> _chainOfResponsibility;
         private static RequestContext _requestContext;
-        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
+        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
 
         public PipelineForCommandAsyncTests()
         {
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-           CommandProcessor.ClearExtServiceBus(); 
+           CommandProcessor.ClearServiceBus(); 
         }
     }
 }

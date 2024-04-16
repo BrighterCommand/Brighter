@@ -10,7 +10,7 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformLifetimeScope>();
         private readonly IAmAMessageTransformerFactory _factory;
-        private readonly IList<IAmAMessageTransformAsync> _trackedObjects = new List<IAmAMessageTransformAsync>();
+        private readonly IList<IAmAMessageTransform> _trackedObjects = new List<IAmAMessageTransform>();
 
         public TransformLifetimeScope(IAmAMessageTransformerFactory factory)
         {
@@ -28,7 +28,7 @@ namespace Paramore.Brighter
             ReleaseTrackedObjects();
         }
         
-        public void Add(IAmAMessageTransformAsync instance)
+        public void Add(IAmAMessageTransform instance)
         {
             _trackedObjects.Add(instance);
             s_logger.LogDebug("Tracking instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());

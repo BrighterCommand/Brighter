@@ -11,43 +11,43 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class RetrieveClaimLargePayloadTests
 {
-    private readonly InMemoryStorageProviderAsync _store;
-    private readonly ClaimCheckTransformer _transformer;
+    private readonly InMemoryStorageProvider _store;
+    private readonly ClaimCheckTransformer _transformerAsync;
     private readonly string _contents;
 
     public RetrieveClaimLargePayloadTests()
     {
-        _store = new InMemoryStorageProviderAsync();
-        _transformer = new ClaimCheckTransformer(store: _store);
+        _store = new InMemoryStorageProvider();
+        _transformerAsync = new ClaimCheckTransformer(store: _store);
         //delete the luggage from the store after claiming it
-        _transformer.InitializeUnwrapFromAttributeParams(false);
+        _transformerAsync.InitializeUnwrapFromAttributeParams(false);
         _contents = DataGenerator.CreateString(6000);
     }
 
     [Fact]
-    public async Task When_a_message_unwraps_a_large_payload()
+    public void When_a_message_unwraps_a_large_payload()
     {
         //arrange
         var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
-        await writer.WriteAsync(_contents);
-        await writer.FlushAsync();
+        writer.Write(_contents);
+        writer.Flush();
         stream.Position = 0;
         
-        var id = await _store.StoreAsync(stream);
+        var id = _store.Store(stream);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
-        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
+        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
         
         //act
-        var unwrappedMessage = await _transformer.UnwrapAsync(message);
+        var unwrappedMessage = _transformerAsync.Unwrap(message);
         
         //assert
         unwrappedMessage.Body.Value.Should().Be(_contents);
         //clean up
-        message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _).Should().BeFalse();
-        (await _store.HasClaimAsync(id)).Should().BeFalse();
+        message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _).Should().BeFalse();
+        _store.HasClaim(id).Should().BeFalse();
     }
 }

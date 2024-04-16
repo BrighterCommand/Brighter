@@ -41,6 +41,8 @@ var rmqConnection = new RmqMessagingGatewayConnection
 
 var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+var producerRegistry = Helpers.GetProducerRegistry(rmqConnection);
+
 builder.Services.AddServiceActivator(options =>
     {
         options.Subscriptions = new Subscription[]
@@ -64,8 +66,6 @@ builder.Services.AddServiceActivator(options =>
         };
         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
     })
-    .UseExternalBus(Helpers.GetProducerRegistry(rmqConnection))
-    .UseInMemoryOutbox()
     .MapperRegistry(r =>
     {
         r.Register<MyDistributedEvent, MessageMapper<MyDistributedEvent>>();
@@ -78,14 +78,16 @@ builder.Services.AddServiceActivator(options =>
         r.Register<UpdateProductCommand, UpdateProductCommandHandler>();
         r.Register<ProductUpdatedEvent, ProductUpdatedEventHandler>();
     })
+    .UseExternalBus((configure) =>
+    {
+        configure.ProducerRegistry = producerRegistry;
+    })
     .UseOutboxSweeper(options =>
     {
         options.TimerInterval = 30;
         options.MinimumMessageAge = 500;
     });
 
-
-builder.Services.AddSingleton<TopicDictionary>();
 builder.Services.AddSingleton(typeof(IAmAMessageMapper<>), typeof(MessageMapper<>));
 
 builder.Services.AddHealthChecks()
@@ -96,30 +98,27 @@ builder.Services.AddHostedService<ServiceActivatorHostedService>();
 var  app = builder.Build();
 
 app.UseRouting();
-app.UseEndpoints(endpoints =>
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/detail", new HealthCheckOptions
 {
-    endpoints.MapHealthChecks("/health");
-    endpoints.MapHealthChecks("/health/detail", new HealthCheckOptions
+    ResponseWriter = async (context, report) =>
     {
-        ResponseWriter = async (context, report) =>
+        var content = new
         {
-            var content = new
-            {
-                Status = report.Status.ToString(),
-                Results = report.Entries.ToDictionary(e => e.Key,
-                    e => new
-                    {
-                        Status = e.Value.Status.ToString(),
-                        Description = e.Value.Description,
-                        Duration = e.Value.Duration
-                    }),
-                TotalDuration = report.TotalDuration
-            };
+            Status = report.Status.ToString(),
+            Results = report.Entries.ToDictionary(e => e.Key,
+                e => new
+                {
+                    Status = e.Value.Status.ToString(),
+                    Description = e.Value.Description,
+                    Duration = e.Value.Duration
+                }),
+            TotalDuration = report.TotalDuration
+        };
 
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(content, JsonSerialisationOptions.Options));
-        }
-    });
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(JsonSerializer.Serialize(content, JsonSerialisationOptions.Options));
+    }
 });
 
 app.Run();

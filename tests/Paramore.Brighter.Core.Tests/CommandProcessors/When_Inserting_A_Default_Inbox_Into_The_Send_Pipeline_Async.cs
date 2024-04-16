@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public CommandProcessorBuildDefaultInboxSendAsyncTests()
         {
-             var handler = new MyCommandHandlerAsync(new Dictionary<string, Guid>());
+             var handler = new MyCommandHandlerAsync(new Dictionary<string, string>());
             
              var subscriberRegistry = new SubscriberRegistry();
              //This handler has no Inbox attribute
@@ -44,6 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
              var inboxConfiguration = new InboxConfiguration(
+                _inbox,
                 InboxScope.All, //grab all the events
                 onceOnly: true, //only allow once
                 actionOnExists: OnceOnlyAction.Throw //throw on duplicates (we should  be the only entry after)
@@ -78,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
  }
 }

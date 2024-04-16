@@ -43,22 +43,29 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpEventRequeueTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper())
-                );
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry) 
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
 
             _event = new MyEvent();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options)));
+            var message1 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options))
+            );
+            var message2 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options))
+            );
             _channel.Enqueue(message1);
             _channel.Enqueue(message2);
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
         }
 

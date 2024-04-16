@@ -9,9 +9,6 @@
     <None Remove="DDL Scripts\MSSQL\Inbox.sql" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="DDL Scripts\MSSQL\Inbox.sql" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>  

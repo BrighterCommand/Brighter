@@ -37,18 +37,29 @@ namespace Paramore.Brighter
         /// <summary>
         /// Creates the specified configuration.
         /// </summary>
-        /// <param name="logger">The logger to use</param>
         /// <param name="outbox">The outbox for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAProducerRegistry producerRegistry)
+        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry)
+            where T : Message
         {
-            var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
+            var mapper = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()),
+                null);
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
-            return new ControlBusSender(CommandProcessorBuilder.With()
-                    .Handlers(new HandlerConfiguration())
-                    .DefaultPolicy()
-                    .ExternalBus(new ExternalBusConfiguration(producerRegistry, mapper),outbox)
+            var busConfiguration = new ExternalBusConfiguration();
+            busConfiguration.ProducerRegistry = producerRegistry;
+            busConfiguration.MessageMapperRegistry = mapper;
+            
+            return new ControlBusSender(
+                CommandProcessorBuilder.With()
+                .Handlers(new HandlerConfiguration())
+                .DefaultPolicy()
+                .ExternalBusCreate(
+                    busConfiguration,
+                    outbox, 
+                    new CommittableTransactionProvider()
+                    )
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );

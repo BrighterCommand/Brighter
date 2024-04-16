@@ -38,9 +38,11 @@ namespace Paramore.Brighter.ServiceActivator
     {
         private Func<IAmACommandProcessorProvider> _commandProcessorFactory;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
+        private IAmAMessageMapperRegistryAsync _messageMapperRegistryAsync;
         private IAmAChannelFactory _defaultChannelFactory;
         private IEnumerable<Subscription> _subscriptions;
         private IAmAMessageTransformerFactory _messageTransformerFactory;
+        private IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
 
         private DispatchBuilder() { }
 
@@ -67,15 +69,26 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// The message mappers used to map between commands, events, and on-the-wire handlers.
         /// </summary>
-        /// <param name="theMessageMapperRegistry">The message mapper registry.</param>
-        /// <param name="messageTransformerFactory"></param>
+        /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <param name="messageMapperRegistryAsync">The async message mapper</param>
+        /// <param name="messageTransformerFactory">A factory to produce transformers for a message mapper</param>
+        /// <param name="messageTransformFactoryAsync">A factory to produce async transformers for a message mapper</param>
         /// <returns>INeedAChannelFactory.</returns>
+        /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
         public INeedAChannelFactory MessageMappers(
-            IAmAMessageMapperRegistry theMessageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory)
+            IAmAMessageMapperRegistry messageMapperRegistry,
+            IAmAMessageMapperRegistryAsync messageMapperRegistryAsync,
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync  messageTransformFactoryAsync)
         {
-            _messageMapperRegistry = theMessageMapperRegistry;
+            _messageMapperRegistry = messageMapperRegistry;
+            _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
+            _messageTransformerFactoryAsync = messageTransformFactoryAsync;
+            
+            if (messageMapperRegistry is null && messageMapperRegistryAsync is null)
+                throw new ConfigurationException("You must provide a message mapper registry or an async message mapper registry");
+            
             return this;
         }
 
@@ -109,33 +122,16 @@ namespace Paramore.Brighter.ServiceActivator
             return this;
         }
         
-        
-        /// <summary>
-        /// A list of connections i.e. mappings of channels to commands or events
-        /// </summary>
-        /// <param name="connections">The connections.</param>
-        /// <returns>IAmADispatchBuilder.</returns>
-        [Obsolete("This will be replaced in v10. Please use Subscriptions, which is functionally equivalent")]
-        public IAmADispatchBuilder Connections(IEnumerable<Subscription> connections)
-        {
-            _subscriptions = connections;
-
-            foreach (var connection in _subscriptions.Where(c => c.ChannelFactory == null))
-            {
-                connection.ChannelFactory = _defaultChannelFactory;
-            }
-
-            return this;
-        }
-
         /// <summary>
         /// Builds this instance.
         /// </summary>
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(_commandProcessorFactory, _messageMapperRegistry, _subscriptions, _messageTransformerFactory);
+            return new Dispatcher(_commandProcessorFactory, _subscriptions, _messageMapperRegistry, _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync);
         }
+
+
     }
 
     #region Progressive Interfaces
@@ -162,11 +158,15 @@ namespace Paramore.Brighter.ServiceActivator
         /// The message mappers used to map between commands, events, and on-the-wire handlers.
         /// </summary>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <param name="messageMapperRegistryAsync">The async message mapper registry</param>
         /// <param name="messageTransformerFactory">The factory for creating transforms</param>
+        /// <param name="messageTransformFactoryAsync">The factory for creating async transforms</param>
         /// <returns>INeedAChannelFactory.</returns>
         INeedAChannelFactory MessageMappers(
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory);
+            IAmAMessageMapperRegistryAsync messageMapperRegistryAsync,
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync  messageTransformFactoryAsync);
     }
     /// <summary>
     /// Interface INeedAChannelFactory
@@ -192,10 +192,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// A list of connections i.e. mappings of channels to commands or events
         /// </summary>
         /// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subsriptions);
-        // TODO: Remove in V10
-        [Obsolete("Will be removed in V10, use Subscriptions instead")]
-        IAmADispatchBuilder Connections(IEnumerable<Subscription> connections);
+        IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subscriptions);
     }
 
     /// <summary>

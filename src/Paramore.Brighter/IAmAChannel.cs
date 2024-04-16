@@ -53,9 +53,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Receives the specified timeout in milliseconds.
         /// </summary>
-        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        Message Receive(int timeoutinMilliseconds);
+        Message Receive(int timeoutInMilliseconds);
 
         /// <summary>
         /// Rejects the specified message.
@@ -79,7 +79,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        /// <returns>True if the message should be Acked, false otherwise
+        /// <returns>True if the message should be Acked, false otherwise</returns>
         bool Requeue(Message message, int delayMilliseconds = 0);
 
    }

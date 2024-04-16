@@ -41,13 +41,13 @@ namespace GreetingsSender
             return Task.CompletedTask;
         }
         
-        private void DoWork(object state)
+        private async void DoWork(object state)
         {
             _iteration++;
 
-            var greetingEvent = new GreetingEvent{ Id = Guid.NewGuid(), Greeting = $"Hello # {_iteration}"};
+            var greetingEvent = new GreetingEvent{ Id = Guid.NewGuid().ToString(), Greeting = $"Hello # {_iteration}"};
             
-            _processor.Post(greetingEvent);
+            await _processor.PostAsync(greetingEvent);
 
             _logger.LogInformation("Sending message with id {Id} and greeting {Request}", greetingEvent.Id,
                 greetingEvent.Greeting);

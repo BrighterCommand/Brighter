@@ -30,6 +30,7 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using System.Text.Json;
+using FakeItEasy;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -41,24 +42,34 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpRetryEventConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             var channel = new FailingChannel { NumberOfRetries = 1 };
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry) 
-                { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            {
+                Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1
+            };
 
             var @event = new MyEvent();
 
             //Two events will be received when channel fixed
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+            var message1 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
+            );
+            var message2 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
+            );
             channel.Enqueue(message1);
             channel.Enqueue(message2);
             
             //Quit the message pump
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             channel.Enqueue(quitMessage);
         }
 

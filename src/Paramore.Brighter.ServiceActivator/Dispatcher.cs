@@ -26,11 +26,13 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.ServiceActivator.Status;
+using BindingFlags = System.Reflection.BindingFlags;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -38,7 +40,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Class Dispatcher.
     /// The 'core' Service Activator class, the Dispatcher controls and co-ordinates the creation of readers from channels, and dispatching the commands and
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
-    /// the stop and start of individual connections through <see cref="Open"/> and <see cref="Shut"/>
+    /// the stop and start of individual connections through <see cref="Open(string)"/> and <see cref="Shut(string)"/>
     /// </summary>
     public class Dispatcher : IDispatcher
     {
@@ -47,6 +49,8 @@ namespace Paramore.Brighter.ServiceActivator
         private Task _controlTask;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
+        private readonly IAmAMessageMapperRegistryAsync _messageMapperRegistryAsync;
+        private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
         private readonly ConcurrentDictionary<int, Task> _tasks;
         private readonly ConcurrentDictionary<string, IAmAConsumer> _consumers;
 
@@ -91,20 +95,29 @@ namespace Paramore.Brighter.ServiceActivator
         /// Initializes a new instance of the <see cref="Dispatcher"/> class.
         /// </summary>
         /// <param name="commandProcessorFactory">The command processor Factory.</param>
-        /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="subscriptions">The subscriptions.</param>
+        /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
-        public Dispatcher(
-            Func<IAmACommandProcessorProvider> commandProcessorFactory,
-            IAmAMessageMapperRegistry messageMapperRegistry,
+        /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
+        /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
+        public Dispatcher(Func<IAmACommandProcessorProvider> commandProcessorFactory,
             IEnumerable<Subscription> subscriptions,
-            IAmAMessageTransformerFactory messageTransformerFactory = null)
+            IAmAMessageMapperRegistry messageMapperRegistry = null,
+            IAmAMessageMapperRegistryAsync messageMapperRegistryAsync = null, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null,
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null)
         {
             CommandProcessorFactory = commandProcessorFactory;
             
             Connections = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;
+            _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
+            _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+
+            if (messageMapperRegistry is null && messageMapperRegistryAsync is null)
+                throw new ConfigurationException("You must provide a message mapper registry or an async message mapper registry");
 
             State = DispatcherState.DS_NOTREADY;
 
@@ -114,12 +127,24 @@ namespace Paramore.Brighter.ServiceActivator
             State = DispatcherState.DS_AWAITING;
         }
 
-        public Dispatcher(
-            IAmACommandProcessor commandProcessor, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IEnumerable<Subscription> subscription, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
-            : this(() => new CommandProcessorProvider(commandProcessor), messageMapperRegistry, subscription, messageTransformerFactory)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Dispatcher"/> class.
+        /// </summary>
+        /// <param name="commandProcessor">The command processor we should use with the dispatcher (prefer to use Command Processor Provider for IoC Scope control</param>
+        /// <param name="subscriptions">The subscriptions.</param>
+        /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
+        /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
+        /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
+        /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>        
+        public Dispatcher(IAmACommandProcessor commandProcessor,
+            IEnumerable<Subscription> subscriptions,
+            IAmAMessageMapperRegistry messageMapperRegistry = null,
+            IAmAMessageMapperRegistryAsync messageMapperRegistryAsync = null, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null,
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null)
+            : this(() => 
+                new CommandProcessorProvider(commandProcessor), subscriptions, messageMapperRegistry, messageMapperRegistryAsync, messageTransformerFactory, messageTransformerFactoryAsync)
         {
         }
 
@@ -227,7 +252,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Connections.Select(s => new DispatcherStateItem()
             {
                 Name = s.Name,
-                ExpectPerformers = s.NoOfPeformers,
+                ExpectPerformers = s.NoOfPerformers,
                 Performers = _consumers.Where(c => c.Value.SubscriptionName == s.Name).Select(c => new PerformerInformation()
                 {
                     Name = c.Value.Name,
@@ -239,7 +264,7 @@ namespace Paramore.Brighter.ServiceActivator
         public void SetActivePerformers(string connectionName, int numberOfPerformers)
         {
             var subscription = Connections.SingleOrDefault(c => c.Name == connectionName);
-            var currentPerformers = subscription.NoOfPeformers;
+            var currentPerformers = subscription.NoOfPerformers;
             if(currentPerformers == numberOfPerformers)
                 return;
 
@@ -335,7 +360,7 @@ namespace Paramore.Brighter.ServiceActivator
             var list = new List<Consumer>();
             subscriptions.Each(subscription =>
             {
-                for (var i = 0; i < subscription.NoOfPeformers; i++)
+                for (var i = 0; i < subscription.NoOfPerformers; i++)
                 {
                     list.Add(CreateConsumer(subscription, i + 1));
                 }
@@ -347,9 +372,39 @@ namespace Paramore.Brighter.ServiceActivator
         {
             s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", consumerNumber, subscription.Name);
             var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
-            var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessorFactory.Invoke(), _messageMapperRegistry, subscription, _messageTransformerFactory);
+            if (!subscription.RunAsync)
+            {
+                var types = new Type[]
+                {
+                    typeof(IAmACommandProcessorProvider), typeof(Subscription),  typeof(IAmAMessageMapperRegistry),typeof(IAmAMessageTransformerFactory)
+                };
+                
+                var consumerFactoryCtor = consumerFactoryType.GetConstructor(
+                    BindingFlags.Instance | BindingFlags.Public, null,
+                    CallingConventions.HasThis, types, null
+                );
+                    
+                var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(), subscription, _messageMapperRegistry,  _messageTransformerFactory });   
 
-            return consumerFactory.Create();
+                return consumerFactory.Create();
+            }
+            else
+            {
+               
+                 var types = new Type[]
+                 {
+                     typeof(IAmACommandProcessorProvider),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), typeof(IAmAMessageTransformerFactoryAsync)
+                 };
+                
+                 var consumerFactoryCtor = consumerFactoryType.GetConstructor(
+                         BindingFlags.Instance | BindingFlags.Public, null,
+                         CallingConventions.HasThis, types, null
+                     );
+                     
+                 var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(),  subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync });  
+
+                return consumerFactory.Create();
+            }
         }
     }
 }

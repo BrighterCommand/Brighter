@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         [Fact]
         public void Command_Is_Not_Stored_If_The_Handler_Is_Not_Successful()
         {
-            Guid id = Guid.NewGuid();
+            string id = Guid.NewGuid().ToString();
 
             Assert.Throws<NotImplementedException>(() => _commandProcessor.Send(new MyCommandToFail { Id = id}));
 
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

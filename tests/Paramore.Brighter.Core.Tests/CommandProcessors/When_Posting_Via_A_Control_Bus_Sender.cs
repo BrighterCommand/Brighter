@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -41,23 +42,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly ControlBusSender _controlBusSender;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutboxSync _fakeOutbox;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeMessageProducer _producer;
 
         public ControlBusSenderPostMessageTests()
         {
+            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutboxSync();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _producer = new FakeMessageProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            const string topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy
@@ -68,12 +70,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
+            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
+            
+            _fakeOutbox = new FakeOutbox();
+            
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry, 
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
+
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
-                messageMapperRegistry,
-                _fakeOutbox,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducer},}));
+                policyRegistry,
+                bus
+            );
 
             _controlBusSender = new ControlBusSender(_commandProcessor);
         }
@@ -97,7 +113,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public void Dispose()
         {
             _controlBusSender.Dispose();
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

@@ -17,11 +17,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
          {
              //Arrange
              var header = new MessageHeader(
-                 messageId: Guid.NewGuid(),
+                 messageId: Guid.NewGuid().ToString(),
                  topic: "MyTopic",
                  messageType: MessageType.MT_EVENT,
                  timeStamp: DateTime.UtcNow,
-                 correlationId: Guid.NewGuid());
+                 correlationId: Guid.NewGuid().ToString()
+                );
 
              var myGuid = Guid.NewGuid();
              var expectedBag = new Dictionary<string, object>
@@ -50,7 +51,10 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
              //Assert
              foreach (var key in expectedBag.Keys)
              {
-                 if (key != "myArrayKey") deserializedHeader.Bag[key].Should().Be(expectedBag[key]);
+                 if (key != "myArrayKey")
+                 {
+                     deserializedHeader.Bag[key].Should().Be(expectedBag[key]);
+                 }
                  if (key == "myArrayKey")
                  {
                      var expectedVals = (int[])expectedBag[key];

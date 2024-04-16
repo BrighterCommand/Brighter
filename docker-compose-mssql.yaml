@@ -6,12 +6,12 @@ services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server
     ports:
-      - "1433:1433"
+      - "11433:1433"
     volumes:
       - sqlserver-data:/var/opt/mssql
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=Password123!
+      - 'ACCEPT_EULA=Y'
+      - 'SA_PASSWORD=Password123!'
 
 volumes:
   sqlserver-data:

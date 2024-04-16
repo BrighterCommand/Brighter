@@ -6,6 +6,7 @@ using Amazon.Runtime;
 using GreetingsEntities;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
+using GreetingsPorts.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -28,7 +29,8 @@ namespace GreetingsWeb
     {
         private const string _outBoxTableName = "Outbox";
         private IWebHostEnvironment _env;
-        
+        private IAmazonDynamoDB _client;
+
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
@@ -75,9 +77,9 @@ namespace GreetingsWeb
 
         private void ConfigureDynamo(IServiceCollection services)
         {
-            IAmazonDynamoDB client = CreateAndRegisterClient(services);
-            CreateEntityStore(client);
-            CreateOutbox(client, services);
+            _client = CreateAndRegisterClient(services);
+            CreateEntityStore();
+            CreateOutbox(services);
         }
 
        private IAmazonDynamoDB CreateAndRegisterClient(IServiceCollection services)
@@ -102,9 +104,6 @@ namespace GreetingsWeb
             var dynamoDb = new AmazonDynamoDBClient(credentials, clientConfig);
             services.Add(new ServiceDescriptor(typeof(IAmazonDynamoDB), dynamoDb));
 
-            var dynamoDbConfiguration = new DynamoDbConfiguration();
-            services.Add(new ServiceDescriptor(typeof(DynamoDbConfiguration), dynamoDbConfiguration));
-            
             return dynamoDb;
         }     
         
@@ -113,10 +112,10 @@ namespace GreetingsWeb
             throw new NotImplementedException();
         }
 
-         private void CreateEntityStore(IAmazonDynamoDB client)
+         private void CreateEntityStore()
         {
             var tableRequestFactory = new DynamoDbTableFactory();
-            var dbTableBuilder = new DynamoDbTableBuilder(client);
+            var dbTableBuilder = new DynamoDbTableBuilder(_client);
     
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<Person>(
                 new DynamoDbCreateProvisionedThroughput
@@ -134,10 +133,10 @@ namespace GreetingsWeb
             }
         }
             
-        private void CreateOutbox(IAmazonDynamoDB client, IServiceCollection services)
+        private void CreateOutbox(IServiceCollection services)
         {
             var tableRequestFactory = new DynamoDbTableFactory();
-            var dbTableBuilder = new DynamoDbTableBuilder(client);
+            var dbTableBuilder = new DynamoDbTableBuilder(_client);
             
             var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
                     new DynamoDbCreateProvisionedThroughput(
@@ -159,6 +158,22 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
+            var producerRegistry = new RmqProducerRegistryFactory(
+                new RmqMessagingGatewayConnection
+                {
+                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                    Exchange = new Exchange("paramore.brighter.exchange"),
+                },
+                new RmqPublication[]{
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("GreetingMade"),
+                        RequestType = typeof(GreetingMade),
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }}
+            ).Create();
+            
             services.AddBrighter(options =>
              {
                  //we want to use scoped, so make sure everything understands that which needs to
@@ -167,26 +182,16 @@ namespace GreetingsWeb
                  options.MapperLifetime = ServiceLifetime.Singleton;
                  options.PolicyRegistry = new GreetingsPolicy();
              })
-             .UseExternalBus(new RmqProducerRegistryFactory(
-                     new RmqMessagingGatewayConnection
-                     {
-                         AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                         Exchange = new Exchange("paramore.brighter.exchange"),
-                     },
-                     new RmqPublication[]{
-                         new RmqPublication
-                        {
-                            Topic = new RoutingKey("GreetingMade"),
-                            MaxOutStandingMessages = 5,
-                            MaxOutStandingCheckIntervalMilliSeconds = 500,
-                            WaitForConfirmsTimeOutInMilliseconds = 1000,
-                            OutBoxBag = new Dictionary<string, object> {{"Topic", "GreetingMade"}},
-                            MakeChannels = OnMissingChannel.Create
-                        }}
-                 ).Create()
-             )
-             .UseDynamoDbOutbox(ServiceLifetime.Singleton)
-             .UseDynamoDbTransactionConnectionProvider(typeof(DynamoDbUnitOfWork), ServiceLifetime.Scoped)
+             .UseExternalBus((configure) =>
+             {
+                 configure.ProducerRegistry = producerRegistry;
+                 configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration());
+                 configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
+                 configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
+                 configure.MaxOutStandingMessages = 5;
+                 configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+                 configure.OutBoxBag = new Dictionary<string, object> { { "Topic", "GreetingMade" } };
+             })
              .UseOutboxSweeper(options => { options.Args.Add("Topic", "GreetingMade"); })
              .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }

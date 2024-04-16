@@ -38,43 +38,50 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxDeletingMessagesTests 
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutboxSync _mySqlOutboxSync;
-        private readonly Message _messageEarliest;
-        private readonly Message _message2;
-        private readonly Message _messageLatest;
-        private IEnumerable<Message> _retrievedMessages;
+        private readonly MySqlOutbox _mySqlOutbox;
+        private readonly Message _firstMessage;
+        private readonly Message _secondMessage;
+        private readonly Message _thirdMessage;
 
         public MySqlOutboxDeletingMessagesTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
+            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
 
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            _firstMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), 
+                new MessageBody("Body")
+            );
+            _secondMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), 
+                new MessageBody("Body2")
+            );
+            _thirdMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), 
+                new MessageBody("Body3")
+            );
             
         }
 
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            _mySqlOutboxSync.Add(_messageEarliest);
-            _mySqlOutboxSync.Add(_message2);
-            _mySqlOutboxSync.Add(_messageLatest);
-            _retrievedMessages = _mySqlOutboxSync.Get();
+            _mySqlOutbox.Add(_firstMessage);
+            _mySqlOutbox.Add(_secondMessage);
+            _mySqlOutbox.Add(_thirdMessage);
+            
+            _mySqlOutbox.Delete([_firstMessage.Id]);
 
-            _mySqlOutboxSync.Delete(_retrievedMessages.First().Id);
-
-            var remainingMessages = _mySqlOutboxSync.Get();
+            var remainingMessages = _mySqlOutbox.OutstandingMessages(0);
 
             remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            remainingMessages.Should().Contain(_secondMessage);
+            remainingMessages.Should().Contain(_thirdMessage);
             
-            _mySqlOutboxSync.Delete(remainingMessages.Select(m => m.Id).ToArray());
+            _mySqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id});
 
-            var messages = _mySqlOutboxSync.Get();
+            var messages = _mySqlOutbox.OutstandingMessages(0);
 
             messages.Should().HaveCount(0);
         }
@@ -82,21 +89,21 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_Removing_Messages_From_The_OutboxAsync()
         {
-            var messages = new List<Message> { _messageEarliest, _message2, _messageLatest };
-            _mySqlOutboxSync.Add(messages);
-            _retrievedMessages = await _mySqlOutboxSync.GetAsync();
+            _mySqlOutbox.Add(_firstMessage);
+            _mySqlOutbox.Add(_secondMessage);
+            _mySqlOutbox.Add(_thirdMessage);
 
-            await _mySqlOutboxSync.DeleteAsync(CancellationToken.None, _retrievedMessages.First().Id);
+            await _mySqlOutbox.DeleteAsync(new []{_firstMessage.Id}, cancellationToken: CancellationToken.None);
 
-            var remainingMessages = await _mySqlOutboxSync.GetAsync();
-
+            var remainingMessages = await _mySqlOutbox.OutstandingMessagesAsync(0);
+                                                                                                       
             remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            remainingMessages.Should().Contain(_secondMessage);
+            remainingMessages.Should().Contain(_thirdMessage);
             
-            await _mySqlOutboxSync.DeleteAsync(CancellationToken.None, remainingMessages.Select(m => m.Id).ToArray());
+            await _mySqlOutbox.DeleteAsync(new []{_secondMessage.Id, _thirdMessage.Id}, cancellationToken: CancellationToken.None);
 
-            var finalMessages = await _mySqlOutboxSync.GetAsync();
+            var finalMessages = await _mySqlOutbox.OutstandingMessagesAsync(0);
 
             finalMessages.Should().HaveCount(0);
         }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
@@ -29,17 +30,30 @@ namespace Tests
         }
 
         [Fact]
-        public void WithProducerRegistry()
+        public void WithExternalBus()
         {
             var serviceCollection = new ServiceCollection();
-            var producer = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { "MyTopic", new FakeProducerSync() }, });
+            const string mytopic = "MyTopic";
+            var producerRegistry = new ProducerRegistry(
+                new Dictionary<string, IAmAMessageProducer>
+                {
+                    { mytopic, new FakeProducer{ Publication = { Topic = new RoutingKey(mytopic)}} },
+                });
+            
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(type => new TestEventMessageMapper()), 
+                new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
+            );
 
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
             serviceCollection
                 .AddBrighter()
-                .UseInMemoryOutbox()
-                .UseExternalBus(producer, false)
+                .UseExternalBus((config) =>
+                {
+                    config.ProducerRegistry = producerRegistry;
+                    config.MessageMapperRegistry = messageMapperRegistry;
+                })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -66,7 +80,6 @@ namespace Tests
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
             };
-
             
             serviceCollection
                 .AddBrighter(options => options.PolicyRegistry = policyRegistry)
@@ -98,31 +111,34 @@ namespace Tests
 
     }
 
-    internal class FakeProducerSync : IAmAMessageProducerSync, IAmAMessageProducerAsync
+    internal class FakeProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
-        public int MaxOutStandingMessages { get; set; } = -1;
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+        public List<Message> SentMessages { get; } = new();
+        
+        public Publication Publication { get; } = new();
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            SentMessages.Clear();
         }
 
         public Task SendAsync(Message message)
         {
-            throw new NotImplementedException();
+            var tcs = new TaskCompletionSource();
+            Send(message);
+            tcs.SetResult();
+            return tcs.Task;
         }
 
         public void Send(Message message)
         {
-            throw new NotImplementedException();
+            SentMessages.Add(message); 
         }
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
-            throw new NotImplementedException();
+            Task.Delay(TimeSpan.FromMilliseconds(delayMilliseconds)).Wait();
+            Send(message);
         }
     }
 }

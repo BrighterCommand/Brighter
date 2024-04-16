@@ -28,6 +28,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -42,28 +43,29 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly Message _message2;
-        private readonly FakeOutboxSync _fakeOutboxSync;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeMessageProducer _producer;
 
         public CommandProcessorPostBoxImplicitClearAsyncTests()
         {
+            const string topic = "MyCommand";
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _fakeOutboxSync = new FakeOutboxSync();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _producer = new FakeMessageProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            const string topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
             _message2 = new Message(
-                new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND),
+                new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy
@@ -74,25 +76,47 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                { topic, _producer },
+            });
+
+            var policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
+            }; 
+            
+            _fakeOutbox = new FakeOutbox();
+            
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry,
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
+
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
-                messageMapperRegistry,
-                _fakeOutboxSync,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducer},}));
+                policyRegistry,
+                bus
+            );
         }
 
         [Fact]
         public async Task When_Implicit_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
-            await _fakeOutboxSync.AddAsync(_message);
-            await _fakeOutboxSync.AddAsync(_message2);
+            await _fakeOutbox.AddAsync(_message);
+            await _fakeOutbox.AddAsync(_message2);
 
             _commandProcessor.ClearAsyncOutbox(1,1);
 
             for (var i = 1; i <= 10; i++)
             {
-                if (_fakeMessageProducer.SentMessages.Count == 1) break;
+                if (_producer.SentMessages.Count == 1) break;
                 await Task.Delay(i * 100);
             }
 
@@ -101,22 +125,22 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //Try again and kick off another background thread
             for (var i = 1; i <= 10; i++)
             {
-                if (_fakeMessageProducer.SentMessages.Count == 2)
+                if (_producer.SentMessages.Count == 2)
                     break;
                 await Task.Delay(i * 100);
                 _commandProcessor.ClearAsyncOutbox(1, 1);
             }
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            _producer.MessageWasSent.Should().BeTrue();
 
-            var sentMessage = _fakeMessageProducer.SentMessages.FirstOrDefault(m => m.Id == _message.Id);
+            var sentMessage = _producer.SentMessages.FirstOrDefault(m => m.Id == _message.Id);
             sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
             sentMessage.Body.Value.Should().Be(_message.Body.Value);
 
-            var sentMessage2 = _fakeMessageProducer.SentMessages.FirstOrDefault(m => m.Id == _message2.Id);
+            var sentMessage2 = _producer.SentMessages.FirstOrDefault(m => m.Id == _message2.Id);
             sentMessage2.Should().NotBeNull();
             sentMessage2.Id.Should().Be(_message2.Id);
             sentMessage2.Header.Topic.Should().Be(_message2.Header.Topic);
@@ -125,7 +149,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

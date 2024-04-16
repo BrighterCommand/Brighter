@@ -96,7 +96,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if (_serviceBusReceiver is {IsClosedOrClosing: true} && !_subscriptionConfiguration.RequireSession)
                 {
                     s_logger.LogDebug("Message Receiver is closing...");
-                    var message = new Message(new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_QUIT), new MessageBody(string.Empty));
+                    var message = new Message(
+                        new MessageHeader(string.Empty, _topicName, MessageType.MT_QUIT), 
+                        new MessageBody(string.Empty));
                     messagesToReturn.Add(message);
                     return messagesToReturn.ToArray();
                 }
@@ -283,8 +285,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             
             var handledCount = GetHandledCount(azureServiceBusMessage);
             var headers = new MessageHeader(azureServiceBusMessage.Id, _topicName, messageType, DateTime.UtcNow,
-                handledCount, 0, azureServiceBusMessage.CorrelationId, contentType: azureServiceBusMessage.ContentType,
-                replyTo: replyAddress);
+                handledCount, 0, azureServiceBusMessage.CorrelationId,
+                replyTo: replyAddress, contentType: azureServiceBusMessage.ContentType);
 
             if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
                 headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
@@ -379,7 +381,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
         }
 
-        private void HandleASBException(ServiceBusException ex, Guid messageId)
+        private void HandleASBException(ServiceBusException ex, string messageId)
         {
             if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
                 s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId);

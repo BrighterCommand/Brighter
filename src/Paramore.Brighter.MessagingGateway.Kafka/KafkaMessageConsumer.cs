@@ -20,6 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -33,7 +34,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    /// <inheritdoc />
+    /// <inheritdoc cref="Paramore.Brighter.IAmAMessageConsumer" />
     /// <summary>
     /// Class KafkaMessageConsumer is an implementation of <see cref="IAmAMessageConsumer"/>
     /// and provides the facilities to consume messages from a Kafka broker for a topic
@@ -107,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (configuration is null)
             {
-                throw new ConfigurationException("You must set a KafkaMessaginGatewayConfiguration to connect to a broker");
+                throw new ConfigurationException("You must set a KafkaMessagingGatewayConfiguration to connect to a broker");
             }
             
             if (routingKey is null)
@@ -134,12 +135,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
                 SslCaLocation = configuration.SslCaLocation
             };
-            _consumerConfig = new ConsumerConfig(_clientConfig)
+            
+            
+            // We repeat properties because copying them from the ClientConfig modifies the ClientConfig in place 
+            _consumerConfig = new ConsumerConfig()
             {
-                GroupId = groupId,
+                BootstrapServers = string.Join(",", configuration.BootStrapServers), 
                 ClientId = configuration.Name,
+                Debug = configuration.Debug,
+                SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                SaslUsername = configuration.SaslUsername,
+                SaslPassword = configuration.SaslPassword,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                SslCaLocation = configuration.SslCaLocation,
+                GroupId = groupId,
                 AutoOffsetReset = offsetDefault,
-                BootstrapServers = string.Join(",", configuration.BootStrapServers),
                 SessionTimeoutMs = sessionTimeoutMs,
                 MaxPollIntervalMs = maxPollIntervalMs,
                 EnablePartitionEof = true,
@@ -215,7 +226,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 })
                 .Build();
 
-            s_logger.LogInformation("Kakfa consumer subscribing to {Topic}", Topic);
+            s_logger.LogInformation("Kafka consumer subscribing to {Topic}", Topic);
             _consumer.Subscribe(new []{ Topic.Value });
 
             _creator = new KafkaMessageCreator();
@@ -292,7 +303,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
-        // <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
+        /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
         public Message[] Receive(int timeoutInMilliseconds)
         {
             try
@@ -558,7 +569,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch (Exception ex)
             {
                 //this may happen if the offset is already committed
-                s_logger.LogDebug("Error committing the current offset to Kakfa before closing: {ErrorMessage}", ex.Message);
+                s_logger.LogDebug("Error committing the current offset to Kafka before closing: {ErrorMessage}", ex.Message);
             }
         }
 

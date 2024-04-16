@@ -39,7 +39,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageProducerDelayedMessageTests()
         {
-            var header = new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
+            var header = new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
             var originalMessage = new Message(header, new MessageBody("test3 content"));
 
             var mutatedHeader = new MessageHeader(header.Id, Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageConsumer.Acknowledge(message);
 
             //now requeue with a delay
-            _message.UpdateHandledCount();
+            _message.Header.UpdateHandledCount();
             _messageConsumer.Requeue(_message, 1000);
 
             //receive and assert

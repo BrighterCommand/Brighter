@@ -70,25 +70,28 @@ namespace GreetingsServer
                     ChannelFactory amAChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     var producer = new RmqMessageProducer(rmqConnection);
 
+                    var producerRegistry = new RmqProducerRegistryFactory(
+                        rmqConnection,
+                        new RmqPublication[]
+                        {
+                            new()
+                            {
+                                //TODO: We don't know the reply routing key, but need a topic name, we could make this simpler
+                                Topic = new RoutingKey("Reply"),
+                                RequestType = typeof(GreetingReply),
+                                MakeChannels = OnMissingChannel.Assume
+                            }
+                        }).Create();
+                    
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = amAChannelFactory;
                     })
-                    .UseInMemoryOutbox()
-                    .UseExternalBus(
-                        new RmqProducerRegistryFactory(
-                            rmqConnection,
-                            new RmqPublication[]
-                            {
-                                new()
-                                {
-                                    //TODO: We don't know the reply routing key, but need a topic name, we could make this simpler
-                                    Topic = new RoutingKey("Reply"),
-                                    MakeChannels = OnMissingChannel.Assume
-                                }
-                            }).Create(),
-                        true)
+                        .UseExternalBus((configure) =>
+                        {
+                            configure.ProducerRegistry = producerRegistry;
+                        })    
                     .AutoFromAssemblies();
 
 

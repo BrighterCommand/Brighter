@@ -26,20 +26,23 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry());
+            
+            var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
             var channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessor, messageMapperRegistry) 
+             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null) 
                 { Channel = channel, TimeoutInMilliseconds = 5000 };
 
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
+            var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
             channel.Enqueue(message);
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             channel.Enqueue(quitMessage);
         }
 

@@ -23,7 +23,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public AWSAssumeInfrastructureTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);

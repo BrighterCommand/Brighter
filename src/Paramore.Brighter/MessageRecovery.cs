@@ -34,7 +34,16 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageRecoverer : IAmAMessageRecoverer
     {
-        public void Repost(List<string> messageIds, IAmAnOutboxSync<Message> outBox, IAmAMessageProducerSync messageProducerSync)
+        /// <summary>
+        /// Repost the messages with these ids
+        /// </summary>
+        /// <param name="messageIds">The list of Ids to repost</param>
+        /// <param name="outBox">An outbox that holds the messages that we want to resend</param>
+        /// <param name="messageProducerSync">A message producer with which to send via a broker</param>
+        /// <typeparam name="T">The type of the message</typeparam>
+        /// <typeparam name="TTransaction">The type of transaction supported by the outbox</typeparam>
+        public void Repost<T, TTransaction>(List<string> messageIds, IAmAnOutboxSync<T, TTransaction> outBox, IAmAMessageProducerSync messageProducerSync)
+            where T : Message
         {
             var foundMessages = GetMessagesFromOutBox(outBox, messageIds);
             foreach (var foundMessage in foundMessages)
@@ -48,11 +57,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="outBox">The store to retrieve from</param>
         /// <param name="messageIds">The messages to retrieve</param>
-        /// <returns></returns>
-        private static IEnumerable<Message> GetMessagesFromOutBox(IAmAnOutboxSync<Message> outBox, IReadOnlyCollection<string> messageIds)
+        /// <typeparam name="T">The type of the message</typeparam>
+        /// <typeparam name="TTransaction">The type of transaction supported by the outbox</typeparam>
+        /// <returns>The selected messages</returns>
+        private static IEnumerable<Message> GetMessagesFromOutBox<T, TTransaction>(IAmAnOutboxSync<T, TTransaction> outBox, IReadOnlyCollection<string> messageIds)
+            where T : Message
         {
             IEnumerable<Message> foundMessages = messageIds 
-                .Select(messageId => outBox.Get(Guid.Parse(messageId)))
+                .Select(messageId => outBox.Get(messageId))
                 .Where(fm => fm != null)
                 .ToList();
 

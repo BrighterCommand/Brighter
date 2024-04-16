@@ -1,13 +1,12 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DapperExtensions;
-using DapperExtensions.Predicate;
+using Dapper;
 using GreetingsEntities;
 using GreetingsPorts.Policies;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
-using Paramore.Brighter.Dapper;
+using Paramore.Brighter;
 using Paramore.Darker;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -16,20 +15,20 @@ namespace GreetingsPorts.Handlers
 {
     public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider;
 
-        public FindPersonByNameHandlerAsync(IUnitOfWork uow)
+        public FindPersonByNameHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
         {
-            _uow = uow;
+            _relationalDbConnectionProvider = relationalDbConnectionProvider;
         }
-       
+
         [QueryLogging(0)]
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
-            var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, query.Name);
-            var people = await _uow.Database.GetListAsync<Person>(searchbyName);
-            var person = people.Single();
+            await using var connection = await _relationalDbConnectionProvider .GetConnectionAsync(cancellationToken);
+            var people = await connection.QueryAsync<Person>("select * from Person where name = @name", new {name = query.Name});
+            var person = people.SingleOrDefault();
 
             return new FindPersonResult(person);
         }

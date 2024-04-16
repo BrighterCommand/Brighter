@@ -39,22 +39,34 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
-        private readonly IAmACommandProcessor _commandProcessor;
         private readonly Subscription _subscription;
+        private readonly Publication _publication;
 
         public MessageDispatcherResetConnection()
         {
             _channel = new FakeChannel();
-            _commandProcessor = new SpyCommandProcessor();
+            IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            _subscription = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { _subscription });
+            _subscription = new Subscription<MyEvent>(
+                new SubscriptionName("test"), 
+                noOfPerformers: 1, 
+                timeoutInMilliseconds: 1000, 
+                channelFactory: new InMemoryChannelFactory(_channel), 
+                channelName: new ChannelName("fakeChannel"), 
+                routingKey: new RoutingKey("fakekey")
+            );
+            
+            _publication = new Publication{Topic = _subscription.RoutingKey, RequestType = typeof(MyEvent)};
+            
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { _subscription }, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapper().MapToMessage(@event, _publication);
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
@@ -70,7 +82,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Open(_subscription);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapper().MapToMessage(@event, _publication);
             _channel.Enqueue(message);
 
             Task.Delay(1000).Wait();

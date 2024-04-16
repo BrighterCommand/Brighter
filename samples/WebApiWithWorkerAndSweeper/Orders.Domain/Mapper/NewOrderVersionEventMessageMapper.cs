@@ -6,9 +6,9 @@ namespace Orders.Domain.Mapper;
 
 public class NewOrderVersionEventMessageMapper : IAmAMessageMapper<NewOrderVersionEvent>
 {
-    public Message MapToMessage(NewOrderVersionEvent request)
+    public Message MapToMessage(NewOrderVersionEvent request, Publication publication)
     {
-        var header = new MessageHeader(messageId: request.Id, topic: NewOrderVersionEvent.Topic, messageType: MessageType.MT_EVENT);
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: MessageType.MT_EVENT);
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);
         return message;
@@ -16,6 +16,8 @@ public class NewOrderVersionEventMessageMapper : IAmAMessageMapper<NewOrderVersi
 
     public NewOrderVersionEvent MapToRequest(Message message)
     {
+#pragma warning disable CS8603 // Possible null reference return.
         return JsonSerializer.Deserialize<NewOrderVersionEvent>(message.Body.Value, JsonSerialisationOptions.Options);
+#pragma warning restore CS8603 // Possible null reference return.
     }
 }

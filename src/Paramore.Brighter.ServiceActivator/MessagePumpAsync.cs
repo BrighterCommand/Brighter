@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -39,6 +40,8 @@ namespace Paramore.Brighter.ServiceActivator
     /// <typeparam name="TRequest">The Request on the Data Type Channel</typeparam>
     public class MessagePumpAsync<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
+        private readonly UnwrapPipelineAsync<TRequest> _unwrapPipeline;
+        
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
@@ -47,24 +50,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         public MessagePumpAsync(
             IAmACommandProcessorProvider commandProcessorProvider,
-            IAmAMessageMapperRegistry messageMapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
-            : base(commandProcessorProvider, messageMapperRegistry, messageTransformerFactory)
+            IAmAMessageMapperRegistryAsync messageMapperRegistry, 
+            IAmAMessageTransformerFactoryAsync messageTransformerFactory) 
+            : base(commandProcessorProvider)
         {
+            var transformPipelineBuilder = new TransformPipelineBuilderAsync(messageMapperRegistry, messageTransformerFactory);
+            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
-
-        /// <summary>
-        /// Constructs a message pump 
-        /// </summary>
-        /// <param name="commandProcessor">A command processor</param>
-        /// <param name="messageMapperRegistry">The registry of mappers</param>
-        /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
-        public MessagePumpAsync(
-            IAmACommandProcessor commandProcessor, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
-            : this(new CommandProcessorProvider(commandProcessor), messageMapperRegistry, messageTransformerFactory)
-        {}
 
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
@@ -78,32 +70,39 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    Run(SendAsync, request);
+                    RunDispatch(SendAsync, request);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    Run(PublishAsync, request);
+                    RunDispatch(PublishAsync, request);
                     break;
                 }
             }
         }
-        
-        private static void Run(Action<TRequest> act, TRequest request)
+
+        protected override TRequest TranslateMessage(Message message)
         {
-            if (act == null) throw new ArgumentNullException("act");
+            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
+            return RunTranslate(TranslateAsync, message);
+        }
+
+        private static void RunDispatch(Action<TRequest, CancellationToken> act, TRequest request, CancellationToken cancellationToken = default)
+        {
+            if (act == null) throw new ArgumentNullException(nameof(act));
 
             var prevCtx = SynchronizationContext.Current;
+            
             try
             {
                 // Establish the new context
                 var context = new BrighterSynchronizationContext();
                 SynchronizationContext.SetSynchronizationContext(context);
-
+                
                 context.OperationStarted();
-
-                act(request);
+                
+                act(request, cancellationToken);
 
                 context.OperationCompleted();
 
@@ -116,15 +115,66 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
         
-        private async void PublishAsync(TRequest request)
+        private static TRequest RunTranslate(Func<Message, CancellationToken, Task<TRequest>> act, Message message, CancellationToken cancellationToken = default)
         {
-            await CommandProcessorProvider.Get().PublishAsync(request, continueOnCapturedContext: true);
+            if (act == null) throw new ArgumentNullException(nameof(act));
+
+            var prevCtx = SynchronizationContext.Current;
+            try
+            {
+                // Establish the new context
+                var context = new BrighterSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(context);
+
+                context.OperationStarted();
+
+                var future = act(message, cancellationToken);
+                
+                future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
+
+                // Pump continuations and propagate any exceptions
+                context.RunOnCurrentThread();
+
+                return future.GetAwaiter().GetResult();
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(prevCtx);
+            }
+        }
+        
+        private async void PublishAsync(TRequest request, CancellationToken cancellationToken = default)
+        {
+            await CommandProcessorProvider.Get().PublishAsync(request, continueOnCapturedContext: true, cancellationToken);
         }
 
-        private async void SendAsync(TRequest request)
+        private async void SendAsync(TRequest request, CancellationToken cancellationToken = default)
         {
-            await CommandProcessorProvider.Get().SendAsync(request, continueOnCapturedContext: true);
+            await CommandProcessorProvider.Get().SendAsync(request, continueOnCapturedContext: true, cancellationToken);
         }
 
+        private async Task<TRequest> TranslateAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                return await _unwrapPipeline.UnwrapAsync(message, cancellationToken);
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
+        }
     }
 }

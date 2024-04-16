@@ -4,8 +4,10 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -19,23 +21,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutboxSync _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
 
         public CommandProcessorDepositPostTests()
         {
+            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutboxSync();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            const string topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy
@@ -46,12 +49,35 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+            var producerRegistry =
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                {
+                    { topic, _producer },
+                });
+
+            var policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+            }; 
+            
+            _fakeOutbox = new FakeOutbox();
+            
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry,
                 messageMapperRegistry,
-                _fakeOutbox,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}));
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
+        
+            CommandProcessor.ClearServiceBus();
+            _commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(), 
+                policyRegistry,
+                bus
+            );
         }
 
 
@@ -64,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //assert
             
             //message should not be posted
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
+            _producer.MessageWasSent.Should().BeFalse();
             
             //message should correspond to the command
             var depositedPost = _fakeOutbox.Get(postedMessageId);
@@ -81,7 +107,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

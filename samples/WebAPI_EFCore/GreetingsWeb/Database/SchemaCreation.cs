@@ -140,7 +140,8 @@ namespace GreetingsWeb.Database
 
             using var existsQuery = sqlConnection.CreateCommand();
             existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
-            bool exists = existsQuery.ExecuteScalar() != null;
+            var findOutbox = existsQuery.ExecuteScalar();
+            bool exists = findOutbox is long and > 0;
 
             if (exists) return;
 

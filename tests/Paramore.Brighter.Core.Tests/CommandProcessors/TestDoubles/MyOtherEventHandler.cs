@@ -29,9 +29,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyOtherEventHandler : RequestHandler<MyEvent>
     {
-        private readonly IDictionary<string, Guid> _receivedMessages;
+        private readonly IDictionary<string, string> _receivedMessages;
 
-        public MyOtherEventHandler(IDictionary<string, Guid> receivedMessages)
+        public MyOtherEventHandler(IDictionary<string, string> receivedMessages)
         {
             _receivedMessages = receivedMessages;
         }

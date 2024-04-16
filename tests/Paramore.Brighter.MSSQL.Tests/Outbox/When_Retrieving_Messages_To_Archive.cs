@@ -23,11 +23,11 @@ public class MsSqlArchiveFetchTests : IDisposable
         _msSqlTestHelper.SetupMessageDb();
 
         _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-        _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+        _messageEarliest = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
-        _messageDispatched = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+        _messageDispatched = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
-        _messageUnDispatched = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+        _messageUnDispatched = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
     }
     
@@ -38,9 +38,12 @@ public class MsSqlArchiveFetchTests : IDisposable
         await _sqlOutbox.MarkDispatchedAsync(_messageEarliest.Id, DateTime.UtcNow.AddHours(-3));
         await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id);
         
-        var allDispatched = await _sqlOutbox.DispatchedMessagesAsync(0, 100, CancellationToken.None);
-        var messagesOverAnHour = await _sqlOutbox.DispatchedMessagesAsync(1, 100, CancellationToken.None);
-        var messagesOver4Hours = await _sqlOutbox.DispatchedMessagesAsync(4, 100, CancellationToken.None);
+        var allDispatched = 
+            await _sqlOutbox.DispatchedMessagesAsync(0, 100, cancellationToken: CancellationToken.None);
+        var messagesOverAnHour = 
+            await _sqlOutbox.DispatchedMessagesAsync(1, 100, cancellationToken: CancellationToken.None);
+        var messagesOver4Hours = 
+            await _sqlOutbox.DispatchedMessagesAsync(4, 100, cancellationToken: CancellationToken.None);
         
         //Assert
         Assert.Equal(2, allDispatched.Count());

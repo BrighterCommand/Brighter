@@ -38,21 +38,27 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
-        private readonly SpyRequeueCommandProcessor _commandProcessor;
 
         public MessagePumpUnacceptableMessageTests()
         {
-            _commandProcessor = new SpyRequeueCommandProcessor();
+            SpyRequeueCommandProcessor commandProcessor = new();
+            var provider = new CommandProcessorProvider(commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            {
+                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
+            };
 
             var myMessage = JsonSerializer.Serialize(new MyEvent());
-            var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
+            var unacceptableMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_UNACCEPTABLE), 
+                new MessageBody(myMessage)
+            );
 
             _channel.Enqueue(unacceptableMessage);
         }
@@ -63,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(new[] { task });

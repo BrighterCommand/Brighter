@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Amazon.S3;
@@ -57,22 +58,26 @@ namespace GreetingsSender
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
                 var topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName());
+
+                var producerRegistry = new SnsProducerRegistryFactory(
+                    awsConnection,
+                    new SnsPublication[]
+                    {
+                        new()
+                        {
+                            Topic = topic,
+                            RequestType = typeof(GreetingEvent),
+                            FindTopicBy = TopicFindBy.Convention,
+                            MakeChannels = OnMissingChannel.Create
+                        }
+                    }
+                ).Create();
                 
                 serviceCollection.AddBrighter()
-                    .UseInMemoryOutbox()
-                    .UseExternalBus(new SnsProducerRegistryFactory(
-                        awsConnection,
-                        new SnsPublication[]
-                        {
-                            new SnsPublication
-                            {
-                               Topic = topic,
-                               FindTopicBy = TopicFindBy.Convention,
-                               MakeChannels = OnMissingChannel.Create
-                            }
-                        }
-                        ).Create()
-                    )
+                    .UseExternalBus((configure) =>
+                    {
+                        configure.ProducerRegistry = producerRegistry;
+                    })
                     .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
                 //We need this for the check as to whether an S3 bucket exists

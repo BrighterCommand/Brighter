@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// that determines how we publish to Kafka and the parameters of any topic if required.
         /// </summary>
         /// <param name="globalConfiguration">Configures how we connect to the broker</param>
-        /// <param name="publication">How do we publish, both producer parameters and topic configuration</param>
+        /// <param name="publications">The list of topics that we want to publish to</param>
         public KafkaProducerRegistryFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration, 
             IEnumerable<KafkaPublication> publications)

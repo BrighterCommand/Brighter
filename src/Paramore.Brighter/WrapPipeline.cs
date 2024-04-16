@@ -32,7 +32,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// class WrapPipeline
-    /// A pipeline with a source of a <see cref="MessageMapper"/> that:
+    /// A pipeline with a source of a <see cref="TransformPipeline{TRequest}.MessageMapper"/> that:
     /// Takes a request and maps it to a message
     /// Runs transforms on that message
     /// </summary>
@@ -47,7 +47,7 @@ namespace Paramore.Brighter
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
-            IEnumerable<IAmAMessageTransformAsync> transforms)
+            IEnumerable<IAmAMessageTransform> transforms)
         {
             MessageMapper = messageMapper;
             Transforms = transforms;
@@ -75,12 +75,12 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="request">The request to wrap</param>
-        /// <param name="cancellationToken">The cancellation token</param>
-        /// <returns></returns>
-        public async Task<Message> WrapAsync(TRequest request, CancellationToken cancellationToken = default)
+        /// <param name="publication">The publication for this channel, provides metadata such as topic or Cloud Events attributes</param>
+        /// <returns>The message created from the request via the pipeline</returns>
+        public Message Wrap(TRequest request, Publication publication)
         {
-            var message = MessageMapper.MapToMessage(request);
-            await Transforms.EachAsync(async transform => message = await transform.WrapAsync(message, cancellationToken));
+            var message = MessageMapper.MapToMessage(request, publication);
+            Transforms.Each(transform => message = transform.Wrap(message, publication));
             return message;
         }
     }

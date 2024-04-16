@@ -41,7 +41,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqMessageProducerDLQTests()
         {
            _message = new Message(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
 
             var deadLetterQueueName = $"{_message.Header.Topic}.DLQ";

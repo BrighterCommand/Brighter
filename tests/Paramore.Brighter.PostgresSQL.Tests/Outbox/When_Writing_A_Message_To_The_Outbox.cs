@@ -39,7 +39,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly string _key4 = "name4";
         private readonly string _key5 = "name5";
         private readonly Message _messageEarliest;
-        private readonly PostgreSqlOutboxSync _sqlOutboxSync;
+        private readonly PostgreSqlOutbox _sqlOutbox;
         private Message _storedMessage;
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
@@ -53,17 +53,18 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new PostgreSqlOutboxSync(_postgresSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid(), 
+                messageId:Guid.NewGuid().ToString(), 
                 topic: "test_topic", 
                 messageType: MessageType.MT_DOCUMENT, 
                 timeStamp: DateTime.UtcNow.AddDays(-1), 
                 handledCount:5, 
                 delayedMilliseconds:5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyTo",
-                contentType: "text/plain");
+                contentType: "text/plain",
+                partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -71,26 +72,27 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-            _sqlOutboxSync.Add(_messageEarliest);
+            _sqlOutbox.Add(_messageEarliest);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_PostgreSql_Outbox()
         {
-            _storedMessage = _sqlOutboxSync.Get(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
+                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-             
+            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey); 
             
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();

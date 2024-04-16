@@ -101,7 +101,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

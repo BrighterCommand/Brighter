@@ -9,34 +9,45 @@ namespace Paramore.Brighter.Sqlite.Tests
 {
     public class SqliteTestHelper
     {
+        private readonly bool _binaryMessagePayload;
         private const string TestDbPath = "test.db";
         public string ConnectionString = $"DataSource=\"{TestDbPath}\"";
-        public string TableName = "test_commands";
-        public string TableName_Messages = "test_messages";
-        private string connectionStringPath;
-        private string connectionStringPathDir;
+        public readonly string InboxTableName = "test_commands";
+        public readonly string OutboxTableName = "test_messages";
+        private string _connectionStringPath;
+        private string _connectionStringPathDir;
+        
+        public RelationalDatabaseConfiguration InboxConfiguration => new(ConnectionString, inboxTableName: InboxTableName);
+        
+        public RelationalDatabaseConfiguration OutboxConfiguration => 
+                    new(ConnectionString, outBoxTableName: OutboxTableName, binaryMessagePayload: _binaryMessagePayload);
+
+        public SqliteTestHelper(bool binaryMessagePayload = false)
+        {
+            _binaryMessagePayload = binaryMessagePayload;
+        }
 
         public void SetupCommandDb()
         {
-            connectionStringPath = GetUniqueTestDbPathAndCreateDir();
-            ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(TableName));
+            _connectionStringPath = GetUniqueTestDbPathAndCreateDir();
+            ConnectionString = $"DataSource=\"{_connectionStringPath}\"";
+            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(InboxTableName));
         }
 
         public void SetupMessageDb()
         {
-            connectionStringPath = GetUniqueTestDbPathAndCreateDir();
-            ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(TableName_Messages));
+            _connectionStringPath = GetUniqueTestDbPathAndCreateDir();
+            ConnectionString = $"DataSource=\"{_connectionStringPath}\"";
+            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(OutboxTableName, hasBinaryMessagePayload: _binaryMessagePayload));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()
         {
             var testRootPath = Directory.GetCurrentDirectory();
             var guidInPath = Guid.NewGuid().ToString();
-            connectionStringPathDir = Path.Combine(Path.Combine(Path.Combine(testRootPath, "bin"), "TestResults"), guidInPath);
-            Directory.CreateDirectory(connectionStringPathDir);
-            return Path.Combine(connectionStringPathDir, $"test{guidInPath}.db");
+            _connectionStringPathDir = Path.Combine(Path.Combine(Path.Combine(testRootPath, "bin"), "TestResults"), guidInPath);
+            Directory.CreateDirectory(_connectionStringPathDir);
+            return Path.Combine(_connectionStringPathDir, $"test{guidInPath}.db");
         }
 
         public async Task CleanUpDbAsync()
@@ -45,8 +56,8 @@ namespace Paramore.Brighter.Sqlite.Tests
             {
                 //add 1 MS delay to allow the file to be released
                 await Task.Delay(1);
-                File.Delete(connectionStringPath);
-                Directory.Delete(connectionStringPathDir, true);
+                File.Delete(_connectionStringPath);
+                Directory.Delete(_connectionStringPathDir, true);
             }
             catch (Exception e)
             {                

@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.Timeout
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

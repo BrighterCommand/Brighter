@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -18,21 +18,25 @@ namespace Paramore.Brighter.Core.Tests.Observability;
 public class ImplicitClearingAsyncObservabilityTests : IDisposable
 {
     private readonly CommandProcessor _commandProcessor;
-    private readonly IAmAnOutboxSync<Message> _outbox;
     private readonly MyEvent _event;
     private readonly TracerProvider _traceProvider;
     private readonly List<Activity> _exportedActivities;
 
     public ImplicitClearingAsyncObservabilityTests()
     {
-        _outbox = new InMemoryOutbox();
+        const string topic = "MyEvent";
+        
+        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox();
         _event = new MyEvent("TestEvent");
 
         var registry = new SubscriberRegistry();
         registry.Register<MyEvent, MyEventHandler>();
 
-        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+        var messageMapperRegistry = new MessageMapperRegistry(
+            null,
+            new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync())
+            );
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
         
         var container = new ServiceCollection();
         container.AddTransient<MyEvent>();
@@ -49,22 +53,36 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
         
         var retryPolicy = Policy
             .Handle<Exception>()
-            .Retry();
+            .RetryAsync();
         
         var circuitBreakerPolicy = Policy
             .Handle<Exception>()
             .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-        var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.RETRYPOLICYASYNC, circuitBreakerPolicy}};
+        var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {MyEvent.Topic, new FakeMessageProducer()}
+            {topic, new FakeMessageProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
         });
-        producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
         
-        CommandProcessor.ClearExtServiceBus();
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            policyRegistry, messageMapperRegistry,_outbox,producerRegistry);
+        IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+            producerRegistry, 
+            policyRegistry, 
+            messageMapperRegistry,
+            new EmptyMessageTransformerFactory(),
+            new EmptyMessageTransformerFactoryAsync(),
+            outbox,
+            maxOutStandingMessages: -1
+        );
+        
+        CommandProcessor.ClearServiceBus();
+        _commandProcessor = new CommandProcessor(
+            registry, 
+            handlerFactory, 
+            new InMemoryRequestContextFactory(), 
+            policyRegistry, 
+            bus
+        );
     }
 
     [Fact]
@@ -92,7 +110,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
 
     public void Dispose()
     {
-        CommandProcessor.ClearExtServiceBus();
+        CommandProcessor.ClearServiceBus();
         _traceProvider?.Dispose();
     }
 }

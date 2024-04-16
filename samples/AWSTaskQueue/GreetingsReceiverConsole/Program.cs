@@ -72,7 +72,6 @@ namespace GreetingsReceiverConsole
                             options.Subscriptions = subscriptions;
                             options.ChannelFactory = new ChannelFactory(awsConnection);
                         })
-                        .UseInMemoryOutbox()
                         .AutoFromAssemblies();
                     }
 

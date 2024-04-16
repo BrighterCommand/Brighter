@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -28,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     return new MyResponseMessageMapper();
 
                 throw new ConfigurationException($"No mapper found for {type.Name}");
-            }));
+            }), null);
             
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
@@ -49,22 +50,39 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             {
                 new Subscription<MyResponse>()
             };
+            
+            var policyRegistry = new PolicyRegistry()
+            {
+                {CommandProcessor.RETRYPOLICY, retryPolicy},
+                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
+            };
 
+            const string topic = "MyRequest";
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                { topic, new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}} }
+            });
+            
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry, 
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                new InMemoryOutbox()
+            );
+
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry
-                {
-                    {CommandProcessor.RETRYPOLICY, retryPolicy},
-                    {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
-                },
-                messageMapperRegistry,
-                new InMemoryOutbox(),
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyRequest", new FakeMessageProducerWithPublishConfirmation()},}),
-                replySubs,
-                responseChannelFactory: new InMemoryChannelFactory());
-            
+                policyRegistry,
+                bus,
+                replySubscriptions:replySubs,
+                responseChannelFactory: new InMemoryChannelFactory()
+            );
+           
             PipelineBuilder<MyRequest>.ClearPipelineCache();
 
         }
@@ -82,7 +100,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

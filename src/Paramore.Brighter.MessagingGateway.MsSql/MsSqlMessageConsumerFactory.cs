@@ -8,9 +8,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     public class MsSqlMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumerFactory>();
-        private readonly MsSqlConfiguration _msSqlConfiguration;
+        private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
 
-        public MsSqlMessageConsumerFactory(MsSqlConfiguration msSqlConfiguration)
+        public MsSqlMessageConsumerFactory(RelationalDatabaseConfiguration msSqlConfiguration)
         {
             _msSqlConfiguration = msSqlConfiguration ??
                                                   throw new ArgumentNullException(

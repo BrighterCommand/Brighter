@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
@@ -17,20 +18,23 @@ namespace Paramore.Brighter.Core.Tests.Observability;
 public class ImplicitClearingObservabilityTests : IDisposable
 {
     private readonly CommandProcessor _commandProcessor;
-    private readonly IAmAnOutboxSync<Message> _outbox;
     private readonly MyEvent _event;
     private readonly TracerProvider _traceProvider;
     private readonly List<Activity> _exportedActivities;
 
     public ImplicitClearingObservabilityTests()
     {
-        _outbox = new InMemoryOutbox();
+        const string topic = "MyEvent";
+        
+        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox();
         _event = new MyEvent("TestEvent");
 
         var registry = new SubscriberRegistry();
         registry.Register<MyEvent, MyEventHandler>();
 
-        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+        var messageMapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+            null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
         
         var container = new ServiceCollection();
@@ -53,12 +57,28 @@ public class ImplicitClearingObservabilityTests : IDisposable
         var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}};
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {MyEvent.Topic, new FakeMessageProducer()}
+            {topic, new FakeMessageProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
         });
-        producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
         
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            policyRegistry, messageMapperRegistry,_outbox,producerRegistry);
+        IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+            producerRegistry, 
+            policyRegistry, 
+            messageMapperRegistry, 
+            new EmptyMessageTransformerFactory(), 
+            new EmptyMessageTransformerFactoryAsync(),
+            outbox,
+            maxOutStandingMessages: -1
+        );
+
+        CommandProcessor.ClearServiceBus();
+        
+        _commandProcessor = new CommandProcessor(
+            registry, 
+            handlerFactory, 
+            new InMemoryRequestContextFactory(),
+            policyRegistry, 
+            bus
+        );
     }
 
     [Fact]
@@ -86,7 +106,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
 
     public void Dispose()
     {
-        CommandProcessor.ClearExtServiceBus();
+        CommandProcessor.ClearServiceBus();
         _traceProvider?.Dispose();
     }
 }

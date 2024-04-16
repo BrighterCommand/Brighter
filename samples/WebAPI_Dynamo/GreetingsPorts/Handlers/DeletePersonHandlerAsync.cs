@@ -11,18 +11,18 @@ namespace GreetingsPorts.Handlers
 {
     public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
-        private readonly DynamoDbUnitOfWork _unitOfWork;
+        private readonly IAmADynamoDbConnectionProvider _dynamoDbConnectionProvider;
 
-        public DeletePersonHandlerAsync(IAmABoxTransactionConnectionProvider unitOfWork)
+        public DeletePersonHandlerAsync(IAmADynamoDbConnectionProvider dynamoDbConnectionProvider)
         {
-            _unitOfWork = (DynamoDbUnitOfWork)unitOfWork;
+            _dynamoDbConnectionProvider = dynamoDbConnectionProvider;
         }
-        
+
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default)
         {
-            var context = new DynamoDBContext(_unitOfWork.DynamoDb);
+            var context = new DynamoDBContext(_dynamoDbConnectionProvider.DynamoDb);
             await context.DeleteAsync(deletePerson.Name, cancellationToken);
 
             return await base.HandleAsync(deletePerson, cancellationToken);

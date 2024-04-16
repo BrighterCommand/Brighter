@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json;
+using System.Transactions;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 
@@ -31,10 +32,11 @@ namespace Paramore.Brighter.Monitoring.Handlers
 {
     /// <summary>
     /// Class MonitorHandler.
-    /// The MonitorHandler raises an event via the Control Bus when we enter, exit, and if any exceptions are thrown, provided that monitoring has been enabled in the configuration.
+    /// The MonitorHandler raises an event via the Control Bus when we enter, exit, and if any exceptions are thrown,
+    /// provided that monitoring has been enabled in the configuration.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class MonitorHandler<T> : RequestHandler<T> where T: class, IRequest
+    /// <typeparam name="TRequest"></typeparam>
+    public class MonitorHandler<TRequest> : RequestHandler<TRequest> where TRequest: class, IRequest
     {
         readonly IAmAControlBusSender _controlBusSender;
         private readonly bool _isMonitoringEnabled;
@@ -69,7 +71,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
         /// </summary>
         /// <param name="command">The command.</param>
         /// <returns>TRequest.</returns>
-        public override T Handle(T command)
+        public override TRequest Handle(TRequest command)
         {
             if (_isMonitoringEnabled)
             {
@@ -84,7 +86,8 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
                             timeBeforeHandle,
-                            0));
+                            0)
+                        );
 
                     base.Handle(command);
 

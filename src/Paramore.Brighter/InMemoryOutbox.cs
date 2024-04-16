@@ -29,11 +29,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
 {
@@ -56,21 +57,6 @@ namespace Paramore.Brighter
         /// The message to be dispatched
         /// </summary>
         public Message Message { get; set; }
-
-        /// <summary>
-        /// The Id of the message as a string key
-        /// </summary>
-        public string Key => Message.Id.ToString();
-
-        /// <summary>
-        /// Turn a Guid into an inbox key - convenience wrapper
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public static string ConvertKey(Guid id)
-        {
-            return $"{id}";
-        }
     }
 
 
@@ -81,7 +67,7 @@ namespace Paramore.Brighter
     /// so you can use multiple instances safely as well
     /// </summary>
 #pragma warning disable CS0618
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmABulkOutboxSync<Message>, IAmABulkOutboxAsync<Message>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 #pragma warning restore CS0618
     {
         /// <summary>
@@ -96,18 +82,17 @@ namespace Paramore.Brighter
         /// <summary>
         /// Adds the specified message
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="outBoxTimeout"></param>
-        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        /// <param name="message">The message to add to the Outbox</param>
+        /// <param name="outBoxTimeout">How long in ms to wait; -1 forever (default -1)</param>
+        /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
 
-            var key = OutboxEntry.ConvertKey(message.Id);
-            if (!_requests.ContainsKey(key))
+            if (!_requests.ContainsKey(message.Id))
             {
-                if (!_requests.TryAdd(key, new OutboxEntry {Message = message, WriteTime = DateTime.UtcNow}))
+                if (!_requests.TryAdd(message.Id, new OutboxEntry {Message = message, WriteTime = DateTime.UtcNow}))
                 {
                     throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                 }
@@ -115,31 +100,39 @@ namespace Paramore.Brighter
         }
         
         /// <summary>
-        /// Adds the specified message
+        /// Adds the specified messages
         /// </summary>
-        /// <param name="messages"></param>
-        /// <param name="outBoxTimeout"></param>
-        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        /// <param name="messages">The messages to add to the Outbox</param>
+        /// <param name="outBoxTimeout">How long to wait in ms; -1 = forever (default -1)</param>
+        /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(
+            IEnumerable<Message> messages, 
+            int outBoxTimeout = -1, 
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null
+            )
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
 
             foreach (Message message in messages)
             {
-                Add(message, outBoxTimeout, transactionConnectionProvider);
+                Add(message, outBoxTimeout, transactionProvider);
             }
         }
 
         /// <summary>
         /// Adds the specified message
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="outBoxTimeout"></param>
+        /// <param name="message">The messages to add to the Outbox</param>
+        /// <param name="outBoxTimeout">How long to wait in ms; -1 = forever (default -1)</param>
+        /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
         /// <param name="cancellationToken"></param>
-        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(
+            Message message,
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -154,16 +147,20 @@ namespace Paramore.Brighter
             tcs.SetResult(new object());
             return tcs.Task;
         }
-        
+
         /// <summary>
-        /// Adds the specified message
+        /// Adds the specified messages
         /// </summary>
-        /// <param name="messages"></param>
-        /// <param name="outBoxTimeout"></param>
+        /// <param name="messages">The messages to add to the Outbox</param>
+        /// <param name="outBoxTimeout">How long to wait in ms; -1 = forever (default -1)</param>
+        /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
         /// <param name="cancellationToken"></param>
-        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
-        public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(
+            IEnumerable<Message> messages,
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -181,6 +178,35 @@ namespace Paramore.Brighter
             tcs.SetResult(new object());
             return tcs.Task;
         }
+
+        /// <summary>
+        /// Delete the specified messages from the Outbox
+        /// </summary>
+        /// <param name="messageIds">The messages to delete</param>
+        /// <param name="args"></param>
+        public void Delete(string[] messageIds, Dictionary<string, object> args = null)
+        {
+            foreach (string messageId in messageIds)
+            {
+                _requests.TryRemove(messageId.ToString(), out _);
+            }
+        }
+
+
+        /// <summary>
+        /// Deletes the messages from the Outbox
+        /// </summary>
+        /// <param name="messageIds">The ids of the messages to delete</param>
+        /// <param name="args">Additional arguments needed to find a message, if any</param>
+        /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous operation</param>
+        /// <returns></returns>
+        public Task DeleteAsync(string[] messageIds, Dictionary<string, object> args,
+            CancellationToken cancellationToken = default)
+        {
+            Delete(messageIds, args);
+            return Task.CompletedTask;
+        }
+        
 
         /// <summary>
         /// Get the messages that have been marked as flushed in the store
@@ -205,50 +231,56 @@ namespace Paramore.Brighter
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
-         
+        
+        /// <summary>
+        /// Get the messages that have been marked as flushed in the store
+        /// </summary>
+        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="pageSize">How many messages in a page</param>
+        /// <param name="pageNumber">Which page of messages to get</param>
+        /// <param name="outboxTimeout"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">A cancellation token for the async operation</param>
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default
+        )
+        {
+            return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout,
+                args));
+        }
+
         /// <summary>
         /// Gets the specified message
         /// </summary>
         /// <param name="messageId">The id of the message to get</param>
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        public Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
             
-            return _requests.TryGetValue(OutboxEntry.ConvertKey(messageId), out OutboxEntry entry) ? entry.Message : null;
+            return _requests.TryGetValue(messageId, out OutboxEntry entry) ? entry.Message : null;
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="pageSize"></param>
-        /// <param name="pageNumber"></param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
-        {
-            ClearExpiredMessages();
-
-            if (pageNumber == 1)
-            {
-                return _requests.Values.Select(oe => oe.Message).Take(pageSize).ToList();
-            }
-            else
-            {
-                var skipMessageCount = (pageNumber-1) * pageSize;
-                return _requests.Values.Select(oe => oe.Message).Skip(skipMessageCount).Take(pageSize).ToList();
-            }
-        }
-         
-       /// <summary>
         /// Gets the specified message
         /// </summary>
         /// <param name="messageId"></param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="cancellationToken"></param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">A cancellation token for the async operation</param>
         /// <returns></returns>
-        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default)
+        public Task<Message> GetAsync(
+            string messageId,
+            int outBoxTimeout = -1,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -264,24 +296,18 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-       public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
-           CancellationToken cancellationToken = default)
-       {
-           var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
-            ClearExpiredMessages();
-
-            var ids = messageIds.Select(m => m.ToString()).ToList();
-
-            tcs.SetResult(_requests.Values.Where(oe => ids.Contains(oe.Key)).Select(oe => oe.Message).ToList());
-
-           return tcs.Task;
-       }
-
-       /// <summary>
+        /// <summary>
         /// Mark the message as dispatched
         /// </summary>
         /// <param name="id">The message to mark as dispatched</param>
-        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        /// <param name="dispatchedAt">The time to mark as the dispatch time</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">A cancellation token for the async operation</param>
+        public Task MarkDispatchedAsync(
+            string id,
+            DateTime? dispatchedAt = null,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             
@@ -292,41 +318,59 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-       public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-           CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Mark the messages as dispatched
+        /// </summary>
+        /// <param name="ids">The messages to mark as dispatched</param>
+        /// <param name="dispatchedAt">The time to mark as the dispatch time</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">A cancellation token for the async operation</param>
+        public Task MarkDispatchedAsync(
+            IEnumerable<string> ids,
+            DateTime? dispatchedAt = null,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
        {
-           throw new NotImplementedException();
+           var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
+           ids.Each((id) => MarkDispatched(id, dispatchedAt));
+            
+           tcs.SetResult(new object());
+
+           return tcs.Task;
        }
 
-       public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
-           int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
-       {
-           return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout,
-               args));
-       }
 
-       /// <summary>
+        /// <summary>
         /// Mark the message as dispatched
         /// </summary>
         /// <param name="id">The message to mark as dispatched</param>
-         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+        /// <param name="dispatchedAt">The time that the message was dispatched</param>
+        /// <param name="args">Allows passing arbitrary arguments for searching for a message - not used</param>
+        public void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
             
-            if (_requests.TryGetValue(OutboxEntry.ConvertKey(id), out OutboxEntry entry))
+            if (_requests.TryGetValue(id, out OutboxEntry entry))
             {
                 entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
             }
         }
 
-        /// <summary>
-        /// Messages still outstanding in the Outbox because their timestamp
-        /// </summary>
-        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-         /// <returns>Outstanding Messages</returns>
-       public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
-            Dictionary<string, object> args = null)
+       /// <summary>
+       /// Messages still outstanding in the Outbox because their timestamp
+       /// </summary>
+       /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+       /// <param name="pageSize">The number of messages to return on a page</param>
+       /// <param name="pageNumber">The page number to return</param>
+       /// <param name="args">Additional parameters required for search, if any</param>
+       /// <returns>Outstanding Messages</returns>
+       public IEnumerable<Message> OutstandingMessages(
+           double millSecondsSinceSent, 
+           int pageSize = 100, 
+           int pageNumber = 1,
+            Dictionary<string, object> args = null
+           )
         {
             ClearExpiredMessages();
             
@@ -336,58 +380,28 @@ namespace Paramore.Brighter
                 .Select(oe => oe.Message).ToArray();
             return outstandingMessages;
         }
-
-        public void Delete(params Guid[] messageIds)
-        {
-            foreach (Guid messageId in messageIds)
-            {
-                _requests.TryRemove(messageId.ToString(), out _);
-            }
-        }
-
-        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
-        {
-            var tcs = new TaskCompletionSource<IList<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            tcs.SetResult(Get(pageSize, pageNumber, args));
-
-            return tcs.Task;
-        }
-
-        public Task<IEnumerable<Message>> OutstandingMessagesAsync(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+       
+       /// <summary>
+       /// A list of outstanding messages
+       /// </summary>
+       /// <param name="millSecondsSinceSent">The age of the message in milliseconds</param>
+       /// <param name="pageSize">The number of messages to return on a page</param>
+       /// <param name="pageNumber">The page to return</param>
+       /// <param name="args">Additional arguments needed to find a message, if any</param>
+       /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous operation</param>
+       /// <returns></returns>
+        public Task<IEnumerable<Message>> OutstandingMessagesAsync(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             tcs.SetResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
 
             return tcs.Task;
-        }
-
-        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
-        {
-            Delete(messageIds);
-            return Task.CompletedTask;
-        }
-
-        public IEnumerable<Message> DispatchedMessages(int hoursDispatchedSince, int pageSize = 100)
-        {
-            ClearExpiredMessages();
-            
-            DateTime dispatchedSince = DateTime.UtcNow.AddHours( -1 * hoursDispatchedSince);
-            return _requests.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
-                .Take(pageSize)
-                .Select(oe => oe.Message).ToArray();
-        }
-        
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
-            CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(DispatchedMessages(hoursDispatchedSince, pageSize));
-        }
-
-        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
-        {
-            return Task.FromResult(_requests.Count(r => r.Value.TimeFlushed == DateTime.MinValue || r.Value.TimeFlushed == null));
         }
     }
 }

@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.Outbox.MsSql
 {
     /// <summary>
@@ -29,34 +31,59 @@ namespace Paramore.Brighter.Outbox.MsSql
     /// </summary>
     public class SqlOutboxBuilder
     {
-        const string OutboxDdl = @"
+        const string TextOutboxDdl = @"
         CREATE TABLE {0}
             (
               [Id] [BIGINT] NOT NULL IDENTITY ,
-              [MessageId] UNIQUEIDENTIFIER NOT NULL ,
-              [Topic] NVARCHAR(255) NULL ,
-              [MessageType] NVARCHAR(32) NULL ,
-              [Timestamp] DATETIME NULL ,
-              [CorrelationId] UNIQUEIDENTIFIER NULL,
+              [MessageId] NVARCHAR(255) NOT NULL,
+              [Topic] NVARCHAR(255) NULL,
+              [MessageType] NVARCHAR(32) NULL,
+              [Timestamp] DATETIME NULL,
+              [CorrelationId] NVARCHAR(255) NULL,
               [ReplyTo] NVARCHAR(255) NULL,
               [ContentType] NVARCHAR(128) NULL,  
+              [PartitionKey] NVARCHAR(255) NULL, 
               [Dispatched] DATETIME NULL,
-              [HeaderBag] NTEXT NULL ,
-              [Body] NTEXT NULL ,
+              [HeaderBag] NVARCHAR(MAX) NULL,
+              [Body] NVARCHAR(MAX) NULL,
               PRIMARY KEY ( [Id] )
             );
         ";
         
-        private const string OutboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
+        const string BinaryOutboxDdl = @"
+        CREATE TABLE {0}
+            (
+              [Id] [BIGINT] NOT NULL IDENTITY,
+              [MessageId] NVARCHAR(255) NOT NULL,
+              [Topic] NVARCHAR(255) NULL,
+              [MessageType] NVARCHAR(32) NULL,
+              [Timestamp] DATETIME NULL,
+              [CorrelationId] NVARCHAR(255) NULL,
+              [ReplyTo] NVARCHAR(255) NULL,
+              [ContentType] NVARCHAR(128) NULL,  
+              [PartitionKey] NVARCHAR(255) NULL,
+              [Dispatched] DATETIME NULL,
+              [HeaderBag] NVARCHAR(MAX) NULL,
+              [Body] VARBINARY(MAX) NULL,
+              PRIMARY KEY ( [Id] )
+            );
+        ";
+ 
+        
+        private const string OutboxExistsSQL = @"IF EXISTS (SELECT 1  FROM sys.tables WHERE  name = '{0}')  SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
 
         /// <summary>
         /// Gets the DDL statements required to create an Outbox in MSSQL
         /// </summary>
         /// <param name="outboxTableName">The name of the Outbox table</param>
+        /// <param name="hasBinaryMessagePayload">Should the message body be stored as binary? Conversion of binary data to/from UTF-8 is lossy</param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string outboxTableName)
+        public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
         {
-            return string.Format(OutboxDdl, outboxTableName);
+            if (string.IsNullOrEmpty(outboxTableName))
+                throw new ArgumentNullException(outboxTableName, $"You must provide a tablename for the OutBox table");
+
+            return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, outboxTableName);
         }
         
         /// <summary>

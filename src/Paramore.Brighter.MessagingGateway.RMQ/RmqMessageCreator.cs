@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<string>.Empty();
-            var messageId = HeaderResult<Guid>.Empty();
+            var messageId = HeaderResult<string>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var handledCount = HeaderResult<int>.Empty();
             var delayedMilliseconds = HeaderResult<int>.Empty();
@@ -73,8 +73,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 else
                 {
                     var messageHeader = timeStamp.Success
-                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result,
-                            delayedMilliseconds.Result)
+                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, 
+                            handledCount.Result, delayedMilliseconds.Result)
                         : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
                     //this effectively transfers ownership of our buffer 
@@ -86,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out object correlationHeader))
                 {
                     var correlationId = Encoding.UTF8.GetString((byte[])correlationHeader);
-                    message.Header.CorrelationId = Guid.Parse(correlationId);
+                    message.Header.CorrelationId = correlationId;
                 }
 
                 message.DeliveryTag = deliveryTag.Result;
@@ -130,10 +130,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
+        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<string> messageId)
         {
             var header = new MessageHeader(
-                messageId.Success ? messageId.Result : Guid.Empty,
+                messageId.Success ? messageId.Result : string.Empty,
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
             var message = new Message(header, new MessageBody(string.Empty));
@@ -200,16 +200,38 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             int delayedMilliseconds;
 
+            // on 32 bit systems the x-delay value will be a int and on 64 bit it will be a long, thank you erlang
+            // The number will be negative after a message has been delayed
+            // sticking with an int as you should not be delaying for more than 49 days
             switch (headers[HeaderNames.DELAYED_MILLISECONDS])
             {
                 case byte[] value:
                 {
-                    delayedMilliseconds = int.TryParse(Encoding.UTF8.GetString(value), out var handledCount) ? handledCount : 0;
+                    if (!int.TryParse(Encoding.UTF8.GetString(value), out var handledCount))
+                        delayedMilliseconds = 0;
+                    else
+                    {
+                        if (handledCount < 0) 
+                            handledCount = Math.Abs(handledCount);
+                        delayedMilliseconds = handledCount;
+                    }
+
                     break;
                 }
                 case int value:
                 {
+                    if (value < 0)
+                        value = Math.Abs(value);
+                    
                     delayedMilliseconds = value;
+                    break;
+                }
+                case long value:
+                {
+                    if (value < 0)
+                        value = Math.Abs(value);
+                    
+                    delayedMilliseconds = (int)value;
                     break;
                 }
                 default:
@@ -228,23 +250,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             });
         }
 
-        private HeaderResult<Guid> ReadMessageId(string messageId)
+        private HeaderResult<string> ReadMessageId(string messageId)
         {
-            var newMessageId = Guid.NewGuid();
+            var newMessageId = Guid.NewGuid().ToString();
 
             if (string.IsNullOrEmpty(messageId))
             {
                 s_logger.LogDebug("No message id found in message MessageId, new message id is {Id}", newMessageId);
-                return new HeaderResult<Guid>(newMessageId, true);
+                return new HeaderResult<string>(newMessageId, true);
             }
 
-            if (Guid.TryParse(messageId, out newMessageId))
-            {
-                return new HeaderResult<Guid>(newMessageId, true);
-            }
-
-            s_logger.LogDebug("Could not parse message MessageId, new message id is {Id}", Guid.Empty);
-            return new HeaderResult<Guid>(Guid.Empty, false);
+            return new HeaderResult<string>(messageId, true);
         }
 
         private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)

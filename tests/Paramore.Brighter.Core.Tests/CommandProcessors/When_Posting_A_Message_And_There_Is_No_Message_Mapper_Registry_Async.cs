@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -41,53 +42,66 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private readonly FakeOutboxSync _fakeOutboxSync;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
         private Exception _exception;
 
         public CommandProcessorNoMessageMapperAsyncTests()
         {
+            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _fakeOutboxSync = new FakeOutboxSync();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
-            const string topic = "MyCommand";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
 
-
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
 
             var retryPolicy = Policy
                 .Handle<Exception>()
-                .Retry();
+                .RetryAsync();
 
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
+            
+            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
+            
+            _fakeOutbox = new FakeOutbox();
+            
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry, 
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
 
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
-                messageMapperRegistry,
-                _fakeOutboxSync,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}));
+                policyRegistry,
+                bus
+            );
         }
 
         [Fact]
-        public async Task When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry_Async()
+        public async Task When_Posting_A_Message_And_There_Is_No_Message_Mapper_Factory_Async()
         {
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
 
             //_should_throw_an_exception
-            _exception.Should().BeOfType<ConfigurationException>();
+            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

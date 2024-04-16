@@ -4,10 +4,10 @@ namespace GreetingsPorts.Responses
 {
     public class FindPersonResult
     {
-         public string Name { get; private set; }
+         public Person Person { get; private set; }
          public FindPersonResult(Person person)
         {
-            Name = person.Name;
+            Person = person;
         }
 
    }

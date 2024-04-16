@@ -33,32 +33,32 @@ namespace Paramore.Brighter
     /// store the message into an OutBox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
     /// We provide implementations of <see cref="IAmAnOutboxSync{T}"/> for various databases. Users using other databases should consider a Pull Request
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public interface IAmAnOutboxSync<in T> : IAmAnOutbox<T> where T : Message
+    /// <typeparam name="T">The message type</typeparam>
+    /// <typeparam name="TTransaction">The transaction type of the underlying Db</typeparam>
+    public interface IAmAnOutboxSync<T, TTransaction> : IAmAnOutbox where T : Message
     {
         /// <summary>
         /// Adds the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
-        void Add(T message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null);
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        void Add(T message, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
+        
+        /// <summary>
+        /// Awaitable add the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        void Add(IEnumerable<T> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
 
         /// <summary>
-        /// Gets the specified message identifier.
+        /// Delete the specified messages
         /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        Message Get(Guid messageId, int outBoxTimeout = -1);
-
-        /// <summary>
-        /// Update a message to show it is dispatched
-        /// </summary>
-        /// <param name="id">The id of the message to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
-        void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
+        /// <param name="messageIds">The id of the message to delete</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        void Delete(string[] messageIds, Dictionary<string, object> args = null);
         
         /// <summary>
         /// Retrieves messages that have been sent within the window
@@ -77,15 +77,22 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null);
 
         /// <summary>
-        /// Gets all messages in the OutBox, LIFO
+        /// Gets the specified message identifier.
         /// </summary>
-        /// <param name="pageSize">Number of items on the page, default is 100</param>
-        /// <param name="pageNumber">Page number of results to return, default is first</param>
-        /// <param name="args">Additional parameters required for the search, if any</param>
-        /// <returns></returns>
-        [Obsolete("Removed in v10, Please use OutstandingMessages instead.")]
-        IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null);
-        
+        /// <param name="messageId">The message identifier.</param>
+        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <returns>Task&lt;Message&gt;.</returns>
+        Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null);
+
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
+        void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
+
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
@@ -99,11 +106,5 @@ namespace Paramore.Brighter
             int pageSize = 100, 
             int pageNumber = 1,
             Dictionary<string, object> args = null);
-
-        /// <summary>
-        /// Delete the specified messages
-        /// </summary>
-        /// <param name="messageIds">The id of the message to delete</param>
-        void Delete(params Guid[] messageIds);
     }
 }

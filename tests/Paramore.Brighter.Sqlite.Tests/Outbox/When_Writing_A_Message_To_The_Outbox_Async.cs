@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
     public class SqliteOutboxWritingMessageAsyncTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sqlOutboxSync;
+        private readonly SqliteOutbox _sqlOutbox;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _key3 = "name3";
@@ -52,10 +52,10 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
-
+            _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
+ 
             var messageHeader = new MessageHeader(
-                Guid.NewGuid(), 
+                Guid.NewGuid().ToString(), 
                 "test_topic", 
                 MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);
@@ -71,15 +71,16 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutboxSync.AddAsync(_messageEarliest);
+            await _sqlOutbox.AddAsync(_messageEarliest);
 
-            _storedMessage = await _sqlOutboxSync.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the message header first bag item from the sql outbox
             //should read the message header timestamp from the sql outbox
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss")
+                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
             //should read the message header topic from the sql outbox =
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             //should read the message header type from the sql outbox

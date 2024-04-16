@@ -36,20 +36,26 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
-        private readonly SpyRequeueCommandProcessor _commandProcessor;
 
         public MessagePumpUnacceptableMessageLimitTests()
         {
-            _commandProcessor = new SpyRequeueCommandProcessor();
+            SpyRequeueCommandProcessor commandProcessor = new();
+            var provider = new CommandProcessorProvider(commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(_commandProcessor, messageMapperRegistry) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3 };
+            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(provider, messageMapperRegistry, null)
+            {
+                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+            };
 
-            var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
+            var unmappableMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }")
+            );
 
             _channel.Enqueue(unmappableMessage);
             _channel.Enqueue(unmappableMessage);

@@ -35,7 +35,13 @@ namespace Paramore.Brighter
     public class Message : IEquatable<Message>
     {
         public const string OriginalMessageIdHeaderName = "x-original-message-id";
+        /// <summary>
+        /// Tag name for the delivery tag header   
+        /// </summary>
         public const string DeliveryTagHeaderName = "DeliveryTag";
+        /// <summary>
+        /// Tag name for the redelivered header
+        /// </summary>
         public const string RedeliveredHeaderName = "Redelivered";
 
         /// <summary>
@@ -50,12 +56,52 @@ namespace Paramore.Brighter
         public MessageBody Body { get; set; }
 
         /// <summary>
-        /// Gets the identifier.
+        /// Gets the identifier of the message.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id
+        public string Id
         {
             get { return Header.Id; }
+        }
+        
+        /// <summary>
+        /// RMQ: An identifier for the message set by the broker. Only valid on the same thread that consumed the message.
+        /// </summary>
+        [JsonIgnore]
+        public ulong DeliveryTag
+        {
+            get
+            {
+                if (Header.Bag.TryGetValue(DeliveryTagHeaderName, out object value))
+                    return (ulong) value;
+                else
+                    return 0;
+            }
+            set { Header.Bag[DeliveryTagHeaderName] = value; }
+        }
+
+        /// <summary>
+        /// RMQ: Is the message persistent
+        /// </summary>
+        [JsonIgnore]
+        public bool Persist { get; set; }
+        
+        /// <summary>
+        /// RMQ: Has this message been redelivered
+        /// </summary>
+        [JsonIgnore]
+        public bool Redelivered
+        {
+            get
+            {
+                if (Header.Bag.TryGetValue(RedeliveredHeaderName, out object value))
+                    return (bool) value;
+                else
+                {
+                    return false;
+                }
+            }
+            set { Header.Bag[RedeliveredHeaderName] = value; }
         }
 
         /// <summary>
@@ -63,7 +109,7 @@ namespace Paramore.Brighter
         /// </summary>
         public Message()
         {
-            Header = new MessageHeader(messageId: Guid.Empty, topic: string.Empty, messageType: MessageType.MT_NONE);
+            Header = new MessageHeader(messageId: string.Empty, topic: string.Empty, messageType: MessageType.MT_NONE);
             Body = new MessageBody(string.Empty);
         }
 
@@ -84,38 +130,6 @@ namespace Paramore.Brighter
 #pragma warning restore CS0618
         }
 
-        public ulong DeliveryTag
-        {
-            get
-            {
-                if (Header.Bag.TryGetValue(DeliveryTagHeaderName, out object value))
-                    return (ulong) value;
-                else
-                    return 0;
-            }
-            set { Header.Bag[DeliveryTagHeaderName] = value; }
-        }
-
-        public bool Redelivered
-        {
-            get
-            {
-                if (Header.Bag.TryGetValue(RedeliveredHeaderName, out object value))
-                    return (bool) value;
-                else
-                {
-                    return false;
-                }
-            }
-            set { Header.Bag[RedeliveredHeaderName] = value; }
-        }
-
-        public bool Persist { get; set; }
-
-        public void UpdateHandledCount()
-        {
-            Header.UpdateHandledCount();
-        }
         public bool HandledCountReached(int requeueCount)
         {
             return Header.HandledCount >= requeueCount;
@@ -179,7 +193,5 @@ namespace Paramore.Brighter
         {
             return !Equals(left, right);
         }
-
-
     }
 }

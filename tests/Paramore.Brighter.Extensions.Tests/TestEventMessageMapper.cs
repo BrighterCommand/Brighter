@@ -4,7 +4,7 @@ namespace Tests
 {
     public class TestEventMessageMapper : IAmAMessageMapper<TestEvent>
     {
-        public Message MapToMessage(TestEvent request)
+        public Message MapToMessage(TestEvent request, Publication publication)  
         {
             throw new System.NotImplementedException();
         }

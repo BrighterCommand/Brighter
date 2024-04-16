@@ -9,7 +9,7 @@ namespace Greetings_SqliteMigrations.Migrations
 {
     [DbContext(typeof(GreetingsEntityGateway))]
     [Migration("20210902180249_Initial")]
-    partial class Initial
+    partial class SqliteInitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

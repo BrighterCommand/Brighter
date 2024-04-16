@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -14,18 +15,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     public class CommandProcessorCallTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly MyRequest _myRequest = new MyRequest();
+        private readonly MyRequest _myRequest = new();
         private readonly Message _message;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeMessageProducerWithPublishConfirmation _producer;
 
 
         public CommandProcessorCallTests()
         {
+            const string topic = "MyRequest";
             _myRequest.RequestValue = "Hello World";
 
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new FakeMessageProducerWithPublishConfirmation();
+            _producer.Publication = new Publication{Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)};
 
-            const string topic = "MyRequest";
             var header = new MessageHeader(
                 messageId: _myRequest.Id, 
                 topic: topic, 
@@ -44,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     return new MyResponseMessageMapper();
                
                 throw new ConfigurationException($"No mapper found for {type.Name}");
-            }));
+            }), null);
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
             
@@ -69,17 +71,36 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new Subscription<MyResponse>()
             };
 
+            var policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+            };
+            var producerRegistry =
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                {
+                    { topic, _producer },
+                });
+        
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
+                policyRegistry,           
+                messageMapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                new InMemoryOutbox());
+        
+            CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
-                messageMapperRegistry,
-                new InMemoryOutbox(),
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}),
-                replySubs,
-                responseChannelFactory: inMemoryChannelFactory);
-            
+                new InMemoryRequestContextFactory(), 
+                policyRegistry,
+                bus,
+                replySubscriptions:replySubs,
+                responseChannelFactory: inMemoryChannelFactory
+            );
+
             PipelineBuilder<MyRequest>.ClearPipelineCache();
   
         }
@@ -91,10 +112,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 500);
             
             //should send a message via the messaging gateway
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
+            _producer.MessageWasSent.Should().BeTrue();
 
             //should convert the command into a message
-            _fakeMessageProducerWithPublishConfirmation.SentMessages[0].Should().Be(_message);
+            _producer.SentMessages[0].Should().Be(_message);
             
             //should forward response to a handler
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
@@ -103,7 +124,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
 
    }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
@@ -24,26 +25,39 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly Message _message;
         private readonly Message _message2;
         private readonly Message _message3;
-        private readonly FakeOutboxSync _fakeOutboxSync;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeMessageProducerWithPublishConfirmation _commandProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _eventProducer;
 
         public CommandProcessorBulkDepositPostTestsAsync()
         {
+            const string commandTopic = "MyCommand";
+            
             _myCommand.Value = "Hello World";
             _myCommand2.Value = "Update World";
 
-            _fakeOutboxSync = new FakeOutboxSync();
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _commandProducer = new FakeMessageProducerWithPublishConfirmation();
+            _commandProducer.Publication = new Publication
+            {
+                Topic =  new RoutingKey(commandTopic),
+                RequestType = typeof(MyCommand)
+            };
 
-            var topic = "MyCommand";
-            var eventTopic = "MyEvent";
+            const string eventTopic = "MyEvent";
+            _eventProducer = new FakeMessageProducerWithPublishConfirmation();
+            _eventProducer.Publication = new Publication
+            {
+                Topic =  new RoutingKey(eventTopic),
+                RequestType = typeof(MyEvent)
+            };
+            
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
             
             _message2 = new Message(
-                new MessageHeader(_myCommand2.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand2.Id, commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand2, JsonSerialisationOptions.Options))
             );
             
@@ -52,17 +66,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            var messageMapperRegistry = new MessageMapperRegistry(
+                null,
+            new SimpleMessageMapperFactoryAsync((type) =>
             {
-                if (type.Equals(typeof(MyCommandMessageMapper)))
-                    return new MyCommandMessageMapper();
-                else
-                {
-                    return new MyEventMessageMapper();
-                }
+                if (type == typeof(MyCommandMessageMapperAsync))
+                    return new MyCommandMessageMapperAsync();
+                else                              
+                    return new MyEventMessageMapperAsync();
             }));
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -72,13 +86,36 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            PolicyRegistry policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
-            _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
+            PolicyRegistry policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
+            };
+
+            var producerRegistry =
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                {
+                    { commandTopic, _commandProducer },
+                    { eventTopic, _eventProducer }
+                }); 
+            
+            _fakeOutbox = new FakeOutbox();
+            
+            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry, 
                 policyRegistry,
                 messageMapperRegistry,
-                _fakeOutboxSync,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}));
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                _fakeOutbox
+            );
+        
+            CommandProcessor.ClearServiceBus();
+            _commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(), 
+                policyRegistry,
+                bus
+            );
         }
 
 
@@ -87,24 +124,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             //act
             var requests = new List<IRequest> {_myCommand, _myCommand2, _myEvent } ;
-            var postedMessageIds = await _commandProcessor.DepositPostAsync(requests);
+            await _commandProcessor.DepositPostAsync(requests);
             
             //assert
             //message should not be posted
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
+            _commandProducer.MessageWasSent.Should().BeFalse();
+            _eventProducer.MessageWasSent.Should().BeFalse();
             
             //message should be in the store
-            var depositedPost = _fakeOutboxSync
+            var depositedPost = _fakeOutbox
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
             
             //message should be in the store
-            var depositedPost2 = _fakeOutboxSync
+            var depositedPost2 = _fakeOutbox
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message2.Id);
             
             //message should be in the store
-            var depositedPost3 = _fakeOutboxSync
+            var depositedPost3 = _fakeOutbox
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message3.Id);
 
@@ -131,7 +169,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
      }
 }

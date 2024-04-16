@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,16 +25,14 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Storage;
 
 namespace Paramore.Brighter.Transforms.Transformers
 {
-    public class ClaimCheckTransformer : IAmAMessageTransformAsync
+    public class ClaimCheckTransformer : IAmAMessageTransform
     {
         public const string CLAIM_CHECK = "claim_check_header";
-        private readonly IAmAStorageProviderAsync _store;
+        private readonly IAmAStorageProvider _store;
         private int _thresholdInBytes;
         private bool _retainLuggage;
 
@@ -44,8 +42,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// it retrieves the payload, via the claim check and replaces the payload.
         /// </summary>
         /// <param name="store">The storage to use for the payload</param>
-        /// <param name="threshold">The size at which checking luggage is triggered. If size is 0 or less, the check will always be triggered</param>
-        public ClaimCheckTransformer(IAmAStorageProviderAsync store)
+        public ClaimCheckTransformer(IAmAStorageProvider store)
         {
             _store = store;
         }
@@ -95,20 +92,20 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// If we place it in storage, set a header property to contain the 'claim' that can be used to retrieve the 'luggage'
         /// </summary>
         /// <param name="message">The message whose contents we want to </param>
-        /// <param name="cancellationToken">Add cancellation token</param>
+        /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>
         /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
-        public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken= default)
+        public Message Wrap(Message message, Publication publication)
         {
             if (System.Text.Encoding.Unicode.GetByteCount(message.Body.Value) < _thresholdInBytes) return message;
 
             var body = message.Body.Value;
             var stream = new MemoryStream();
             var writer = new StreamWriter(stream);
-            await writer.WriteAsync(body);
-            await writer.FlushAsync();
+            writer.Write(body);
+            writer.Flush();
             stream.Position = 0;
 
-            var id = await _store.StoreAsync(stream, cancellationToken);
+            var id = _store.Store(stream);
 
             message.Header.Bag[CLAIM_CHECK] = id;
             message.Body = new MessageBody($"Claim Check {id}");
@@ -120,19 +117,18 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// If a message has a 'claim' in its header, then retrieve the associated 'luggage' from the store and replace the body
         /// </summary>
         /// <param name="message">The message, with luggage retrieved if required</param>
-        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
+        public Message Unwrap(Message message)
         {
             if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
             {
                 var id = (string)objId;
-                var luggage = await new StreamReader(await _store.RetrieveAsync(id, cancellationToken)).ReadToEndAsync();
+                var luggage = new StreamReader(_store.Retrieve(id)).ReadToEnd();
                 var newBody = new MessageBody(luggage);
                 message.Body = newBody;
                 if (!_retainLuggage)
                 {
-                    await _store.DeleteAsync(id, cancellationToken);
+                    _store.Delete(id);
                     message.Header.Bag.Remove(CLAIM_CHECK);
                 }
             }
