@@ -23,6 +23,10 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 * Compression Transform now available to compress messages using Gzip (or Brotli or Deflate on .NET 6 or 7)
 
+## Release 9.7.7
+
+- Fix for Kafka transport to remove spurious call to StoreOffset (we commit offsets in the consumer)
+- Fix for Kafka transport when partitions re-assigned, new behavior
 
 ## Release 9.3.6 ##
 
