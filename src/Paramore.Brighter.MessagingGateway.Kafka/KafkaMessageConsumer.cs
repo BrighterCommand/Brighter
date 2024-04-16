@@ -157,24 +157,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _readCommittedOffsetsTimeoutMs = readCommittedOffsetsTimeoutMs;
 
             _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
-                .SetPartitionsAssignedHandler((consumer, partitions) =>
+                .SetPartitionsAssignedHandler((consumer, list) =>
                 {
-                    var partitionInfo = partitions.Select(p => $"{p.Topic} : {p.Partition.Value}");
+                    var partitions = list.Select(p => $"{p.Topic} : {p.Partition.Value}");
                     
                     s_logger.LogInformation("Partition Added {Channels}", String.Join(",", partitions));
                     
-                    // Determine strategy and act accordingly
-                    if (_consumerConfig.PartitionAssignmentStrategy == PartitionAssignmentStrategy.CooperativeSticky)
-                        consumer.IncrementalAssign(partitions);
-                    else
-                        consumer.Assign(partitions);
+                    _partitions.AddRange(list);
                 })
-                .SetPartitionsRevokedHandler((consumer, partitions) =>
+                .SetPartitionsRevokedHandler((consumer, list) =>
                 {
                     //We should commit any offsets we have stored for these partitions
                     try
                     {
-                        _consumer?.Commit(partitions);
+                        _consumer?.Commit(list);
                     }  
                     catch (KafkaException error)
                     {
@@ -184,31 +180,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             ); 
                     }
 
-                    var revokedPartitions = partitions.Select(tpo => tpo.TopicPartition);
-                    var revokedPartitionInfo = partitions.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
+                    var revokedPartitionInfo = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
                     s_logger.LogInformation("Partitions for consumer revoked {Channels}", string.Join(",", revokedPartitionInfo));
                     
-                    // Determine strategy and act accordingly
-                    if (_consumerConfig.PartitionAssignmentStrategy == PartitionAssignmentStrategy.CooperativeSticky)
-                        consumer.IncrementalUnassign(revokedPartitions );
-                    else
-                        consumer.Unassign();
-                    
-                    _partitions = _partitions.Where(tp => partitions.All(tpo => tpo.TopicPartition != tp)).ToList();
-                 })
-                .SetPartitionsLostHandler((consumer, partitions) =>
+                    _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
+                })
+                .SetPartitionsLostHandler((consumer, list) =>
                 {
-                    var lostPartitions = partitions.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
+                    var lostPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
                     s_logger.LogInformation("Partitions for consumer lost {Channels}", string.Join(",", lostPartitions));
                     
-                    _partitions = _partitions.Where(tp => partitions.All(tpo => tpo.TopicPartition != tp)).ToList();
-                    
-                    // This is typically treated the same as revocation
-                    consumer.IncrementalUnassign(_partitions);
+                    _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
-                .SetErrorHandler((_, error) =>
+                .SetErrorHandler((consumer, error) =>
                 {
                     s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code,
                         error.Reason, error.IsFatal);

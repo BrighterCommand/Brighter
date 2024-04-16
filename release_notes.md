@@ -26,7 +26,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 ## Release 9.7.7
 
 - Fix for Kafka transport to remove spurious call to StoreOffset (we commit offsets in the consumer)
-- Fix for Kafka transport when partitions re-assigned, new behavior
+- Do not allow a Co-operative Sticky strategy as it breaks with manual commits https://github.com/confluentinc/confluent-kafka-dotnet/issues/2206 
 
 ## Release 9.3.6 ##
 
