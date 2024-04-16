@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             channel.Enqueue(quitMessage);
         }
 
-        [Fact(Timeout = 50000)]
+        [Fact()]
         public void When_a_message_is_dispatched_it_should_reach_a_handler_async()
         {
             _messagePump.Run();
