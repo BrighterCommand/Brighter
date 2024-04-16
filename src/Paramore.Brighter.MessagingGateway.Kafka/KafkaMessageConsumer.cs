@@ -178,7 +178,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 })
                 .SetPartitionsRevokedHandler((consumer, list) =>
                 {
-                    consumer.Commit(list);
+                    try
+                    {
+                        _consumer?.Commit(list);
+                    }  
+                    catch (KafkaException error)
+                    {
+                        s_logger.LogError(
+                            "Error Committing Offsets During Partition Revoke: {Message} Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", 
+                            error.Message, error.Error.Code, error.Error.Reason, error.Error.IsFatal
+                        ); 
+                    }
+                    
                     var revokedPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
                     s_logger.LogInformation("Partitions for consumer revoked {Channels}", string.Join(",", revokedPartitions));
@@ -237,7 +248,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 s_logger.LogInformation("Storing offset {Offset} to topic {Topic} for partition {ChannelName}",
                     new Offset(topicPartitionOffset.Offset + 1).Value, topicPartitionOffset.TopicPartition.Topic,
                     topicPartitionOffset.TopicPartition.Partition.Value);
-                _consumer.StoreOffset(offset);
                 _offsetStorage.Add(offset);
 
                 if (_offsetStorage.Count % _maxBatchSize == 0)
