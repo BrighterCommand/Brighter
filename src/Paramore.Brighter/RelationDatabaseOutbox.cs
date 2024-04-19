@@ -111,19 +111,20 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageIds">The id of the message to delete</param>
         /// <param name="args">Additional parameters required for search, if any</param>
-        public void Delete(Guid[] messageIds, Dictionary<string, object> args = null)
+        public void Delete(string[] messageIds, Dictionary<string, object> args = null)
         {
             if(messageIds.Any())
                 WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
         }
-        
+
         /// <summary>
         /// Delete the specified messages
         /// </summary>
         /// <param name="messageIds">The id of the message to delete</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        public Task DeleteAsync(Guid[] messageIds, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task DeleteAsync(string[] messageIds, Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
             if(!messageIds.Any())
                 return Task.CompletedTask;
@@ -204,7 +205,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
+        public Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             return ReadFromStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
                 dr => MapFunction(dr));
@@ -218,7 +219,8 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
-        public Task<Message> GetAsync(Guid messageId,
+        public Task<Message> GetAsync(
+            string messageId,
             int outBoxTimeout = -1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
@@ -235,7 +237,7 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The Ids of the messages</param>
         /// <returns></returns>
         public Task<IEnumerable<Message>> GetAsync(
-            IEnumerable<Guid> messageIds, 
+            IEnumerable<string> messageIds, 
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default
             )
@@ -297,7 +299,7 @@ namespace Paramore.Brighter
         /// <param name="args">Allows additional arguments for specific Outbox Db providers</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public Task MarkDispatchedAsync(
-            Guid id, 
+            string id, 
             DateTime? dispatchedAt = null, 
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
@@ -314,8 +316,7 @@ namespace Paramore.Brighter
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Allows additional arguments to be passed for specific Db providers</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(
-            IEnumerable<Guid> ids, 
+        public Task MarkDispatchedAsync(IEnumerable<string> ids,
             DateTime? dispatchedAt = null,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
@@ -325,13 +326,13 @@ namespace Paramore.Brighter
                 cancellationToken);
         }
 
-         /// <summary>
+        /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Allows additional arguments to be provided for specific Outbox Db providers</param>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+        public void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             WriteToStore(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow),
                 null);
@@ -448,12 +449,12 @@ namespace Paramore.Brighter
                 insertClause.parameters);
         }
 
-        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, string messageId, DateTime? dispatchedAt)
             => CreateCommand(connection, GenerateSqlText(queries.MarkDispatchedCommand), 0,
                 CreateSqlParameter("MessageId", messageId),
                 CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()));
 
-        private DbCommand InitMarkDispatchedCommand(DbConnection connection, IEnumerable<Guid> messageIds,
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, IEnumerable<string> messageIds,
             DateTime? dispatchedAt)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
@@ -462,11 +463,11 @@ namespace Paramore.Brighter
                     .ToArray());
         }
 
-        private DbCommand InitGetMessageCommand(DbConnection connection, Guid messageId, int outBoxTimeout = -1)
+        private DbCommand InitGetMessageCommand(DbConnection connection, string messageId, int outBoxTimeout = -1)
             => CreateCommand(connection, GenerateSqlText(queries.GetMessageCommand), outBoxTimeout,
                 CreateSqlParameter("MessageId", messageId));
 
-        private DbCommand InitGetMessagesCommand(DbConnection connection, List<Guid> messageIds, int outBoxTimeout = -1)
+        private DbCommand InitGetMessagesCommand(DbConnection connection, List<string> messageIds, int outBoxTimeout = -1)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds);
             return CreateCommand(connection, GenerateSqlText(queries.GetMessagesCommand, inClause.inClause), outBoxTimeout,
@@ -476,7 +477,7 @@ namespace Paramore.Brighter
         private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
             => string.Format(sqlFormat, orderedParams.Prepend(outboxTableName).ToArray());
 
-        private DbCommand InitDeleteDispatchedCommand(DbConnection connection, IEnumerable<Guid> messageIds)
+        private DbCommand InitDeleteDispatchedCommand(DbConnection connection, IEnumerable<string> messageIds)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
             return CreateCommand(connection, GenerateSqlText(queries.DeleteMessagesCommand, inClause.inClause), 0,
@@ -503,7 +504,7 @@ namespace Paramore.Brighter
         
         protected abstract Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken);
         
-        private (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
+        private (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(List<string> messageIds)
         {
             var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
 

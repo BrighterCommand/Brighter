@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -42,37 +41,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// </summary>
     public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
-        public event Action<bool, Guid> OnMessagePublished;
-
-        /// <summary>
-        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
-        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
-        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
-        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
-        /// </summary>
-        public int MaxOutStandingMessages { get; set; } = -1;
-
-        /// <summary>
-        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
-        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
-        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
-        /// </summary>
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        /// <summary>
-        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
-        /// This bag provides the args required
-        /// </summary>
-
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+        public event Action<bool, string> OnMessagePublished;
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
         static readonly object _lock = new object();
         private readonly RmqPublication _publication;
-        private readonly ConcurrentDictionary<ulong, Guid> _pendingConfirmations = new ConcurrentDictionary<ulong, Guid>();
+        private readonly ConcurrentDictionary<ulong, string> _pendingConfirmations = new ConcurrentDictionary<ulong, string>();
         private bool _confirmsSelected = false;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
+
+        public Publication Publication { get { return _publication; } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -81,8 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         ///     Make Channels = Create
         public RmqMessageProducer(RmqMessagingGatewayConnection connection)
             : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create })
-        {
-        }
+        { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -95,10 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             : base(connection)
         {
             _publication = publication ?? new RmqPublication { MakeChannels = OnMissingChannel.Create };
-            MaxOutStandingMessages = _publication.MaxOutStandingMessages;
-            MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
             _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
-            OutBoxBag = _publication.OutBoxBag;
         }
 
         /// <summary>
@@ -209,20 +184,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void OnPublishFailed(object sender, BasicNackEventArgs e)
         {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out Guid messageId))
+            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string messageId))
             {
                 OnMessagePublished?.Invoke(false, messageId);
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out string msgId);
                 s_logger.LogDebug("Failed to publish message: {MessageId}", messageId);
             }
         }
 
         private void OnPublishSucceeded(object sender, BasicAckEventArgs e)
         {
-            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out Guid messageId))
+            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string messageId))
             {
                 OnMessagePublished?.Invoke(true, messageId);
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out string msgId);
                 s_logger.LogInformation("Published message: {MessageId}", messageId);
             }
         }

@@ -2,36 +2,22 @@
 using OpenTelemetry.Shared.Commands;
 using OpenTelemetry.Shared.Events;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 
 namespace OpenTelemetry.Shared.Mappers;
 
 public class MessageMapper<T> : IAmAMessageMapper<T> where T : class, IRequest
 {
-    private readonly TopicDictionary _topics;
-
-    public MessageMapper(TopicDictionary topics)
+  
+    public Message MapToMessage(T request, Publication publication)
     {
-        _topics = topics;
-    }
-    public Message MapToMessage(T request)
-    {
-        MessageType messageType;
-        if (request is ICommand)
-            messageType = MessageType.MT_COMMAND;
-        else if (request is IEvent)
-            messageType = MessageType.MT_EVENT;
-        else
-        {
-            throw new ArgumentException("This message mapper can only map Commands and Events", nameof(request));
-        }
-
-        var topicName = _topics.GetTopic(typeof(T));
-
-        var header = new MessageHeader(messageId: request.Id, topic: topicName, messageType: messageType);
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
         var body = new MessageBody(JsonSerializer.Serialize(request));
         var message = new Message(header, body);
         return message;
     }
+
+ 
 
     public T MapToRequest(Message message)
     {
@@ -41,16 +27,3 @@ public class MessageMapper<T> : IAmAMessageMapper<T> where T : class, IRequest
     }
 }
 
-public class TopicDictionary
-{
-    private readonly Dictionary<Type, string> _topics = new Dictionary<Type, string>();
-
-    public TopicDictionary()
-    {
-        _topics.Add(typeof(MyDistributedEvent), "MyDistributedEvent");
-        _topics.Add(typeof(UpdateProductCommand), "UpdateProductCommand");
-        _topics.Add(typeof(ProductUpdatedEvent), "ProductUpdatedEvent");
-    }
-
-    public string GetTopic(Type type) => _topics[type];
-}

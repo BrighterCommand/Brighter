@@ -4,6 +4,7 @@ using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
+using GreetingsPorts.Requests;
 using GreetingsWeb.Database;
 using GreetingsWeb.Messaging;
 using Microsoft.AspNetCore.Builder;
@@ -97,7 +98,7 @@ namespace GreetingsWeb
                 ConfigureSqlite(services);
             else
                 ConfigureProductionDatabase(GetDatabaseType(), services);
-            }
+        }
 
         private void ConfigureProductionDatabase(DatabaseType databaseType, IServiceCollection services)
         {
@@ -189,11 +190,13 @@ namespace GreetingsWeb
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
                 .UseExternalBus((configure) =>
-                        {
+                {
                     configure.ProducerRegistry = ConfigureProducerRegistry(messagingTransport);
                     configure.Outbox = makeOutbox.outbox;
                     configure.TransactionProvider = makeOutbox.transactionProvider;
                     configure.ConnectionProvider = makeOutbox.connectionProvider;
+                    configure.MaxOutStandingMessages = 5;
+                    configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
                 })
                 .UseOutboxSweeper(options => {
                     options.TimerInterval = 5;
@@ -271,6 +274,7 @@ namespace GreetingsWeb
                         new KafkaPublication
                         {
                             Topic = new RoutingKey("GreetingMade"),
+                            RequestType = typeof(GreetingMade),
                             MessageSendMaxRetries = 3,
                             MessageTimeoutMs = 1000,
                             MaxInFlightRequestsPerConnection = 1,
@@ -295,8 +299,7 @@ namespace GreetingsWeb
                     new RmqPublication
                     {
                         Topic = new RoutingKey("GreetingMade"),
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        RequestType = typeof(GreetingMade),
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels = OnMissingChannel.Create
                     }

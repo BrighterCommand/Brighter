@@ -9,7 +9,7 @@ namespace SalutationAnalytics.Mappers
 {
     public class GreetingMadeMessageMapperAsync : IAmAMessageMapperAsync<GreetingMade>
     {
-        public Task<Message> MapToMessageAsync(GreetingMade request, CancellationToken cancellationToken = default)
+        public Task<Message> MapToMessageAsync(GreetingMade request, Publication publication, CancellationToken cancellationToken = default)
         {
             throw new System.NotImplementedException();
         }

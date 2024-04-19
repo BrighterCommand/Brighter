@@ -52,11 +52,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
              _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options)));
+            var message1 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
+            );
+            
+            var message2 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
+            );
+            
             _channel.Enqueue(message1);
             _channel.Enqueue(message2);
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(
+                new MessageHeader(string.Empty, "", MessageType.MT_QUIT), 
+                new MessageBody("")
+            );
             _channel.Enqueue(quitMessage);
         }
 

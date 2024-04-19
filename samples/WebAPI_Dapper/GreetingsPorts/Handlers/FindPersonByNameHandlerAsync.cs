@@ -13,14 +13,20 @@ using Paramore.Darker.QueryLogging;
 
 namespace GreetingsPorts.Handlers
 {
-    public class FindPersonByNameHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
-        : QueryHandlerAsync<FindPersonByName, FindPersonResult>
+    public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
     {
+        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider;
+
+        public FindPersonByNameHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
+        {
+            _relationalDbConnectionProvider = relationalDbConnectionProvider;
+        }
+
         [QueryLogging(0)]
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
-            await using var connection = await relationalDbConnectionProvider .GetConnectionAsync(cancellationToken);
+            await using var connection = await _relationalDbConnectionProvider .GetConnectionAsync(cancellationToken);
             var people = await connection.QueryAsync<Person>("select * from Person where name = @name", new {name = query.Name});
             var person = people.SingleOrDefault();
 

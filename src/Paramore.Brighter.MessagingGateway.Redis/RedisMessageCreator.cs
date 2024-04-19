@@ -180,10 +180,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="topic"></param>
         /// <param name="messageId"></param>
         /// <returns></returns>
-        private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<Guid> messageId)
+        private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<string> messageId)
         {
             return new MessageHeader(
-                messageId.Success ? messageId.Result : Guid.Empty,
+                messageId.Success ? messageId.Result : string.Empty,
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
         }
@@ -197,19 +197,16 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<string>(String.Empty, false);
         }
 
-        private HeaderResult<Guid> ReadCorrelationId(Dictionary<string, string> headers)
+        private HeaderResult<string> ReadCorrelationId(Dictionary<string, string> headers)
         {
-            var messageId = Guid.Empty;
+            var newCorrelationId = string.Empty;
             
-            if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string header))
+            if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string correlatonId))
             {
-                if (Guid.TryParse(header, out messageId))
-                {
-                    return new HeaderResult<Guid>(messageId, true);
-                }
+                return new HeaderResult<string>(correlatonId, true);
             }
             
-            return new HeaderResult<Guid>(messageId, false);
+            return new HeaderResult<string>(newCorrelationId, false);
         }
 
          private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
@@ -270,19 +267,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
-        private HeaderResult<Guid> ReadMessageId(IDictionary<string, string> headers)
+        private HeaderResult<string> ReadMessageId(IDictionary<string, string> headers)
         {
-            var messageId = Guid.Empty;
-            
             if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string header))
             {
-                if (Guid.TryParse(header, out messageId))
-                {
-                    return new HeaderResult<Guid>(messageId, true);
-                }
+                    return new HeaderResult<string>(header, true);
             }
             
-            return new HeaderResult<Guid>(messageId, false);
+            return new HeaderResult<string>(string.Empty, false);
         }
         
         private HeaderResult<string> ReadReplyTo(Dictionary<string, string> headers)

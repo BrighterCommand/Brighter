@@ -10,11 +10,11 @@ name: CI
 
 on:
   push:
-    branches: [ master, release/9 ]
+    branches: [ master, release/9X ]
     tags:
       - '*.*.*'
   pull_request:
-    branches: [ master, release/9 ]
+    branches: [ master, release/9X ]
   
 env:
  # Stop wasting time caching packages
@@ -134,7 +134,7 @@ jobs:
 
     services:
       rabbitmq:
-        image: brightercommand/rabbitmq:3.8-management-delay
+        image: brightercommand/rabbitmq:3.13-management-delay
         ports:
         - 5672:5672 
         # needed because the rabbitmq container does not provide a healthcheck

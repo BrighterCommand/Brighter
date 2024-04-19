@@ -58,7 +58,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageIds">The id of the message to delete</param>
         /// <param name="args">Additional parameters required for search, if any</param>
-        void Delete(Guid[] messageIds, Dictionary<string, object> args = null);
+        void Delete(string[] messageIds, Dictionary<string, object> args = null);
         
         /// <summary>
         /// Retrieves messages that have been sent within the window
@@ -75,7 +75,7 @@ namespace Paramore.Brighter
             int pageNumber = 1, 
             int outboxTimeout = -1,
             Dictionary<string, object> args = null);
-        
+
         /// <summary>
         /// Gets the specified message identifier.
         /// </summary>
@@ -83,7 +83,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        Message Get(Guid messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null);
+        Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null);
 
         /// <summary>
         /// Update a message to show it is dispatched
@@ -91,7 +91,7 @@ namespace Paramore.Brighter
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
-        void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
+        void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
 
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp

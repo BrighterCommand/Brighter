@@ -108,7 +108,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

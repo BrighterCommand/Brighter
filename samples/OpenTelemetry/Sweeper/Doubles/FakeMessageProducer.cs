@@ -4,15 +4,12 @@ namespace Sweeper.Doubles;
 
 public class FakeMessageProducer : IAmAMessageProducerSync
 {
+    public Publication Publication { get; } = new();
+    
     public void Dispose()
     {
         //throw new NotImplementedException();
     }
-
-    public int MaxOutStandingMessages { get; set; }
-    public int MaxOutStandingCheckIntervalMilliSeconds { get; set; }
-
-    public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
 
     public void Send(Message message)
     {

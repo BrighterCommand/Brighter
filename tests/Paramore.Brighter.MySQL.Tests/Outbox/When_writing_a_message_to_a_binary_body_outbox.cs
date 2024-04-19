@@ -28,13 +28,13 @@ namespace Paramore.Brighter.MySQL.Tests
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayedMilliseconds: 5,
-                correlationId: new Guid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyTo",
                 contentType: "application/octet-stream",
                 partitionKey: Guid.NewGuid().ToString());

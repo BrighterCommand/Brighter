@@ -25,14 +25,15 @@ THE SOFTWARE. */
 using System.Text.Json;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 
 namespace Greetings.Ports.Mappers
 {
     public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
     {
-        public Message MapToMessage(GreetingEvent request)
+        public Message MapToMessage(GreetingEvent request, Publication publication)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: "greeting.event", messageType: MessageType.MT_EVENT);
+            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;

@@ -235,7 +235,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_requeue_is_called_and_the_delay_is_zero_the_send_method_is_called()
         {
             var messageLockTokenOne = Guid.NewGuid();
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_EVENT);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT);
             var message = new Message(messageHeader, new MessageBody("body"));
             message.Header.Bag.Add("LockToken", messageLockTokenOne);
 
@@ -248,7 +248,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_requeue_is_called_and_the_delay_is_more_than_zero_the_sendWithDelay_method_is_called()
         {
             var messageLockTokenOne = Guid.NewGuid();
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_EVENT);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT);
             var message = new Message(messageHeader, new MessageBody("body"));
             message.Header.Bag.Add("LockToken", messageLockTokenOne);
 

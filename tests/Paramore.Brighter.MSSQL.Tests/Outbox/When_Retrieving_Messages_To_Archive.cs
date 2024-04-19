@@ -23,11 +23,11 @@ public class MsSqlArchiveFetchTests : IDisposable
         _msSqlTestHelper.SetupMessageDb();
 
         _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-        _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+        _messageEarliest = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
-        _messageDispatched = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+        _messageDispatched = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
-        _messageUnDispatched = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+        _messageUnDispatched = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT),
             new MessageBody("message body"));
     }
     

@@ -29,7 +29,7 @@ public abstract class Transform : IAmAMessageTransform
     /// <param name="initializerList"></param>
     public void InitializeUnwrapFromAttributeParams(params object[] initializerList) { }
 
-    public abstract Message Wrap(Message message);
+    public abstract Message Wrap(Message message, Publication publication);
 
     public abstract Message Unwrap(Message message);
 }

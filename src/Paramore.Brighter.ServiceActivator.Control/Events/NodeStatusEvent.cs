@@ -7,7 +7,7 @@ public record NodeStatusEvent : IEvent
     /// <summary>
     /// The event Id
     /// </summary>
-    public Guid Id { get; set; }
+    public string Id { get; set; }
 
     /// <summary>
     /// The Diagnostics Span

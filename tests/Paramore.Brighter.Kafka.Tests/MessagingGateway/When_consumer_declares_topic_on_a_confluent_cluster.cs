@@ -121,7 +121,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public async Task When_a_consumer_declares_topics_on_a_confluent_cluster()
         {
             var message = new Message(
-                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },

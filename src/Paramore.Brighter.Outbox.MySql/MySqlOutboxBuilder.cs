@@ -34,11 +34,11 @@ namespace Paramore.Brighter.Outbox.MySql
     public class MySqlOutboxBuilder
     {
         const string TextOutboxDdl = @"CREATE TABLE {0} ( 
-	`MessageId` CHAR(36) NOT NULL , 
+	`MessageId`VARCHAR(255) NOT NULL , 
 	`Topic` VARCHAR(255) NOT NULL , 
 	`MessageType` VARCHAR(32) NOT NULL , 
 	`Timestamp` TIMESTAMP(3) NOT NULL , 
-    `CorrelationId` CHAR(36) NULL ,
+    `CorrelationId`VARCHAR(255) NULL ,
     `ReplyTo` VARCHAR(255) NULL ,
     `ContentType` VARCHAR(128) NULL , 
     `PartitionKey` VARCHAR(128) NULL , 
@@ -52,11 +52,11 @@ namespace Paramore.Brighter.Outbox.MySql
 ) ENGINE = InnoDB;";
         
         const string BinaryOutboxDdl = @"CREATE TABLE {0} ( 
-	`MessageId` CHAR(36) NOT NULL , 
+	`MessageId` VARCHAR(255) NOT NULL , 
 	`Topic` VARCHAR(255) NOT NULL , 
 	`MessageType` VARCHAR(32) NOT NULL , 
 	`Timestamp` TIMESTAMP(3) NOT NULL , 
-    `CorrelationId` CHAR(36) NULL ,
+    `CorrelationId` VARCHAR(255) NULL ,
     `ReplyTo` VARCHAR(255) NULL ,
     `ContentType` VARCHAR(128) NULL ,  
     `PartitionKey` VARCHAR(128) NULL ,

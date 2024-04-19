@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     public class FakeMessageProducerWithPublishConfirmation : FakeMessageProducer, ISupportPublishConfirmation
     {
-        public event Action<bool, Guid> OnMessagePublished;
+        public event Action<bool, string> OnMessagePublished;
 
         public new void Send(Message message)
         {

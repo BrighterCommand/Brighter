@@ -33,12 +33,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     public class FakeMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
-        public int MaxOutStandingMessages { get; set; } = -1;
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();  
-
-        public List<Message> SentMessages = new List<Message>();
+        public Publication Publication { get; set; } = new();
+        public readonly List<Message> SentMessages = new();
         public bool MessageWasSent { get; set; }
 
         public void Dispose() { }
@@ -51,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return tcs.Task;
         }
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             var msgs = messages as Message[] ?? messages.ToArray();

@@ -96,8 +96,8 @@ internal class RmqMessagePublisher
                 { HeaderNames.HANDLED_COUNT, message.Header.HandledCount }
             };
 
-            if (message.Header.CorrelationId != Guid.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString());
+            if (message.Header.CorrelationId != string.Empty)
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
 
             message.Header.Bag.Each(header =>
             {
@@ -133,7 +133,7 @@ internal class RmqMessagePublisher
         /// <param name="delayMilliseconds">Delay in ms.</param>
         public void RequeueMessage(Message message, string queueName, int delayMilliseconds)
         {
-            var messageId = Guid.NewGuid() ;
+            var messageId = Guid.NewGuid().ToString() ;
             const string deliveryTag = "1";
 
             s_logger.LogInformation("RmqMessagePublisher: Regenerating message {Id} with DeliveryTag of {1} to {2} with DeliveryTag of {DeliveryTag}", message.Id, deliveryTag, messageId, 1);
@@ -145,8 +145,8 @@ internal class RmqMessagePublisher
                 {HeaderNames.HANDLED_COUNT, message.Header.HandledCount},
              };
 
-            if (message.Header.CorrelationId != Guid.Empty)
-                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString());
+            if (message.Header.CorrelationId != string.Empty)
+                headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId);
 
             message.Header.Bag.Each((header) =>
             {
@@ -177,7 +177,7 @@ internal class RmqMessagePublisher
                 message.Body.Bytes);
         }
 
-        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, string type, string contentType,
+        private IBasicProperties CreateBasicProperties(string id, DateTime timeStamp, string type, string contentType,
             string replyTo, bool persistMessage, IDictionary<string, object> headers = null)
         {
             var basicProperties = _channel.CreateBasicProperties();
@@ -185,7 +185,7 @@ internal class RmqMessagePublisher
             basicProperties.DeliveryMode = (byte) (persistMessage ? 2 : 1); // delivery mode set to 2 if message is persistent or 1 if non-persistent
             basicProperties.ContentType = contentType;
             basicProperties.Type = type;
-            basicProperties.MessageId = id.ToString();
+            basicProperties.MessageId = id;
             basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(timeStamp));
             if (!string.IsNullOrEmpty(replyTo))
                 basicProperties.ReplyTo = replyTo;

@@ -42,7 +42,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageConsumerConnectionClosedTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid(),  Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),  Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
             _sentMessage = new Message(messageHeader, new MessageBody("test content"));

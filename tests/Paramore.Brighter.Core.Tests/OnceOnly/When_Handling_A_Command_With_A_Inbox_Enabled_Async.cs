@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         [Fact]
         public async Task Command_Is_Not_Stored_If_The_Handler_Is_Not_Successful()
         {
-            Guid id = Guid.NewGuid();
+            string id = Guid.NewGuid().ToString();
             await Catch.ExceptionAsync(async () =>await _commandProcessor.SendAsync(new MyCommandToFail { Id = id }));
 
             var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

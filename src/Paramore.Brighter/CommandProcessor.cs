@@ -57,8 +57,6 @@ namespace Paramore.Brighter
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
-        private readonly TransformPipelineBuilder _transformPipelineBuilder;
-        private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -67,7 +65,6 @@ namespace Paramore.Brighter
 
         private const string PROCESSCOMMAND = "Process Command";
         private const string PROCESSEVENT = "Process Event";
-        private const string DEPOSITPOST = "Deposit Post";
 
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -162,11 +159,8 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAnExternalBusService bus,
-            IAmAMessageMapperRegistry mapperRegistry = null,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmAMessageTransformerFactory messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync = null,
             IEnumerable<Subscription> replySubscriptions = null,
             IAmAChannelFactory responseChannelFactory = null
             )
@@ -174,13 +168,6 @@ namespace Paramore.Brighter
         {
             _responseChannelFactory = responseChannelFactory;
             _replySubscriptions = replySubscriptions;
-
-            if (mapperRegistry == null) 
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
-            if (!(mapperRegistry is IAmAMessageMapperRegistryAsync mapperRegistryAsync))
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
             InitExtServiceBus(bus); 
         }
@@ -202,11 +189,8 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAnExternalBusService bus,
-            IAmAMessageMapperRegistry mapperRegistry = null,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmAMessageTransformerFactory messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync = null,
             IEnumerable<Subscription> replySubscriptions = null)
         {
             _requestContextFactory = requestContextFactory;
@@ -215,16 +199,8 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
             _replySubscriptions = replySubscriptions;
             
-            if (mapperRegistry == null) 
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
-            if (!(mapperRegistry is IAmAMessageMapperRegistryAsync mapperRegistryAsync))
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
-            
             InitExtServiceBus(bus); 
         }
-
         
         /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.
@@ -388,7 +364,9 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false,
+        public async Task PublishAsync<T>(
+            T @event,
+            bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
@@ -488,7 +466,7 @@ namespace Paramore.Brighter
             where TRequest : class, IRequest
         {
             var messageId = await DepositPostAsync(request, (IAmABoxTransactionProvider<CommittableTransaction>)null, args, continueOnCapturedContext, cancellationToken);
-            await ClearOutboxAsync(new Guid[] { messageId }, args, continueOnCapturedContext, cancellationToken);
+            await ClearOutboxAsync(new string[] { messageId }, args, continueOnCapturedContext, cancellationToken);
         }
 
         /// <summary>
@@ -496,13 +474,13 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid DepositPost<TRequest>(TRequest request, Dictionary<string, object> args = null) 
+        public string DepositPost<TRequest>(TRequest request, Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
         {
             return DepositPost<TRequest, CommittableTransaction>(request, null, args); 
@@ -513,7 +491,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
@@ -521,23 +499,20 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of Db transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid DepositPost<TRequest, TTransaction>(
+        public string DepositPost<TRequest, TTransaction>(
             TRequest request,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider, 
-            Dictionary<string, object> args = null
-            ) 
+            IAmABoxTransactionProvider<TTransaction> transactionProvider,
+            Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
-            var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
+            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
             
             if (!bus.HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            var message = MapMessage<TRequest, TTransaction>(request, new CancellationToken()).GetAwaiter().GetResult();
-
-            AddTelemetryToMessage<TRequest>(message);
+            Message message = bus.CreateMessageFromRequest(request);
 
             bus.AddToOutbox(request, message, transactionProvider);
 
@@ -549,13 +524,13 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid[] DepositPost<TRequest>(IEnumerable<TRequest> requests, Dictionary<string, object> args = null) 
+        public string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
         {
             return DepositPost<TRequest, CommittableTransaction >(requests, null, args); 
@@ -566,7 +541,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
@@ -574,21 +549,20 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid[] DepositPost<TRequest, TTransaction>(
+        public string[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
-            Dictionary<string, object> args = null
-            ) where TRequest : class, IRequest
+            Dictionary<string, object> args = null) where TRequest : class, IRequest
         {
             s_logger.LogInformation("Save bulk requests request: {RequestType}", typeof(TRequest));
             
-            var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
+            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
             
-            var successfullySentMessage = new List<Guid>();
+            var successfullySentMessage = new List<string>();
 
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
             {
-                var messages = MapMessages(batch.Key, batch, new CancellationToken()).GetAwaiter().GetResult();
+                var messages = bus.CreateMessagesFromRequests(batch.Key, batch, new CancellationToken()).GetAwaiter().GetResult();
 
                 s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
@@ -605,7 +579,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/>
+        /// Pass deposited string to <see cref="ClearOutboxAsync"/>
         /// NOTE: If you get an error about the transaction type not matching CommittableTransaction, then you need to
         /// use the specialized version of this method that takes a transaction provider.
         /// </summary>
@@ -615,12 +589,11 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        public async Task<Guid> DepositPostAsync<TRequest>(
-            TRequest request, 
+        public async Task<string> DepositPostAsync<TRequest>(
+            TRequest request,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default
-        ) where TRequest : class, IRequest
+            CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await DepositPostAsync<TRequest, CommittableTransaction>(
                 request,
@@ -635,7 +608,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// Pass deposited message to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
@@ -645,37 +618,33 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of the transaction used by the Outbox</typeparam>
         /// <returns></returns>
-        public async Task<Guid> DepositPostAsync<TRequest, TTransaction>(
-            TRequest request, 
+        public async Task<string> DepositPostAsync<TRequest, TTransaction>(
+            TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default
-        ) where TRequest : class, IRequest
+            CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
             
-            var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
+            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
 
             if (!bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            Message message = await MapMessage<TRequest, TTransaction>(request, cancellationToken);
-
-            AddTelemetryToMessage<TRequest>(message);
+            Message message = await bus.CreateMessageFromRequestAsync(request, cancellationToken);
 
             await bus.AddToOutboxAsync(request, message, transactionProvider, continueOnCapturedContext, cancellationToken);
 
             return message.Id;
         }
 
-
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// Pass deposited message to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
@@ -683,12 +652,11 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        public async Task<Guid[]> DepositPostAsync<TRequest>(
-            IEnumerable<TRequest> requests, 
+        public async Task<string[]> DepositPostAsync<TRequest>(
+            IEnumerable<TRequest> requests,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default
-            ) where TRequest : class, IRequest
+            CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await DepositPostAsync<TRequest, CommittableTransaction>(
                 requests,
@@ -703,7 +671,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// Pass deposited message to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider used with the Outbox</param>
@@ -713,21 +681,20 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used with the Outbox</typeparam>
         /// <returns></returns>
-        public async Task<Guid[]> DepositPostAsync<TRequest, TTransaction>(
-            IEnumerable<TRequest> requests, 
+        public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(
+            IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default
-            ) where TRequest : class, IRequest
+            CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            var bus = ((ExternalBusServices<Message, TTransaction>)_bus);
+            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
             
-            var successfullySentMessage = new List<Guid>();
+            var successfullySentMessage = new List<string>();
 
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
             {
-                var messages = await MapMessages(batch.Key, batch.ToArray(), cancellationToken);
+                var messages = await bus.CreateMessagesFromRequests(batch.Key, batch.ToArray(), cancellationToken);
 
                 s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
@@ -745,7 +712,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="ids">The message ids to flush</param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearOutbox(Guid[] ids, Dictionary<string, object> args = null)
+        public void ClearOutbox(string[] ids, Dictionary<string, object> args = null)
         {
             _bus.ClearOutbox(ids, null);
         }
@@ -768,11 +735,11 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="posts">The ids to flush</param>
-        /// <param name="continueOnCapturedContext">Should the callback run on a new thread?</param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="continueOnCapturedContext">Should the callback run on a new thread?</param>
         /// <param name="cancellationToken">The token to cancel a running asynchronous operation</param>
         public async Task ClearOutboxAsync(
-            IEnumerable<Guid> posts,
+            IEnumerable<string> posts,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
@@ -818,8 +785,6 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
             }
 
-            var outWrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
-
             var subscription = _replySubscriptions.FirstOrDefault(s => s.DataType == typeof(TResponse));
 
             if (subscription is null)
@@ -836,14 +801,14 @@ namespace Paramore.Brighter
             {
                 s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
                 request.ReplyAddress.Topic = routingKey;
-                request.ReplyAddress.CorrelationId = channelName;
+                request.ReplyAddress.CorrelationId = channelName.ToString();
 
                 //we do this to create the channel on the broker, or we won't have anything to send to; we 
                 //retry in case the subscription is poor. An alternative would be to extract the code from
                 //the channel to create the subscription, but this does not do much on a new queue
                 _bus.Retry(() => responseChannel.Purge());
 
-                var outMessage = outWrapPipeline.Wrap(request);
+                var outMessage = _bus.CreateMessageFromRequest(request);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
@@ -861,9 +826,7 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogDebug("Reply received from {ChannelName}", channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                    //TODO: this only handles a synchronous unwrap pipeline, we need to handle async too
-                    var inUnwrapPipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TResponse>();
-                    response = inUnwrapPipeline.Unwrap(responseMessage);
+                    _bus.CreateRequestFromMessage(responseMessage, out response);
                     Send(response);
                 }
 
@@ -878,7 +841,7 @@ namespace Paramore.Brighter
         /// This method clears the external service bus, so that the next attempt to use it will create a fresh one
         /// It is mainly intended for testing, to allow the external service bus to be reset between tests
         /// </summary>
-        public static void ClearExtServiceBus()
+        public static void ClearServiceBus()
         {
             if (_bus != null)
             {
@@ -890,17 +853,6 @@ namespace Paramore.Brighter
                         _bus = null;
                     }
                 }
-            }
-        }
-        
-        private void AddTelemetryToMessage<T>(Message message)
-        {
-            var activity = Activity.Current ??
-                           ApplicationTelemetry.ActivitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
-
-            if (activity != null)
-            {
-                message.Header.AddTelemetryInformation(activity, typeof(T).ToString());
             }
         }
 
@@ -917,33 +869,7 @@ namespace Paramore.Brighter
                     $"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
         
-        private List<Message> BulkMapMessages<T>(IEnumerable<IRequest> requests) where T : class, IRequest
-        {
-            return requests.Select(r =>
-            {
-                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
-                var message = wrapPipeline.Wrap((T)r);
-                AddTelemetryToMessage<T>(message);
-                return message;
-            }).ToList();
-        }
-
-        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<IRequest> requests,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var messages = new List<Message>();
-            foreach (var request in requests)
-            {
-                var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
-                var message = await wrapPipeline.WrapAsync((T)request, cancellationToken);
-                AddTelemetryToMessage<T>(message);
-                messages.Add(message);
-            }
-
-            return messages;
-        }
-        
-        // Create an instance of the ExternalBusServices if one not already set for this app. Note that we do not support reinitialization here, so once you have
+        // Create an instance of the ExternalBusService if one not already set for this app. Note that we do not support reinitialization here, so once you have
         // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         // if needed as a "get out of gaol" card.
         private static void InitExtServiceBus(IAmAnExternalBusService bus)
@@ -989,58 +915,6 @@ namespace Paramore.Brighter
                 default:
                     return true;
             }
-        }
-        
-        private async Task<Message> MapMessage<TRequest, TTransaction>(TRequest request, CancellationToken cancellationToken)
-            where TRequest : class, IRequest
-        {
-            Message message;
-            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
-            {
-                message = await _transformPipelineBuilderAsync
-                    .BuildWrapPipeline<TRequest>()
-                    .WrapAsync(request, cancellationToken);
-            }
-            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
-            {
-                message = _transformPipelineBuilder
-                    .BuildWrapPipeline<TRequest>()
-                    .Wrap(request);
-
-            } 
-            else
-            {
-                throw new ArgumentOutOfRangeException("No message mapper defined for request");
-            }
-
-            return message;
-        }
-
-        private Task<List<Message>> MapMessages(Type requestType, IEnumerable<IRequest> requests,
-            CancellationToken cancellationToken)
-        {
-            var parameters = new object[] { requests, cancellationToken };
-
-            var hasAsyncPipeline = (bool) typeof(TransformPipelineBuilderAsync)
-                    .GetMethod(nameof(TransformPipelineBuilderAsync.HasPipeline),
-                        BindingFlags.Instance | BindingFlags.Public)
-                .MakeGenericMethod(requestType)
-                .Invoke(this._transformPipelineBuilderAsync, null);
-            
-            if (hasAsyncPipeline)
-            {
-                return (Task<List<Message>>) GetType()
-                    .GetMethod(nameof(BulkMapMessagesAsync), BindingFlags.Instance | BindingFlags.NonPublic)
-                    .MakeGenericMethod(requestType)
-                    .Invoke(this, parameters); 
-            }
-            
-            var tcs = new TaskCompletionSource<List<Message>>();
-            tcs.SetResult((List<Message>)GetType()
-                .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
-                .MakeGenericMethod(requestType)                                                             
-                .Invoke(this, new[] { requests }));
-            return tcs.Task;
         }
         
         private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)

@@ -24,14 +24,15 @@ THE SOFTWARE. */
 
 using System.Text.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
     internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
     {
-        public Message MapToMessage(MyEvent request)
+        public Message MapToMessage(MyEvent request, Publication publication)
         {
-            var header = new MessageHeader(request.Id, "MyEvent", MessageType.MT_EVENT);
+            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;

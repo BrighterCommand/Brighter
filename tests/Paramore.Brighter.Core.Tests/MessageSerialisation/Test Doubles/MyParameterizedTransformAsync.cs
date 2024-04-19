@@ -21,7 +21,7 @@ public class MyParameterizedTransformAsync : IAmAMessageTransformAsync
         _displayFormat = (string)initializerList[0];
     }
 
-    public Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
+    public Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<Message>(cancellationToken);
         message.Header.Bag.Add(HEADER_KEY, _template);

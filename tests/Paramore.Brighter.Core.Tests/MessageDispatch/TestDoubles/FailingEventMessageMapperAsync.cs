@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
     internal class FailingEventMessageMapperAsync : IAmAMessageMapperAsync<MyFailingMapperEvent>
     {
-        public Task<Message> MapToMessageAsync(MyFailingMapperEvent request, CancellationToken cancellationToken = default)
+        public Task<Message> MapToMessageAsync(MyFailingMapperEvent request, Publication publication, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<Message>();
             tcs.SetException(new JsonException());

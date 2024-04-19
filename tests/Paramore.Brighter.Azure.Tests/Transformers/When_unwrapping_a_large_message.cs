@@ -2,7 +2,6 @@
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using FluentAssertions;
-using Paramore.Brighter.Azure.TestDoubles.Tests;
 using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.Azure;

@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Inbox.Postgres
         private const string OutboxDDL = @"
                     CREATE TABLE {0}
                         (
-                            CommandId uuid NOT NULL ,
+                            CommandId VARCHAR(256) NOT NULL ,
                             CommandType VARCHAR(256) NULL ,
                             CommandBody TEXT NULL ,
                             Timestamp timestamptz  NULL ,

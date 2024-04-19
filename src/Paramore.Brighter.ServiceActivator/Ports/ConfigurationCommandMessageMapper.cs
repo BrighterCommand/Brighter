@@ -7,9 +7,8 @@ namespace Paramore.Brighter.ServiceActivator.Ports
 {
     public class ConfigurationCommandMessageMapper : IAmAMessageMapper<ConfigurationCommand>
     {
-        public Message MapToMessage(ConfigurationCommand request)
+        public Message MapToMessage(ConfigurationCommand request, Publication publication)
         {
-            //var topic = Environment.MachineName + Assembly.GetEntryAssembly().GetName();
             var topic = Environment.MachineName + Assembly.GetEntryAssembly()?.GetName();
 
             var header = new MessageHeader(messageId: request.Id, topic: topic, messageType: MessageType.MT_COMMAND);

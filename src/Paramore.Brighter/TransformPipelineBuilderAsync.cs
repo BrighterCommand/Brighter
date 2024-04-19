@@ -213,7 +213,7 @@ namespace Paramore.Brighter
                 BindingFlags.Public | BindingFlags.Instance,
                 null,
                 CallingConventions.Any,
-                new Type[] { typeof(TRequest), typeof(CancellationToken) },
+                new Type[] { typeof(TRequest), typeof(Publication), typeof(CancellationToken) },
                 null);
         }
 

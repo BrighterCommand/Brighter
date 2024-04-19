@@ -95,9 +95,10 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// If we place it in storage, set a header property to contain the 'claim' that can be used to retrieve the 'luggage'
         /// </summary>
         /// <param name="message">The message whose contents we want to </param>
+        /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>
         /// <param name="cancellationToken">Add cancellation token</param>
         /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
-        public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken= default)
+        public async Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken= default)
         {
             if (System.Text.Encoding.Unicode.GetByteCount(message.Body.Value) < _thresholdInBytes) return message;
 

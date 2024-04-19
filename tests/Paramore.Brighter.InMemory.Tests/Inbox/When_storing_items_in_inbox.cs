@@ -152,7 +152,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             }
              
             //Act
-            var firstCommandExists = inbox.Exists<SimpleCommand>(Guid.NewGuid(), contextKey);
+            var firstCommandExists = inbox.Exists<SimpleCommand>(Guid.NewGuid().ToString(), contextKey);
  
             //Assert
             firstCommandExists.Should().BeFalse();

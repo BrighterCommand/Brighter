@@ -47,7 +47,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _commandProcessor = new SpyExceptionCommandProcessor();
             var commandProcessorProvider = new CommandProcessorProvider(_commandProcessor);
+            
             _channel = new FakeChannel();
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
@@ -60,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyCommand>()
-                .WrapAsync(new MyCommand())
+                .WrapAsync(new MyCommand(), new Publication{Topic = new RoutingKey("MyCommand")})
                 .Result;
             _channel.Enqueue(msg);
         }
@@ -73,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
                 await Task.Delay(1000);
 
-                var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT),
+                var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT),
                     new MessageBody(""));
                 _channel.Enqueue(quitMessage);
 

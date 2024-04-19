@@ -55,8 +55,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _command = new MyCommand();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options)));
+            var message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
+            );
+            var message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
+            );
             _channel.Enqueue(message1);
             _channel.Enqueue(message2);
         }
@@ -67,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(task);

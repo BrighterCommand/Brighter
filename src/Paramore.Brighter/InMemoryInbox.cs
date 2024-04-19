@@ -91,7 +91,7 @@ namespace Paramore.Brighter
         /// <param name="id">The Guid for the request</param>
         /// <param name="contextKey">The handler this is for</param>
         /// <returns></returns>
-        public static string CreateKey(Guid id, string contextKey)
+        public static string CreateKey(string id, string contextKey)
         {
             return $"{id}:{contextKey}";
         }
@@ -177,7 +177,7 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>ICommand.</returns>
         /// <exception cref="System.TypeLoadException"></exception>
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
             
@@ -189,7 +189,7 @@ namespace Paramore.Brighter
             throw new RequestNotFoundException<T>(id);
         }
 
-        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
 
@@ -203,8 +203,10 @@ namespace Paramore.Brighter
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -231,7 +233,8 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task{T}" />.</returns>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 

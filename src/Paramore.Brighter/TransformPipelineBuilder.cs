@@ -228,20 +228,25 @@ namespace Paramore.Brighter
             return transformAttributes;
         }
 
-
         private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
         {
             return FindMethods(messageMapper)
                 .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToMessage))
-                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
+                .SingleOrDefault(
+                    method => method.GetParameters().Length == 2 
+                    && method.GetParameters().First().ParameterType == typeof(TRequest)
+                    && method.GetParameters().Last().ParameterType == typeof(Publication)
+                );
         }
-
 
         private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
         {
             return FindMethods(messageMapper)
                 .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToRequest))
-                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(Message));
+                .SingleOrDefault(
+                    method => method.GetParameters().Length == 1 
+                    && method.GetParameters().Single().ParameterType == typeof(Message)
+                );
         }
 
         private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest

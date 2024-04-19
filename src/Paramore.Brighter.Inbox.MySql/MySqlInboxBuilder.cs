@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Inbox.MySql
     {
         private const string OutboxDDL = @"CREATE TABLE {0} 
             ( 
-                `CommandId` CHAR(36) NOT NULL , 
+                `CommandId` VARCHAR(255) NOT NULL , 
                 `CommandType` VARCHAR(256) NOT NULL , 
                 `CommandBody` TEXT NOT NULL , 
                 `Timestamp` TIMESTAMP(4) NOT NULL , 
