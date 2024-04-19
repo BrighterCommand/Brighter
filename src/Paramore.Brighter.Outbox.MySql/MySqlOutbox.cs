@@ -226,7 +226,7 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 new MySqlParameter
                 {
-                    ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id.ToString()
+                    ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id
                 },
                 new MySqlParameter
                 {
@@ -248,7 +248,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 {
                     ParameterName = $"@{prefix}CorrelationId",
                     DbType = DbType.String,
-                    Value = message.Header.CorrelationId.ToString()
+                    Value = message.Header.CorrelationId
                 },
                 new MySqlParameter
                 {
@@ -279,8 +279,11 @@ namespace Paramore.Brighter.Outbox.MySql
             };
         }
 
-        protected override IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
-            int pageSize, int pageNumber)
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
+            double milliSecondsSinceAdded,
+            int pageSize, 
+            int pageNumber
+            )
         {
             var offset = (pageNumber - 1) * pageSize;
             var parameters = new IDbDataParameter[3];
@@ -445,12 +448,12 @@ namespace Paramore.Brighter.Outbox.MySql
             return contentType;
         }
 
-        private Guid? GetCorrelationId(IDataReader dr)
+        private string GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 
@@ -459,9 +462,9 @@ namespace Paramore.Brighter.Outbox.MySql
             return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static Guid GetMessageId(IDataReader dr)
+        private static string GetMessageId(IDataReader dr)
         {
-            return dr.GetGuid(0);
+            return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
         private string GetPartitionKey(IDataReader dr)

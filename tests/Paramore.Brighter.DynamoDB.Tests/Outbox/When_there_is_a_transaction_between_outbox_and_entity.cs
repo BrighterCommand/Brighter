@@ -54,13 +54,13 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
         var myItem = new MyEntity { Id = Guid.NewGuid().ToString(), Value = "Test Value for Transaction Checking" };
         var attributes = context.ToDocument(myItem).ToAttributeMap();
         var myMessageHeader = new MessageHeader(
-            messageId: Guid.NewGuid(),
+            messageId: Guid.NewGuid().ToString(),
             topic: "test_topic",
             messageType: MessageType.MT_DOCUMENT,
             timeStamp: DateTime.UtcNow.AddDays(-1),
             handledCount: 5,
             delayedMilliseconds: 5,
-            correlationId: Guid.NewGuid(),
+            correlationId: Guid.NewGuid().ToString(),
             replyTo: "ReplyAddress",
             contentType: "text/plain");
 

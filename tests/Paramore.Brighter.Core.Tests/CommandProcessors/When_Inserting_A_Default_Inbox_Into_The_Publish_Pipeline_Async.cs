@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public CommandProcessorBuildDefaultInboxPublishAsyncTests()
         {
-            var handler = new MyEventHandlerAsync(new Dictionary<string, Guid>());
+            var handler = new MyEventHandlerAsync(new Dictionary<string, string>());
 
             var subscriberRegistry = new SubscriberRegistry();
             //This handler has no Inbox attribute
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

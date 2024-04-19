@@ -40,7 +40,10 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
         public DynamoDbOutboxEmptyStoreAsyncTests()
         {
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _messageEarliest = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageBody("message body")
+            );
             _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
         }
 

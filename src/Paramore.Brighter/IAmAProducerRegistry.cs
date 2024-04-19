@@ -13,13 +13,6 @@ namespace Paramore.Brighter
         void CloseAll();
         
         /// <summary>
-        /// Used to obtain values from the first producer for configuration of the Outbox. Workaround because the outbox properties are on the publication
-        /// expect to be removed
-        /// </summary>
-        /// <returns></returns>
-        IAmAMessageProducer GetDefaultProducer();
-        
-        /// <summary>
         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
         /// </summary>
         /// <param name="topic">The topic we want to find the producer for</param>
@@ -27,11 +20,9 @@ namespace Paramore.Brighter
         IAmAMessageProducer LookupBy(string topic);
 
         /// <summary>
-        /// Looks up the producer associated with this message via a topic or returns the default producer. The topic lives on the message headers
-        /// </summary>
-        /// <param name="topic">The topic we want to find the producer for</param>
-        /// <returns>A producer</returns>
-        IAmAMessageProducer LookupByOrDefault(string topic);
+        /// Looks up the Publication used to build a given producer; useful for obtaining CloudEvents metadata
+        /// </summary> 
+        Publication LookupPublication<TRequest>() where TRequest : class, IRequest;
 
         /// <summary>
         /// An iterable list of all the producers in the registry

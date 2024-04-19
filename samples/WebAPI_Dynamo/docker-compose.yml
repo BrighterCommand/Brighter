@@ -11,7 +11,7 @@ services:
     working_dir: /home/dynamodblocal
     
   rabbitmq:
-    image: brightercommand/rabbitmq:3.8-management-delay
+    image: brightercommand/rabbitmq:3.13-management-delay
     ports:
       - "5672:5672"
       - "15672:15672"

@@ -23,7 +23,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _topicClientProvider = A.Fake<IServiceBusSenderProvider>();
             _topicClient = A.Fake<IServiceBusSenderWrapper>();
 
-            _producer = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper, _topicClientProvider, OnMissingChannel.Create);
+            _producer = new AzureServiceBusMessageProducer(
+                _nameSpaceManagerWrapper, 
+                _topicClientProvider, 
+                new AzureServiceBusPublication{MakeChannels = OnMissingChannel.Create}
+            );
         }
 
         [Fact]
@@ -36,7 +40,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
             A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, CancellationToken ct) => Task.FromResult(sentMessage = g));
 
-            _producer.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_EVENT), new MessageBody(messageBody, "JSON")));
+            _producer.Send(new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT), 
+                new MessageBody(messageBody, "JSON"))
+            );
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
@@ -53,7 +60,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
             A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, CancellationToken ct) => Task.FromResult(sentMessage = g));
 
-            _producer.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_COMMAND), new MessageBody(messageBody, "JSON")));
+            _producer.Send(new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_COMMAND), 
+                new MessageBody(messageBody, "JSON"))
+            );
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
@@ -70,7 +80,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
             A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, CancellationToken ct) => Task.FromResult(sentMessage = g));
 
-            _producer.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")));
+            _producer.Send(new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                new MessageBody(messageBody, "JSON")));
 
             A.CallTo(() => _nameSpaceManagerWrapper.CreateTopic("topic", null)).MustHaveHappenedOnceExactly();
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
@@ -86,7 +98,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             try
             {
-                _producer.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody("Message", "JSON")));
+                _producer.Send(new Message(
+                    new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                    new MessageBody("Message", "JSON")));
             }
             catch (Exception)
             {
@@ -111,7 +125,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 Task.FromResult(sentMessage = g));
 
             _producer.SendWithDelay(
-                new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_EVENT),
+                new Message(
+                    new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT),
                     new MessageBody(messageBody, "JSON")), 1);
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
@@ -131,7 +146,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 A.CallTo(() => _topicClient.ScheduleMessageAsync(A<ServiceBusMessage>.Ignored, A<DateTimeOffset>.Ignored,
                     CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, DateTimeOffset t, CancellationToken ct) => Task.FromResult(sentMessage = g));
 
-            _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_COMMAND), new MessageBody(messageBody, "JSON")), 1);
+            _producer.SendWithDelay(new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_COMMAND), 
+                new MessageBody(messageBody, "JSON")), 1);
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
@@ -150,7 +167,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 A.CallTo(() => _topicClient.ScheduleMessageAsync(A<ServiceBusMessage>.Ignored, A<DateTimeOffset>.Ignored,
                     CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, DateTimeOffset t , CancellationToken ct) => Task.FromResult(sentMessage = g));
 
-            _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1);
+            _producer.SendWithDelay(new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                new MessageBody(messageBody, "JSON")), 1);
 
             A.CallTo(() => _nameSpaceManagerWrapper.CreateTopic("topic", null)).MustHaveHappenedOnceExactly();
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
@@ -167,8 +186,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(topicExists);
             A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
 
-            _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1);
-            _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1);
+            _producer.SendWithDelay(new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                new MessageBody(messageBody, "JSON")), 1);
+            _producer.SendWithDelay(new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                new MessageBody(messageBody, "JSON")), 1);
 
             if (topicExists == false)
             {
@@ -185,7 +208,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Throws(new Exception());
 
-            await Assert.ThrowsAsync<Exception>(() => _producer.SendWithDelayAsync(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1));
+            await Assert.ThrowsAsync<Exception>(() => _producer.SendWithDelayAsync(
+                new Message(
+                    new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                    new MessageBody(messageBody, "JSON")), 1)
+            );
             A.CallTo(() => _nameSpaceManagerWrapper.Reset()).MustHaveHappenedOnceExactly();
         }
 
@@ -199,7 +226,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             A.CallTo(() => _topicClientProvider.Get("topic")).Throws(new Exception()).Once().Then.Returns(_topicClient);
 
-           _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")));
+           _producer.SendWithDelay(new Message(
+               new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+               new MessageBody(messageBody, "JSON"))
+           );
 
             A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).MustHaveHappenedOnceExactly();
         }
@@ -209,9 +239,17 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            var producerValidate = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper, _topicClientProvider, OnMissingChannel.Validate);
+            var producerValidate = new AzureServiceBusMessageProducer(
+                _nameSpaceManagerWrapper, 
+                _topicClientProvider, 
+                new AzureServiceBusPublication{MakeChannels = OnMissingChannel.Validate})
+            ;
 
-            await Assert.ThrowsAsync<ChannelFailureException>(() => producerValidate.SendAsync(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON"))));
+            await Assert.ThrowsAsync<ChannelFailureException>(() => producerValidate.SendAsync(
+                new Message(
+                    new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                    new MessageBody(messageBody, "JSON")))
+            );
         }
     }
 }

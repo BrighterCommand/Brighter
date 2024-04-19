@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using FakeItEasy;
 using FluentAssertions;
@@ -33,7 +34,8 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    public class ControlBusBuilderTests
+    [Collection("CommandProcessor")]
+    public class ControlBusBuilderTests : IDisposable
     {
         private Dispatcher _controlBus;
         private readonly ControlBusReceiverBuilder _busReceiverBuilder;
@@ -65,6 +67,11 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _controlBus.Connections.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.HEARTBEAT}");
             //_should_have_a_command_processor
             _controlBus.CommandProcessor.Should().NotBeNull();
+        }
+        
+        public void Dispose()
+        {
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

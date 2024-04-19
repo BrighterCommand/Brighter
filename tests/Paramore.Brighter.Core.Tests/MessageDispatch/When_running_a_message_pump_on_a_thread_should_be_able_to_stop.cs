@@ -54,7 +54,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             messagePump.TimeoutInMilliseconds = 5000;
 
             var @event = new MyEvent();
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+            var message = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
+            );
             _channel.Enqueue(message);
 
             Performer performer = new(_channel, messagePump);

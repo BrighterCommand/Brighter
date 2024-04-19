@@ -33,13 +33,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public void When_a_message_consumer_reads_multiple_messages()
         {
             //Post one more than batch size messages
-             var messageOne = new Message(new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND), new MessageBody("test content One"));
+             var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND), new MessageBody("test content One"));
             _messageProducer.Send(messageOne);
-             var messageTwo= new Message(new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Two"));
+             var messageTwo= new Message(new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Two"));
             _messageProducer.Send(messageTwo);
-             var messageThree= new Message(new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Three"));
+             var messageThree= new Message(new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Three"));
             _messageProducer.Send(messageThree);
-             var messageFour= new Message(new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Four"));
+             var messageFour= new Message(new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Four"));
             _messageProducer.Send(messageFour);
             
             //let them arrive

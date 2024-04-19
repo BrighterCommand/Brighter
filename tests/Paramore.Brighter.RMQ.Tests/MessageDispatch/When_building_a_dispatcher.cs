@@ -118,7 +118,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
 
         private Subscription GetConnection(string name)

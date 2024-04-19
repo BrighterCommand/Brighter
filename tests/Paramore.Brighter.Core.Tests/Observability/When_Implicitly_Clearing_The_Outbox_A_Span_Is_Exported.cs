@@ -24,6 +24,8 @@ public class ImplicitClearingObservabilityTests : IDisposable
 
     public ImplicitClearingObservabilityTests()
     {
+        const string topic = "MyEvent";
+        
         IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox();
         _event = new MyEvent("TestEvent");
 
@@ -55,21 +57,28 @@ public class ImplicitClearingObservabilityTests : IDisposable
         var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}};
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {MyEvent.Topic, new FakeMessageProducer()}
+            {topic, new FakeMessageProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
         });
-        producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
         
-        IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, outbox);
+        IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+            producerRegistry, 
+            policyRegistry, 
+            messageMapperRegistry, 
+            new EmptyMessageTransformerFactory(), 
+            new EmptyMessageTransformerFactoryAsync(),
+            outbox,
+            maxOutStandingMessages: -1
+        );
 
-        CommandProcessor.ClearExtServiceBus();
+        CommandProcessor.ClearServiceBus();
         
         _commandProcessor = new CommandProcessor(
             registry, 
             handlerFactory, 
-            new InMemoryRequestContextFactory(), 
+            new InMemoryRequestContextFactory(),
             policyRegistry, 
-            bus,
-            messageMapperRegistry);
+            bus
+        );
     }
 
     [Fact]
@@ -97,7 +106,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
 
     public void Dispose()
     {
-        CommandProcessor.ClearExtServiceBus();
+        CommandProcessor.ClearServiceBus();
         _traceProvider?.Dispose();
     }
 }

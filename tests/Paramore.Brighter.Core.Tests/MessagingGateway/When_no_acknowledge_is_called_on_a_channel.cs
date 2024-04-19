@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             _channel = new Channel("test", _gateway);
 
             _receivedMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("a test body"));
 
             _receivedMessage.DeliveryTag = 12345UL;

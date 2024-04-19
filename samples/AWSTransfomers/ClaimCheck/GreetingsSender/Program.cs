@@ -63,9 +63,10 @@ namespace GreetingsSender
                     awsConnection,
                     new SnsPublication[]
                     {
-                        new SnsPublication
+                        new()
                         {
                             Topic = topic,
+                            RequestType = typeof(GreetingEvent),
                             FindTopicBy = TopicFindBy.Convention,
                             MakeChannels = OnMissingChannel.Create
                         }

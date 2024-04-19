@@ -13,6 +13,7 @@ public class SmallPayloadNotCompressedTests
     private readonly CompressPayloadTransformer _transformer;
     private readonly string _body;
     private readonly Message _message;
+    private string _topic;
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
     
     
@@ -22,8 +23,9 @@ public class SmallPayloadNotCompressedTests
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
 
         _body = "small message";
+        _topic = "test_topic";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON),
+            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON),
             new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));      
     }
     
@@ -31,7 +33,7 @@ public class SmallPayloadNotCompressedTests
     [Fact]
     public void When_a_message_is_under_the_threshold()
     {
-        var uncompressedMessage = _transformer.Wrap(_message);
+        var uncompressedMessage = _transformer.Wrap(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //look for gzip in the bytes
         uncompressedMessage.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);

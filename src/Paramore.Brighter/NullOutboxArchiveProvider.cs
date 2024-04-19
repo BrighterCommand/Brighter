@@ -63,15 +63,14 @@ namespace Paramore.Brighter
 
             return Task.CompletedTask;
         }
-        
+
         /// <summary>
         /// Archive messages in Parallel
         /// </summary>
         /// <param name="messages">Messages to send</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>IDs of successfully archived messages</returns>
-
-        public Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+        public Task<string[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Messages with Ids {MessageIds} will not be stored",
                 string.Join(",", messages.Select(m => m.Id.ToString()).ToArray()));

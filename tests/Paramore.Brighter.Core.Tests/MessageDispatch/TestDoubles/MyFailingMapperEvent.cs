@@ -9,16 +9,14 @@ internal class MyFailingMapperEvent : IRequest
     /// Gets or sets the identifier.
     /// </summary>
     /// <value>The identifier.</value>
-    public Guid Id { get; set; }
-    public string MissingStringField { get; set; }
-    public int MissingIntField { get; set; }
+    public string Id { get; set; }
         
     /// <summary>
     /// Initializes a new instance of the <see cref="T:System.Object"/> class.
     /// </summary>
     public MyFailingMapperEvent()
     {
-        Id = new Guid();
+        Id = Guid.NewGuid().ToString();
     }
         
     /// <summary>

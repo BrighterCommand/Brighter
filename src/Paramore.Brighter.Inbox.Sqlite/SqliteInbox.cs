@@ -90,7 +90,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
                    sqlException.SqliteErrorCode == SqliteUniqueKeyError;
         }
 
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"select * from {this.OutboxTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT CommandId FROM {OutboxTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
             var parameters = new[]
@@ -128,9 +128,12 @@ namespace Paramore.Brighter.Inbox.Sqlite
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT CommandId FROM {OutboxTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
             var parameters = new[]
@@ -178,7 +181,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
             }
         }
 
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"select * from {OutboxTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
@@ -283,7 +287,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
             return parameters;
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr, Guid id) where TResult : class, IRequest
+        private TResult ReadCommand<TResult>(IDataReader dr, string id) where TResult : class, IRequest
         {
             using (dr)
             {

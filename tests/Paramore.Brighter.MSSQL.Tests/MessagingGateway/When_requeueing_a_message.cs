@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         public MsSqlMessageConsumerRequeueTests()
         {
             var myCommand = new MyCommand { Value = "Test" };
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
             var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";

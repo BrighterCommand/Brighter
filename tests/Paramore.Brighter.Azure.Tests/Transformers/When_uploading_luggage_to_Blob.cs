@@ -2,7 +2,7 @@
 using Azure.Storage.Blobs;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Paramore.Brighter.Azure.TestDoubles.Tests;
+using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Transformers.Azure;
 using Policy = Polly.Policy;
 

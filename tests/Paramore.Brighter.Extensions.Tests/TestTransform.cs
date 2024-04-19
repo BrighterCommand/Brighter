@@ -24,7 +24,7 @@ public class TestTransform : IAmAMessageTransformAsync, IAmAMessageTransform
        UnwrapInitializerList.AddRange(initializerList); 
     }
 
-    public Message Wrap(Message message)
+    public Message Wrap(Message message, Publication publication)
     {
         return message;
     }
@@ -34,7 +34,7 @@ public class TestTransform : IAmAMessageTransformAsync, IAmAMessageTransform
         return message;
     }
 
-    public Task<Message> WrapAsync(Message message, CancellationToken cancellationToken)
+    public Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken)
     {
         var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
         tcs.SetResult(message);

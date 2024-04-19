@@ -33,7 +33,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public SnsReDrivePolicySDlqTests()
         {
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
             var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -69,7 +69,15 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
             //how do we send to the queue
-            _sender = new SqsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+            _sender = new SqsMessageProducer(
+                _awsConnection, 
+                new SnsPublication 
+                    { 
+                        Topic = new RoutingKey(_topicName), 
+                        RequestType = typeof(MyDeferredCommand), 
+                        MakeChannels = OnMissingChannel.Create 
+                    }
+                );
 
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);
@@ -92,7 +100,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var provider = new CommandProcessorProvider(_commandProcessor);
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)),
+                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
                 null
                 ); 
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
@@ -138,7 +146,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             await Task.Delay(5000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message

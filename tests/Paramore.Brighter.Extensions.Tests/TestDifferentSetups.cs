@@ -33,7 +33,17 @@ namespace Tests
         public void WithExternalBus()
         {
             var serviceCollection = new ServiceCollection();
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { "MyTopic", new FakeProducer() }, });
+            const string mytopic = "MyTopic";
+            var producerRegistry = new ProducerRegistry(
+                new Dictionary<string, IAmAMessageProducer>
+                {
+                    { mytopic, new FakeProducer{ Publication = { Topic = new RoutingKey(mytopic)}} },
+                });
+            
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(type => new TestEventMessageMapper()), 
+                new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
+            );
 
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
@@ -42,6 +52,7 @@ namespace Tests
                 .UseExternalBus((config) =>
                 {
                     config.ProducerRegistry = producerRegistry;
+                    config.MessageMapperRegistry = messageMapperRegistry;
                 })
                 .AutoFromAssemblies();
 
@@ -69,7 +80,6 @@ namespace Tests
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
             };
-
             
             serviceCollection
                 .AddBrighter(options => options.PolicyRegistry = policyRegistry)
@@ -103,12 +113,9 @@ namespace Tests
 
     internal class FakeProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
-        public List<Message> SentMessages { get; } = new List<Message>();
+        public List<Message> SentMessages { get; } = new();
         
-        public int MaxOutStandingMessages { get; set; } = -1;
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+        public Publication Publication { get; } = new();
 
         public void Dispose()
         {

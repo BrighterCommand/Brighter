@@ -21,11 +21,11 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             _channel = new Channel("test", _gateway, BufferLimit);
 
             _messageOne = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("FirstMessage"));
            
             _messageTwo = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("SecondMessage"));
 
         }
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             _channel.Enqueue(_messageOne, _messageTwo);
              
             _messageThree = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("ThirdMessage"));
             
             A.CallTo(() => _gateway.Receive(10)).Returns(new Message[] {_messageThree});
@@ -55,19 +55,19 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
             //put BufferLimit messages on the queue first
             var messageOne = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("FirstMessage"));
             
             var messageTwo = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("SecondMessage"));
             
             var messageThree = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("ThirdMessage"));
             
             var messageFour = new Message(
-                new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
                 new MessageBody("FourthMessage"));
             
 

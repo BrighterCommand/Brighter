@@ -26,13 +26,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
  
-            _message = new Message(new MessageHeader(Guid.NewGuid(), _Topic1, MessageType.MT_COMMAND),
+            _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic1, MessageType.MT_COMMAND),
                 new MessageBody("message body"));
-            _message1 = new Message(new MessageHeader(Guid.NewGuid(), _Topic2, MessageType.MT_EVENT),
+            _message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic2, MessageType.MT_EVENT),
                 new MessageBody("message body2"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _Topic1, MessageType.MT_COMMAND),
+            _message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic1, MessageType.MT_COMMAND),
                 new MessageBody("message body3"));
-            _message3 = new Message(new MessageHeader(Guid.NewGuid(), _Topic2, MessageType.MT_EVENT),
+            _message3 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic2, MessageType.MT_EVENT),
                 new MessageBody("message body4"));
         }
 

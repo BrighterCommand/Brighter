@@ -96,13 +96,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
             var message = new Message(
-                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey,
                     ContentType = "application/json",
                     Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
                     ReplyTo = "com.brightercommand.replyto",
-                    CorrelationId = Guid.NewGuid(),
+                    CorrelationId = Guid.NewGuid().ToString(),
                     DelayedMilliseconds = 10,
                     HandledCount = 2,
                     TimeStamp = DateTime.UtcNow

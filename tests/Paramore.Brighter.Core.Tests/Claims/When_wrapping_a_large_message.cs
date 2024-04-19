@@ -14,6 +14,7 @@ public class LargeMessagePayloadWrapTests
     private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
     private InMemoryStorageProvider _inMemoryStorageProvider;
+    private readonly Publication _publication;
 
     public LargeMessagePayloadWrapTests()
     {
@@ -24,6 +25,8 @@ public class LargeMessagePayloadWrapTests
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
             null);
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+        
+        _publication = new Publication{Topic = new RoutingKey("transform.event")};
 
         _myCommand = new MyLargeCommand(6000);
 
@@ -39,7 +42,7 @@ public class LargeMessagePayloadWrapTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = _transformPipeline.Wrap(_myCommand);
+        var message = _transformPipeline.Wrap(_myCommand, _publication);
         
         //assert
         message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();

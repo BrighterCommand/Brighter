@@ -46,9 +46,10 @@ namespace Paramore.Brighter
         /// Maps to message.
         /// </summary>
         /// <param name="request">The request.</param>
+        /// <param name="publication">The Publication for the channel we are writing the message to, for metadata such as Topic/RoutingKey or CloudEvents</param>
         /// <param name="cancellationToken"></param>
         /// <returns>Message.</returns>
-        Task<Message> MapToMessageAsync(TRequest request, CancellationToken cancellationToken = default);
+        Task<Message> MapToMessageAsync(TRequest request, Publication publication, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Maps to request.

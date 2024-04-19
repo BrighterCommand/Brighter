@@ -21,7 +21,7 @@ public class MyParameterizedTransform : IAmAMessageTransform
         _displayFormat = (string)initializerList[0];
     }
 
-    public Message Wrap(Message message)
+    public Message Wrap(Message message, Publication publication)
     {
         message.Header.Bag.Add(HEADER_KEY, _template);
         return message;

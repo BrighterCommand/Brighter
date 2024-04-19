@@ -38,15 +38,24 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The identifier.</value>
         [NJsonSchema.Annotations.NotNull]
-        public Guid Id { get; set; }
+        public string Id { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Command"/> class.
         /// </summary>
         /// <param name="id">The identifier.</param>
-        public Command(Guid id)
+        public Command(string id)
         {
             Id = id;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Command"/> class. 
+        /// </summary>
+        /// <param name="id">The identifier</param>
+        public Command(Guid id)
+        {
+           Id = id.ToString(); 
         }
         
         /// <summary>

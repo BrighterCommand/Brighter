@@ -60,19 +60,17 @@ namespace GreetingsSender
                 {
                     new()
                     {
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels =OnMissingChannel.Create,
-                        Topic = new RoutingKey("greeting.event")
+                        Topic = new RoutingKey("greeting.event"),
+                        RequestType = typeof(GreetingEvent)
                     },
                     new()
                     {
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels =OnMissingChannel.Create,
-                        Topic = new RoutingKey("farewell.event")                            
+                        Topic = new RoutingKey("farewell.event"),
+                        RequestType = typeof(FarewellEvent)
                     }
                 }).Create();
             
@@ -80,6 +78,8 @@ namespace GreetingsSender
                 .UseExternalBus((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;
+                    configure.MaxOutStandingMessages = 5;
+                    configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
                 })
                 .AutoFromAssemblies();
 

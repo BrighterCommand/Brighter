@@ -35,27 +35,27 @@ var subscriptionName = "paramore.example.worker";
 var subscriptions = new Subscription[]
 {
     new AzureServiceBusSubscription<GreetingAsyncEvent>(
-        new SubscriptionName(GreetingEventAsyncMessageMapper.Topic),
+        new SubscriptionName("Greeting Event"),
         new ChannelName(subscriptionName),
-        new RoutingKey(GreetingEventAsyncMessageMapper.Topic),
+        new RoutingKey("greeting.event"),
         timeoutInMilliseconds: 400,
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
         noOfPerformers: 2, unacceptableMessageLimit: 1),
     new AzureServiceBusSubscription<GreetingEvent>(
-        new SubscriptionName(GreetingEventMessageMapper.Topic),
+        new SubscriptionName("Greeting Async Event"),
         new ChannelName(subscriptionName),
-        new RoutingKey(GreetingEventMessageMapper.Topic),
+        new RoutingKey("greeting.Asyncevent"),
         timeoutInMilliseconds: 400,
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: false,
         noOfPerformers: 2),
     new AzureServiceBusSubscription<AddGreetingCommand>(
-        new SubscriptionName(AddGreetingMessageMapper.Topic),
+        new SubscriptionName("Greeting Command"),
         new ChannelName(subscriptionName),
-        new RoutingKey(AddGreetingMessageMapper.Topic),
+        new RoutingKey("greeting.addGreetingCommand"),
         timeoutInMilliseconds: 400,
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,

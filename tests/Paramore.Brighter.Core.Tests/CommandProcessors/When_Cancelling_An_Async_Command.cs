@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     public class CancellingAsyncPipelineTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
+        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
         private readonly MyCommand _myCommand = new MyCommand();
 
         public CancellingAsyncPipelineTests()
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

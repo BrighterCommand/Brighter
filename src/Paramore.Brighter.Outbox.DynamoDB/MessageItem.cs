@@ -138,10 +138,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             //following type may be missing on older data
             var characterEncoding = CharacterEncoding != null ? (CharacterEncoding) Enum.Parse(typeof(CharacterEncoding), CharacterEncoding) : Brighter.CharacterEncoding.UTF8;
-            var correlationId = Guid.Parse(CorrelationId);
+            var correlationId = CorrelationId;
             var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(HeaderBag,
                 JsonSerialisationOptions.Options);
-            var messageId = Guid.Parse(MessageId);
+            var messageId = MessageId;
             var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
             var timestamp = new DateTime(CreatedTime, DateTimeKind.Utc);
 
@@ -152,8 +152,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 timeStamp: timestamp,
                 correlationId: correlationId,
                 replyTo: ReplyTo,
-                partitionKey: PartitionKey,
-                contentType: ContentType);
+                contentType: ContentType, partitionKey: PartitionKey);
 
             foreach (var key in bag.Keys)
             {

@@ -75,12 +75,13 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="request">The request to wrap</param>
+        /// <param name="publication">The publication for this channel, provides metadata such as topic or Cloud Events attributes</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
-        public async Task<Message> WrapAsync(TRequest request, CancellationToken cancellationToken = default)
+        public async Task<Message> WrapAsync(TRequest request, Publication publication, CancellationToken cancellationToken = default)
         {
-            var message = await MessageMapper.MapToMessageAsync(request, cancellationToken);
-            await Transforms.EachAsync(async transform => message = await transform.WrapAsync(message, cancellationToken));
+            var message = await MessageMapper.MapToMessageAsync(request, publication, cancellationToken);
+            await Transforms.EachAsync(async transform => message = await transform.WrapAsync(message, publication, cancellationToken));
             return message;
         }
     }

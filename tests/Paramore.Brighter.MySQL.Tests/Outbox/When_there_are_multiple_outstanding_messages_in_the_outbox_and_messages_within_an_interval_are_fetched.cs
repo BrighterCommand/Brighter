@@ -25,9 +25,18 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
 
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
+            _messageEarliest = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), _TopicFirstMessage, MessageType.MT_DOCUMENT), 
+                new MessageBody("message body")
+            );
+            _message1 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "test_topic2", MessageType.MT_DOCUMENT), 
+                new MessageBody("message body2")
+            );
+            _message2 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), _TopicLastMessage, MessageType.MT_DOCUMENT), 
+                new MessageBody("message body3")
+            );
             _mySqlOutbox.Add(_messageEarliest);
             Thread.Sleep(100);
             _mySqlOutbox.Add(_message1);

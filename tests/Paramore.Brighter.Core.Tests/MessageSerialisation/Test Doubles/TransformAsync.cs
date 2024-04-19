@@ -29,7 +29,7 @@ public abstract class TransformAsync : IAmAMessageTransformAsync
     /// <param name="initializerList"></param>
     public void InitializeUnwrapFromAttributeParams(params object[] initializerList) { }
 
-    public abstract Task<Message> WrapAsync(Message message, CancellationToken cancellationToken);
+    public abstract Task<Message> WrapAsync(Message message,Publication publication, CancellationToken cancellationToken);
 
     public abstract Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken);
 }

@@ -87,11 +87,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public async Task When_a_consumer_declares_topics()
         {
             var message = new Message(
-                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
-                new MessageBody($"test content [{_queueName}]"));
+                new MessageBody($"test content [{_queueName}]")
+            );
             
             //This should fail, if consumer can't create the topic as set to Assume
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);

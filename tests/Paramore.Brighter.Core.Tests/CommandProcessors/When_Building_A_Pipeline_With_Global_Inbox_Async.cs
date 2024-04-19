@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public PipelineGlobalInboxTestsAsync()
         {
             _inbox = new InMemoryInbox();
-            var handler = new MyCommandHandlerAsync(new Dictionary<string, Guid>());
+            var handler = new MyCommandHandlerAsync(new Dictionary<string, string>());
            
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
 
         private PipelineTracer TracePipeline(IHandleRequestsAsync<MyCommand> firstInPipeline)

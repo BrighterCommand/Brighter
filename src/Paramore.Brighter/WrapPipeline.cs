@@ -75,12 +75,12 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="request">The request to wrap</param>
-        /// <param name="cancellationToken">The cancellation token</param>
-        /// <returns></returns>
-        public Message Wrap(TRequest request)
+        /// <param name="publication">The publication for this channel, provides metadata such as topic or Cloud Events attributes</param>
+        /// <returns>The message created from the request via the pipeline</returns>
+        public Message Wrap(TRequest request, Publication publication)
         {
-            var message = MessageMapper.MapToMessage(request);
-            Transforms.Each(transform => message = transform.Wrap(message));
+            var message = MessageMapper.MapToMessage(request, publication);
+            Transforms.Each(transform => message = transform.Wrap(message, publication));
             return message;
         }
     }

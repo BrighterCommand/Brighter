@@ -71,7 +71,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                 CompactionPercentage = 0.5
             };
 
-            var messageIds = new Guid[] {Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()};
+            var messageIds = new string[] {Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString()};
 
             for (int i = 0; i <= limit - 1; i++)
             {
