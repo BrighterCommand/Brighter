@@ -323,7 +323,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return (IAmAnExternalBusService)Activator.CreateInstance(busType,
                 busConfiguration.ProducerRegistry,
                 policyRegistry,
-                busConfiguration.MessageMapperRegistry,
+                MessageMapperRegistry(serviceProvider),
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),
                 outbox,

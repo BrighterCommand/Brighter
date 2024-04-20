@@ -61,21 +61,22 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var busConfiguration = new ExternalBusConfiguration { 
-                ProducerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
-                {
-                    { topic, _producer },
-                }),
-                MessageMapperRegistry = messageMapperRegistry,
-            };
+            var producerRegistry =
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { topic, _producer }, });
+
+            var externalBus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry: producerRegistry,
+                policyRegistry: new DefaultPolicy(),
+                mapperRegistry: messageMapperRegistry,
+                messageTransformerFactory: new EmptyMessageTransformerFactory(),
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
+                outbox: _fakeOutbox
+            );  
             
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBusCreate(
-                    busConfiguration, 
-                    _fakeOutbox,
-                    new CommittableTransactionProvider())
+                .ExternalBus(ExternalBusType.FireAndForget, externalBus)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

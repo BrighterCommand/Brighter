@@ -38,6 +38,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Gets the message mapper registry.
+        /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
         /// </summary>
         /// <value>The message mapper registry.</value>
         IAmAMessageMapperRegistry MessageMapperRegistry { get; set; }
@@ -127,6 +128,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Gets the message mapper registry.
+        /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
         /// </summary>
         /// <value>The message mapper registry.</value>
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; set; }
@@ -179,6 +181,12 @@ namespace Paramore.Brighter
         /// </summary>
         public IAmAChannelFactory ResponseChannelFactory { get; set; }
         
+        /// <summary>
+        /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
+        /// of your MessageMappers
+        /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
+        /// </summary>
+        public IAmAMessageTransformerFactory TransformerFactory { get; set; }
         
         /// <summary>
         /// The transaction provider for the outbox

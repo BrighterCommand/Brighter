@@ -193,39 +193,6 @@ namespace Paramore.Brighter
         }
         
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
-        /// 
-        /// </summary>
-        /// <param name="configuration">The Task Queues configuration.</param>
-        /// <param name="outbox">The Outbox.</param>
-        /// <param name="transactionProvider"></param>
-        /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext ExternalBusCreate<TTransaction>(
-            ExternalBusConfiguration configuration, 
-            IAmAnOutbox outbox,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider)
-        {
-            _responseChannelFactory = configuration.ResponseChannelFactory;
-            
-            _bus = new ExternalBusService<Message, TTransaction>(
-                configuration.ProducerRegistry,
-                _policyRegistry,
-                configuration.MessageMapperRegistry,
-                new EmptyMessageTransformerFactory(),
-                new EmptyMessageTransformerFactoryAsync(),
-                outbox, 
-                configuration.OutboxBulkChunkSize,
-                configuration.OutboxTimeout,
-                configuration.MaxOutStandingMessages,
-                configuration.MaxOutStandingCheckIntervalMilliSeconds,
-                configuration.OutBoxBag);
-            
-            return this;
-        }
-
-        /// <summary>
         /// Use to indicate that you are not using Task Queues.
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
@@ -360,21 +327,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
         INeedARequestContext NoExternalBus();
-
-        /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="CommandProcessorBuilder.Policies"/> when choosing this option.
-        /// 
-        /// </summary>
-        /// <param name="configuration">The Task Queues configuration.</param>
-        /// <param name="outbox">The Outbox.</param>
-        /// <param name="transactionProvider"></param>
-        /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext ExternalBusCreate<TTransaction>(
-            ExternalBusConfiguration configuration, 
-            IAmAnOutbox outbox,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider);
     }
 
     /// <summary>
