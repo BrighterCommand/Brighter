@@ -445,18 +445,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         //Called during a revoke, we are passed the partitions that we are revoking and their last offset and we need to
         //commit anything we have not stored.
-        private void CommitOffsetsFor(List<TopicPartitionOffset> partitionsToCommit)
+        private void CommitOffsetsFor(List<TopicPartitionOffset> revokedPartitions)
         {
             try
             {
                 //find the provided set of partitions amongst our stored offsets 
-                var offsets = _offsetStorage.ToArray();
+                var partitionOffsets = _offsetStorage.ToArray();
                 var revokedOffsetsToCommit =
-                    offsets.Where(tpo =>
-                            partitionsToCommit.Any(ptc =>
+                    partitionOffsets.Where(tpo =>
+                            revokedPartitions.Any(ptc =>
                                 ptc.TopicPartition == tpo.TopicPartition 
-                                && ptc.Offset != Offset.Unset 
-                                && ptc.Offset.Value < tpo.Offset.Value
+                                && ptc.Offset.Value != Offset.Unset.Value 
+                                && tpo.Offset.Value > ptc.Offset.Value 
                             )
                         )
                         .ToList();
