@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Transactions;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
 
@@ -47,19 +48,20 @@ namespace Paramore.Brighter
                 null);
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
-            var busConfiguration = new ExternalBusConfiguration();
-            busConfiguration.ProducerRegistry = producerRegistry;
-            busConfiguration.MessageMapperRegistry = mapper;
+            var bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry: producerRegistry,
+                policyRegistry: new DefaultPolicy(),
+                mapperRegistry: mapper,
+                messageTransformerFactory: new EmptyMessageTransformerFactory(),
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
+                outbox: outbox
+                ); 
             
             return new ControlBusSender(
                 CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .ExternalBusCreate(
-                    busConfiguration,
-                    outbox, 
-                    new CommittableTransactionProvider()
-                    )
+                .ExternalBus(ExternalBusType.FireAndForget, bus)   
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );
