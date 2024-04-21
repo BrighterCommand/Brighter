@@ -26,9 +26,12 @@ public class SqlInitialCreate : Migration
             .WithColumn("Message").AsString()
             .WithColumn("Recipient_Id").AsInt32();
 
-        Create.ForeignKey()
-            .FromTable("Greeting").ForeignColumn("Recipient_Id")
-            .ToTable("Person").PrimaryColumn("Id");
+        if (_configuration.DbType != "Sqlite")
+        {
+            Create.ForeignKey()
+                .FromTable("Greeting").ForeignColumn("Recipient_Id")
+                .ToTable("Person").PrimaryColumn("Id");
+        }
     }
 
     public override void Down()
