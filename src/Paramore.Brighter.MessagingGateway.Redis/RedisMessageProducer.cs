@@ -81,25 +81,23 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>Task.</returns>
         public void Send(Message message)
         {
-            using (var client = Pool.Value.GetClient())
-            {
-                Topic = message.Header.Topic;
+            using var client = Pool.Value.GetClient();
+            Topic = message.Header.Topic;
 
-                s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
+            s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
   
-                var redisMessage = CreateRedisMessage(message);
+            var redisMessage = CreateRedisMessage(message);
 
-                s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
-                    message.Header.Topic, message.Id.ToString(), message.Body.Value);
-                //increment a counter to get the next message id
-                var nextMsgId = IncrementMessageCounter(client);
-                //store the message, against that id
-                StoreMessage(client, redisMessage, nextMsgId);
-                //If there are subscriber queues, push the message to the subscriber queues
-                var pushedTo = PushToQueues(client, nextMsgId);
-                s_logger.LogDebug("RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
-                    message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
-            }
+            s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
+                message.Header.Topic, message.Id.ToString(), message.Body.Value);
+            //increment a counter to get the next message id
+            var nextMsgId = IncrementMessageCounter(client);
+            //store the message, against that id
+            StoreMessage(client, redisMessage, nextMsgId);
+            //If there are subscriber queues, push the message to the subscriber queues
+            var pushedTo = PushToQueues(client, nextMsgId);
+            s_logger.LogDebug("RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
+                message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
         }
 
         /// <summary>

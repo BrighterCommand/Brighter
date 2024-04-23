@@ -66,18 +66,14 @@ namespace Paramore.Brighter.MSSQL.Tests
 
         public void CreateDatabase()
         {
-            using (var connection = _masterConnectionProvider.GetConnection())
-            {
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"
+            using var connection = _masterConnectionProvider.GetConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
                                         IF DB_ID('BrighterTests') IS NULL
                                         BEGIN
                                             CREATE DATABASE BrighterTests;
                                         END;";
-                    command.ExecuteNonQuery();
-                }
-            }
+            command.ExecuteNonQuery();
         }
 
         public void SetupMessageDb()
@@ -116,48 +112,36 @@ namespace Paramore.Brighter.MSSQL.Tests
 
         public void CleanUpDb()
         {
-            using (var connection = _connectionProvider.GetConnection())
-            {
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = $@"
+            using var connection = _connectionProvider.GetConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = $@"
                                         IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'{_tableName}') AND type in (N'U'))
                                         BEGIN
                                             DROP TABLE {_tableName}
                                         END;";
-                    command.ExecuteNonQuery();
-                }
-            }
+            command.ExecuteNonQuery();
         }
 
         public void CreateOutboxTable()
         {
-            using (var connection = _connectionProvider.GetConnection())
-            {
-                _tableName = $"[message_{_tableName}]";
-                var createTableSql = SqlOutboxBuilder.GetDDL(_tableName, _binaryMessagePayload);
+            using var connection = _connectionProvider.GetConnection();
+            _tableName = $"[message_{_tableName}]";
+            var createTableSql = SqlOutboxBuilder.GetDDL(_tableName, _binaryMessagePayload);
 
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = createTableSql;
-                    command.ExecuteNonQuery();
-                }
-            }
+            using var command = connection.CreateCommand();
+            command.CommandText = createTableSql;
+            command.ExecuteNonQuery();
         }
 
         public void CreateInboxTable()
         {
-            using (var connection = _connectionProvider.GetConnection())
-            {
-                _tableName = $"[command_{_tableName}]";
-                var createTableSql = SqlInboxBuilder.GetDDL(_tableName);
+            using var connection = _connectionProvider.GetConnection();
+            _tableName = $"[command_{_tableName}]";
+            var createTableSql = SqlInboxBuilder.GetDDL(_tableName);
 
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = createTableSql;
-                    command.ExecuteNonQuery();
-                }
-            }
+            using var command = connection.CreateCommand();
+            command.CommandText = createTableSql;
+            command.ExecuteNonQuery();
         }
     }
 

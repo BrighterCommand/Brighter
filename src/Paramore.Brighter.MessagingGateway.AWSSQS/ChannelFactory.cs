@@ -99,38 +99,36 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (_subscription.MakeChannels == OnMissingChannel.Assume)
                 return;
 
-            using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
-            {
-                //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
-                var queueName = _subscription.ChannelName.ToValidSQSQueueName();
-                var topicName = _subscription.RoutingKey.ToValidSNSTopicName();
+            using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+            //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
+            var queueName = _subscription.ChannelName.ToValidSQSQueueName();
+            var topicName = _subscription.RoutingKey.ToValidSNSTopicName();
 
-                (bool exists, _) = QueueExists(sqsClient, queueName);
-                if (!exists)
+            (bool exists, _) = QueueExists(sqsClient, queueName);
+            if (!exists)
+            {
+                if (_subscription.MakeChannels == OnMissingChannel.Create)
                 {
-                    if (_subscription.MakeChannels == OnMissingChannel.Create)
+                    if (_subscription.RedrivePolicy != null)
                     {
-                        if (_subscription.RedrivePolicy != null)
-                        {
-                            CreateDLQ(sqsClient);
-                        }
+                        CreateDLQ(sqsClient);
+                    }
                         
-                        CreateQueue(sqsClient);
+                    CreateQueue(sqsClient);
      
-                    }
-                    else if (_subscription.MakeChannels == OnMissingChannel.Validate)
-                    {
-                        var message = $"Queue does not exist: {queueName} for {topicName} on {_awsConnection.Region}";
-                        s_logger.LogDebug("Queue does not exist: {ChannelName} for {Topic} on {Region}", queueName,
-                            topicName, _awsConnection.Region);
-                        throw new QueueDoesNotExistException(message);
-                    }
                 }
-                else
+                else if (_subscription.MakeChannels == OnMissingChannel.Validate)
                 {
-                    s_logger.LogDebug("Queue exists: {ChannelName} subscribed to {Topic} on {Region}",
-                        queueName, topicName, _awsConnection.Region);
+                    var message = $"Queue does not exist: {queueName} for {topicName} on {_awsConnection.Region}";
+                    s_logger.LogDebug("Queue does not exist: {ChannelName} for {Topic} on {Region}", queueName,
+                        topicName, _awsConnection.Region);
+                    throw new QueueDoesNotExistException(message);
                 }
+            }
+            else
+            {
+                s_logger.LogDebug("Queue exists: {ChannelName} subscribed to {Topic} on {Region}",
+                    queueName, topicName, _awsConnection.Region);
             }
         }
 
@@ -176,10 +174,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (!string.IsNullOrEmpty(_queueUrl))
                 {
                     s_logger.LogDebug("Queue created: {URL}", _queueUrl);
-                    using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
-                    {
-                        CheckSubscription(_subscription.MakeChannels, sqsClient, snsClient);
-                    }
+                    using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
+                    CheckSubscription(_subscription.MakeChannels, sqsClient, snsClient);
                 }
                 else
                 {
@@ -379,22 +375,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (_subscription == null)
                 return;
 
-            using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
-            {
-                //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
-                (bool exists, string name) queueExists = QueueExists(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
+            using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+            //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
+            (bool exists, string name) queueExists = QueueExists(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
 
-                if (queueExists.exists)
+            if (queueExists.exists)
+            {
+                try
                 {
-                    try
-                    {
-                        sqsClient.DeleteQueueAsync(queueExists.name).Wait();
-                    }
-                    catch (Exception)
-                    {
-                        //don't break on an exception here, if we can't delete, just exit
-                        s_logger.LogError("Could not delete queue {ChannelName}", queueExists.name);
-                    }
+                    sqsClient.DeleteQueueAsync(queueExists.name).Wait();
+                }
+                catch (Exception)
+                {
+                    //don't break on an exception here, if we can't delete, just exit
+                    s_logger.LogError("Could not delete queue {ChannelName}", queueExists.name);
                 }
             }
         }
@@ -404,22 +398,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (_subscription == null)
                 return;
 
-            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
+            using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
+            (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(ChannelTopicArn);
+            if (exists)
             {
-                (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(ChannelTopicArn);
-                if (exists)
+                try
                 {
-                    try
-                    {
-                        UnsubscribeFromTopic(snsClient);
+                    UnsubscribeFromTopic(snsClient);
 
-                        DeleteTopic(snsClient);
-                    }
-                    catch (Exception)
-                    {
-                        //don't break on an exception here, if we can't delete, just exit
-                        s_logger.LogError("Could not delete topic {TopicResourceName}", ChannelTopicArn);
-                    }
+                    DeleteTopic(snsClient);
+                }
+                catch (Exception)
+                {
+                    //don't break on an exception here, if we can't delete, just exit
+                    s_logger.LogError("Could not delete topic {TopicResourceName}", ChannelTopicArn);
                 }
             }
         }

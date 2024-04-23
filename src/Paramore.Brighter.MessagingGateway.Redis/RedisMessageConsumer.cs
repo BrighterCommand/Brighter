@@ -92,12 +92,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         public void Purge()
         {
-            using (var client = Pool.Value.GetClient())
-            {
-                s_logger.LogDebug("RmqMessageConsumer: Purging channel {ChannelName}", _queueName);
-                //This kills the queue, not the messages, which we assume expire
-                client.RemoveAllFromList(_queueName);
-            }
+            using var client = Pool.Value.GetClient();
+            s_logger.LogDebug("RmqMessageConsumer: Purging channel {ChannelName}", _queueName);
+            //This kills the queue, not the messages, which we assume expire
+            client.RemoveAllFromList(_queueName);
         }
 
         /// <summary>
@@ -169,22 +167,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             message.Header.DelayedMilliseconds = delayMilliseconds;
             
             message.Header.HandledCount++;
-            using (var client = Pool.Value.GetClient())
+            using var client = Pool.Value.GetClient();
+            if (_inflight.ContainsKey(message.Id))
             {
-                if (_inflight.ContainsKey(message.Id))
-                {
-                    var msgId = _inflight[message.Id];
-                    client.AddItemToList(_queueName, msgId);
-                    var redisMsg = CreateRedisMessage(message);
-                    StoreMessage(client, redisMsg, long.Parse(msgId));
-                    _inflight.Remove(message.Id);
-                    return true;
-                }
-                else
-                {
-                    s_logger.LogError(string.Format("Expected to find message id {0} in-flight but was not", message.Id.ToString()));
-                    return false;
-                }
+                var msgId = _inflight[message.Id];
+                client.AddItemToList(_queueName, msgId);
+                var redisMsg = CreateRedisMessage(message);
+                StoreMessage(client, redisMsg, long.Parse(msgId));
+                _inflight.Remove(message.Id);
+                return true;
+            }
+            else
+            {
+                s_logger.LogError(string.Format("Expected to find message id {0} in-flight but was not", message.Id.ToString()));
+                return false;
             }
         }
         

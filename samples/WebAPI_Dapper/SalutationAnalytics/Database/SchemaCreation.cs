@@ -47,50 +47,44 @@ namespace SalutationAnalytics.Database
 
         public static IHost CreateInbox(this IHost host)
         {
-            using (var scope = host.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var env = services.GetService<IHostEnvironment>();
-                var config = services.GetService<IConfiguration>();
+            using var scope = host.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
 
-                CreateInbox(config, env);
-            }
+            CreateInbox(config, env);
 
             return host;
         }
         
         public static IHost CreateOutbox(this IHost webHost, bool hasBinaryMessagePayload)
         {
-            using (var scope = webHost.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var env = services.GetService<IHostEnvironment>();
-                var config = services.GetService<IConfiguration>();
+            using var scope = webHost.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
 
-                CreateOutbox(config, env, hasBinaryMessagePayload);
-            }
+            CreateOutbox(config, env, hasBinaryMessagePayload);
 
             return webHost;
         }
 
         public static IHost MigrateDatabase(this IHost host)
         {
-            using (var scope = host.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
+            using var scope = host.Services.CreateScope();
+            var services = scope.ServiceProvider;
 
-                try
-                {
-                    var runner = services.GetRequiredService<IMigrationRunner>();
-                    runner.ListMigrations();
-                    runner.MigrateUp();
-                }
-                catch (Exception ex)
-                {
-                    var logger = services.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(ex, "An error occurred while migrating the database.");
-                    throw;
-                }
+            try
+            {
+                var runner = services.GetRequiredService<IMigrationRunner>();
+                runner.ListMigrations();
+                runner.MigrateUp();
+            }
+            catch (Exception ex)
+            {
+                var logger = services.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ex, "An error occurred while migrating the database.");
+                throw;
             }
 
             return host;

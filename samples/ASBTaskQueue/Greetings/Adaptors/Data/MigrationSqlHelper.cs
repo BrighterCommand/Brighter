@@ -12,15 +12,11 @@ namespace GreetingsSender.Web.Data
             var assembly = Assembly.GetExecutingAssembly();
 
             var name = $"{migration.GetType().Namespace}.{resourceName}";
-            using (var stream = assembly.GetManifestResourceStream(name))
-            {
-                if (stream == null) throw new ArgumentNullException(resourceName);
-                using (var textStreamReader = new StreamReader(stream))
-                {
-                    var sql = textStreamReader.ReadToEnd();
-                    migrationBuilder.Sql(sql);
-                }
-            }
+            using var stream = assembly.GetManifestResourceStream(name);
+            if (stream == null) throw new ArgumentNullException(resourceName);
+            using var textStreamReader = new StreamReader(stream);
+            var sql = textStreamReader.ReadToEnd();
+            migrationBuilder.Sql(sql);
         }
     }
 }

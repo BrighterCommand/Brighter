@@ -69,15 +69,11 @@ namespace Paramore.Brighter.PostgresSQL.Tests
                 if (createDatabase)
                     try
                     {
-                        using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString))
-                        {
-                            connection.Open();
-                            using (var command = connection.CreateCommand())
-                            {
-                                command.CommandText = @"CREATE DATABASE brightertests";
-                                command.ExecuteNonQuery();
-                            }
-                        }
+                        using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString);
+                        connection.Open();
+                        using var command = connection.CreateCommand();
+                        command.CommandText = @"CREATE DATABASE brightertests";
+                        command.ExecuteNonQuery();
                     }
                     catch (PostgresException sqlException)
                     {
@@ -93,46 +89,34 @@ namespace Paramore.Brighter.PostgresSQL.Tests
 
         private void CreateOutboxTable()
         {
-            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
-            {
-                _tableName = $"message_{_tableName}";
-                var createTableSql = PostgreSqlOutboxBulder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
+            using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
+            _tableName = $"message_{_tableName}";
+            var createTableSql = PostgreSqlOutboxBulder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
 
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = createTableSql;
-                    command.ExecuteNonQuery();
-                }
-            }
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = createTableSql;
+            command.ExecuteNonQuery();
         }
         public void CreateInboxTable()
         {
-            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
-            {
-                _tableName = $"command_{_tableName}";
-                var createTableSql = PostgreSqlInboxBuilder.GetDDL(_tableName);
+            using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
+            _tableName = $"command_{_tableName}";
+            var createTableSql = PostgreSqlInboxBuilder.GetDDL(_tableName);
 
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = createTableSql;
-                    command.ExecuteNonQuery();
-                }
-            }
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = createTableSql;
+            command.ExecuteNonQuery();
         }
 
         public void CleanUpDb()
         {
-            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
-                    command.ExecuteNonQuery();
-                }
-            }
+            using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
+            command.ExecuteNonQuery();
         }
     }
 

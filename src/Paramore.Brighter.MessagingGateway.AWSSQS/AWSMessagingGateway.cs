@@ -54,29 +54,27 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
         {
-            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
+            using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
+            var attributes = new Dictionary<string, string>();
+            if (snsAttributes != null)
             {
-                var attributes = new Dictionary<string, string>();
-                if (snsAttributes != null)
-                {
-                    if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy)) attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
-                    if (!string.IsNullOrEmpty(snsAttributes.Policy)) attributes.Add("Policy", snsAttributes.Policy);
-                }
-
-                var createTopicRequest = new CreateTopicRequest(topicName)
-                {
-                    Attributes = attributes,
-                    Tags = new List<Tag> {new Tag {Key = "Source", Value = "Brighter"}}
-                };
-                
-                //create topic is idempotent, so safe to call even if topic already exists
-                var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
-                
-                if (!string.IsNullOrEmpty(createTopic.TopicArn))
-                    ChannelTopicArn = createTopic.TopicArn;
-                else
-                    throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
+                if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy)) attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
+                if (!string.IsNullOrEmpty(snsAttributes.Policy)) attributes.Add("Policy", snsAttributes.Policy);
             }
+
+            var createTopicRequest = new CreateTopicRequest(topicName)
+            {
+                Attributes = attributes,
+                Tags = new List<Tag> {new Tag {Key = "Source", Value = "Brighter"}}
+            };
+                
+            //create topic is idempotent, so safe to call even if topic already exists
+            var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
+                
+            if (!string.IsNullOrEmpty(createTopic.TopicArn))
+                ChannelTopicArn = createTopic.TopicArn;
+            else
+                throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
         }
 
         private void ValidateTopic(RoutingKey topic, TopicFindBy findTopicBy, OnMissingChannel onMissingChannel)

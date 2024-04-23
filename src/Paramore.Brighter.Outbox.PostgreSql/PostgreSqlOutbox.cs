@@ -89,28 +89,26 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                    command.Transaction = transactionProvider.GetTransaction();
+                command.ExecuteNonQuery();
+            }
+            catch (PostgresException sqlException)
+            {
+                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
+                    loggingAction.Invoke();
+                    return;
                 }
-                catch (PostgresException sqlException)
-                {
-                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    transactionProvider?.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                transactionProvider?.Close();
             }
         }
 
@@ -129,32 +127,30 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                    command.Transaction = transactionProvider.GetTransaction();
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (PostgresException sqlException)
+            {
+                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    await command.ExecuteNonQueryAsync(cancellationToken);
+                    s_logger.LogWarning(
+                        "PostgresSqlOutbox: A duplicate was detected in the batch");
+                    return;
                 }
-                catch (PostgresException sqlException)
-                {
-                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                    {
-                        s_logger.LogWarning(
-                            "PostgresSqlOutbox: A duplicate was detected in the batch");
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
-                        connection.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                if (transactionProvider != null)
+                    transactionProvider.Close();
+                else
+                    connection.Close();
             }
         }
 
@@ -167,16 +163,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return resultFunc.Invoke(command.ExecuteReader());
-                }
-                finally
-                {
-                    connection.Close();
-                }
+                return resultFunc.Invoke(command.ExecuteReader());
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -190,16 +184,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
-                }
-                finally
-                {
-                    connection.Close();
-                }
+                return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 

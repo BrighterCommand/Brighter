@@ -221,27 +221,25 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
+            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
+            try
             {
-                try
-                {
-                    s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
-                        command.Id);
-                    var handlerChain = builder.Build(requestContext);
+                s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
+                    command.Id);
+                var handlerChain = builder.Build(requestContext);
 
-                    AssertValidSendPipeline(command, handlerChain.Count());
+                AssertValidSendPipeline(command, handlerChain.Count());
 
-                    handlerChain.First().Handle(command);
-                }
-                catch (Exception)
-                {
-                    span.span?.SetStatus(ActivityStatusCode.Error);
-                    throw;
-                }
-                finally
-                {
-                    EndSpan(span.span);
-                }
+                handlerChain.First().Handle(command);
+            }
+            catch (Exception)
+            {
+                span.span?.SetStatus(ActivityStatusCode.Error);
+                throw;
+            }
+            finally
+            {
+                EndSpan(span.span);
             }
         }
 
@@ -266,28 +264,26 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
+            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
+            try
             {
-                try
-                {
-                    s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
-                        command.GetType(), command.Id);
-                    var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
+                s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
+                    command.GetType(), command.Id);
+                var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
-                    AssertValidSendPipeline(command, handlerChain.Count());
+                AssertValidSendPipeline(command, handlerChain.Count());
 
-                    await handlerChain.First().HandleAsync(command, cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
-                }
-                catch (Exception)
-                {
-                    span.span?.SetStatus(ActivityStatusCode.Error);
-                    throw;
-                }
-                finally
-                {
-                    EndSpan(span.span);
-                }
+                await handlerChain.First().HandleAsync(command, cancellationToken)
+                    .ConfigureAwait(continueOnCapturedContext);
+            }
+            catch (Exception)
+            {
+                span.span?.SetStatus(ActivityStatusCode.Error);
+                throw;
+            }
+            finally
+            {
+                EndSpan(span.span);
             }
         }
 
@@ -312,43 +308,41 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
+            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
+            s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
+                @event.Id);
+            var handlerChain = builder.Build(requestContext);
+
+            var handlerCount = handlerChain.Count();
+
+            s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
+                @event.GetType(), @event.Id);
+
+            var exceptions = new List<Exception>();
+            foreach (var handleRequests in handlerChain)
             {
-                s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
-                var handlerChain = builder.Build(requestContext);
-
-                var handlerCount = handlerChain.Count();
-
-                s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
-                    @event.GetType(), @event.Id);
-
-                var exceptions = new List<Exception>();
-                foreach (var handleRequests in handlerChain)
+                try
                 {
-                    try
-                    {
-                        handleRequests.Handle(@event);
-                    }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
+                    handleRequests.Handle(@event);
                 }
-
-                if (span.created)
+                catch (Exception e)
                 {
-                    if (exceptions.Any())
-                        span.span?.SetStatus(ActivityStatusCode.Error);
-                    EndSpan(span.span);
+                    exceptions.Add(e);
                 }
+            }
 
+            if (span.created)
+            {
                 if (exceptions.Any())
-                {
-                    throw new AggregateException(
-                        "Failed to publish to one more handlers successfully, see inner exceptions for details",
-                        exceptions);
-                }
+                    span.span?.SetStatus(ActivityStatusCode.Error);
+                EndSpan(span.span);
+            }
+
+            if (exceptions.Any())
+            {
+                throw new AggregateException(
+                    "Failed to publish to one more handlers successfully, see inner exceptions for details",
+                    exceptions);
             }
         }
 
@@ -380,44 +374,42 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
+            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
+            s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
+                @event.Id);
+
+            var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
+            var handlerCount = handlerChain.Count();
+
+            s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
+                @event.GetType(), @event.Id);
+
+            var exceptions = new List<Exception>();
+            foreach (var handler in handlerChain)
             {
-                s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
-
-                var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
-                var handlerCount = handlerChain.Count();
-
-                s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
-                    @event.GetType(), @event.Id);
-
-                var exceptions = new List<Exception>();
-                foreach (var handler in handlerChain)
+                try
                 {
-                    try
-                    {
-                        await handler.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-                    }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
+                    await handler.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
                 }
-
-
-                if (span.created)
+                catch (Exception e)
                 {
-                    if (exceptions.Any())
-                        span.span?.SetStatus(ActivityStatusCode.Error);
-                    EndSpan(span.span);
+                    exceptions.Add(e);
                 }
+            }
 
-                if (exceptions.Count > 0)
-                {
-                    throw new AggregateException(
-                        "Failed to async publish to one more handlers successfully, see inner exceptions for details",
-                        exceptions);
-                }
+
+            if (span.created)
+            {
+                if (exceptions.Any())
+                    span.span?.SetStatus(ActivityStatusCode.Error);
+                EndSpan(span.span);
+            }
+
+            if (exceptions.Count > 0)
+            {
+                throw new AggregateException(
+                    "Failed to async publish to one more handlers successfully, see inner exceptions for details",
+                    exceptions);
             }
         }
 
@@ -797,43 +789,41 @@ namespace Paramore.Brighter
             subscription.ChannelName = new ChannelName(channelName.ToString());
             subscription.RoutingKey = new RoutingKey(routingKey);
 
-            using (var responseChannel = _responseChannelFactory.CreateChannel(subscription))
+            using var responseChannel = _responseChannelFactory.CreateChannel(subscription);
+            s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
+            request.ReplyAddress.Topic = routingKey;
+            request.ReplyAddress.CorrelationId = channelName.ToString();
+
+            //we do this to create the channel on the broker, or we won't have anything to send to; we 
+            //retry in case the subscription is poor. An alternative would be to extract the code from
+            //the channel to create the subscription, but this does not do much on a new queue
+            _bus.Retry(() => responseChannel.Purge());
+
+            var outMessage = _bus.CreateMessageFromRequest(request);
+
+            //We don't store the message, if we continue to fail further retry is left to the sender 
+            //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
+            s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
+            _bus.CallViaExternalBus<T, TResponse>(outMessage);
+
+            Message responseMessage = null;
+
+            //now we block on the receiver to try and get the message, until timeout.
+            s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
+            _bus.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+
+            TResponse response = default(TResponse);
+            if (responseMessage.Header.MessageType != MessageType.MT_NONE)
             {
-                s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
-                request.ReplyAddress.Topic = routingKey;
-                request.ReplyAddress.CorrelationId = channelName.ToString();
+                s_logger.LogDebug("Reply received from {ChannelName}", channelName);
+                //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
+                _bus.CreateRequestFromMessage(responseMessage, out response);
+                Send(response);
+            }
 
-                //we do this to create the channel on the broker, or we won't have anything to send to; we 
-                //retry in case the subscription is poor. An alternative would be to extract the code from
-                //the channel to create the subscription, but this does not do much on a new queue
-                _bus.Retry(() => responseChannel.Purge());
+            s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
 
-                var outMessage = _bus.CreateMessageFromRequest(request);
-
-                //We don't store the message, if we continue to fail further retry is left to the sender 
-                //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
-                s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
-                _bus.CallViaExternalBus<T, TResponse>(outMessage);
-
-                Message responseMessage = null;
-
-                //now we block on the receiver to try and get the message, until timeout.
-                s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
-                _bus.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
-
-                TResponse response = default(TResponse);
-                if (responseMessage.Header.MessageType != MessageType.MT_NONE)
-                {
-                    s_logger.LogDebug("Reply received from {ChannelName}", channelName);
-                    //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                    _bus.CreateRequestFromMessage(responseMessage, out response);
-                    Send(response);
-                }
-
-                s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
-
-                return response;
-            } //clean up everything at this point, whatever happens
+            return response;
         }
         
         /// <summary>
