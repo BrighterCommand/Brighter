@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Transforms.Attributes
 
         public override object[] InitializerParams()
         {
-            return new object[] { _thresholdInKb };
+            return [_thresholdInKb];
         }
 
         /// <summary>

@@ -46,8 +46,9 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
                 Guid.NewGuid().ToString(),
                 "Heartbeat",
                 MessageType.MT_COMMAND,
-                DateTime.UtcNow,
-                _correlationId, TOPIC);
+                timeStamp: DateTime.UtcNow,
+                correlationId:_correlationId,
+                replyTo:TOPIC);
 
             var body = String.Format("\"Id\": \"{0}\"", _commandId);
             var messageBody = new MessageBody("{" + body + "}");

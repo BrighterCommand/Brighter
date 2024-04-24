@@ -13,7 +13,7 @@ public class MyTransformableCommandMessageMapperAsync : IAmAMessageMapperAsync<M
     {
         var tcs = new TaskCompletionSource<Message>();
         tcs.SetResult(new Message(
-            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), DateTime.UtcNow),
+            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)))
             ));
         return tcs.Task;

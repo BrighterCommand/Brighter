@@ -60,7 +60,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: replyTo, contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 

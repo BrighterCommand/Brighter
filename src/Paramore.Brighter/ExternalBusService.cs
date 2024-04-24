@@ -22,9 +22,6 @@ namespace Paramore.Brighter
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         private readonly IPolicyRegistry<string> _policyRegistry;
-        private readonly IAmAMessageMapperRegistry _mapperRegistry;
-        private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
-        private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction> _outBox;
@@ -82,9 +79,6 @@ namespace Paramore.Brighter
         {
             _producerRegistry = producerRegistry ?? throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _policyRegistry = policyRegistry?? throw new ConfigurationException("Missing Policy Registry for External Bus Services");
-            _mapperRegistry = mapperRegistry;
-            _messageTransformerFactory = messageTransformerFactory;
-            _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
             
             if (mapperRegistry is null) 
                 throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
@@ -369,7 +363,6 @@ namespace Paramore.Brighter
         public Message CreateMessageFromRequest<TRequest>(TRequest request) where TRequest : class, IRequest
         {
             var message = MapMessage(request);
-            AddTelemetryToMessage<TRequest>(message);
             return message;
         }
 
@@ -385,7 +378,6 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken) where TRequest : class, IRequest
         {
             Message message = await MapMessageAsync(request, cancellationToken);
-            AddTelemetryToMessage<TRequest>(message);
             return message;
         }
         
@@ -456,17 +448,6 @@ namespace Paramore.Brighter
             }
         } 
 
-        private void AddTelemetryToMessage<T>(Message message)
-        {
-            var activity = Activity.Current ??
-                           ApplicationTelemetry.ActivitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
-
-            if (activity != null)
-            {
-                message.Header.AddTelemetryInformation(activity, typeof(T).ToString());
-            }
-        }
-        
         /// <summary>
         /// Configure the callbacks for the producers 
         /// </summary>
@@ -787,7 +768,6 @@ namespace Paramore.Brighter
                 var publication = _producerRegistry.LookupPublication<T>();
                 var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
                 var message = wrapPipeline.Wrap((T)r, publication);
-                AddTelemetryToMessage<T>(message);
                 return message;
             }).ToList();
         }
@@ -801,7 +781,6 @@ namespace Paramore.Brighter
                 var publication = _producerRegistry.LookupPublication<T>();
                 var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
                 var message = await wrapPipeline.WrapAsync((T)request,publication, cancellationToken);
-                AddTelemetryToMessage<T>(message);
                 messages.Add(message);
             }
 

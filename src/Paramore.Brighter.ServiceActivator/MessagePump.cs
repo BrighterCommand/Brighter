@@ -52,34 +52,79 @@ namespace Paramore.Brighter.ServiceActivator
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
 
-        private static readonly ActivitySource _activitySource = new ActivitySource("Paramore.Brighter.ServiceActivator",
-            Assembly.GetAssembly(typeof(CommandProcessor)).GetName().Version.ToString());
+        private static readonly ActivitySource s_activitySource;
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private int _unacceptableMessageCount = 0;
 
         /// <summary>
-        /// Constructs a message pump 
+        /// Used to initialize static members of the message pump
         /// </summary>
-        /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
+        static MessagePump()
+        {
+            var name = Assembly.GetAssembly(typeof(MessagePump<>)).GetName();
+            var sourceName = name.Name;
+            var sourceVersion = name.Version.ToString();
+
+            s_activitySource = new ActivitySource(sourceName, sourceVersion);
+        }
+
+        /// <summary>
+        /// Constructs a message pump. The message pump is the heart of a consumer. It runs a loop that performs the following:
+        ///  - Gets a message from a queue/stream
+        ///  - Translates the message to the local type system
+        ///  - Dispatches the message to waiting handlers
+        ///  The message pump is a classic event loop and is intended to be run on a single-thread 
+        /// </summary>
+        /// <param name="commandProcessorProvider">Provides a correctly scoped command processor </param>
         protected MessagePump(IAmACommandProcessorProvider commandProcessorProvider)
         {
             CommandProcessorProvider = commandProcessorProvider;
        }
 
+        /// <summary>
+        /// How long to wait for a message before timing out
+        /// </summary>
         public int TimeoutInMilliseconds { get; set; }
 
+        /// <summary>
+        /// How many times to requeue a message before discarding it
+        /// </summary>
         public int RequeueCount { get; set; }
 
+        /// <summary>
+        /// How long to wait before requeuing a message
+        /// </summary>
         public int RequeueDelayInMilliseconds { get; set; }
 
+        /// <summary>
+        /// The number of unacceptable messages to receive before stopping the message pump
+        /// </summary>
         public int UnacceptableMessageLimit { get; set; }
 
+        /// <summary>
+        /// The channel to receive messages from
+        /// </summary>
         public IAmAChannel Channel { get; set; }
         
+        /// <summary>
+        /// The delay to wait when the channel is empty
+        /// </summary>
         public int EmptyChannelDelay { get; set; }
+        
+        /// <summary>
+        /// The delay to wait when the channel has failed
+        /// </summary>
         public int ChannelFailureDelay { get; set; }
 
+        /// <summary>
+        /// Runs the message pump, performing the following:
+        /// - Gets a message from a queue/stream
+        /// - Translates the message to the local type system
+        /// - Dispatches the message to waiting handlers
+        /// - Handles any exceptions that occur during the dispatch and tries to keep the pump alive  
+        /// </summary>
+        /// <exception cref="Exception"></exception>
         public void Run()
         {
             do
@@ -150,17 +195,8 @@ namespace Paramore.Brighter.ServiceActivator
                 Activity span = null;
                 try
                 {
-                    message.Header.UpdateTelemetryFromHeaders();//ToDo: Discuss this as a temp measure
                     var request = TranslateMessage(message);
-                    if (message.Header.Telemetry != null)
-                    {
-                        span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer,
-                            message.Header.Telemetry.EventId);
-                    }
-                    else
-                    {
-                        span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer);
-                    }
+                    span = s_activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer, message.Header.Id);
                     request.Span = span;
                     
                     CommandProcessorProvider.CreateScope();

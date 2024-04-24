@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Transforms.Attributes
 
         public override object[] InitializerParams()
         {
-            return new object[] { _retain };
+            return [_retain];
         }
 
         /// <summary>

@@ -282,11 +282,25 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             
             MessageType messageType = GetMessageType(azureServiceBusMessage);
             var replyAddress = GetReplyAddress(azureServiceBusMessage);
-            
             var handledCount = GetHandledCount(azureServiceBusMessage);
-            var headers = new MessageHeader(azureServiceBusMessage.Id, _topicName, messageType, DateTime.UtcNow,
-                handledCount, 0, azureServiceBusMessage.CorrelationId,
-                replyTo: replyAddress, contentType: azureServiceBusMessage.ContentType);
+            
+            //TODO:CLOUD_EVENTS parse from headers
+            
+            var headers = new MessageHeader(
+                messageId: azureServiceBusMessage.Id, 
+                topic:_topicName, 
+                messageType: messageType, 
+                source: null,
+                type: "",
+                timeStamp: DateTime.UtcNow,
+                correlationId: azureServiceBusMessage.CorrelationId,
+                replyTo: replyAddress,
+                contentType: azureServiceBusMessage.ContentType,
+                handledCount:handledCount, 
+                dataSchema: null,
+                subject: null,
+                delayedMilliseconds: 0
+                );
 
             if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
                 headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);

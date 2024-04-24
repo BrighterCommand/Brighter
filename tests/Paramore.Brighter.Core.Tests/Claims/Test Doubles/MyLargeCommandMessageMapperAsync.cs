@@ -16,7 +16,7 @@ public class MyLargeCommandMessageMapperAsync : IAmAMessageMapperAsync<MyLargeCo
         using MemoryStream stream = new();
         await JsonSerializer.SerializeAsync(stream, request, new JsonSerializerOptions(JsonSerializerDefaults.General), cancellationToken);
         return new Message(
-            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), DateTime.UtcNow),
+            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
             new MessageBody(stream.ToArray()));
     }
 

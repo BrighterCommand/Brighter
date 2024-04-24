@@ -10,7 +10,7 @@ public class MyParameterizedTransformMessageMapper: IAmAMessageMapper<MyTransfor
     public Message MapToMessage(MyTransformableCommand request, Publication publication)
     {
         return new Message(
-            new MessageHeader(request.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(request.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
     }                                                       

@@ -14,7 +14,7 @@ public class MyLargeCommandMessageMapper : IAmAMessageMapper<MyLargeCommand>
     public Message MapToMessage(MyLargeCommand request, Publication publication)
     {
         return new Message(
-            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), DateTime.UtcNow),
+            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)))
             );
     }
@@ -34,7 +34,7 @@ public class MyLargeCommandMessageMapperAsync : IAmAMessageMapperAsync<MyLargeCo
         using var memoryContentStream = new MemoryStream();
         await JsonSerializer.SerializeAsync(memoryContentStream, request, new JsonSerializerOptions(JsonSerializerDefaults.General), cancellationToken);
         return new Message(
-            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), DateTime.UtcNow),
+            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
             new MessageBody(memoryContentStream.ToArray()));
     }
 

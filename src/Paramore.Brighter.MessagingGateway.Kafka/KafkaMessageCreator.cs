@@ -77,30 +77,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
                 else
                 {
-                    var messageHeader = timeStamp.Success
-                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result)
-                        : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
-
-                    if (correlationId.Success)
-                        messageHeader.CorrelationId = correlationId.Result;
-
-                    //If we don't have a partition key in the header, assume a non-Brighter sender and use message key
-                    if (partitionKey.Success)
-                        messageHeader.PartitionKey = partitionKey.Result;
-                    else
-                        messageHeader.PartitionKey = consumeResult.Message.Key;
-
-                    if (contentType.Success)
-                        messageHeader.ContentType = contentType.Result;
-
-                    if (replyTo.Success)
-                        messageHeader.ReplyTo = replyTo.Result;
-
-                    if (delayMilliseconds.Success)
-                        messageHeader.DelayedMilliseconds = delayMilliseconds.Result;
-
-                    if (handledCount.Success)
-                        messageHeader.HandledCount = handledCount.Result;
+                    var messageHeader = new MessageHeader(
+                        messageId: messageId.Result,
+                        topic: topic.Result,
+                        messageType.Result,
+                        source: null,
+                        type: "",
+                        timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                        correlationId: correlationId.Success ? correlationId.Result : "",
+                        replyTo: replyTo.Success ? replyTo.Result : "",
+                        contentType: contentType.Success ? contentType.Result : "plain/text",
+                        partitionKey: partitionKey.Success ? partitionKey.Result : consumeResult.Message.Key,
+                        handledCount: handledCount.Success ? handledCount.Result : 0,
+                        dataSchema: null,
+                        subject: null,
+                        delayedMilliseconds: delayMilliseconds.Success ? delayMilliseconds.Result : 0
+                    );
 
                     message = new Message(messageHeader,
                         new MessageBody(consumeResult.Message.Value, messageHeader.ContentType));

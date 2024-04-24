@@ -28,7 +28,7 @@ public class AsyncClaimCheckSmallPayloadTests
         string body = DataGenerator.CreateString(2485);
         _topic = "test_topic";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(body));
     }
 
