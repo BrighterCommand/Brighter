@@ -141,10 +141,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
                 return;
 
-            var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
+            var receiptHandle = value.ToString();
 
             try
             {
@@ -168,10 +168,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
-            if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
                 return;
 
-            var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
+            var receiptHandle = value.ToString();
 
             try
             {
@@ -228,10 +228,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>True if the message was requeued successfully</returns>
         public bool Requeue(Message message, int delayMilliseconds)
         {
-            if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
                 return false;
 
-            var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
+            var receiptHandle = value.ToString();
 
             try
             {
