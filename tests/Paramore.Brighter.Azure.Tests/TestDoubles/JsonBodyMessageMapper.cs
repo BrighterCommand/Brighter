@@ -5,6 +5,8 @@ namespace Paramore.Brighter.Azure.Tests.TestDoubles;
 
 public class JsonBodyMessageMapper<T> : IAmAMessageMapper<T> where T : class, IRequest
 {
+    public IRequestContext Context { get; set; }
+
     public Message MapToMessage(T request, Publication publication)
     {
         var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());

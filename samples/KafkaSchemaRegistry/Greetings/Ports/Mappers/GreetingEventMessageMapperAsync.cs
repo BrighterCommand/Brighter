@@ -35,12 +35,13 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 
 namespace Greetings.Ports.Mappers
 {
-    public class GreetingEventMessageMapperAsync(ISchemaRegistryClient schemaRegistryClient)
-        : IAmAMessageMapperAsync<GreetingEvent>
+    public class GreetingEventMessageMapperAsync(ISchemaRegistryClient schemaRegistryClient) : IAmAMessageMapperAsync<GreetingEvent>
     {
         private readonly string _partitionKey = "KafkaTestQueueExample_Partition_One";
         private readonly SerializationContext _serializationContext = new(MessageComponentType.Value, Topic);
         private const string Topic = "greeting.event";
+
+        public IRequestContext Context { get; set; }
 
         public async Task<Message> MapToMessageAsync(GreetingEvent request, Publication publication, CancellationToken cancellationToken = default)
         {

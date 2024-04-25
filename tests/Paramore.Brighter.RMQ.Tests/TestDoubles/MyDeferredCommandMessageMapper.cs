@@ -5,6 +5,8 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
     internal class MyDeferredCommandMessageMapper : IAmAMessageMapper<MyDeferredCommand>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(MyDeferredCommand request, Publication publication)
         {
             var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());

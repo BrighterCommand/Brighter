@@ -7,6 +7,8 @@ namespace Greetings.Ports.Mappers
 {
     public class GreetingReplyMessageMapper : IAmAMessageMapper<GreetingReply>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(GreetingReply request, Publication publication)
         {
             var header = new MessageHeader(

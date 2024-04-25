@@ -30,6 +30,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
     internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(MyEvent request, Publication publication)
         {
             var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());

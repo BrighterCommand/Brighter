@@ -8,7 +8,8 @@ namespace OpenTelemetry.Shared.Mappers;
 
 public class MessageMapper<T> : IAmAMessageMapper<T> where T : class, IRequest
 {
-  
+    public IRequestContext Context { get; set; }
+
     public Message MapToMessage(T request, Publication publication)
     {
         var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());

@@ -31,6 +31,8 @@ namespace Greetings.Ports.Mappers
 {
     public class FarewellEventMessageMapper : IAmAMessageMapper<FarewellEvent>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(FarewellEvent request, Publication publication)
         {
 

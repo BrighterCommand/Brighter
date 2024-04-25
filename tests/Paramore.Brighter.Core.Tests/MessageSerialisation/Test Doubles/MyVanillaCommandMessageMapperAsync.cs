@@ -8,6 +8,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
 public class MyVanillaCommandMessageMapperAsync : IAmAMessageMapperAsync<MyTransformableCommand>
 {
+    public IRequestContext Context { get; set; }
+
     public Task<Message> MapToMessageAsync(MyTransformableCommand request, Publication publication, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<Message>();

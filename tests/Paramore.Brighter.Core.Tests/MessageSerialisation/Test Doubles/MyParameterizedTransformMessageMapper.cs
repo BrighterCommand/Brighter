@@ -6,6 +6,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
 public class MyParameterizedTransformMessageMapper: IAmAMessageMapper<MyTransformableCommand>
 {
+    public IRequestContext Context { get; set; }
+
     [MyParameterizedWrapWith(0,  displayFormat: "I am a format indicator {0}" )]
     public Message MapToMessage(MyTransformableCommand request, Publication publication)
     {

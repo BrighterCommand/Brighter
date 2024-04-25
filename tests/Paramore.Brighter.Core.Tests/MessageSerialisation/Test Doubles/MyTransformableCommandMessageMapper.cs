@@ -6,6 +6,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
 public class MyTransformableCommandMessageMapper : IAmAMessageMapper<MyTransformableCommand>
 {
+    public IRequestContext Context { get; set; }
+
     [MySimpleWrapWith(0)]
     public Message MapToMessage(MyTransformableCommand request, Publication publication)
     {

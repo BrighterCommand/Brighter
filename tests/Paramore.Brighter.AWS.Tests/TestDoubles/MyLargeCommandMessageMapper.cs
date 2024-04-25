@@ -10,6 +10,8 @@ namespace Paramore.Brighter.AWS.Tests.TestDoubles;
 
 public class MyLargeCommandMessageMapper : IAmAMessageMapper<MyLargeCommand>
 {
+    public IRequestContext Context { get; set; }
+
     [ClaimCheck(0, thresholdInKb: 5)]
     public Message MapToMessage(MyLargeCommand request, Publication publication)
     {
@@ -28,6 +30,8 @@ public class MyLargeCommandMessageMapper : IAmAMessageMapper<MyLargeCommand>
 
 public class MyLargeCommandMessageMapperAsync : IAmAMessageMapperAsync<MyLargeCommand>
 {
+    public IRequestContext Context { get; set; }
+
     [ClaimCheck(0, thresholdInKb: 5)]
     public async Task<Message> MapToMessageAsync(MyLargeCommand request, Publication publication, CancellationToken cancellationToken = default)
     {
