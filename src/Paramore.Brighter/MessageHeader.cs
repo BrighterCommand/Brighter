@@ -88,7 +88,7 @@ namespace Paramore.Brighter
         /// MUST adhere to the format specified in <see href="https://datatracker.ietf.org/doc/html/rfc2046">RFC 2046</see>
         /// Because of the complexity of serializing if you do not know the type, we regard this as required even
         /// though Cloud Events does not.
-        /// Default value is text/plain
+        /// Default value is "text/plain"
         /// </summary>
         public string ContentType { get; set; }
         

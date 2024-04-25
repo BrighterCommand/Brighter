@@ -87,7 +87,7 @@ namespace Paramore.Brighter
         /// The topic this publication is for
         /// </summary>
         public RoutingKey Topic { get; set; }
-        
+
         /// <summary>
         /// REQUIRED
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Clode Events Spec</see>
@@ -96,6 +96,6 @@ namespace Paramore.Brighter
         /// SHOULD be prefixed with a reverse-DNS name. The prefixed domain dictates the organization which defines the semantics of this event type.
         /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
         /// </summary>
-        public string Type { get; set; }
+        public string Type { get; set; } = "goparamore.io.Paramore.Brighter.Message";
     }
 }

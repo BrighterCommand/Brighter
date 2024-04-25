@@ -68,4 +68,63 @@ public class CloudEventsTransformerTests
         Assert.Equal(_subject, cloudEvents.Header.Subject);
 
     }
+    
+    [Fact]
+    public void When_a_message_uses_cloud_events_and_a_publication()
+    {
+        //arrange
+        
+        var publication = new Publication
+        {
+            Source = _source,
+            Type = _type,
+            ContentType = _dataContentType,
+            DataSchema = _dataSchema,
+            Subject = _subject
+            
+        };
+        
+        //These attributes override the publication values above
+        var source =  new Uri("http://goparamore.io/OverrideSource");
+        var type = "goparamore.io/OverrideType";
+        var dataContentType = "application/xml";
+        var dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerOverride/schema");
+        var subject = "CloudEventsTransformerAlternative"; 
+
+        //act
+        _transformer.InitializeWrapFromAttributeParams(source, type, dataContentType, dataSchema, subject);
+
+        var cloudEvents = _transformer.Wrap(_message, publication);
+        
+        //assert
+        Assert.Equal(source, cloudEvents.Header.Source);
+        Assert.Equal(type, cloudEvents.Header.Type);
+        Assert.Equal(dataContentType, cloudEvents.Header.ContentType);
+        Assert.Equal(dataSchema, cloudEvents.Header.DataSchema);
+        Assert.Equal(subject, cloudEvents.Header.Subject);
+
+    }
+    
+    [Fact]
+    public void When_a_message_uses_cloud_events_but_no_publication_or_arguments()
+    {
+        //arrange
+        var publication = new Publication
+        {
+            //no cloud events properties set
+        };
+        
+        //These attributes override the publication values above
+
+        //act
+        var cloudEvents = _transformer.Wrap(_message, publication);
+        
+        //assert
+        Assert.Equal(new Uri("http://goparamore.io"), cloudEvents.Header.Source);
+        Assert.Equal( "goparamore.io.Paramore.Brighter.Message", cloudEvents.Header.Type);
+        Assert.Equal("text/plain", cloudEvents.Header.ContentType);
+        Assert.Equal(null, cloudEvents.Header.DataSchema);
+        Assert.Equal(null, cloudEvents.Header.Subject);
+
+    }
 }
