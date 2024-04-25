@@ -29,6 +29,12 @@ public class CloudEventsTransformer : IAmAMessageTransform
     private Uri _dataschema;
     private string _subject;
     
+    /// <summary>
+    /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+    /// </summary>
+    /// <value>The context.</value>
+    public IRequestContext Context { get; set; }
+    
     public void Dispose()
     {
         //no op as we have no unmanaged resources

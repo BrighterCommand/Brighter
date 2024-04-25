@@ -40,6 +40,12 @@ namespace Paramore.Brighter.Transforms.Transformers
         private readonly IAmAStorageProvider _store;
         private int _thresholdInBytes;
         private bool _retainLuggage;
+        
+        /// <summary>
+        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+        /// </summary>
+        /// <value>The context.</value>
+        public IRequestContext Context { get; set; }
 
         /// <summary>
         /// A claim check moves the payload of a message, which when wrapping checks for a payloads that exceeds a certain threshold size, and inserts those
@@ -67,6 +73,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         public void Dispose()
         {
         }
+
 
         /// <summary>
         /// We assume that the initializer list contains

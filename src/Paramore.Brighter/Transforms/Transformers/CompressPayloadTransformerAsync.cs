@@ -49,6 +49,12 @@ namespace Paramore.Brighter.Transforms.Transformers
         
         /// <summary> Original content type header name</summary>
         public const string ORIGINAL_CONTENTTYPE_HEADER = "originalContentType";
+        
+        /// <summary>
+        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+        /// </summary>
+        /// <value>The context.</value>
+        public IRequestContext Context { get; set; }
 
         /// <summary>
         /// Dispose of this transform; a no-op
