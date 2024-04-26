@@ -71,6 +71,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            new InMemoryRequestContextFactory(),
             outbox,
             maxOutStandingMessages: -1
         );

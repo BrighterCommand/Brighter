@@ -51,6 +51,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
         private readonly IAmAMessageMapperRegistryAsync _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly ConcurrentDictionary<int, Task> _tasks;
         private readonly ConcurrentDictionary<string, IAmAConsumer> _consumers;
 
@@ -100,13 +101,15 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
+        /// <param name="requestContextFactory">The factory used to make a request context</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
         public Dispatcher(Func<IAmACommandProcessorProvider> commandProcessorFactory,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry messageMapperRegistry = null,
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync = null, 
             IAmAMessageTransformerFactory messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null)
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null,
+            IAmARequestContextFactory requestContextFactory = null)
         {
             CommandProcessorFactory = commandProcessorFactory;
             
@@ -115,6 +118,7 @@ namespace Paramore.Brighter.ServiceActivator
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _requestContextFactory = requestContextFactory;
 
             if (messageMapperRegistry is null && messageMapperRegistryAsync is null)
                 throw new ConfigurationException("You must provide a message mapper registry or an async message mapper registry");
@@ -136,15 +140,20 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
+        /// <param name="requestContextFactory">The factory used to make a request context</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>        
         public Dispatcher(IAmACommandProcessor commandProcessor,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry messageMapperRegistry = null,
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync = null, 
             IAmAMessageTransformerFactory messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null)
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null,
+            IAmARequestContextFactory requestContextFactory = null)
             : this(() => 
-                new CommandProcessorProvider(commandProcessor), subscriptions, messageMapperRegistry, messageMapperRegistryAsync, messageTransformerFactory, messageTransformerFactoryAsync)
+                new CommandProcessorProvider(commandProcessor), subscriptions, messageMapperRegistry, 
+                messageMapperRegistryAsync, messageTransformerFactory, messageTransformerFactoryAsync, 
+                requestContextFactory
+            )
         {
         }
 
@@ -376,7 +385,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 var types = new Type[]
                 {
-                    typeof(IAmACommandProcessorProvider), typeof(Subscription),  typeof(IAmAMessageMapperRegistry),typeof(IAmAMessageTransformerFactory)
+                    typeof(IAmACommandProcessorProvider), typeof(Subscription),  typeof(IAmAMessageMapperRegistry),typeof(IAmAMessageTransformerFactory), typeof(IAmARequestContextFactory)
                 };
                 
                 var consumerFactoryCtor = consumerFactoryType.GetConstructor(
@@ -384,7 +393,7 @@ namespace Paramore.Brighter.ServiceActivator
                     CallingConventions.HasThis, types, null
                 );
                     
-                var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(), subscription, _messageMapperRegistry,  _messageTransformerFactory });   
+                var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(), subscription, _messageMapperRegistry,  _messageTransformerFactory, _requestContextFactory });   
 
                 return consumerFactory.Create();
             }
@@ -393,7 +402,7 @@ namespace Paramore.Brighter.ServiceActivator
                
                  var types = new Type[]
                  {
-                     typeof(IAmACommandProcessorProvider),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), typeof(IAmAMessageTransformerFactoryAsync)
+                     typeof(IAmACommandProcessorProvider),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), typeof(IAmAMessageTransformerFactoryAsync), typeof(IAmARequestContextFactory)
                  };
                 
                  var consumerFactoryCtor = consumerFactoryType.GetConstructor(
@@ -401,7 +410,7 @@ namespace Paramore.Brighter.ServiceActivator
                          CallingConventions.HasThis, types, null
                      );
                      
-                 var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(),  subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync });  
+                 var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(),  subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync, _requestContextFactory });  
 
                 return consumerFactory.Create();
             }

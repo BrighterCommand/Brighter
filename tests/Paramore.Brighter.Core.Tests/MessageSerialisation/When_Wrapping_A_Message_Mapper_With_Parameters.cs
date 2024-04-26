@@ -31,7 +31,7 @@ public class MessageWrapRequestWithAttributesTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MyParameterizedTransform()));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
     }
     
     [Fact]

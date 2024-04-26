@@ -63,8 +63,8 @@ namespace Paramore.Brighter
         // the following are not readonly to allow setting them to null on dispose
         private readonly IAmAChannelFactory _responseChannelFactory;
 
-        private const string PROCESSCOMMAND = "Process Command";
-        private const string PROCESSEVENT = "Process Event";
+        private const string PROCESSCOMMAND = "Process Command Type: {0}";
+        private const string PROCESSEVENT = "Process Event Type: {0}";
 
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -214,10 +214,10 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
-            var span = GetSpan(PROCESSCOMMAND);
-            command.Span = span.span;
+            var span = GetSpan(string.Format(PROCESSCOMMAND, typeof(T).Name));
 
             var requestContext = _requestContextFactory.Create();
+            requestContext.Span = span.span;
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
@@ -259,10 +259,10 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = GetSpan(PROCESSCOMMAND);
-            command.Span = span.span;
+            var span = GetSpan(string.Format(PROCESSCOMMAND, typeof(T).Name));
 
             var requestContext = _requestContextFactory.Create();
+            requestContext.Span = span.span;
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
@@ -305,10 +305,10 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
-            var span = GetSpan(PROCESSEVENT);
-            @event.Span = span.span;
+            var span = GetSpan(string.Format(PROCESSEVENT, typeof(T).Name));
 
             var requestContext = _requestContextFactory.Create();
+            requestContext.Span = span.span;
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
@@ -373,10 +373,10 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = GetSpan(PROCESSEVENT);
-            @event.Span = span.span;
+            var span = GetSpan(string.Format(PROCESSEVENT, typeof(T).Name));
 
             var requestContext = _requestContextFactory.Create();
+            requestContext.Span = span.span;
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 

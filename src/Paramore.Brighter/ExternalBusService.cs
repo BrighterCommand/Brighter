@@ -58,6 +58,7 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The mapper registry; it should also implement IAmAMessageMapperRegistryAsync</param>
         /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
+        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
         /// <param name="outboxBulkChunkSize">The size of a chunk for bulk work</param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
@@ -70,6 +71,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
+            IAmARequestContextFactory requestContextFactory,
             IAmAnOutbox outbox = null,
             int outboxBulkChunkSize = 100,
             int outboxTimeout = 300,
@@ -87,8 +89,8 @@ namespace Paramore.Brighter
             if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
                 throw new ConfigurationException("A Command Processor with an external bus must have a message transformer factory");
             
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory,requestContextFactory);
+            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, requestContextFactory);
 
             //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
             if (outbox is null) outbox = new InMemoryOutbox();

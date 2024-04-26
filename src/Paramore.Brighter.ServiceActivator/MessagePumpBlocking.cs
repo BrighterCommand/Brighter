@@ -38,19 +38,22 @@ namespace Paramore.Brighter.ServiceActivator
     public class MessagePumpBlocking<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
         private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
+
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
+        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public MessagePumpBlocking(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistry messageMapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory) 
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmARequestContextFactory requestContextFactory) 
             : base(commandProcessorProvider)
         {
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory, requestContextFactory);
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
         

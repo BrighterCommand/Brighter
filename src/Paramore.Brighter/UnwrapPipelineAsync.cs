@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
@@ -36,17 +37,22 @@ namespace Paramore.Brighter
     /// </summary>
     public class UnwrapPipelineAsync<TRequest> : TransformPipelineAsync<TRequest> where TRequest: class, IRequest
     {
+        private readonly IAmARequestContextFactory _requestContextFactory;
+
         /// <summary>
         /// Constructs an instance of an Unwrap pipeline
         /// </summary>
         /// <param name="transforms">The transforms that run before the mapper</param>
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapperAsync">The message mapper that forms the pipeline sink</param>
+        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public UnwrapPipelineAsync(
             IEnumerable<IAmAMessageTransformAsync> transforms, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactory, 
-            IAmAMessageMapperAsync<TRequest> messageMapperAsync)
+            IAmAMessageMapperAsync<TRequest> messageMapperAsync,
+            IAmARequestContextFactory requestContextFactory)
         {
+            _requestContextFactory = requestContextFactory;
             MessageMapper = messageMapperAsync;
             Transforms = transforms;
             if (messageTransformerFactory != null)
@@ -76,8 +82,16 @@ namespace Paramore.Brighter
         /// <returns>a request</returns>
         public async Task<TRequest> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
+            var context = _requestContextFactory.Create();
+            context.Span = Activity.Current;
+            
             var msg = message;
-            await Transforms.EachAsync(async transform => msg = await transform.UnwrapAsync(msg,cancellationToken));
+            await Transforms.EachAsync(async transform => {
+               transform.Context = context; 
+               msg = await transform.UnwrapAsync(msg, cancellationToken);
+            });
+
+            MessageMapper.Context = context;
             return await MessageMapper.MapToRequestAsync(msg, cancellationToken);
         }                                                        
     }

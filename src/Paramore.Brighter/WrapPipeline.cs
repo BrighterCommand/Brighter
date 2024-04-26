@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,17 +39,22 @@ namespace Paramore.Brighter
     /// </summary>
     public class WrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
     {
+        private readonly IAmARequestContextFactory _requestContextFactory;
+
         /// <summary>
         /// Constructs an instance of a wrap pipeline
         /// </summary>
         /// <param name="messageMapper">The message mapper that forms the pipeline source</param>
         /// <param name="messageTransformerFactory">Factory for transforms, required to release</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
+        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
-            IEnumerable<IAmAMessageTransform> transforms)
+            IEnumerable<IAmAMessageTransform> transforms,
+            IAmARequestContextFactory requestContextFactory)
         {
+            _requestContextFactory = requestContextFactory;
             MessageMapper = messageMapper;
             Transforms = transforms;
             if (messageTransformerFactory != null)
@@ -79,8 +85,17 @@ namespace Paramore.Brighter
         /// <returns>The message created from the request via the pipeline</returns>
         public Message Wrap(TRequest request, Publication publication)
         {
+            var context = _requestContextFactory.Create();
+            context.Span = Activity.Current;
+
+            MessageMapper.Context = context;
             var message = MessageMapper.MapToMessage(request, publication);
-            Transforms.Each(transform => message = transform.Wrap(message, publication));
+            
+            Transforms.Each(transform =>
+            {
+                transform.Context = context;
+                message = transform.Wrap(message, publication);
+            });
             return message;
         }
     }

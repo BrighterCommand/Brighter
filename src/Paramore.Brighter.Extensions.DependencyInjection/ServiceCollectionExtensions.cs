@@ -77,6 +77,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  - Inbox - defaults to InMemoryInbox if none supplied 
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
+        ///  - Request Context Factory - how do we create a request context for a pipeline
         /// </summary>
         /// <param name="services">The collection of services that we want to add registrations to</param>
         /// <param name="options"></param>
@@ -91,6 +92,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
+            
+            services.TryAddSingleton<IAmARequestContextFactory>(options.RequestContextFactory);
 
             if (options.FeatureSwitchRegistry != null)
                 services.TryAddSingleton(options.FeatureSwitchRegistry);
@@ -303,8 +306,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             INeedARequestContext ret = AddEventBus(provider, messagingBuilder, useRequestResponse);
 
+            var requestContextFactory = provider.GetService<IAmARequestContextFactory>();
+
             var commandProcessor = ret
-                .RequestContextFactory(options.RequestContextFactory)
+                .RequestContextFactory(requestContextFactory)
                 .Build();
 
             return commandProcessor;
@@ -326,6 +331,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 MessageMapperRegistry(serviceProvider),
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),
+                RequestContextFactory(serviceProvider),
                 outbox,
                 busConfiguration.OutboxBulkChunkSize,
                 busConfiguration.OutboxTimeout,
@@ -423,6 +429,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmATransactionConnectionProvider),
                     transactionProvider, serviceLifetime));
             }
+        }
+
+        /// <summary>
+        /// Grabs the Request Context Factory from DI. Mainly used to create a similar level of
+        /// abstraction to the other providers for building an external service bus
+        /// </summary>
+        /// <param name="provider"></param>
+        public static IAmARequestContextFactory RequestContextFactory(IServiceProvider provider)
+        {
+            return provider.GetService<IAmARequestContextFactory>();
         }
 
         /// <summary>

@@ -53,12 +53,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
             };
 
-            var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
+            var msg = new TransformPipelineBuilder(messageMapperRegistry, null, new InMemoryRequestContextFactory())
                 .BuildWrapPipeline<MyCommand>()
                 .Wrap(new MyCommand(), new Publication{Topic = new RoutingKey("MyCommand")});
 

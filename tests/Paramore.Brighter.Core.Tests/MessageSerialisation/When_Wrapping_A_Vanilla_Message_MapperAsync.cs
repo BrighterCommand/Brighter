@@ -30,7 +30,7 @@ public class AsyncVanillaMessageWrapRequestTests
         
         _publication = new Publication{Topic = new RoutingKey("MyTransformableCommand"), RequestType = typeof(MyTransformableCommand)};
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
     }
     
     [Fact]

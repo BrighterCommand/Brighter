@@ -55,12 +55,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
              
-            _messagePump = new MessagePumpAsync<MyCommand>(commandProcessorProvider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpAsync<MyCommand>(commandProcessorProvider, messageMapperRegistry, 
+                null, new InMemoryRequestContextFactory()
+                )
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
             };
 
-            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
+            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null,
+                    new InMemoryRequestContextFactory()
+                )
                 .BuildWrapPipeline<MyCommand>()
                 .WrapAsync(new MyCommand(), new Publication{Topic = new RoutingKey("MyCommand")})
                 .Result;

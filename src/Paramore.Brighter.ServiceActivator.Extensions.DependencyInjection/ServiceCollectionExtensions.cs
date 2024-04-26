@@ -65,7 +65,11 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 providerFactory = () => new CommandProcessorProvider(commandProcessor);
             }
 
-            var dispatcherBuilder = DispatchBuilder.With().CommandProcessorFactory(providerFactory);
+            var requestContextFactory = serviceProvider.GetService<IAmARequestContextFactory>();
+            
+            var dispatcherBuilder = DispatchBuilder
+                .With()
+                .CommandProcessorFactory(providerFactory, requestContextFactory);
 
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             var messageTransformFactory = ServiceCollectionExtensions.TransformFactory(serviceProvider);

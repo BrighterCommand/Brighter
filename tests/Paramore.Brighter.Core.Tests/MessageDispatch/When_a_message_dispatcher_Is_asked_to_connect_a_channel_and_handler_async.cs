@@ -43,7 +43,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 _commandProcessor, 
                 new List<Subscription> { connection }, 
                 null, 
-                messageMapperRegistry
+                messageMapperRegistry,
+               requestContextFactory: new InMemoryRequestContextFactory() 
             );
 
             var @event = new MyEvent();

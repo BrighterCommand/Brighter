@@ -39,7 +39,7 @@ public class RetrieveClaimLargePayloadTests
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
-        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
+        message.Header.DataRef = id;
         
         //act
         var unwrappedMessage = _transformerAsync.Unwrap(message);

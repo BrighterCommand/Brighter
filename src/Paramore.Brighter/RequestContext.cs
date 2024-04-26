@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
 using Polly.Registry;
 
@@ -43,6 +44,11 @@ namespace Paramore.Brighter
         {
             Bag = new Dictionary<string, object>();
         }
+        
+        /// <summary>
+        /// Gets the Span [Activity] associated with the request
+        /// </summary>
+        public Activity Span { get; set; }
 
         /// <summary>
         /// Gets the bag.

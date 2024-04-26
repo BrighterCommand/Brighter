@@ -32,6 +32,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
         private readonly Subscription _subscription;
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
+        private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly ConsumerName _consumerName;
         private readonly IAmAMessageMapperRegistryAsync _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
@@ -40,12 +41,14 @@ namespace Paramore.Brighter.ServiceActivator
             IAmACommandProcessorProvider commandProcessorProvider,
             Subscription subscription,
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory = null)
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmARequestContextFactory requestContextFactory)
         {
             _commandProcessorProvider = commandProcessorProvider;
             _messageMapperRegistry = messageMapperRegistry;
             _subscription = subscription;
             _messageTransformerFactory = messageTransformerFactory;
+            _requestContextFactory = requestContextFactory;
             _consumerName = new ConsumerName($"{_subscription.Name}-{Guid.NewGuid()}");
         }
         
@@ -53,12 +56,14 @@ namespace Paramore.Brighter.ServiceActivator
             IAmACommandProcessorProvider commandProcessorProvider,
             Subscription subscription,
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync)
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
+            IAmARequestContextFactory requestContextFactory)
         {
             _commandProcessorProvider = commandProcessorProvider;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _subscription = subscription;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _requestContextFactory = requestContextFactory;
             _consumerName = new ConsumerName($"{_subscription.Name}-{Guid.NewGuid()}");
         }
 
@@ -73,7 +78,7 @@ namespace Paramore.Brighter.ServiceActivator
         private Consumer CreateBlocking()
         {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessorProvider, _messageMapperRegistry, _messageTransformerFactory)
+            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessorProvider, _messageMapperRegistry, _messageTransformerFactory, _requestContextFactory)
             {
                 Channel = channel,
                 TimeoutInMilliseconds = _subscription.TimeoutInMilliseconds,
@@ -88,7 +93,7 @@ namespace Paramore.Brighter.ServiceActivator
         private Consumer CreateAsync()
         {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessorProvider, _messageMapperRegistryAsync, _messageTransformerFactoryAsync)
+            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessorProvider, _messageMapperRegistryAsync, _messageTransformerFactoryAsync, _requestContextFactory)
             {
                 Channel = channel,
                 TimeoutInMilliseconds = _subscription.TimeoutInMilliseconds,

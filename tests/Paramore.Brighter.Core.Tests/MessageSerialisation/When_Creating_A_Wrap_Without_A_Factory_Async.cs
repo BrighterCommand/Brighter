@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         
         _publication = new Publication{Topic = new RoutingKey("MyTransformableCommand"), RequestType= typeof(MyTransformableCommand)};
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null, new InMemoryRequestContextFactory());
     }
     
     [Fact]

@@ -30,7 +30,7 @@ public class MessageWrapCleanupTests
         
         _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
         
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory());
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory(), new InMemoryRequestContextFactory());
     }
     
     [Fact]

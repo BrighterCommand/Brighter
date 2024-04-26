@@ -75,7 +75,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync);
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, new InMemoryRequestContextFactory());
         }
 
         [Fact]

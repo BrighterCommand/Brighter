@@ -50,6 +50,7 @@ namespace Paramore.Brighter
         private readonly IAmAMessageMapperRegistryAsync _mapperRegistryAsync;
 
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private readonly IAmARequestContextFactory _requestContextFactory;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
@@ -67,11 +68,16 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="mapperRegistryAsync">The async message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactoryAsync">The async transform factory, can be null</param>
+        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
-        public TransformPipelineBuilderAsync(IAmAMessageMapperRegistryAsync mapperRegistryAsync, IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync)
+        public TransformPipelineBuilderAsync(
+            IAmAMessageMapperRegistryAsync mapperRegistryAsync, 
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
+            IAmARequestContextFactory requestContextFactory)
         {
             _mapperRegistryAsync = mapperRegistryAsync ?? throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _requestContextFactory = requestContextFactory;
         }
 
         /// <summary>
@@ -89,7 +95,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms);
+                var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms, _requestContextFactory);
 
                 s_logger.LogDebug("New wrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
@@ -118,7 +124,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-                var pipeline = new UnwrapPipelineAsync<TRequest>(transforms, _messageTransformerFactoryAsync, messageMapper);
+                var pipeline = new UnwrapPipelineAsync<TRequest>(transforms, _messageTransformerFactoryAsync, messageMapper, _requestContextFactory);
 
                 s_logger.LogDebug(
                     "New unwrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name,

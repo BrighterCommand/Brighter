@@ -30,7 +30,7 @@ public class AsyncLargeMessagePaylodUnwrapTests
         _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_inMemoryStorageProviderAsync));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
     }
     
     [Fact]

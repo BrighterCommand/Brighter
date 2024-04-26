@@ -34,7 +34,7 @@ public class LargeMessagePayloadWrapTests
         var messageTransformerFactory = new SimpleMessageTransformerFactory(
             _ => new ClaimCheckTransformer(_inMemoryStorageProvider));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
     }
     
     [Fact]
@@ -45,8 +45,8 @@ public class LargeMessagePayloadWrapTests
         var message = _transformPipeline.Wrap(_myCommand, _publication);
         
         //assert
-        message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();
-        var id = (string) message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
+        var id = message.Header.DataRef;
+        id.Should().NotBeNullOrEmpty();
         message.Body.Value.Should().Be($"Claim Check {id}");
         _inMemoryStorageProvider.HasClaim(id).Should().BeTrue();
 

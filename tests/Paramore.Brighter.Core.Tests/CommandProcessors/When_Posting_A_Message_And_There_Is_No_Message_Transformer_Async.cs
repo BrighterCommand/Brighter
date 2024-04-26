@@ -94,6 +94,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 _messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 null,
+                new InMemoryRequestContextFactory(),
                 _fakeOutbox)
             );               
 

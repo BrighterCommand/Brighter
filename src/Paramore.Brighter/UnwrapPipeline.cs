@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
@@ -34,17 +35,22 @@ namespace Paramore.Brighter
     /// </summary>
     public class UnwrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
     {
+        private readonly IAmARequestContextFactory _requestContextFactory;
+
         /// <summary>
         /// Constructs an instance of an Unwrap pipeline
         /// </summary>
         /// <param name="transforms">The transforms that run before the mapper</param>
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
+        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public UnwrapPipeline(
             IEnumerable<IAmAMessageTransform> transforms, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
-            IAmAMessageMapper<TRequest> messageMapper)
+            IAmAMessageMapper<TRequest> messageMapper,
+            IAmARequestContextFactory requestContextFactory)
         {
+            _requestContextFactory = requestContextFactory;
             MessageMapper = messageMapper;
             Transforms = transforms;
             if (messageTransformerFactory != null)
@@ -73,8 +79,17 @@ namespace Paramore.Brighter
         /// <returns>a request</returns>
         public TRequest Unwrap(Message message)
         {
+            var context = _requestContextFactory.Create();
+            context.Span = Activity.Current;
+            
             var msg = message;
-            Transforms.Each(transform => msg = transform.Unwrap(msg));
+            Transforms.Each(transform =>
+            {
+                transform.Context = context;
+                msg = transform.Unwrap(msg);
+            });
+            
+            MessageMapper.Context = context;
             return MessageMapper.MapToRequest(msg);
         }
     }

@@ -30,7 +30,7 @@ public class VanillaMessageWrapRequestTests
 
         _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
     }
     
     [Fact]
