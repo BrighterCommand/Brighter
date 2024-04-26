@@ -63,19 +63,17 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
                 new SqliteParameter("Body", message.Body.Value),
             };
 
-            using (var connection = new SqliteConnection(_sqliteTestHelper.ConnectionString))
-            using (var command = connection.CreateCommand())
-            {
-                connection.Open();
+            using var connection = new SqliteConnection(_sqliteTestHelper.ConnectionString);
+            using var command = connection.CreateCommand();
+            connection.Open();
 
-                command.CommandText = sql;
-                //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
-                for (var index = 0; index < parameters.Length; index++)
-                {
-                    command.Parameters.Add(parameters[index]);
-                }
-                command.ExecuteNonQuery();
+            command.CommandText = sql;
+            //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
+            for (var index = 0; index < parameters.Length; index++)
+            {
+                command.Parameters.Add(parameters[index]);
             }
+            command.ExecuteNonQuery();
         }
 
         [Fact]

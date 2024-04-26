@@ -82,32 +82,30 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                    command.Transaction = transactionProvider.GetTransaction();
+                command.ExecuteNonQuery();
+            }
+            catch (SqlException sqlException)
+            {
+                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                    sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
+                    loggingAction.Invoke();
+                    return;
                 }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
-                        connection.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                if (transactionProvider != null)
+                    transactionProvider.Close();
+                else
+                    connection.Close();
             }
         }
 
@@ -126,32 +124,30 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                    command.Transaction = transactionProvider.GetTransaction();
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (SqlException sqlException)
+            {
+                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                    sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    await command.ExecuteNonQueryAsync(cancellationToken);
+                    loggingAction.Invoke();
+                    return;
                 }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
-                        connection.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                if (transactionProvider != null)
+                    transactionProvider.Close();
+                else
+                    connection.Close();
             }
         }
 
@@ -164,16 +160,14 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return resultFunc.Invoke(command.ExecuteReader());
-                }
-                finally
-                {
-                        connection.Close();
-                }
+                return resultFunc.Invoke(command.ExecuteReader());
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -187,16 +181,14 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
-                }
-                finally
-                {
-                        connection.Close();
-                }
+                return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 

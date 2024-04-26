@@ -63,10 +63,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             //Convert the message into something we can put out via Redis i.e. a string
             var redisMessage = RedisMessagePublisher.EMPTY_MESSAGE;
-            using (var redisMessageFactory = new RedisMessagePublisher())
-            {
-                redisMessage = redisMessageFactory.Create(message);
-            }
+            using var redisMessageFactory = new RedisMessagePublisher();
+            redisMessage = redisMessageFactory.Create(message);
             return redisMessage;
         }
         

@@ -82,25 +82,23 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = _connectionProvider.GetConnection())
+            using var connection = _connectionProvider.GetConnection();
+            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+            try
             {
-                var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                try
+                sqlcmd.ExecuteNonQuery();
+            }
+            catch (SqlException sqlException)
+            {
+                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    sqlcmd.ExecuteNonQuery();
+                    s_logger.LogWarning(
+                        "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
+                        command.Id);
+                    return;
                 }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                            command.Id);
-                        return;
-                    }
 
-                    throw;
-                }
+                throw;
             }
         }
 
@@ -158,25 +156,23 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+            try
             {
-                var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                try
+                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (SqlException sqlException)
+            {
+                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                    s_logger.LogWarning(
+                        "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
+                        command.Id);
+                    return;
                 }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                            command.Id);
-                        return;
-                    }
 
-                    throw;
-                }
+                throw;
             }
         }
 
@@ -265,16 +261,14 @@ namespace Paramore.Brighter.Inbox.MsSql
             params IDbDataParameter[] parameters
             )
         {
-            using (var connection = _connectionProvider.GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+            using var connection = _connectionProvider.GetConnection();
+            using var command = connection.CreateCommand();
+            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
 
-                var item = execute(command);
-                return item;
-            }
+            var item = execute(command);
+            return item;
         }
 
         private async Task<T> ExecuteCommandAsync<T>(
@@ -284,16 +278,14 @@ namespace Paramore.Brighter.Inbox.MsSql
             CancellationToken cancellationToken = default,
             params IDbDataParameter[] parameters)
         {
-            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            using var command = connection.CreateCommand();
+            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
 
-                var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                return item;
-            }
+            var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
+            return item;
         }
 
         private DbCommand InitAddDbCommand(DbConnection connection, IDbDataParameter[] parameters, int timeoutInMilliseconds)

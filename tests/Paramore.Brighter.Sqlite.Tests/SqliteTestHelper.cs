@@ -68,16 +68,12 @@ namespace Paramore.Brighter.Sqlite.Tests
 
         private void CreateDatabaseWithTable(string dataSourceTestDb, string createTableScript)
         {
-            using (var sqliteConnection = new SqliteConnection(dataSourceTestDb))
-            {
-                using (var command = sqliteConnection.CreateCommand())
-                {
-                    command.CommandText = createTableScript;
+            using var sqliteConnection = new SqliteConnection(dataSourceTestDb);
+            using var command = sqliteConnection.CreateCommand();
+            command.CommandText = createTableScript;
 
-                    sqliteConnection.Open();
-                    command.ExecuteNonQuery();
-                }
-            }
+            sqliteConnection.Open();
+            command.ExecuteNonQuery();
         }
     }
 }

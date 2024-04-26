@@ -94,10 +94,8 @@ namespace GreetingsWeb
                 //don't check this for SQlite in development
                 if (!_env.IsDevelopment())
                 {
-                    using (var conn = new MySqlConnection(connectionString))
-                    {
-                        conn.Open();
-                    }
+                    using var conn = new MySqlConnection(connectionString);
+                    conn.Open();
                 }
             });
         }
