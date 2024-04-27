@@ -51,13 +51,13 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistry messageMapperRegistry, 
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory) 
-            : base(commandProcessorProvider)
+            : base(commandProcessorProvider, requestContextFactory)
         {
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory, requestContextFactory);
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
         
-        protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
+        protected override void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
         {
             s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
@@ -69,19 +69,19 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    CommandProcessorProvider.Get().Send(request);
+                    CommandProcessorProvider.Get().Send(request, requestContext);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    CommandProcessorProvider.Get().Publish(request);
+                    CommandProcessorProvider.Get().Publish(request, requestContext);
                     break;
                 }
             }
         }
 
-        protected override TRequest TranslateMessage(Message message)
+        protected override TRequest TranslateMessage(Message message, RequestContext requestContext)
         {
             s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
 
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             try
             {
-                request = _unwrapPipeline.Unwrap(message);
+                request = _unwrapPipeline.Unwrap(message, requestContext);
             }
             catch (ConfigurationException)
             {

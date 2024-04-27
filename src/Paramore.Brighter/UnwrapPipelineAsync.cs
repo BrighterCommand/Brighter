@@ -37,22 +37,18 @@ namespace Paramore.Brighter
     /// </summary>
     public class UnwrapPipelineAsync<TRequest> : TransformPipelineAsync<TRequest> where TRequest: class, IRequest
     {
-        private readonly IAmARequestContextFactory _requestContextFactory;
-
         /// <summary>
         /// Constructs an instance of an Unwrap pipeline
         /// </summary>
         /// <param name="transforms">The transforms that run before the mapper</param>
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapperAsync">The message mapper that forms the pipeline sink</param>
-        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public UnwrapPipelineAsync(
             IEnumerable<IAmAMessageTransformAsync> transforms, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactory, 
-            IAmAMessageMapperAsync<TRequest> messageMapperAsync,
-            IAmARequestContextFactory requestContextFactory)
+            IAmAMessageMapperAsync<TRequest> messageMapperAsync
+            )
         {
-            _requestContextFactory = requestContextFactory;
             MessageMapper = messageMapperAsync;
             Transforms = transforms;
             if (messageTransformerFactory != null)
@@ -78,20 +74,20 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="message">The message to unwrap</param>
+        /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>a request</returns>
-        public async Task<TRequest> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
+        public async Task<TRequest> UnwrapAsync(Message message,RequestContext requestContext, CancellationToken cancellationToken = default)
         {
-            var context = _requestContextFactory.Create();
-            context.Span = Activity.Current;
+            requestContext.Span ??= Activity.Current;
             
             var msg = message;
             await Transforms.EachAsync(async transform => {
-               transform.Context = context; 
+               transform.Context = requestContext; 
                msg = await transform.UnwrapAsync(msg, cancellationToken);
             });
 
-            MessageMapper.Context = context;
+            MessageMapper.Context = requestContext;
             return await MessageMapper.MapToRequestAsync(msg, cancellationToken);
         }                                                        
     }

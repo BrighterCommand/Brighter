@@ -56,6 +56,7 @@ namespace Paramore.Brighter.ServiceActivator
         private static readonly ActivitySource s_activitySource;
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
+        private readonly IAmARequestContextFactory _requestContextFactory;
         private int _unacceptableMessageCount = 0;
 
         /// <summary>
@@ -63,11 +64,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         static MessagePump()
         {
-            var name = Assembly.GetAssembly(typeof(MessagePump<>)).GetName();
-            var sourceName = name.Name;
-            var sourceVersion = name.Version.ToString();
+            var name = Assembly.GetAssembly(typeof(MessagePump<>))?.GetName();
+            var sourceName = name?.Name;
+            var sourceVersion = name?.Version?.ToString();
 
-            s_activitySource = new ActivitySource(sourceName, sourceVersion);
+            s_activitySource = new ActivitySource(sourceName ?? "Paramore.Brighter.ServiceActivator.MessagePump", sourceVersion);
         }
 
         /// <summary>
@@ -78,10 +79,12 @@ namespace Paramore.Brighter.ServiceActivator
         ///  The message pump is a classic event loop and is intended to be run on a single-thread 
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a correctly scoped command processor </param>
-        protected MessagePump(IAmACommandProcessorProvider commandProcessorProvider)
+        /// <param name="requestContextFactory">Provides a request context</param>
+        protected MessagePump(IAmACommandProcessorProvider commandProcessorProvider, IAmARequestContextFactory requestContextFactory)
         {
             CommandProcessorProvider = commandProcessorProvider;
-       }
+            _requestContextFactory = requestContextFactory;
+        }
 
         /// <summary>
         /// How long to wait for a message before timing out
@@ -197,10 +200,15 @@ namespace Paramore.Brighter.ServiceActivator
                 // Serviceable message
                 try
                 {
-                    var request = TranslateMessage(message);
+                    var context = _requestContextFactory.Create();
+                    context.Span = span;
+                    context.Bag.Add("Message", message);
+                    
+                    var request = TranslateMessage(message, context);
                     
                     CommandProcessorProvider.CreateScope();
-                    DispatchRequest(message.Header, request);
+                    
+                    DispatchRequest(message.Header, request, context);
 
                     span?.SetStatus(ActivityStatusCode.Ok);
                 }
@@ -356,7 +364,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         // Implemented in a derived class to dispatch to the relevant type of pipeline via the command processor
         // i..e an async pipeline uses SendAsync/PublishAsync and a blocking pipeline uses Send/Publish
-        protected abstract void DispatchRequest(MessageHeader messageHeader, TRequest request);
+        protected abstract void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext context);
 
         private void IncrementUnacceptableMessageLimit()
         {
@@ -408,7 +416,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Channel.Requeue(message, RequeueDelayInMilliseconds);
         }
 
-        protected abstract TRequest TranslateMessage(Message message);
+        protected abstract TRequest TranslateMessage(Message message, RequestContext requestContext);
 
         private bool UnacceptableMessageLimitReached()
         {

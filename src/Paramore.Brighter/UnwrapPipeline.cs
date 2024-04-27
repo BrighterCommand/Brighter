@@ -35,22 +35,18 @@ namespace Paramore.Brighter
     /// </summary>
     public class UnwrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
     {
-        private readonly IAmARequestContextFactory _requestContextFactory;
-
         /// <summary>
         /// Constructs an instance of an Unwrap pipeline
         /// </summary>
         /// <param name="transforms">The transforms that run before the mapper</param>
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
-        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public UnwrapPipeline(
             IEnumerable<IAmAMessageTransform> transforms, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
-            IAmAMessageMapper<TRequest> messageMapper,
-            IAmARequestContextFactory requestContextFactory)
+            IAmAMessageMapper<TRequest> messageMapper
+            )
         {
-            _requestContextFactory = requestContextFactory;
             MessageMapper = messageMapper;
             Transforms = transforms;
             if (messageTransformerFactory != null)
@@ -76,20 +72,20 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransform"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="message">The message to unwrap</param>
+        /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <returns>a request</returns>
-        public TRequest Unwrap(Message message)
+        public TRequest Unwrap(Message message, RequestContext requestContext)
         {
-            var context = _requestContextFactory.Create();
-            context.Span = Activity.Current;
+            requestContext.Span ??= Activity.Current;
             
             var msg = message;
             Transforms.Each(transform =>
             {
-                transform.Context = context;
+                transform.Context = requestContext;
                 msg = transform.Unwrap(msg);
             });
             
-            MessageMapper.Context = context;
+            MessageMapper.Context = requestContext;
             return MessageMapper.MapToRequest(msg);
         }
     }

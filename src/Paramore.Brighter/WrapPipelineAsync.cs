@@ -39,22 +39,18 @@ namespace Paramore.Brighter
     /// </summary>
     public class WrapPipelineAsync<TRequest> : TransformPipelineAsync<TRequest> where TRequest: class, IRequest
     {
-        private readonly IAmARequestContextFactory _requestContextFactory;
-
         /// <summary>
         /// Constructs an instance of a wrap pipeline
         /// </summary>
         /// <param name="messageMapperAsync">The message mapper that forms the pipeline source</param>
         /// <param name="messageTransformerFactoryAsync">Factory for transforms, required to release</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
-        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public WrapPipelineAsync(
             IAmAMessageMapperAsync<TRequest> messageMapperAsync, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync, 
-            IEnumerable<IAmAMessageTransformAsync> transforms,
-            IAmARequestContextFactory requestContextFactory)
+            IEnumerable<IAmAMessageTransformAsync> transforms
+            )
         {
-            _requestContextFactory = requestContextFactory;
             MessageMapper = messageMapperAsync;
             Transforms = transforms;
             if (messageTransformerFactoryAsync != null)
@@ -82,18 +78,18 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to wrap</param>
         /// <param name="publication">The publication for this channel, provides metadata such as topic or Cloud Events attributes</param>
+        /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
-        public async Task<Message> WrapAsync(TRequest request, Publication publication, CancellationToken cancellationToken = default)
+        public async Task<Message> WrapAsync(TRequest request, Publication publication, RequestContext requestContext, CancellationToken cancellationToken = default)
         {
-            var context = _requestContextFactory.Create();
-            context.Span = Activity.Current;
+            requestContext.Span ??= Activity.Current;
             
-            MessageMapper.Context = context; 
+            MessageMapper.Context = requestContext; 
             var message = await MessageMapper.MapToMessageAsync(request, publication, cancellationToken); 
             await Transforms.EachAsync(async transform =>
             {
-                transform.Context = context;
+                transform.Context = requestContext;
                 message = await transform.WrapAsync(message, publication, cancellationToken);
             }); 
             return message;

@@ -82,10 +82,9 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Builds a pipeline.
-        /// Anything marked with <see cref=""/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
-        /// Anything marked with
+        /// Anything marked with <see cref="WrapWithAttribute"/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
         /// </summary>
-        /// <typeparam name="TRequest"></typeparam>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
         public WrapPipelineAsync<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
         {
@@ -95,7 +94,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms, _requestContextFactory);
+                var pipeline = new WrapPipelineAsync<TRequest>(messageMapper, _messageTransformerFactoryAsync, transforms);
 
                 s_logger.LogDebug("New wrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name, TraceWrapPipeline(pipeline));
 
@@ -116,6 +115,12 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <summary>
+        /// Builds a pipeline.
+        /// Anything marked with <see cref="UnwrapWithAttribute"/> will run after the <see cref="IAmAMessageMapper{TRequest}"/>
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <returns></returns>
         public UnwrapPipelineAsync<TRequest> BuildUnwrapPipeline<TRequest>() where TRequest : class, IRequest
         {
             try
@@ -124,7 +129,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-                var pipeline = new UnwrapPipelineAsync<TRequest>(transforms, _messageTransformerFactoryAsync, messageMapper, _requestContextFactory);
+                var pipeline = new UnwrapPipelineAsync<TRequest>(transforms, _messageTransformerFactoryAsync, messageMapper);
 
                 s_logger.LogDebug(
                     "New unwrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name,

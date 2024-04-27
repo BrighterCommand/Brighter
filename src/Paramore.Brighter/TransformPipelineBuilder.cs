@@ -49,7 +49,6 @@ namespace Paramore.Brighter
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
 
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
-        private readonly IAmARequestContextFactory _requestContextFactory;
 
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento =
@@ -67,26 +66,23 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="mapperRegistry">The message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactory">The transform factory, can be null</param>
-        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
         public TransformPipelineBuilder(
             IAmAMessageMapperRegistry mapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory,
-            IAmARequestContextFactory requestContextFactory)
+            IAmAMessageTransformerFactory messageTransformerFactory
+            )
         {
             _mapperRegistry = mapperRegistry ??
                               throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
 
             _messageTransformerFactory = messageTransformerFactory;
-            _requestContextFactory = requestContextFactory;
         }
 
         /// <summary>
         /// Builds a pipeline.
-        /// Anything marked with <see cref=""/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
-        /// Anything marked with
+        /// Anything marked with <see cref="WrapWithAttribute"/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
         /// </summary>
-        /// <typeparam name="TRequest"></typeparam>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
         public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
         {
@@ -96,7 +92,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                var pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms, _requestContextFactory);
+                var pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms);
 
                 s_logger.LogDebug(
                     "New wrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name,
@@ -120,6 +116,13 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <summary>
+        /// Builds a pipeline.
+        /// Anything marked with <see cref="UnwrapWithAttribute"/> will run after the <see cref="IAmAMessageMapper{TRequest}"/>
+        /// </summary>
+        /// <param name="requestContext">The context of this request</param>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <returns></returns>
         public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>() where TRequest : class, IRequest
         {
             try
@@ -128,7 +131,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-                var pipeline = new UnwrapPipeline<TRequest>(transforms, _messageTransformerFactory, messageMapper, _requestContextFactory);
+                var pipeline = new UnwrapPipeline<TRequest>(transforms, _messageTransformerFactory, messageMapper);
 
                 s_logger.LogDebug(
                     "New unwrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name,
