@@ -52,6 +52,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 var outBoxSweeper = new OutboxSweeper(
                     millisecondsSinceSent: _options.MinimumMessageAge,
                     commandProcessor: commandProcessor,
+                    new InMemoryRequestContextFactory(),
                     _options.BatchSize,
                     _options.UseBulk,
                     _options.Args);

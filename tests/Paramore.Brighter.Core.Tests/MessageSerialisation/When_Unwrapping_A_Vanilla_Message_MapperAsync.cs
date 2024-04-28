@@ -28,7 +28,7 @@ public class AsyncVanillaMessageUnwrapRequestTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => null));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
@@ -43,7 +43,7 @@ public class AsyncVanillaMessageUnwrapRequestTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = await _transformPipeline.UnwrapAsync(_message);
+        var request = await _transformPipeline.UnwrapAsync(_message, new RequestContext());
         
         //assert
         request.Value = _myCommand.Value;

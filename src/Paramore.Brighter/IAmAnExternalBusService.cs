@@ -5,8 +5,13 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
+    /// <summary>
+    /// An external bus service allows us to send messages to external systems
+    /// The interaction with the CommandProcessor is mostly via the Outbox and the Message Mapper
+    /// </summary>
     public interface IAmAnExternalBusService : IDisposable
     {
+
         /// <summary>
         /// Used with RPC to call a remote service via the external bus
         /// </summary>
@@ -69,7 +74,8 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="TRequest">the type of the request</typeparam>
         /// <returns></returns>
-        Message CreateMessageFromRequest<TRequest>(TRequest request, RequestContext requestContext) where TRequest : class, IRequest;
+        Message CreateMessageFromRequest<TRequest>(TRequest request, RequestContext requestContext)
+            where TRequest : class, IRequest;
 
         /// <summary>
         /// Given a request, run the transformation pipeline to create a message 
@@ -94,11 +100,11 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         Task<List<Message>> CreateMessagesFromRequests(
-            Type requestType, 
+            Type requestType,
             IEnumerable<IRequest> requests,
             RequestContext requestContext,
             CancellationToken cancellationToken);
-        
+
         /// <summary>
         /// Intended for usage with the CommandProcessor's Call method, this method will create a request from a message
         /// </summary>
@@ -109,6 +115,84 @@ namespace Paramore.Brighter
         /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
         void CreateRequestFromMessage<TRequest>(Message message, RequestContext requestContext, out TRequest request)
             where TRequest : class, IRequest;
+        
+
+        /// <summary>
+        /// Retry an action via the policy engine
+        /// </summary>
+        /// <param name="action">The Action to try</param>
+        /// <returns></returns>
+        bool Retry(Action action);
+
+    }
+    
+    /// <summary>
+    /// An external bus service allows us to send messages to external systems
+    /// The interaction with the CommandProcessor is mostly via the Outbox and the Message Mapper
+    /// </summary>
+    public interface IAmAnExternalBusService<TMessage, TTransaction> : IDisposable
+    {
+        /// <summary>
+        /// Adds a message to the outbox
+        /// </summary>
+        /// <param name="message">The message to store in the outbox</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
+        /// <param name="overridingTransactionProvider">The provider of the transaction for the outbox</param>
+        /// <param name="continueOnCapturedContext">Use the same thread for a callback</param>
+        /// <param name="cancellationToken">Allow cancellation of the message</param>
+        /// <typeparam name="TRequest">The type of request we are saving</typeparam>
+        /// <exception cref="ChannelFailureException">Thrown if we cannot write to the outbox</exception>
+        Task AddToOutboxAsync(
+            TMessage message,
+            RequestContext requestContext,
+            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
+            bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default); 
+
+        /// <summary>
+        /// Adds a message to the outbox
+        /// </summary>
+        /// <param name="messages">The messages to store in the outbox</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
+        /// <param name="overridingTransactionProvider"></param>
+        /// <param name="continueOnCapturedContext">Use the same thread for a callback</param>
+        /// <param name="cancellationToken">Allow cancellation of the message</param>
+        /// <param name="overridingTransactionProvider ">The provider of the transaction for the outbox</param>
+        /// <exception cref="ChannelFailureException">Thrown if we cannot write to the outbox</exception>
+        Task AddToOutboxAsync(
+            IEnumerable<TMessage> messages,
+            RequestContext requestContext,
+            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
+            bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Adds a message to the outbox
+        /// </summary>
+        /// <param name="request">The request the message is composed from (used for diagnostics)</param>
+        /// <param name="message">The message we intend to send</param>
+        /// <param name="overridingTransactionProvider">A transaction provider that gives us the transaction to use with the Outbox</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
+        /// <typeparam name="TRequest">The type of the request we have converted into a message</typeparam>
+        /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
+        void AddToOutbox(
+            TMessage message,
+            RequestContext requestContext,
+            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
+        );
+
+        /// <summary>
+        /// Adds messages to the Outbox
+        /// </summary>
+        /// <param name="messages">The set of messages to add</param>
+        /// <param name="requestContext">The request context for the pipeline</param>
+        /// <param name="overridingTransactionProvider">If the write is part of a transaction where do we get it from</param>
+        /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
+        void AddToOutbox(
+            IEnumerable<TMessage> messages,
+            RequestContext requestContext,
+            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
+        );
 
         /// <summary>
         /// Do we have an async outbox defined?
@@ -121,14 +205,5 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>true if defined</returns>
         bool HasOutbox();
-
-        /// <summary>
-        /// Retry an action via the policy engine
-        /// </summary>
-        /// <param name="action">The Action to try</param>
-        /// <returns></returns>
-        bool Retry(Action action);
-
- 
     }
 }

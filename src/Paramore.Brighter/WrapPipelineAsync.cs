@@ -81,7 +81,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
-        public async Task<Message> WrapAsync(TRequest request, Publication publication, RequestContext requestContext, CancellationToken cancellationToken = default)
+        public async Task<Message> WrapAsync(TRequest request, RequestContext requestContext, Publication publication, CancellationToken cancellationToken = default)
         {
             requestContext.Span ??= Activity.Current;
             

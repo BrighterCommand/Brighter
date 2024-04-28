@@ -34,7 +34,7 @@ public class LargeMessagePayloadWrapTests
         var messageTransformerFactory = new SimpleMessageTransformerFactory(
             _ => new ClaimCheckTransformer(_inMemoryStorageProvider));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
     
     [Fact]
@@ -42,7 +42,7 @@ public class LargeMessagePayloadWrapTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = _transformPipeline.Wrap(_myCommand, _publication);
+        var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
         
         //assert
         var id = message.Header.DataRef;

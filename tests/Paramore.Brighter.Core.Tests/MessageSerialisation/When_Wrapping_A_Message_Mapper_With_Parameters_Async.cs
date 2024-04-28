@@ -34,7 +34,7 @@ public class AsyncMessageWrapRequestWithAttributesTests
             Topic = new RoutingKey("MyTransformableCommand"), RequestType = typeof(MyTransformableCommand)
         };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
     
     [Fact]
@@ -42,7 +42,7 @@ public class AsyncMessageWrapRequestWithAttributesTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = await _transformPipeline.WrapAsync(_myCommand, _publication);
+        var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

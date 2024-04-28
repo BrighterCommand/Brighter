@@ -30,7 +30,7 @@ public class MessageWrapCleanupTests
         
         _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
         
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory(), new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory());
     }
     
     [Fact]
@@ -38,7 +38,7 @@ public class MessageWrapCleanupTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = _transformPipeline.Wrap(_myCommand, _publication);
+        var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
         _transformPipeline.Dispose();
         
         //assert

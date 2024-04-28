@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         
         _publication = new Publication{Topic = new RoutingKey("MyTransformableCommand"), RequestType= typeof(MyTransformableCommand)};
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null);
     }
     
     [Fact]
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapperAsync");
 
         //wrap should just do message mapper                                          
-        var message = await _transformPipeline.WrapAsync(_myCommand, _publication);
+        var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

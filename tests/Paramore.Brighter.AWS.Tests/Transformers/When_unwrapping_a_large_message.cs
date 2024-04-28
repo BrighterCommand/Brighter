@@ -71,7 +71,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
-            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
         }
     
         [Fact]
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             //act
             var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-            var transformedMessage = await transformPipeline.UnwrapAsync(message);
+            var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
         
             //assert
             //contents should be from storage

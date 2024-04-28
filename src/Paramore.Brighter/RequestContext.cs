@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
@@ -37,6 +38,8 @@ namespace Paramore.Brighter
     /// </summary>
     public class RequestContext : IRequestContext
     {
+        private Message _originatingMessage;
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestContext"/> class.
         /// </summary>
@@ -55,11 +58,33 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The bag.</value>
         public Dictionary<string, object> Bag { get; private set; }
+        
+        /// <summary>
+        /// When we pass a requestContext through a receiver pipeline, we may want to pass the original message that started the pipeline.
+        /// This is primarily useful for debugging - how did we get to this request?. But it is also useful for some request metadata that we
+        /// do not want to transfer to the Request.
+        ///</summary>
+        /// <value>The originating message</value> 
+        public Message OriginatingMessage
+        {
+            get { return _originatingMessage; }
+            set
+            {
+                if (_originatingMessage == null) 
+                    _originatingMessage = value;
+                else 
+                    throw new InvalidOperationException("You may only set the originating message once on the same context");
+            }
+                
+            
+        }
+        
         /// <summary>
         /// Gets the policies.
         /// </summary>
         /// <value>The policies.</value>
         public IPolicyRegistry<string>  Policies { get; set; }
+        
         /// <summary>
         /// Gets the Feature Switches
         /// </summary>

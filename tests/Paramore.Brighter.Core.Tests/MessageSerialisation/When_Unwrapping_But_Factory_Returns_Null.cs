@@ -27,7 +27,7 @@ public class MessageUnwrapRequestFailingMapperFactoryTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         Message message = new(
             new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),

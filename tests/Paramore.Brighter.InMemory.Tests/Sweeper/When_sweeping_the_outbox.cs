@@ -20,7 +20,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             var outbox = new InMemoryOutbox();
             var commandProcessor = new FakeCommandProcessor();
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
+            var requestContextFactory = new InMemoryRequestContextFactory();
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, requestContextFactory);
 
             var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
 
@@ -52,7 +53,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             var outbox = new InMemoryOutbox();
             var commandProcessor = new FakeCommandProcessor();
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
+            var requestContextFactory = new InMemoryRequestContextFactory();
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, requestContextFactory);
 
             var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
 
@@ -83,7 +85,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              const int milliSecondsSinceSent = 500;
              
              var commandProcessor = new FakeCommandProcessor();
-             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
+             var requestContextFactory = new InMemoryRequestContextFactory();
+             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, requestContextFactory);
              
              Message oldMessage = new MessageTestDataBuilder();
              commandProcessor.DepositPost(oldMessage.ToStubRequest());
@@ -115,7 +118,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             const int milliSecondsSinceSent = 500;
             
             var commandProcessor = new FakeCommandProcessor();
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
+            var requestContextFactory = new InMemoryRequestContextFactory();
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, requestContextFactory);
  
             Message oldMessage = new MessageTestDataBuilder();
             commandProcessor.DepositPost(oldMessage.ToStubRequest());

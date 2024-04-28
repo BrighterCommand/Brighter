@@ -29,7 +29,7 @@ public class LargeMessagePaylodUnwrapTests
         _inMemoryStorageProvider = new InMemoryStorageProvider();
         var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_inMemoryStorageProvider));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
     
     [Fact]
@@ -61,7 +61,7 @@ public class LargeMessagePaylodUnwrapTests
 
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-        var transformedMessage = transformPipeline.Unwrap(message);
+        var transformedMessage = transformPipeline.Unwrap(message, new RequestContext());
         
         //assert
         //contents should be from storage

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -60,6 +61,7 @@ namespace Paramore.Brighter.ServiceActivator
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
         {
             s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
 
             var messageType = messageHeader.MessageType;
 
@@ -84,6 +86,7 @@ namespace Paramore.Brighter.ServiceActivator
         protected override TRequest TranslateMessage(Message message, RequestContext requestContext)
         {
             s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
+            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
 
             TRequest request;
 

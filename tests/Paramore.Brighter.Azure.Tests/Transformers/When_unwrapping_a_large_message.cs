@@ -38,7 +38,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }                                                                             
     
     [Test]
@@ -72,7 +72,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
 
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-        var transformedMessage = await transformPipeline.UnwrapAsync(message);
+        var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
         
         //assert
         //contents should be from storage

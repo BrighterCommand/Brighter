@@ -34,7 +34,7 @@ public class AsyncLargeMessagePayloadWrapTests
 
         _publication = new Publication { Topic = new RoutingKey("MyLargeCommand") };
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
     
     [Fact]
@@ -42,7 +42,7 @@ public class AsyncLargeMessagePayloadWrapTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = await _transformPipeline.WrapAsync(_myCommand, _publication);
+        var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
         
         //assert
         message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();

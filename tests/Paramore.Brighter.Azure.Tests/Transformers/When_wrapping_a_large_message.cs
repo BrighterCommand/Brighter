@@ -43,7 +43,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
             var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
-            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
 
             _client.CreateIfNotExists();
     }
@@ -53,7 +53,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = _transformPipeline.WrapAsync(_myCommand, _publication).Result;
+        var message = _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication).Result;
 
         //assert
         message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();

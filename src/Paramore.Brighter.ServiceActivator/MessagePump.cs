@@ -200,10 +200,8 @@ namespace Paramore.Brighter.ServiceActivator
                 // Serviceable message
                 try
                 {
-                    var context = _requestContextFactory.Create();
-                    context.Span = span;
-                    context.Bag.Add("Message", message);
-                    
+                    RequestContext context = InitRequestContext(span, message);
+
                     var request = TranslateMessage(message, context);
                     
                     CommandProcessorProvider.CreateScope();
@@ -298,7 +296,7 @@ namespace Paramore.Brighter.ServiceActivator
                 Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
         }
-
+ 
         private void AcknowledgeMessage(Message message)
         {
             s_logger.LogDebug(
@@ -369,6 +367,16 @@ namespace Paramore.Brighter.ServiceActivator
         private void IncrementUnacceptableMessageLimit()
         {
             _unacceptableMessageCount++;
+        }
+        
+        private RequestContext InitRequestContext(Activity span, Message message)
+        {
+            var context = _requestContextFactory.Create();
+            context.Span = span;
+            context.OriginatingMessage = message;
+            context.Bag.Add("ChannelName", Channel.Name);
+            context.Bag.Add("RequestStart", DateTime.UtcNow);
+            return context;
         }
 
         private void RejectMessage(Message message)

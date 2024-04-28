@@ -75,7 +75,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
 
-            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync, new InMemoryRequestContextFactory());
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync);
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
         {
             //act
             _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-            var message = await _transformPipeline.WrapAsync(_myCommand, _publication);
+            var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
             //assert
             message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();

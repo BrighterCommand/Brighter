@@ -245,7 +245,7 @@ namespace Paramore.Brighter
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task SendAsync<T>(
             T command, 
-            RequestContext requestContext, 
+            RequestContext requestContext = null, 
             bool continueOnCapturedContext = false, 
             CancellationToken cancellationToken = default
         )
@@ -506,14 +506,14 @@ namespace Paramore.Brighter
 
             try
             {
-                var bus = ((ExternalBusService<Message, TTransaction>)s_bus);
+                Message message = s_bus.CreateMessageFromRequest(request, context);
+                
+                var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
 
                 if (!bus.HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
 
-                Message message = bus.CreateMessageFromRequest(request, context);
-
-                bus.AddToOutbox(request, message, context, transactionProvider);
+                bus.AddToOutbox(message, context, transactionProvider);
 
                 return message.Id;
             }
@@ -569,13 +569,11 @@ namespace Paramore.Brighter
 
             try
             {
-                var bus = ((ExternalBusService<Message, TTransaction>)s_bus);
-
                 var successfullySentMessage = new List<string>();
 
                 foreach (var batch in SplitRequestBatchIntoTypes(requests))
                 {
-                    var messages = bus.CreateMessagesFromRequests(
+                    var messages = s_bus.CreateMessagesFromRequests(
                         batch.Key, batch, context, new CancellationToken()
                     ).GetAwaiter().GetResult();
 
@@ -583,6 +581,7 @@ namespace Paramore.Brighter
                         "Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count()
                     );
 
+                    var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
                     bus.AddToOutbox(messages, context, transactionProvider);
 
                     successfullySentMessage.AddRange(messages.Select(m => m.Id));
@@ -659,16 +658,14 @@ namespace Paramore.Brighter
 
             try
             {
-                var bus = ((ExternalBusService<Message, TTransaction>)s_bus);
-
+                Message message = await s_bus.CreateMessageFromRequestAsync(request, context, cancellationToken);
+                
+                var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
+                
                 if (!bus.HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
 
-                Message message = await bus.CreateMessageFromRequestAsync(request, context, cancellationToken);
-
-                await bus.AddToOutboxAsync(
-                    request, message, context, transactionProvider, continueOnCapturedContext, cancellationToken
-                );
+                await bus.AddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext, cancellationToken);
 
                 return message.Id;
             }
@@ -732,7 +729,6 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            var bus = ((ExternalBusService<Message, TTransaction>)s_bus);
             
             var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
             var context = InitRequestContext(span, requestContext);
@@ -743,13 +739,15 @@ namespace Paramore.Brighter
 
                 foreach (var batch in SplitRequestBatchIntoTypes(requests))
                 {
-                    var messages = await bus.CreateMessagesFromRequests(
+                    var messages = await s_bus.CreateMessagesFromRequests(
                         batch.Key, batch.ToArray(), context, cancellationToken
                     );
 
                     s_logger.LogInformation(
                         "Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count()
                     );
+                    
+                    var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
 
                     await bus.AddToOutboxAsync(
                         messages, context, transactionProvider, continueOnCapturedContext, cancellationToken

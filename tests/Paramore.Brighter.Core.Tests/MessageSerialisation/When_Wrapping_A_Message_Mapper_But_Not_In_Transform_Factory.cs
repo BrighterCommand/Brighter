@@ -22,7 +22,7 @@ public class MessageWrapRequestMissingTransformTests
 
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
     
     [Fact]

@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Timeout()
         {
-            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 0));
+            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOutInMilliseconds: 0));
             
             //should throw an exception as we require a timeout to be set
             exception.Should().BeOfType<InvalidOperationException>();

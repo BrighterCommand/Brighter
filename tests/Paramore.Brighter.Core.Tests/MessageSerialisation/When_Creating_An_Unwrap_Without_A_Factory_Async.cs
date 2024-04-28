@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null, new InMemoryRequestContextFactory());
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, null);
     }
     
     [Fact]
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapperAsync");
 
         //wrap should just do message mapper                                          
-        var request = await _transformPipeline.UnwrapAsync(_message);
+        var request = await _transformPipeline.UnwrapAsync(_message, new RequestContext());
         
         //assert
         request.Value = _myCommand.Value;

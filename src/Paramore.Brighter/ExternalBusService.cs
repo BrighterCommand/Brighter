@@ -16,7 +16,7 @@ namespace Paramore.Brighter
     /// Provide services to CommandProcessor that persist across the lifetime of the application. Allows separation from elements that have a lifetime linked
     /// to the scope of a request, or are transient for DI purposes
     /// </summary>
-    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService
+    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService, IAmAnExternalBusService<TMessage, TTransaction>
         where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
@@ -89,7 +89,7 @@ namespace Paramore.Brighter
                 throw new ConfigurationException("A Command Processor with an external bus must have a message transformer factory");
             
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync, requestContextFactory);
+            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
             //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox();
@@ -134,14 +134,14 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Use the same thread for a callback</param>
         /// <param name="cancellationToken">Allow cancellation of the message</param>
         /// <typeparam name="TRequest">The type of request we are saving</typeparam>
-        /// <exception cref="ChannelFailureException">Thrown if we cannot write to the outbox</exception>
-        public async Task AddToOutboxAsync<TRequest>(
-            TRequest request,
+        /// <typeparam name="TTransaction">The type of the transaction used to add to the Outbox</typeparam>
+        /// <exception cref="ChannelFailureException">Thrown if we cannot write to the Outbox</exception>
+        public async Task AddToOutboxAsync(
             TMessage message,
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : IRequest
+            CancellationToken cancellationToken = default) 
         {
             CheckOutboxOutstandingLimit();
 
@@ -154,7 +154,7 @@ namespace Paramore.Brighter
                 continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
             if (!written)
-                throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
+                throw new ChannelFailureException($"Could not write request {message.Id} to the outbox");
             
             requestContext.Span?.AddEvent(
                 new ActivityEvent(
@@ -212,19 +212,18 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="TRequest">The type of the request we have converted into a message</typeparam>
         /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
-        public void AddToOutbox<TRequest>(TRequest request,
+        public void AddToOutbox(
             TMessage message,
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
         )
-            where TRequest : class, IRequest
         {
             CheckOutboxOutstandingLimit();
 
             var written = Retry(() => { _outBox.Add(message, _outboxTimeout, overridingTransactionProvider); });
 
             if (!written)
-                throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
+                throw new ChannelFailureException($"Could not write message {message.Id} to the outbox");
             
             requestContext.Span?.AddEvent(
                 new ActivityEvent(
@@ -864,7 +863,7 @@ namespace Paramore.Brighter
             {
                 var publication = _producerRegistry.LookupPublication<T>();
                 var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
-                var message = await wrapPipeline.WrapAsync((T)request,publication, requestContext, cancellationToken);
+                var message = await wrapPipeline.WrapAsync((T)request, requestContext, publication, cancellationToken);
                 messages.Add(message);
             }
 
@@ -968,7 +967,7 @@ namespace Paramore.Brighter
             {
                 message = await _transformPipelineBuilderAsync
                     .BuildWrapPipeline<TRequest>()
-                    .WrapAsync(request, publication, requestContext, cancellationToken);
+                    .WrapAsync(request, requestContext, publication, cancellationToken);
             }
             else
             {
