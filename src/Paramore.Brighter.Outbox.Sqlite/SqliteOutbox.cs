@@ -86,31 +86,29 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                    command.Transaction = transactionProvider.GetTransaction();
+                command.ExecuteNonQuery();
+            }
+            catch (SqliteException sqlException)
+            {
+                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
+                    loggingAction.Invoke();
+                    return;
                 }
-                catch (SqliteException sqlException)
-                {
-                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
-                        connection.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                if (transactionProvider != null)
+                    transactionProvider.Close();
+                else
+                    connection.Close();
             }
         }
 
@@ -128,35 +126,33 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                    command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (SqliteException sqlException)
+            {
+                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
-                    await command.ExecuteNonQueryAsync(cancellationToken);
+                    loggingAction.Invoke();
+                    return;
                 }
-                catch (SqliteException sqlException)
-                {
-                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
+                throw;
+            }
+            finally
+            {
+                if (transactionProvider != null)
+                    transactionProvider.Close();
+                else
 #if NETSTANDARD2_0
                         connection.Close();
 #else
-                        await connection.CloseAsync();
+                    await connection.CloseAsync();
 #endif
-                }
             }
         }
 
@@ -169,16 +165,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return resultFunc.Invoke(command.ExecuteReader());
-                }
-                finally
-                {
-                        connection.Close();
-                }
+                return resultFunc.Invoke(command.ExecuteReader());
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -191,20 +185,18 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
-                }
-                finally
-                {
+                return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+            }
+            finally
+            {
 #if NETSTANDARD2_0
                         connection.Close();
 #else
-                    await connection.CloseAsync();
+                await connection.CloseAsync();
 #endif
-                }
             }
         }
         

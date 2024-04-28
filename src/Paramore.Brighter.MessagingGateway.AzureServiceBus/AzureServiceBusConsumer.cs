@@ -316,10 +316,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
         {
-            if (azureServiceBusMessage.ApplicationProperties == null || !azureServiceBusMessage.ApplicationProperties.ContainsKey(ASBConstants.MessageTypeHeaderBagKey))
+            if (azureServiceBusMessage.ApplicationProperties == null || !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey, out object property))
                 return MessageType.MT_EVENT;
 
-            if (Enum.TryParse(azureServiceBusMessage.ApplicationProperties[ASBConstants.MessageTypeHeaderBagKey].ToString(), true, out MessageType messageType))
+            if (Enum.TryParse(property.ToString(), true, out MessageType messageType))
                 return messageType;
 
             return MessageType.MT_EVENT;
@@ -328,12 +328,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
         {
             if (azureServiceBusMessage.ApplicationProperties is null ||
-                !azureServiceBusMessage.ApplicationProperties.ContainsKey(ASBConstants.ReplyToHeaderBagKey))
+                !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey, out object property))
             {
                 return null;
             }
 
-            var replyAddress = azureServiceBusMessage.ApplicationProperties[ASBConstants.ReplyToHeaderBagKey].ToString();
+            var replyAddress = property.ToString();
 
             return replyAddress;
         }
@@ -341,9 +341,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
         {
             var count = 0;
-            if (azureServiceBusMessage.ApplicationProperties != null && azureServiceBusMessage.ApplicationProperties.ContainsKey(ASBConstants.HandledCountHeaderBagKey))
+            if (azureServiceBusMessage.ApplicationProperties != null && azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey, out object property))
             {
-                int.TryParse(azureServiceBusMessage.ApplicationProperties[ASBConstants.HandledCountHeaderBagKey].ToString(), out count);
+                int.TryParse(property.ToString(), out count);
             }
             return count;
         }

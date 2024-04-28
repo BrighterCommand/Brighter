@@ -217,6 +217,7 @@ namespace Paramore.Brighter
             {
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
                     command.Id);
+
                 var handlerChain = builder.Build(context);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -230,6 +231,7 @@ namespace Paramore.Brighter
             }
             finally
             {
+
                 EndSpan(span);
             }
         }
@@ -262,6 +264,7 @@ namespace Paramore.Brighter
             {
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
                     command.GetType(), command.Id);
+
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -298,6 +301,7 @@ namespace Paramore.Brighter
             var span = CreateSpan(string.Format(PROCESSEVENT, typeof(T).Name));
             var context = InitRequestContext(span, requestContext);
 
+
             try
             {
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
@@ -308,7 +312,7 @@ namespace Paramore.Brighter
                 var handlerCount = handlerChain.Count();
 
                 s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
-                    @event.GetType(), @event.Id);
+                   @event.GetType(), @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handleRequests in handlerChain)
@@ -317,24 +321,22 @@ namespace Paramore.Brighter
                     {
                         handleRequests.Handle(@event);
                     }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
-                }
 
-                if (exceptions.Any())
-                {
-                    span?.SetStatus(ActivityStatusCode.Error);
-                    throw new AggregateException(
-                        "Failed to publish to one more handlers successfully, see inner exceptions for details",
-                        exceptions);
+
+                    if (exceptions.Any())
+                    {
+                        span?.SetStatus(ActivityStatusCode.Error);
+                        throw new AggregateException(
+                            "Failed to publish to one more handlers successfully, see inner exceptions for details",
+                            exceptions);
+                    }
+
                 }
-            }
-            finally
-            {
+             } 
+             finally
+             {
                 EndSpan(span);
-            }
+             }
         }
 
         /// <summary>
@@ -363,6 +365,7 @@ namespace Paramore.Brighter
             var span = CreateSpan(string.Format(PROCESSEVENT, typeof(T).Name));
             var context = InitRequestContext(span, requestContext);
 
+
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             try
             {
@@ -376,6 +379,7 @@ namespace Paramore.Brighter
                     @event.GetType(), @event.Id
                 );
 
+
                 var exceptions = new List<Exception>();
                 foreach (var handler in handlerChain)
                 {
@@ -383,14 +387,17 @@ namespace Paramore.Brighter
                     {
                         await handler.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
                     }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
-                }
 
-                if (exceptions.Any())
-                    span?.SetStatus(ActivityStatusCode.Error);
+                    if (exceptions.Any())
+                        span?.SetStatus(ActivityStatusCode.Error);
+
+
+                if (span.created)
+                {
+                    if (exceptions.Any())
+                        span.span?.SetStatus(ActivityStatusCode.Error);
+                    EndSpan(span.span);
+                }
 
                 if (exceptions.Count > 0)
                 {
@@ -915,6 +922,7 @@ namespace Paramore.Brighter
             //we do this to create the channel on the broker, or we won't have anything to send to; we 
             //retry in case the subscription is poor. An alternative would be to extract the code from
             //the channel to create the subscription, but this does not do much on a new queue
+
             s_bus.Retry(() => responseChannel.Purge());
 
             var span = CreateSpan(CLEAROUTBOX);
@@ -930,6 +938,7 @@ namespace Paramore.Brighter
 
                 Message responseMessage = null;
 
+
                 //now we block on the receiver to try and get the message, until timeout.
                 s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
                 s_bus.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
@@ -942,6 +951,7 @@ namespace Paramore.Brighter
                     s_bus.CreateRequestFromMessage(responseMessage, context, out response);
                     Send(response);
                 }
+
 
                 s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
 

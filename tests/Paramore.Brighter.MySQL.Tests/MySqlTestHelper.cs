@@ -33,15 +33,11 @@ namespace Paramore.Brighter.MySQL.Tests
 
         public void CreateDatabase()
         {
-            using (var connection = new MySqlConnection(_mysqlSettings.TestsMasterConnectionString))
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"CREATE DATABASE IF NOT EXISTS BrighterTests;";
-                    command.ExecuteNonQuery();
-                }
-            }
+            using var connection = new MySqlConnection(_mysqlSettings.TestsMasterConnectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"CREATE DATABASE IF NOT EXISTS BrighterTests;";
+            command.ExecuteNonQuery();
         }
 
         public void SetupMessageDb()
@@ -57,49 +53,37 @@ namespace Paramore.Brighter.MySQL.Tests
         }
 
        public void CleanUpDb()
-        {
-            using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
+       {
+           using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
+           connection.Open();
+           using var command = connection.CreateCommand();
+           command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
+           command.ExecuteNonQuery();
+       }
 
         public void CreateOutboxTable()
         {
-            using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
-            {
-                _tableName = $"`message_{_tableName}`";
-                var createTableSql =
-                    MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: _binaryMessagePayload);
+            using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
+            _tableName = $"`message_{_tableName}`";
+            var createTableSql =
+                MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: _binaryMessagePayload);
 
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = createTableSql;
-                    command.ExecuteNonQuery();
-                }
-            }
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = createTableSql;
+            command.ExecuteNonQuery();
         }
 
         public void CreateInboxTable()
         {
-            using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
-            {
-                _tableName = $"`command_{_tableName}`";
-                var createTableSql = MySqlInboxBuilder.GetDDL(_tableName);
+            using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
+            _tableName = $"`command_{_tableName}`";
+            var createTableSql = MySqlInboxBuilder.GetDDL(_tableName);
 
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = createTableSql;
-                    command.ExecuteNonQuery();
-                }
-            }
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = createTableSql;
+            command.ExecuteNonQuery();
         }
     }
 

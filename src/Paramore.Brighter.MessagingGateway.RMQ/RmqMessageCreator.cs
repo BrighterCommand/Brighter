@@ -120,12 +120,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
         {
-            if (false == dict.ContainsKey(key))
+            if (false == dict.TryGetValue(key, out object value))
             {
                 return new HeaderResult<string>(string.Empty, !dieOnMissing);
             }
 
-            if (!(dict[key] is byte[] bytes))
+            if (!(value is byte[] bytes))
             {
                 s_logger.LogWarning("The value of header {Key} could not be cast to a byte array", key);
                 return new HeaderResult<string>(null, false);
@@ -186,12 +186,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private HeaderResult<int> ReadHandledCount(IDictionary<string, object> headers)
         {
-            if (headers.ContainsKey(HeaderNames.HANDLED_COUNT) == false)
+            if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out object header) == false)
             {
                 return new HeaderResult<int>(0, true);
             }
 
-            switch (headers[HeaderNames.HANDLED_COUNT])
+            switch (header)
             {
                 case byte[] value:
                 {

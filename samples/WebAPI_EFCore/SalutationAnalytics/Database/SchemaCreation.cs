@@ -24,21 +24,19 @@ namespace SalutationAnalytics.Database
 
         public static IHost MigrateDatabase(this IHost host)
         {
-            using (var scope = host.Services.CreateScope())
+            using var scope = host.Services.CreateScope();
+            var services = scope.ServiceProvider;
+
+            try
             {
-                var services = scope.ServiceProvider;
+                var db = services.GetRequiredService<SalutationsEntityGateway>();
 
-                try
-                {
-                    var db = services.GetRequiredService<SalutationsEntityGateway>();
-
-                    db.Database.Migrate();
-                }
-                catch (Exception ex)
-                {
-                    var logger = services.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(ex, "An error occurred while migrating the database.");
-                }
+                db.Database.Migrate();
+            }
+            catch (Exception ex)
+            {
+                var logger = services.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ex, "An error occurred while migrating the database.");
             }
 
             return host;
@@ -88,14 +86,12 @@ namespace SalutationAnalytics.Database
 
         public static IHost CreateInbox(this IHost host)
         {
-            using (var scope = host.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var env = services.GetService<IHostEnvironment>();
-                var config = services.GetService<IConfiguration>();
+            using var scope = host.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
 
-                CreateInbox(config, env);
-            }
+            CreateInbox(config, env);
 
             return host;
         }
@@ -152,14 +148,12 @@ namespace SalutationAnalytics.Database
         
         public static IHost CreateOutbox(this IHost webHost)
         {
-            using (var scope = webHost.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var env = services.GetService<IHostEnvironment>();
-                var config = services.GetService<IConfiguration>();
+            using var scope = webHost.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
 
-                CreateOutbox(config, env);
-            }
+            CreateOutbox(config, env);
 
             return webHost;
         }
