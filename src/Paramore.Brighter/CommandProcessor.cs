@@ -217,7 +217,6 @@ namespace Paramore.Brighter
             {
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
                     command.Id);
-
                 var handlerChain = builder.Build(context);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -231,7 +230,6 @@ namespace Paramore.Brighter
             }
             finally
             {
-
                 EndSpan(span);
             }
         }
@@ -264,7 +262,6 @@ namespace Paramore.Brighter
             {
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
                     command.GetType(), command.Id);
-
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -301,7 +298,6 @@ namespace Paramore.Brighter
             var span = CreateSpan(string.Format(PROCESSEVENT, typeof(T).Name));
             var context = InitRequestContext(span, requestContext);
 
-
             try
             {
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
@@ -321,22 +317,24 @@ namespace Paramore.Brighter
                     {
                         handleRequests.Handle(@event);
                     }
-
-
-                    if (exceptions.Any())
+                    catch (Exception e)
                     {
-                        span?.SetStatus(ActivityStatusCode.Error);
-                        throw new AggregateException(
-                            "Failed to publish to one more handlers successfully, see inner exceptions for details",
-                            exceptions);
+                        exceptions.Add(e);
                     }
-
                 }
-             } 
-             finally
-             {
+
+                if (exceptions.Any())
+                {
+                    span?.SetStatus(ActivityStatusCode.Error);
+                    throw new AggregateException(
+                        "Failed to publish to one more handlers successfully, see inner exceptions for details",
+                        exceptions);
+                }
+            }
+            finally
+            {
                 EndSpan(span);
-             }
+            }
         }
 
         /// <summary>
@@ -365,7 +363,6 @@ namespace Paramore.Brighter
             var span = CreateSpan(string.Format(PROCESSEVENT, typeof(T).Name));
             var context = InitRequestContext(span, requestContext);
 
-
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             try
             {
@@ -379,7 +376,6 @@ namespace Paramore.Brighter
                     @event.GetType(), @event.Id
                 );
 
-
                 var exceptions = new List<Exception>();
                 foreach (var handler in handlerChain)
                 {
@@ -387,17 +383,14 @@ namespace Paramore.Brighter
                     {
                         await handler.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
                     }
-
-                    if (exceptions.Any())
-                        span?.SetStatus(ActivityStatusCode.Error);
-
-
-                if (span.created)
-                {
-                    if (exceptions.Any())
-                        span.span?.SetStatus(ActivityStatusCode.Error);
-                    EndSpan(span.span);
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
                 }
+
+                if (exceptions.Any())
+                    span?.SetStatus(ActivityStatusCode.Error);
 
                 if (exceptions.Count > 0)
                 {
