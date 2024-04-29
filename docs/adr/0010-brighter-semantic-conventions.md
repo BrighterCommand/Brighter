@@ -1,4 +1,4 @@
-# 10. Brighter OpenTelemetry Sematic Conventions 
+# 10. Brighter OpenTelemetry Semantic Conventions 
 
 Date: 2024-04-29
 
