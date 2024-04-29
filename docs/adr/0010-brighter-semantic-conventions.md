@@ -18,7 +18,7 @@ There are some public semantic conventions of interest for attributes to set on 
 * [Semantic Conventions for Cloud Events](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/cloudevents/README.md)
 * [Trace Context](https://w3c.github.io/trace-context/)
 
-The Semantic Conventions for Messaging Systems provides a common way to propogate context between services: the Semantic Conventions for Messaging Systems provide a common way to describe spans and attributes in messaging systems; the W3C  Trace Context standard provides a common way to propogate context information between services; the Cloud Events Semantic Conventions uses the W3C Trace Context standard to propogate their context and add additional attributes to the Messaging approach.
+The Semantic Conventions provides a standard way to describe a trace and to propogate context between services: the Semantic Conventions for Messaging Systems provide a common way to describe spans and attributes in messaging systems; the W3C  Trace Context standard provides a common way to propogate context information between services; the Cloud Events Semantic Conventions uses the W3C Trace Context standard to propogate their context and add additional attributes to the Messaging approach.
 
 The [worked example](https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/MicroserviceExample) for RabbitMQ is a good starting point for understanding OTel in a messaging context. 
                      
