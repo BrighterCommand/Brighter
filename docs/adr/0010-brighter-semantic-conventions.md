@@ -1,10 +1,10 @@
-# 10. Support OpenTelemetry standards 
+# 10. Brighter OpenTelemetry Sematic Conventions 
 
-Date: 2024-04-28
+Date: 2024-04-29
 
 ## Status
 
-Accepted
+Proposed
 
 ## Context
 
@@ -18,15 +18,13 @@ There are some public semantic conventions of interest for attributes to set on 
 * [Semantic Conventions for Cloud Events](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/cloudevents/README.md)
 * [Trace Context](https://w3c.github.io/trace-context/)
 
-The Semantic Conventions for Messaging Systems provides a common way to pass context information between services. The Semantic Conventions for Cloud Events provides a common way to pass context information between services. The W3C  Trace Context standard provides a common way to propogate context information between services. Cloud Events uses the W3C Trace Context standard to propogate it's context.
+The Semantic Conventions for Messaging Systems provides a common way to propogate context between services: the Semantic Conventions for Messaging Systems provide a common way to describe spans and attributes in messaging systems; the W3C  Trace Context standard provides a common way to propogate context information between services; the Cloud Events Semantic Conventions uses the W3C Trace Context standard to propogate their context and add additional attributes to the Messaging approach.
 
-All of these standards are designed to work together to provide a common way to pass context information between services. For Brighter to participate well in an OTel ecosystem we need to support these standards.  
-
-The [worked example](https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/MicroserviceExample) for RabbitMQ is a good starting point. 
+The [worked example](https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/MicroserviceExample) for RabbitMQ is a good starting point for understanding OTel in a messaging context. 
                      
 #### Semantic Conventions for Brighter
 
-In addition, we would need to think about semantic conventions for Brighter itself. 
+We would want to define semantic conventions for Brighter itself. 
 
 Brighter can operate both as a Command Processor and Dispatcher. 
 
@@ -35,17 +33,16 @@ When Brighter operates operates as a Command Processor, the span would naturally
 * We would assume that the span would be named for the type of request.
 * Attributes for the span would include request level metadata, which is well known.
 * Entering a handler, either middleware or sink, would be an event on the span. 
-* A publish is likely a single span, see the semantic conventions for messaging as an example, with an event for each new pipeline we enter.
+* A publish is likely a publish span which has links to child spans for each handler pipeline subscribed to the event.
 
-When Brighter operates as a Dispatcher, each individual Performer would tend to create a span which would begin where we receive a message. Because processing a message triggers the Command Processor this would likely create a further child span of the Performer's receive span. The translation span would thus likely be a child of the Performer's receive span as well and a sibling of the Command Processor span.
+When Brighter operates as a Dispatcher, each individual Performer would tend to create a span which would begin where we receive a message. 
+
+* Because processing a message triggers the Command Processor this would create a child span of the Performer's receive span, as described above.
+* The Performer also triggers message translation via a MessageMapper. Because the Command Processor is a child span, message translation would also likely be a child of the Performer's receive span; as well and a sibling of the Command Processor span.
     
 #### Controlling the Number of Attributes
 
-We should determine the depth of attributes that users of the framework want from the library and provide options for them to control this. See [this blog](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/) for an example.
-
-#### Tracing
-
-We have an existing Trace operation on a Handler that uses the Visitor pattern. This proves useful for diagnostics, and just uses the handler name. When the event is likely to be recorded on the span in the RequestContext that flows through the pipeline, it might be possible to retire the Trace operation in favour of the span. Tests that rely on the Trace operation would need to be updated to use the span instead.
+We should make it possible to set the types of attributes that users of the framework want from the library and provide options for them to control this. See [this blog](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/) for an example.
 
 ## Decision
 
@@ -91,7 +88,7 @@ We record the following attributes on a Command Processor span:
                      
 Because we allow you to inject RequestContext on a call to the Command Processor you can use this to add additional attributes to the span. Any RequestContext.Bag entries that start with "paramore.brighter.spancontext." will be added to the span as attributes. Baggage is an alternative here, but we won't automatically add baggage as attributes to your span. 
 
-We should check Activity.IsAllDataRequested and only add the attributes if it is. This is because adding attributes to a span can be expensive. See [this doc](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/docs/trace/README.md).
+We should check Activity.IsAllDataRequested and only add the attributes if it is. We should enable granular control of which attributes if all data is requested. This is because adding attributes to a span can be expensive. See [this doc](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/docs/trace/README.md).
 
 #### Command Processor Events
 
@@ -124,18 +121,42 @@ The operation is Publish, unless the operation is within a Batch in which case e
 
 The span kind will be Producer instead of Internal at this point.
 
+The Command Processor will need to ask the Producer for some of the attributes to set on the span:
 
+* messaging.system: what broker are we using?
+
+Others are more directly available:
+
+* messaging.destination: what is the name of the channel?
+* messaging.message_id: what is the message id?
+* messaging.destination.partition.id: what is the partition id?
+* messaging.message.body.size: what is the size of the message payload?
+
+We may also wish to make the payload available on request (although not part of the semantic conventions).
+
+* messaging.message.body: what is the message payload?
 
 ### Service Activator Performer
 
-The Service Activator Performer creates a span for each message that it processes. We must follow the existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
+The Service Activator Performer creates a span for each message that it processes. 
 
 ### Consumer
+
+There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
 
 * Receive Message via a pull => span name: "<channel> receive" span kind: consumer
 * Process Message via a push  => span name: "<channel> process" span kind: consumer
 
-The span is not created when read into any cache but only when made available to the consumer.
+We will have to ask the specific channel implementation for a transport for:
+
+* Recieve or Process: was the message obtained by push or pull?
+* messaging.operation: an attribute that describes the above (also used in the name)
+* messaging.system: what broker did we obtain the message from?
+* server.address: what is the address of that broker
+
+
+
+The span is not created when read into any cache but only when made available to the consumer i.e. within the Performer itself.
 
 ### Third-Party Infrastructure Calls Dependencies Spans
 
@@ -143,7 +164,11 @@ Where we access a database i.e. Inbox and Outbox, we should instrument as a span
 
 Where our Claim Check accesses the S3 bucket we should record an event as per the [OTel documentation for S3](https://opentelemetry.io/docs/specs/semconv/object-stores/s3/)
 
-
 ## Consequences
 
+### Path Tracing
 
+We have an existing "Trace" operation on a Handler that uses the Visitor pattern to describe the middleware pipeline for a handler.
+* This approach has proved useful for diagnostics; we just append the handler name to a string.
+* Under OTel, an event should to be recorded on the span in the RequestContext that flows through the pipeline; we would just name the event after the handler.
+* Thus it might be possible to retire the Trace operation in favour of the span. Tests that rely on the Trace operation would need to be updated to use the span instead.
