@@ -94,11 +94,11 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 
 We record an event for every handler we enter. The event is named after the handler. The event has the following attributes:
 
-| Attribute | Type | Description | Example|
-| --- | --- | --- | --- |
+| Attribute                     | Type | Description | Example|
+|-------------------------------| --- | --- | --- |
 | paramore.brighter.handlername | string | The full type name of the handler | "MyNamespace.MyHandler" |
 | paramore.brighter.handlertype | string | Is the handler sync or async | "Async" |
-| paramore.brighter.issink | bool | Is this the final operation in the chain | True |
+| paramore.brighter.is_sink     | bool | Is this the final operation in the chain | True |
 
 We should record exceptions as events on the span. See the [OTel documentation on Exceptions](https://opentelemetry.io/docs/specs/semconv/exceptions/exceptions-spans/)
 
@@ -121,18 +121,20 @@ The operation is Publish, unless the operation is within a Batch in which case e
 
 The span kind will be Producer instead of Internal at this point.
 
-The Command Processor will need to ask the Producer for some of the attributes to set on the span:
+The Semantic Convention for Messaging Systems provides a common set of attributes for messaging systems. There are both Required and Recommended attributes. We should always set the Required attributes and offer the Recommended attributes. We should make it possible to control the amount of attributes we set by only setting the Recommended attributes if the user has requested them.
+
+The Command Processor will need changes to the code to support asking the Producer for some of the attributes to set on the span. For example:
 
 * messaging.system: what broker are we using?
 
-Others are more directly available:
+Other attributes are available in Brighter today:
 
 * messaging.destination: what is the name of the channel?
 * messaging.message_id: what is the message id?
 * messaging.destination.partition.id: what is the partition id?
 * messaging.message.body.size: what is the size of the message payload?
 
-We may also wish to make the payload available on request (although not part of the semantic conventions).
+We may also wish to make the payload available on request (although not part of the Semantic Conventions).
 
 * messaging.message.body: what is the message payload?
 
@@ -140,7 +142,7 @@ We may also wish to make the payload available on request (although not part of 
 
 The Service Activator Performer creates a span for each message that it processes. 
 
-### Consumer
+#### Consumer
 
 There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
 
@@ -154,15 +156,32 @@ We will have to ask the specific channel implementation for a transport for:
 * messaging.system: what broker did we obtain the message from?
 * server.address: what is the address of that broker
 
-
-
 The span is not created when read into any cache but only when made available to the consumer i.e. within the Performer itself.
 
-### Third-Party Infrastructure Calls Dependencies Spans
+### Brighter Usage of External Storage
 
-Where we access a database i.e. Inbox and Outbox, we should instrument as a span, with low-cardinality (i.e. name of Outbox or Inbox operation) as per the [Otel specification](https://opentelemetry.io/docs/specs/semconv/database/database-spans/).
+#### Outbox and Inbox
+
+From within Brighter we call out to external databases for our Outbox and Inbox. Where we access a database i.e. Inbox and Outbox, we should instrument as a span, with low-cardinality (i.e. name of Outbox or Inbox operation) as per the [Otel specification](https://opentelemetry.io/docs/specs/semconv/database/database-spans/).
+                                              
+#### Object Storage
 
 Where our Claim Check accesses the S3 bucket we should record an event as per the [OTel documentation for S3](https://opentelemetry.io/docs/specs/semconv/object-stores/s3/)
+
+### Cloud Events Semantic Conventions
+
+Cloud Events also defines semantic conventions for [attributes and spans](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/cloudevents/cloudevents-spans.md). 
+
+We will use traceparent and tracestate as message headers as defined in the (Cloud Events Distributed Tracing Extension)[https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md].
+
+Cloud Events has a differnt scheme for naming the span:
+
+* Create a message => span name: "Cloud Events Create <event type>" span kind: producer
+* Receive a message => span name: "Cloud Events Process <event type>" span kind: consumer
+
+In our case we will use the messaging semantic conventions as they are richer than those proposed by Cloud Events. (The Cloud Events standard is also irrelevant in a span name).
+
+Cloud Events supports attributes for the span. This gives us multiple attributes for describing some properties of a message. The id of a message is given by both *messaging.message_id* and *cloudevents.event_id*. As a generic framework, we opt to support both messaging and cloud events conventions for attribute names and provide options to allow users to include either (including supporting both conventions).
 
 ## Consequences
 
