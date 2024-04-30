@@ -169,6 +169,10 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 * MessageBody => (message.body)what is the message body?
 * MessageHeaders => (message.headers) what is the metadata of the message?
 
+#### Serialization
+
+Because we may be participating in a distributed trace, we will need to set the traceparent and tracecontext headers on the outgoing message. Because we might be an intermediary we need to preserve any remote context by setting the traceparent to the originator of the flow, not reset it to ourselves. See Cloud Events [here](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md)
+
 ### Performer
 
 The Peformer (message pump) acts as a Consumer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
@@ -187,6 +191,10 @@ We will have to ask the transport for the operation the span is performing:
 * Recieve or Process: was the message obtained by push or pull?
 
 This is because this will vary by the capabilities of the transport.As this information is static, we can enhance the channel with this information. 
+  
+#### Deserialization
+
+Because we may be participating in a distributed trace, we will need to work with traceparent and tracecontext headers when initializing the span. There is an example of how ASP.NET does this [here](https://github.com/dotnet/aspnetcore/blob/main/src/Hosting/Hosting/src/Internal/HostingApplicationDiagnostics.cs#L248) or .NET [here](https://github.com/dotnet/runtime/blob/4f9ae42d861fcb4be2fcd5d3d55d5f227d30e723/src/libraries/System.Net.Http/src/System/Net/Http/DiagnosticsHandler.cs?ref=jimmybogard.com#L254). See also this article on [distributed tracing](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/).
 
 #### Attributes
 
