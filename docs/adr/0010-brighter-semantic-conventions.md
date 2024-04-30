@@ -18,9 +18,9 @@ There are some public semantic conventions of interest for attributes to set on 
 * [Semantic Conventions for Cloud Events](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/cloudevents/README.md)
 * [Trace Context](https://w3c.github.io/trace-context/)
 
-The Semantic Conventions provides a standard way to describe a trace and to propogate context between services: the Semantic Conventions for Messaging Systems provide a common way to describe spans and attributes in messaging systems; the W3C  Trace Context standard provides a common way to propogate context information between services; the Cloud Events Semantic Conventions uses the W3C Trace Context standard to propogate their context and add additional attributes to the Messaging approach.
+Conventions provide a standard way to describe a trace and to propogate context between services: the Semantic Conventions for Messaging Systems provide a common way to describe spans and attributes in messaging systems; the W3C  Trace Context standard provides a common way to propogate context information between services; the Cloud Events Semantic Conventions uses the W3C Trace Context standard to propogate their context and add additional attributes to the Messaging approach.
 
-The [worked example](https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/MicroserviceExample) for RabbitMQ is a good starting point for understanding OTel in a messaging context. 
+The [worked example](https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/MicroserviceExample) for RabbitMQ is a starting point for understanding OTel in a messaging context within .NET. 
                      
 #### Semantic Conventions for Brighter
 
@@ -45,6 +45,21 @@ When Brighter operates as a Dispatcher, each individual Performer would tend to 
 We should make it possible to set the types of attributes that users of the framework want from the library and provide options for them to control this. See [this blog](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/) for an example.
 
 ## Decision
+
+### Activity Source
+
+Brighter should define its own Activity Source (see [this](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/distributed-tracing-instrumentation-walkthroughs) note). This will allow application developers to enable or disable the source. The name of the source should be be:
+
+*Paramore.Brighter and the version number of the library*
+          
+We do not want to initialize this for both usage as a Command Processor and a Dispatcher implying that the source needs to be created by a stand-alone static class. 
+
+The approach outlined here forms a useful starting point for the [Activity Source](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/):
+
+* We should create a static class that initializes the Activity Source.
+* We should create a settings class that allows the user to control the attributes that we add to the span.
+* We should create an Enricher that adds the attributes to the span, observing the options set by the user.
+* We should provide a helper class to register the source and ensure no typos in source name cause us trivial issues.
 
 ### Command Processor
 
@@ -78,17 +93,22 @@ Note that we Publish, Deposit and Clear may be batch operations which result in 
 
 We record the following attributes on a Command Processor span:
 
-| Attribute                         | Type | Description                                                        | Example|
-|-----------------------------------| --- |--------------------------------------------------------------------| --- |
-| paramore.brighter.requestid       | string | In a non-batch operation this is the request id                    | "1234-5678-9012-3456" |
-| paramore.brighter.requestids      | string | In a batch operation this is a comma separated list of request ids | "1234-5678-9012-3456, 2345-6789-0123-4567" |
-| paramore.brighter.requesttype     | string | The full type name of the command                                  | "MyNamespace.MyCommand" |
-| paramore.brighter.operation       | string | The operation being performed                                      | "Send" |
-| paramore.brighter.spancontext.*   | varies | User supplied attributes for the span via the request context bag  | paramore.brighter.spancontext.userid "1234" |
+| Attribute                       | Type | Description                                                        | Example                                     |
+|---------------------------------| --- |--------------------------------------------------------------------|---------------------------------------------|
+| paramore.brighter.requestid     | string | In a non-batch operation this is the request id                    | "1234-5678-9012-3456"                       |
+| paramore.brighter.requestids    | string | In a batch operation this is a comma separated list of request ids | "1234-5678-9012-3456, 2345-6789-0123-4567"  |
+| paramore.brighter.requesttype   | string | The full type name of the command                                  | "MyNamespace.MyCommand"                     |
+| paramore.brighter.request_body  | string | The contents of the request as JSON                                | "{"greeting": "Hello World"}"                |
+| paramore.brighter.operation     | string | The operation being performed                                      | "Send"                                      |
+| paramore.brighter.spancontext.* | varies | User supplied attributes for the span via the request context bag  | paramore.brighter.spancontext.userid "1234" |
                      
 Because we allow you to inject RequestContext on a call to the Command Processor you can use this to add additional attributes to the span. Any RequestContext.Bag entries that start with "paramore.brighter.spancontext." will be added to the span as attributes. Baggage is an alternative here, but we won't automatically add baggage as attributes to your span. 
 
-We should check Activity.IsAllDataRequested and only add the attributes if it is. We should enable granular control of which attributes if all data is requested. This is because adding attributes to a span can be expensive. See [this doc](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/docs/trace/README.md).
+We should check Activity.IsAllDataRequested and only add the attributes if it is. We should enable granular control of which attributes if all data is requested. This is because adding attributes to a span can be expensive, see s[this doc](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/docs/trace/README.md). Likely options we would need:
+
+* RequestInformation (requestid, requestids, requesttype, operation) => what is the request?
+* RequestBody => (request_body)what is the request body?
+* RequestContext => (spancontext.*) what is the context of the request?
 
 #### Command Processor Events
 
@@ -104,11 +124,13 @@ We should record exceptions as events on the span. See the [OTel documentation o
 
 We should instrument our Feature Flag handler as an event in the span, as per the [OTel documentation on feature flags](https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-spans/)
 
-#### Command Processor Producer
+### Command Processor Clear Operations
 
-There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) semantic conventions for a Producer.
+During a Clear the Command Processor acts as a Producer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) semantic conventions for a Producer.
 
-The span is named:
+#### Spans
+
+We should create a span for producing a message, that is a child of the Command Processor span. The span is named:
 
 * destination name operation name
 
@@ -120,6 +142,8 @@ where the destination name is the name of the channel and the operation name is 
 The operation is Publish, unless the operation is within a Batch in which case each item is a Create.
 
 The span kind will be Producer instead of Internal at this point.
+
+#### Attributes
 
 The Semantic Convention for Messaging Systems provides a common set of attributes for messaging systems. There are both Required and Recommended attributes. We should always set the Required attributes and offer the Recommended attributes. We should make it possible to control the amount of attributes we set by only setting the Recommended attributes if the user has requested them.
 
@@ -134,29 +158,54 @@ Other attributes are available in Brighter today:
 * messaging.destination.partition.id: what is the partition id?
 * messaging.message.body.size: what is the size of the message payload?
 
-We may also wish to make the payload available on request (although not part of the Semantic Conventions).
+We may also wish to make the payload available (although it is not part of the Semantic Conventions).
 
 * messaging.message.body: what is the message payload?
+* messaging.message.headers: what are the message headers?
 
-### Service Activator Performer
+We should check Activity.IsAllDataRequested and only add the attributes if it is. Likely options we would need:
 
-The Service Activator Performer creates a span for each message that it processes. 
+* MessageInformation (message.*) => what is the message?
+* MessageBody => (message.body)what is the message body?
+* MessageHeaders => (message.headers) what is the metadata of the message?
 
-#### Consumer
+### Performer
 
-There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
+The Peformer (message pump) acts as a Consumer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
+
+#### Spans 
+
+A Performer should create a span for each message that it processes.
 
 * Receive Message via a pull => span name: "<channel> receive" span kind: consumer
 * Process Message via a push  => span name: "<channel> process" span kind: consumer
 
-We will have to ask the specific channel implementation for a transport for:
+We don't create the span until we begin to process the message i.e. not when we read into Brighter's local buffer, but when we retrieve a message from that buffer. This means that the span is created outside of the transport and within the message pump.
+
+We will have to ask the transport for the operation the span is performing:
 
 * Recieve or Process: was the message obtained by push or pull?
+
+This is because this will vary by the capabilities of the transport.As this information is static, we can enhance the channel with this information. 
+
+#### Attributes
+
+The Semantic Conventions for Messaging Systems provides a common set of attributes for messaging systems. There are both Required and Recommended attributes. We should always set the Required attributes and offer the Recommended attributes. We should make it possible to control the amount of attributes we set by only setting the Recommended attributes if the user has requested them.
+
+A number of attributes will need to be retrieved from the transport, as they are specific to the transport and not available on the message itself:
+
 * messaging.operation: an attribute that describes the above (also used in the name)
 * messaging.system: what broker did we obtain the message from?
 * server.address: what is the address of that broker
 
-The span is not created when read into any cache but only when made available to the consumer i.e. within the Performer itself.
+As this information is dynamic the other we should put it into the header bag when reading from the broker and retrieve it from there when creating the span.
+
+We should check Activity.IsAllDataRequested and only add the attributes if it is. Likely options we would need:
+
+* MessageInformation (message.*) => what is the message?
+* MessageBody => (message.body)what is the message body?
+* MessageHeaders => (message.headers) what is the metadata of the message?
+* ServerInformation => (server.*) what is the server information?
 
 ### Brighter Usage of External Storage
 
