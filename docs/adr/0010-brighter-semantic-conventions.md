@@ -22,7 +22,7 @@ Conventions provide a standard way to describe a trace and to propogate context 
 
 The [worked example](https://github.com/open-telemetry/opentelemetry-dotnet/tree/main/examples/MicroserviceExample) for RabbitMQ is a starting point for understanding OTel in a messaging context within .NET. 
                      
-#### Semantic Conventions for Brighter
+### Semantic Conventions for Brighter
 
 We would want to define semantic conventions for Brighter itself. 
 
@@ -49,7 +49,7 @@ When Brighter operates as a Dispatcher, each individual Performer would tend to 
   * With a transform that calls out-of-process, such as to a schema registry or object storage, it would create a child span to cover the external call.
   * *For example, a call to check an Inbox would create a child span for the database operation*
     
-#### Controlling the Number of Attributes
+### Controlling the Number of Attributes
 
 We should make it possible to set the types of attributes that users of the framework want from the library and provide options for them to control this. See [this blog](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/) for an example.
 
@@ -127,7 +127,7 @@ The span kind will be Producer instead of Internal at this point.
 
 When we Clear we read a message from the Outbox. Once we have dispatched the message, we update the Outbox to mark it as sent. Reading and writing the message to and from the Outbox should create a span, with low-cardinality (i.e. name of Outbox or Inbox operation) as per the [Otel specification](https://opentelemetry.io/docs/specs/semconv/database/database-spans/).
 
-#### Command Processor Attributes
+### Command Processor Attributes
 
 We record the following attributes on a Command Processor span:
 
@@ -182,7 +182,7 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 * MessageBody => (message.body)what is the message body?
 * MessageHeaders => (message.headers) what is the metadata of the message?
 
-#### Command Processor Events
+### Command Processor Events
 
 We record an event for every handler we enter. The event is named after the handler. The event has the following attributes:
 
@@ -215,7 +215,7 @@ We will have to ask the transport for the operation the span is performing:
 
 * Recieve or Process: was the message obtained by push or pull?
 
-This is because this will vary by the capabilities of the transport.As this information is static, we can enhance the channel with this information. 
+This is because this will vary by the capabilities of the transport.As this information is static, we can enhance the channel with this information.
   
 #### Retrieving Message Context
 
