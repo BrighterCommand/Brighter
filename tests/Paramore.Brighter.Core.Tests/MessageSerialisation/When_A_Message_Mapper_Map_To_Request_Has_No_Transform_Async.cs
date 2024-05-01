@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.MessageMappers;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -17,8 +18,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
          var mapperRegistry = new MessageMapperRegistry(
              null,
-             new SimpleMessageMapperFactoryAsync(_ => new MyVanillaCommandMessageMapperAsync()));
-         mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
+             new SimpleMessageMapperFactoryAsync(_ => new JsonMessageMapperAsync<MyTransformableCommand>()));
+         mapperRegistry.RegisterAsync<MyTransformableCommand, JsonMessageMapperAsync<MyTransformableCommand>>();
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => null));
 

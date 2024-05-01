@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessageMappers;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -36,5 +37,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 _msSqlMessageConsumerFactory.Create(subscription),
                 subscription.BufferSize);
         }
+
+        public Type DefaultGenericMessageMapper() => typeof(JsonMessageMapper<>);
+        public Type DefaultGenericMessageMapperAsync() => typeof(JsonMessageMapperAsync<>);
     }
 }

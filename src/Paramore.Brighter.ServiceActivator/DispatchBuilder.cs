@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Paramore.Brighter.MessageMappers;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -108,15 +109,33 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// A list of subscriptions i.e. mappings of channels to commands or events
         /// </summary>
-        /// <param name="connections">The connections.</param>
+        /// <param name="subscriptions"></param>
         /// <returns>IAmADispatchBuilder.</returns>
         public IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subscriptions)
         {
             _subscriptions = subscriptions;
-
+            
             foreach (var connection in _subscriptions.Where(c => c.ChannelFactory == null))
             {
                 connection.ChannelFactory = _defaultChannelFactory;
+            }
+
+            foreach (var subscription in subscriptions)
+            {
+                var subscriptionType = subscription.DataType;
+
+                if (subscription.RunAsync)
+                {
+                    var defaultMessageMapper = subscription.ChannelFactory.DefaultGenericMessageMapperAsync() ?? typeof(JsonMessageMapperAsync<>);
+                    if (!_messageMapperRegistryAsync.Has(subscriptionType))
+                        _messageMapperRegistryAsync.RegisterAsync(subscriptionType, defaultMessageMapper.MakeGenericType(subscription.DataType));
+                }
+                else
+                {
+                    var defaultMessageMapper = subscription.ChannelFactory.DefaultGenericMessageMapper() ?? typeof(JsonMessageMapper<>);
+                    if (!_messageMapperRegistry.Has(subscriptionType))
+                        _messageMapperRegistry.Register(subscriptionType,  defaultMessageMapper.MakeGenericType(subscription.DataType));
+                }
             }
 
             return this;

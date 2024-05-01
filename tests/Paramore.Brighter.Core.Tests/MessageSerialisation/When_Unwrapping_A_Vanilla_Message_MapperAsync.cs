@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.MessageMappers;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -21,8 +22,8 @@ public class AsyncVanillaMessageUnwrapRequestTests
 
         var mapperRegistry = new MessageMapperRegistry(
             null,
-            new SimpleMessageMapperFactoryAsync(_ => new MyVanillaCommandMessageMapperAsync()));
-        mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
+            new SimpleMessageMapperFactoryAsync(_ => new JsonMessageMapperAsync<MyTransformableCommand>()));
+        mapperRegistry.RegisterAsync<MyTransformableCommand, JsonMessageMapperAsync<MyTransformableCommand>>();
 
         _myCommand = new MyTransformableCommand();
         

@@ -55,5 +55,7 @@ namespace Paramore.Brighter
         /// <param name="mapper">The type of the mapper for this request</param>
         /// <exception cref="System.ArgumentException"></exception>
         void Register(Type request, Type mapper);
+
+        bool Has(Type subscriptionType);
     }
 }

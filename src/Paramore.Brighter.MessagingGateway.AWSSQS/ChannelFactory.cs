@@ -33,6 +33,7 @@ using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.MessageMappers;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
@@ -93,6 +94,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             return channel;
         }
+
+        public Type DefaultGenericMessageMapper() => typeof(JsonMessageMapper<>);
+        public Type DefaultGenericMessageMapperAsync() => typeof(JsonMessageMapperAsync<>);
 
         private void EnsureQueue()
         {

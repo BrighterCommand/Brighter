@@ -22,7 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
+using Paramore.Brighter.MessageMappers;
 
 namespace Paramore.Brighter.ServiceActivator.TestHelpers
 {
@@ -45,6 +47,9 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
             }
             return channel;
         }
+
+        public Type DefaultGenericMessageMapper() => typeof(JsonMessageMapper<>);
+        public Type DefaultGenericMessageMapperAsync() => typeof(JsonMessageMapperAsync<>);
 
         public void SeedChannel(IEnumerable<Message> seedMessages)
         {

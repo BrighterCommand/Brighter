@@ -21,6 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using Paramore.Brighter.MessageMappers;
+
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     /// <summary>
@@ -55,5 +58,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 _kafkaMessageConsumerFactory.Create(subscription), 
                 subscription.BufferSize);
         }
+
+        public Type DefaultGenericMessageMapper() => typeof(JsonMessageMapper<>);
+        public Type DefaultGenericMessageMapperAsync() => typeof(JsonMessageMapperAsync<>);
     }
 }

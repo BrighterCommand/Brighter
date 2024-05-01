@@ -1,4 +1,5 @@
 ﻿using System;
+using Paramore.Brighter.MessageMappers;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -44,5 +45,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 maxQueueLength: subscription.BufferSize
             );
         }
+
+        public Type DefaultGenericMessageMapper() => typeof(JsonMessageMapper<>);
+        public Type DefaultGenericMessageMapperAsync() => typeof(JsonMessageMapperAsync<>);
+
     }
 }

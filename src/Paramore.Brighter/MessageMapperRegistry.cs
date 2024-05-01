@@ -120,7 +120,12 @@ namespace Paramore.Brighter
 
             _messageMappers.Add(request, mapper);
         }
-        
+
+        public bool Has(Type subscriptionType)
+        {
+            return _messageMappers.ContainsKey(subscriptionType) || _asyncMessageMappers.ContainsKey(subscriptionType);
+        }
+
         /// <summary>
         /// Registers this instance.
         /// </summary>
