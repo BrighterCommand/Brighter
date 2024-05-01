@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessageMappers;
 using Polly;
 using Polly.Registry;
 
@@ -106,6 +107,25 @@ namespace Paramore.Brighter
             _maxOutStandingMessages = maxOutStandingMessages;
             _maxOutStandingCheckIntervalMilliSeconds = maxOutStandingCheckIntervalMilliSeconds;
             _outBoxBag = outBoxBag;
+            
+            
+            foreach (var producer in _producerRegistry.Producers)
+            {
+                // if (subscription.RunAsync)
+                // {
+                //     var defaultMessageMapper = busConfiguration..ChannelFactory.DefaultGenericMessageMapperAsync() ?? typeof(JsonMessageMapperAsync<>);
+                //     if (!busConfiguration.MessageMapperRegistry.Has(subscriptionType))
+                //         busConfiguration.MessageMapperRegistry.RegisterAsync(subscriptionType, defaultMessageMapper.MakeGenericType(subscription.DataType));
+                // }
+                // else
+                // {
+                //var defaultMessageMapper = subscription.ChannelFactory.DefaultGenericMessageMapper() ?? typeof(JsonMessageMapper<>);
+                var defaultMessageMapper = typeof(JsonMessageMapper<>);
+                if (!_mapperRegistry.Has(producer.Publication.RequestType))
+                    _mapperRegistry.Register(producer.Publication.RequestType, defaultMessageMapper.MakeGenericType(producer.Publication.RequestType));
+                //}
+            }
+            
 
             ConfigureCallbacks();
         }
