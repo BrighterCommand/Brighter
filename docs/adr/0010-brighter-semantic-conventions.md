@@ -59,7 +59,7 @@ We should make it possible to set the types of attributes that users of the fram
 
 Brighter should define its own Tracer, via the Activity Source class in .NET (see [this](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/distributed-tracing-instrumentation-walkthroughs) note). The name of the source should be be:
 
-*Paramore.Brighter and the version number of the library*
+source name: `Paramore.Brighter <version number>`
           
 We do not want to initialize this for both usage as a Command Processor and a Dispatcher implying that the source needs to be created by a stand-alone static class. 
 
@@ -74,10 +74,10 @@ The approach outlined here forms a useful design for the usage of [Activity Sour
 
 We will create a span for each command processed. The span will be named as follows:
 
-*request type operation*
+span name: `<request type> <operation>`
 
-* The <request type> is the full type name of the request.
-* The <operation> the command processor operation being performed.
+* The `<request type>` is the full type name of the request.
+* The `<operation>` the command processor operation being performed.
 
 The span will usually have a parent. This is because the command processor is usually invoked by an ASP.NET Controller or by Brighter's Service Activator Performer (or Message Pump). The parent span will be the span for the ASP.NET Controller or the Service Activator Performer.  
 
@@ -118,10 +118,16 @@ We should create a span for producing a message, that is a child of the Command 
 
 where the destination name is the name of the channel and the operation name is the operation being performed. The span kind is producer.
 
-* Create Message => span name: "<channel> create" span kind: producer
-* Publish Message => span name: "<channel> publish" span kind: producer
+* Create Message => span name: `<channel> create` span kind: producer
+* Publish Message => span name: `<channel> publish` span kind: producer
 
 Producing a message is a Publish operation, unless the operation is within a Batch in which case the batch is a Publish with each message in the batch a Create span.
+
+[Cloud Events](https://opentelemetry.io/docs/specs/semconv/cloudevents/cloudevents-spans/#attributes) offers alternative names the producer and consumer spans:
+
+* Create a message => span name: `Cloud Events Create <event type>` span kind: producer
+
+In our case we will use the messaging semantic conventions; the Cloud Events standard identifier is irrelevant in a span name.
 
 The span kind will be Producer instead of Internal at this point.
 
@@ -182,6 +188,13 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 * MessageBody => (message.body)what is the message body?
 * MessageHeaders => (message.headers) what is the metadata of the message?
 
+[Cloud Events](https://opentelemetry.io/docs/specs/semconv/cloudevents/cloudevents-spans/#attributes) also provides attributes for a producer span. This gives us multiple attributes for describing some properties of a message. The id of a message is given by both *messaging.message_id* and *cloudevents.event_id*. As a generic framework, we opt to support both messaging and cloud events conventions for attribute names.
+
+This means that we will need to provide options to allow users to choose the attributes they wish to propogate:
+
+* UseMessagingSemanticConventionsAttributes
+* UseCloudEventsConventionsAttributes
+
 ### Command Processor Events
 
 We record an event for every handler we enter. The event is named after the handler. The event has the following attributes:
@@ -196,18 +209,20 @@ We should record exceptions as events on the span. See the [OTel documentation o
 
 Standards may exist for the attributes used by events, and we should follow those. *For example we should instrument our Feature Flag handler in compliance with the [OTel documentation on feature flags](https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-spans/)*
 
-### Propogating Context from a Producer
-
-Because we may be participating in a distributed trace, we will need to set the traceparent and tracecontext headers on the outgoing message. Because we might be an intermediary we need to preserve any remote context by setting the traceparent to the originator of the flow, not reset it to ourselves. See Cloud Events [here](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md)
-
 ### Performer Spans
 
 The Peformer (message pump) acts as a Consumer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
 
 A Performer should create a span for each message that it processes.
 
-* Receive Message via a pull => span name: "<channel> receive" span kind: consumer
-* Process Message via a push  => span name: "<channel> process" span kind: consumer
+* Receive Message via a pull => span name: `<channel> receive` span kind: consumer
+* Process Message via a push  => span name: `<channel> process` span kind: consumer
+
+Cloud Events offers alternative names the consumer span:
+
+* Receive a message => span name: `Cloud Events Process <event type>` span kind: consumer
+
+In our case we will use the messaging semantic conventions; the Cloud Events standard identifier is irrelevant in a span name.
 
 We don't create the span until we begin to process the message i.e. not when we read into Brighter's local buffer, but when we retrieve a message from that buffer. This means that the span is created outside of the transport and within the message pump.
 
@@ -240,33 +255,11 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 * MessageHeaders => (message.headers) what is the metadata of the message?
 * ServerInformation => (server.*) what is the server information?
 
-### Interoperability with Cloud Events 
+### Propogating Context from a Producer
 
-Cloud Events also defines semantic conventions for [attributes and spans](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/cloudevents/cloudevents-spans.md). 
+Because we may be participating in a distributed trace, we will need to set the traceparent and tracecontext headers on the outgoing message. Because we might be an intermediary we need to preserve any remote context by setting the traceparent to the originator of the flow, not reset it to ourselves. 
 
-#### Cloud Events Spans
-
-Cloud Events offers alternative names the producer and consumer spans:
-
-* Create a message => span name: "Cloud Events Create <event type>" span kind: producer
-* Receive a message => span name: "Cloud Events Process <event type>" span kind: consumer
-
-In our case we will use the messaging semantic conventions; the Cloud Events standard identifier is irrelevant in a span name.
-
-#### Cloud Events Attributes
-
-Cloud Events supports attributes for the span. This gives us multiple attributes for describing some properties of a message. The id of a message is given by both *messaging.message_id* and *cloudevents.event_id*. As a generic framework, we opt to support both messaging and cloud events conventions for attribute names. 
-
-This means that we will need to provide options to allow users to choose the attributes they wish to propogate:
-
-* UseMessagingSemanticConventionsAttributes
-* UseCloudEventsConventionsAttributes
-
-It should be valid to choose both.
-
-#### Cloud Events Context Propogation
-
-We will use traceparent and tracestate as message headers as defined in the (Cloud Events Distributed Tracing Extension)[https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md] to allow contet propogation.
+We will use traceparent and tracestate as message headers as defined in the (Cloud Events Distributed Tracing Extension)[https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md] to allow context propogation.
 
 ## Consequences
 
