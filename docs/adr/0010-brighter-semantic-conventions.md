@@ -31,14 +31,23 @@ Brighter can operate both as a Command Processor and Dispatcher.
 When Brighter operates operates as a Command Processor, the span would naturally be the point at which the command processor is invoked:
 
 * We would assume that the span would be named for the type of request.
-* Attributes for the span would include request level metadata, which is well known.
-* Entering a handler, either middleware or sink, would be an event on the span. 
-* A publish is likely a publish span which has links to child spans for each handler pipeline subscribed to the event.
+  * Attributes for the span would include request level metadata.
+  * Entering a handler, either middleware or sink, would be an event on the span. 
+  * A send is a span which covers the entire handler pipeline for a command.
+  * A publish is span which has links to child spans for each handler pipeline subscribed to the event.
+  * A deposit is a span which covers the entire outgoing transform and message mapper pipeline for a request. 
+    * It would create a child span to cover the Outbox database operation.
+    * With a transform that calls out-of-process, such as to a schema registry or object storage, it would create a child span to cover the external call.
+  * A clear is a span which covers producing a message to a messaging system. 
+      * It would create a child span to cover the Outbox database operation.
+      * Invoking the messaging transport would be a child span. 
 
 When Brighter operates as a Dispatcher, each individual Performer would tend to create a span which would begin where we receive a message. 
 
 * Because processing a message triggers the Command Processor this would create a child span of the Performer's receive span, as described above.
-* The Performer also triggers message translation via a MessageMapper. Because the Command Processor is a child span, message translation would also likely be a child of the Performer's receive span; as well and a sibling of the Command Processor span.
+* The Performer also triggers message translation of an incoming request via a transform pipeline and a message mapper. Because the Command Processor is a child span, message translation would also likely be a child of the Performer's receive span; as well and a sibling of the Command Processor span.
+  * With a transform that calls out-of-process, such as to a schema registry or object storage, it would create a child span to cover the external call.
+  * *For example, a call to check an Inbox would create a child span for the database operation*
     
 #### Controlling the Number of Attributes
 
@@ -46,24 +55,22 @@ We should make it possible to set the types of attributes that users of the fram
 
 ## Decision
 
-### Activity Source
+### Tracer
 
-Brighter should define its own Activity Source (see [this](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/distributed-tracing-instrumentation-walkthroughs) note). This will allow application developers to enable or disable the source. The name of the source should be be:
+Brighter should define its own Tracer, via the Activity Source class in .NET (see [this](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/distributed-tracing-instrumentation-walkthroughs) note). The name of the source should be be:
 
 *Paramore.Brighter and the version number of the library*
           
 We do not want to initialize this for both usage as a Command Processor and a Dispatcher implying that the source needs to be created by a stand-alone static class. 
 
-The approach outlined here forms a useful starting point for the [Activity Source](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/):
+The approach outlined here forms a useful design for the usage of [Activity Source](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/) in .NET:
 
 * We should create a static class that initializes the Activity Source.
 * We should create a settings class that allows the user to control the attributes that we add to the span.
 * We should create an Enricher that adds the attributes to the span, observing the options set by the user.
 * We should provide a helper class to register the source and ensure no typos in source name cause us trivial issues.
 
-### Command Processor
-
-#### Spans
+### Command Processor Spans
 
 We will create a span for each command processed. The span will be named as follows:
 
@@ -80,14 +87,45 @@ The span kind will always be Internal. This is because the command processor is 
 
 #### Command Processor Operations
 
-| Operation | Description |
-| --- | --- |
-| Send | A command is being routed to a single handler. |
-| Publish | A command is being routed to multiple handlers. |
-| Deposit | A request is being written to the Outbox |
-| Clear | Requests in the Outbox are being dispatched via a messaging gateway |
+| Operation | Description                                                                         |
+| --- |-------------------------------------------------------------------------------------|
+| Send | A command is routed to a single handler.                                            |
+| Publish | An event is routed to multiple handlers.                                            |
+| Deposit | A request is transfomed into a message and stored in an Outbox                      |
+| Clear | Requests in the Outbox are dispatched to a messaging broker via a messaging gateway |
 
 Note that we Publish, Deposit and Clear may be batch operations which result in multiple invocations of our pipeline. In a batch we will create a parent span (itself probably a child of another span that triggered it) and add each item within the batch as an activity via an activity link on the parent span. 
+
+#### Deposit Operation Spans, External Call Spans
+
+During a Deposit the Command Processor transforms a request into a message via a transform and mapper pipeline. It then stores the message in an Outbox.
+
+The Command Processor span for a Deposit covers the entire transform and mapper pipeline; however child spans are created for any external calls in that pipeline. *For example, if the transform uses object storage or s achema registry, a child span is created for the external call.*
+
+Storing the message in an Outbox should create a span, with low-cardinality (i.e. name of Outbox or Inbox operation) as per the [Otel specification](https://opentelemetry.io/docs/specs/semconv/database/database-spans/).
+
+A transformer is middleware used in the message mapping pipeline that turns a request into a message. A transformer may call externally, for exammple to object storage or a schema registry. These external calls should create a new span that has the Deposit Operation Span as a parent.
+
+In some cases semantic conventions will exist for these external calls. *For example see object storage: See the [OTel documentation for S3]*
+
+#### Clear Operation Spans, Publish and Create Spans
+
+During a Clear the Command Processor acts as a Producer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) semantic conventions for a Producer.
+
+We should create a span for producing a message, that is a child of the Command Processor span. The span is named:
+
+* destination name operation name
+
+where the destination name is the name of the channel and the operation name is the operation being performed. The span kind is producer.
+
+* Create Message => span name: "<channel> create" span kind: producer
+* Publish Message => span name: "<channel> publish" span kind: producer
+
+Producing a message is a Publish operation, unless the operation is within a Batch in which case the batch is a Publish with each message in the batch a Create span.
+
+The span kind will be Producer instead of Internal at this point.
+
+When we Clear we read a message from the Outbox. Once we have dispatched the message, we update the Outbox to mark it as sent. Reading and writing the message to and from the Outbox should create a span, with low-cardinality (i.e. name of Outbox or Inbox operation) as per the [Otel specification](https://opentelemetry.io/docs/specs/semconv/database/database-spans/).
 
 #### Command Processor Attributes
 
@@ -104,48 +142,23 @@ We record the following attributes on a Command Processor span:
                      
 Because we allow you to inject RequestContext on a call to the Command Processor you can use this to add additional attributes to the span. Any RequestContext.Bag entries that start with "paramore.brighter.spancontext." will be added to the span as attributes. Baggage is an alternative here, but we won't automatically add baggage as attributes to your span. 
 
-We should check Activity.IsAllDataRequested and only add the attributes if it is. We should enable granular control of which attributes if all data is requested. This is because adding attributes to a span can be expensive, see s[this doc](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/docs/trace/README.md). Likely options we would need:
+We should check Activity.IsAllDataRequested and only add the attributes if it is. We should enable granular control of which attributes if all data is requested. This is because adding attributes to a span can be expensive, see [this doc](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/docs/trace/README.md). Likely options we would need:
 
 * RequestInformation (requestid, requestids, requesttype, operation) => what is the request?
-* RequestBody => (request_body)what is the request body?
-* RequestContext => (spancontext.*) what is the context of the request?
+* RequestBody (request_body) => what is the request body?
+* RequestContext (spancontext.*) => what is the context of the request?
 
-#### Command Processor Events
+##### External Call Span Attributes
 
-We record an event for every handler we enter. The event is named after the handler. The event has the following attributes:
+In many cases semantic conventions will define attributes for these spans. For example: 
 
-| Attribute                     | Type | Description | Example|
-|-------------------------------| --- | --- | --- |
-| paramore.brighter.handlername | string | The full type name of the handler | "MyNamespace.MyHandler" |
-| paramore.brighter.handlertype | string | Is the handler sync or async | "Async" |
-| paramore.brighter.is_sink     | bool | Is this the final operation in the chain | True |
+* Object Storage: See the [OTel documentation for S3]
+* Database Calls: See the [OTel documentation for Database](https://opentelemetry.io/docs/specs/semconv/database/)
+* HTTP Calls: See the [OTel documentation for HTTP](https://opentelemetry.io/docs/specs/semconv/http/)
 
-We should record exceptions as events on the span. See the [OTel documentation on Exceptions](https://opentelemetry.io/docs/specs/semconv/exceptions/exceptions-spans/)
+##### Publish/Create Span Attributes
 
-We should instrument our Feature Flag handler as an event in the span, as per the [OTel documentation on feature flags](https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-spans/)
-
-### Command Processor Clear Operations
-
-During a Clear the Command Processor acts as a Producer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) semantic conventions for a Producer.
-
-#### Spans
-
-We should create a span for producing a message, that is a child of the Command Processor span. The span is named:
-
-* destination name operation name
-
-where the destination name is the name of the channel and the operation name is the operation being performed. The span kind is producer.
-
-* Create Message => span name: "<channel> create" span kind: producer
-* Publish Message => span name: "<channel> publish" span kind: producer
-
-The operation is Publish, unless the operation is within a Batch in which case each item is a Create.
-
-The span kind will be Producer instead of Internal at this point.
-
-#### Attributes
-
-The Semantic Convention for Messaging Systems provides a common set of attributes for messaging systems. There are both Required and Recommended attributes. We should always set the Required attributes and offer the Recommended attributes. We should make it possible to control the amount of attributes we set by only setting the Recommended attributes if the user has requested them.
+A Clear operation results in Publish or Create span for a message being sent which will have additional attributes. The Semantic Convention for Messaging Systems provides a common set of attributes for messaging. There are both Required and Recommended attributes. We should always set the Required attributes and offer the Recommended attributes. We should make it possible to control the amount of attributes we set by only setting the Recommended attributes if the user has requested them.
 
 The Command Processor will need changes to the code to support asking the Producer for some of the attributes to set on the span. For example:
 
@@ -169,15 +182,27 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 * MessageBody => (message.body)what is the message body?
 * MessageHeaders => (message.headers) what is the metadata of the message?
 
-#### Serialization
+#### Command Processor Events
+
+We record an event for every handler we enter. The event is named after the handler. The event has the following attributes:
+
+| Attribute                     | Type | Description | Example|
+|-------------------------------| --- | --- | --- |
+| paramore.brighter.handlername | string | The full type name of the handler | "MyNamespace.MyHandler" |
+| paramore.brighter.handlertype | string | Is the handler sync or async | "Async" |
+| paramore.brighter.is_sink     | bool | Is this the final operation in the chain | True |
+
+We should record exceptions as events on the span. See the [OTel documentation on Exceptions](https://opentelemetry.io/docs/specs/semconv/exceptions/exceptions-spans/)
+
+Standards may exist for the attributes used by events, and we should follow those. *For example we should instrument our Feature Flag handler in compliance with the [OTel documentation on feature flags](https://opentelemetry.io/docs/specs/semconv/feature-flags/feature-flags-spans/)*
+
+### Propogating Context from a Producer
 
 Because we may be participating in a distributed trace, we will need to set the traceparent and tracecontext headers on the outgoing message. Because we might be an intermediary we need to preserve any remote context by setting the traceparent to the originator of the flow, not reset it to ourselves. See Cloud Events [here](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md)
 
-### Performer
+### Performer Spans
 
 The Peformer (message pump) acts as a Consumer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
-
-#### Spans 
 
 A Performer should create a span for each message that it processes.
 
@@ -192,11 +217,11 @@ We will have to ask the transport for the operation the span is performing:
 
 This is because this will vary by the capabilities of the transport.As this information is static, we can enhance the channel with this information. 
   
-#### Deserialization
+#### Retrieving Message Context
 
 Because we may be participating in a distributed trace, we will need to work with traceparent and tracecontext headers when initializing the span. There is an example of how ASP.NET does this [here](https://github.com/dotnet/aspnetcore/blob/main/src/Hosting/Hosting/src/Internal/HostingApplicationDiagnostics.cs#L248) or .NET [here](https://github.com/dotnet/runtime/blob/4f9ae42d861fcb4be2fcd5d3d55d5f227d30e723/src/libraries/System.Net.Http/src/System/Net/Http/DiagnosticsHandler.cs?ref=jimmybogard.com#L254). See also this article on [distributed tracing](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/).
 
-#### Attributes
+#### Performer Attributes
 
 The Semantic Conventions for Messaging Systems provides a common set of attributes for messaging systems. There are both Required and Recommended attributes. We should always set the Required attributes and offer the Recommended attributes. We should make it possible to control the amount of attributes we set by only setting the Recommended attributes if the user has requested them.
 
@@ -215,32 +240,39 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 * MessageHeaders => (message.headers) what is the metadata of the message?
 * ServerInformation => (server.*) what is the server information?
 
-### Brighter Usage of External Storage
-
-#### Outbox and Inbox
-
-From within Brighter we call out to external databases for our Outbox and Inbox. Where we access a database i.e. Inbox and Outbox, we should instrument as a span, with low-cardinality (i.e. name of Outbox or Inbox operation) as per the [Otel specification](https://opentelemetry.io/docs/specs/semconv/database/database-spans/).
-                                              
-#### Object Storage
-
-Where our Claim Check accesses the S3 bucket we should record an event as per the [OTel documentation for S3](https://opentelemetry.io/docs/specs/semconv/object-stores/s3/)
-
-### Cloud Events Semantic Conventions
+### Interoperability with Cloud Events 
 
 Cloud Events also defines semantic conventions for [attributes and spans](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/cloudevents/cloudevents-spans.md). 
 
-We will use traceparent and tracestate as message headers as defined in the (Cloud Events Distributed Tracing Extension)[https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md].
+#### Cloud Events Spans
 
-Cloud Events has a differnt scheme for naming the span:
+Cloud Events offers alternative names the producer and consumer spans:
 
 * Create a message => span name: "Cloud Events Create <event type>" span kind: producer
 * Receive a message => span name: "Cloud Events Process <event type>" span kind: consumer
 
-In our case we will use the messaging semantic conventions as they are richer than those proposed by Cloud Events. (The Cloud Events standard is also irrelevant in a span name).
+In our case we will use the messaging semantic conventions; the Cloud Events standard identifier is irrelevant in a span name.
 
-Cloud Events supports attributes for the span. This gives us multiple attributes for describing some properties of a message. The id of a message is given by both *messaging.message_id* and *cloudevents.event_id*. As a generic framework, we opt to support both messaging and cloud events conventions for attribute names and provide options to allow users to include either (including supporting both conventions).
+#### Cloud Events Attributes
+
+Cloud Events supports attributes for the span. This gives us multiple attributes for describing some properties of a message. The id of a message is given by both *messaging.message_id* and *cloudevents.event_id*. As a generic framework, we opt to support both messaging and cloud events conventions for attribute names. 
+
+This means that we will need to provide options to allow users to choose the attributes they wish to propogate:
+
+* UseMessagingSemanticConventionsAttributes
+* UseCloudEventsConventionsAttributes
+
+It should be valid to choose both.
+
+#### Cloud Events Context Propogation
+
+We will use traceparent and tracestate as message headers as defined in the (Cloud Events Distributed Tracing Extension)[https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md] to allow contet propogation.
 
 ## Consequences
+
+### Standards
+
+Following standards helps us become a participant of wider ecosystem. In particular, adopting standards for how we provide telemetry information from Brighter will make it easier for users to integrate Brighter into user's own observability tools.
 
 ### Path Tracing
 
