@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using Paramore.Brighter.MessageMappers;
+
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     /// <summary>
@@ -58,5 +61,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 subscription.BufferSize
                 );
         }
+
+        public Type DefaultGenericMessageMapper() => typeof(JsonMessageMapper<>);
+        public Type DefaultGenericMessageMapperAsync() => typeof(JsonMessageMapperAsync<>);
     }
 }

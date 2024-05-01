@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using Paramore.Brighter.MessageMappers;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -41,5 +44,8 @@ namespace Paramore.Brighter
         /// <param name="subscription">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
         IAmAChannel CreateChannel(Subscription subscription);
+
+        Type DefaultGenericMessageMapper();
+        Type DefaultGenericMessageMapperAsync();
     }
 }

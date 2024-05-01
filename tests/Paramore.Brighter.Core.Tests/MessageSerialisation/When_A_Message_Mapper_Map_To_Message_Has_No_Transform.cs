@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+using Paramore.Brighter.MessageMappers;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
@@ -16,9 +17,9 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
          TransformPipelineBuilder.ClearPipelineCache();
 
          var mapperRegistry = new MessageMapperRegistry(
-             new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()),
+             new SimpleMessageMapperFactory(_ => new JsonMessageMapper<MyTransformableCommand>()),
              null);
-         mapperRegistry.Register<MyTransformableCommand, MyVanillaCommandMessageMapper>();
+         mapperRegistry.Register<MyTransformableCommand, JsonMessageMapper<MyTransformableCommand>>();
 
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 

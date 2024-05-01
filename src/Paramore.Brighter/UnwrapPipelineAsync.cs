@@ -63,8 +63,8 @@ namespace Paramore.Brighter
         /// <param name="pipelineTracer"></param>
         public void DescribePath(TransformPipelineTracer pipelineTracer)
         {
-            Transforms.Each(t => pipelineTracer.AddTransform(t.GetType().Name));
-            pipelineTracer.AddTransform(MessageMapper.GetType().Name);
+            Transforms.Each(t => pipelineTracer.AddTransform(t.GetType().ToString()));
+            pipelineTracer.AddTransform(MessageMapper.GetType().ToString());
         }
 
         /// <summary>
