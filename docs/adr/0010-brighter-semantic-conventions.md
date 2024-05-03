@@ -59,7 +59,9 @@ We should make it possible to set the types of attributes that users of the fram
 
 Brighter should define its own Tracer, via the Activity Source class in .NET (see [this](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/distributed-tracing-instrumentation-walkthroughs) note). The name of the source should be be:
 
-source name: `Paramore.Brighter <version number>`
+source name: `paramore.brighter` 
+
+We would also add the `<version number>` to the Activity Source.
           
 We do not want to initialize this for both usage as a Command Processor and a Dispatcher implying that the source needs to be created by a stand-alone static class. 
 
@@ -88,11 +90,11 @@ The span kind will always be Internal. This is because the command processor is 
 #### Command Processor Operations
 
 | Operation | Description                                                                         |
-| --- |-------------------------------------------------------------------------------------|
-| Send | A command is routed to a single handler.                                            |
-| Publish | An event is routed to multiple handlers.                                            |
-| Deposit | A request is transfomed into a message and stored in an Outbox                      |
-| Clear | Requests in the Outbox are dispatched to a messaging broker via a messaging gateway |
+|-----------|-------------------------------------------------------------------------------------|
+| `send`    | A command is routed to a single handler.                                            |
+| `publish` | An event is routed to multiple handlers.                                            |
+| `deposit` | A request is transfomed into a message and stored in an Outbox                      |
+| `clear`     | Requests in the Outbox are dispatched to a messaging broker via a messaging gateway |
 
 Note that we Publish, Deposit and Clear may be batch operations which result in multiple invocations of our pipeline. In a batch we will create a parent span (itself probably a child of another span that triggered it) and add each item within the batch as an activity via an activity link on the parent span. 
 
@@ -114,7 +116,7 @@ During a Clear the Command Processor acts as a Producer. There are existing [Mes
 
 We should create a span for producing a message, that is a child of the Command Processor span. The span is named:
 
-* destination name operation name
+* `<destination name>` `<operation name>`
 
 where the destination name is the name of the channel and the operation name is the operation being performed. The span kind is producer.
 
@@ -139,26 +141,26 @@ We record the following attributes on a Command Processor span:
 
 | Attribute                       | Type | Description                                                        | Example                                     |
 |---------------------------------| --- |--------------------------------------------------------------------|---------------------------------------------|
-| paramore.brighter.requestid     | string | In a non-batch operation this is the request id                    | "1234-5678-9012-3456"                       |
-| paramore.brighter.requestids    | string | In a batch operation this is a comma separated list of request ids | "1234-5678-9012-3456, 2345-6789-0123-4567"  |
-| paramore.brighter.requesttype   | string | The full type name of the command                                  | "MyNamespace.MyCommand"                     |
-| paramore.brighter.request_body  | string | The contents of the request as JSON                                | "{"greeting": "Hello World"}"                |
-| paramore.brighter.operation     | string | The operation being performed                                      | "Send"                                      |
-| paramore.brighter.spancontext.* | varies | User supplied attributes for the span via the request context bag  | paramore.brighter.spancontext.userid "1234" |
+| `paramore.brighter.requestid`     | string | In a non-batch operation this is the request id                    | "1234-5678-9012-3456"                       |
+| `paramore.brighter.requestids`    | string | In a batch operation this is a comma separated list of request ids | "1234-5678-9012-3456, 2345-6789-0123-4567"  |
+| `paramore.brighter.requesttype`   | string | The full type name of the command                                  | "MyNamespace.MyCommand"                     |
+| `paramore.brighter.request_body`  | string | The contents of the request as JSON                                | "{"greeting": "Hello World"}"                |
+| `paramore.brighter.operation`     | string | The operation being performed                                      | "send"                                      |
+| `paramore.brighter.spancontext.*` | varies | User supplied attributes for the span via the request context bag  | paramore.brighter.spancontext.userid "1234" |
                      
 Because we allow you to inject RequestContext on a call to the Command Processor you can use this to add additional attributes to the span. Any RequestContext.Bag entries that start with "paramore.brighter.spancontext." will be added to the span as attributes. Baggage is an alternative here, but we won't automatically add baggage as attributes to your span. 
 
 We should check Activity.IsAllDataRequested and only add the attributes if it is. We should enable granular control of which attributes if all data is requested. This is because adding attributes to a span can be expensive, see [this doc](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/docs/trace/README.md). Likely options we would need:
 
-* RequestInformation (requestid, requestids, requesttype, operation) => what is the request?
-* RequestBody (request_body) => what is the request body?
-* RequestContext (spancontext.*) => what is the context of the request?
+* `RequestInformation` (`.requestid`, `.requestids`, `.requesttype`, `.operation`) => what is the request?
+* `RequestBody` (`.request_body`) => what is the request body?
+* `RequestContext` (`.spancontext.*`) => what is the context of the request?
 
 ##### External Call Span Attributes
 
 In many cases semantic conventions will define attributes for these spans. For example: 
 
-* Object Storage: See the [OTel documentation for S3]
+* Object Storage: See the [OTel documentation for S3](https://opentelemetry.io/docs/specs/semconv/object-stores/s3/)
 * Database Calls: See the [OTel documentation for Database](https://opentelemetry.io/docs/specs/semconv/database/)
 * HTTP Calls: See the [OTel documentation for HTTP](https://opentelemetry.io/docs/specs/semconv/http/)
 
@@ -168,32 +170,32 @@ A Clear operation results in Publish or Create span for a message being sent whi
 
 The Command Processor will need changes to the code to support asking the Producer for some of the attributes to set on the span. For example:
 
-* messaging.system: what broker are we using?
+* `messaging.system`: what broker are we using?
 
 Other attributes are available in Brighter today:
 
-* messaging.destination: what is the name of the channel?
-* messaging.message_id: what is the message id?
-* messaging.destination.partition.id: what is the partition id?
-* messaging.message.body.size: what is the size of the message payload?
+* `messaging.destination`: what is the name of the channel?
+* `messaging.message_id`: what is the message id?
+* `messaging.destination.partition.id`: what is the partition id?
+* `messaging.message.body.size`: what is the size of the message payload?
 
 We may also wish to make the payload available (although it is not part of the Semantic Conventions).
 
-* messaging.message.body: what is the message payload?
-* messaging.message.headers: what are the message headers?
+* `messaging.message.body`: what is the message payload?
+* `messaging.message.headers`: what are the message headers?
 
 We should check Activity.IsAllDataRequested and only add the attributes if it is. Likely options we would need:
 
-* MessageInformation (message.*) => what is the message?
-* MessageBody => (message.body)what is the message body?
-* MessageHeaders => (message.headers) what is the metadata of the message?
+* `MessageInformation` (`message.*`) => what is the message?
+* `MessageBody` => (`message.body`)what is the message body?
+* `MessageHeaders` => (`message.headers`) what is the metadata of the message?
 
 [Cloud Events](https://opentelemetry.io/docs/specs/semconv/cloudevents/cloudevents-spans/#attributes) also provides attributes for a producer span. This gives us multiple attributes for describing some properties of a message. The id of a message is given by both *messaging.message_id* and *cloudevents.event_id*. As a generic framework, we opt to support both messaging and cloud events conventions for attribute names.
 
 This means that we will need to provide options to allow users to choose the attributes they wish to propogate:
 
-* UseMessagingSemanticConventionsAttributes
-* UseCloudEventsConventionsAttributes
+* `UseMessagingSemanticConventionsAttributes`
+* `UseCloudEventsConventionsAttributes`
 
 ### Command Processor Events
 
@@ -201,9 +203,9 @@ We record an event for every handler we enter. The event is named after the hand
 
 | Attribute                     | Type | Description | Example|
 |-------------------------------| --- | --- | --- |
-| paramore.brighter.handlername | string | The full type name of the handler | "MyNamespace.MyHandler" |
-| paramore.brighter.handlertype | string | Is the handler sync or async | "Async" |
-| paramore.brighter.is_sink     | bool | Is this the final operation in the chain | True |
+| `paramore.brighter.handlername` | string | The full type name of the handler | "MyNamespace.MyHandler" |
+| `paramore.brighter.handlertype` | string | Is the handler sync or async | "async" |
+| `paramore.brighter.is_sink`     | bool | Is this the final operation in the chain | true |
 
 We should record exceptions as events on the span. See the [OTel documentation on Exceptions](https://opentelemetry.io/docs/specs/semconv/exceptions/exceptions-spans/)
 
@@ -215,26 +217,26 @@ The Peformer (message pump) acts as a Consumer. There are existing [Messaging](h
 
 A Performer should create a span for each message that it processes.
 
-* Receive Message via a pull => span name: `<channel> receive` span kind: consumer
-* Process Message via a push  => span name: `<channel> process` span kind: consumer
+* Receive Message via a pull => span name: `<channel> receive` span kind: `consumer`
+* Process Message via a push  => span name: `<channel> process` span kind: `consumer`
 
 Cloud Events offers alternative names the consumer span:
 
-* Receive a message => span name: `Cloud Events Process <event type>` span kind: consumer
+* Receive a message => span name: `Cloud Events Process <event type>` span kind: `consumer`
 
-In our case we will use the messaging semantic conventions; the Cloud Events standard identifier is irrelevant in a span name.
+In our case we will use the messaging semantic conventions; the `Cloud Events` standard identifier is irrelevant in a span name.
 
 We don't create the span until we begin to process the message i.e. not when we read into Brighter's local buffer, but when we retrieve a message from that buffer. This means that the span is created outside of the transport and within the message pump.
 
 We will have to ask the transport for the operation the span is performing:
 
-* Recieve or Process: was the message obtained by push or pull?
+* `recieve` or `process`: was the message obtained by push or pull?
 
 This is because this will vary by the capabilities of the transport.As this information is static, we can enhance the channel with this information.
   
 #### Retrieving Message Context
 
-Because we may be participating in a distributed trace, we will need to work with traceparent and tracecontext headers when initializing the span. There is an example of how ASP.NET does this [here](https://github.com/dotnet/aspnetcore/blob/main/src/Hosting/Hosting/src/Internal/HostingApplicationDiagnostics.cs#L248) or .NET [here](https://github.com/dotnet/runtime/blob/4f9ae42d861fcb4be2fcd5d3d55d5f227d30e723/src/libraries/System.Net.Http/src/System/Net/Http/DiagnosticsHandler.cs?ref=jimmybogard.com#L254). See also this article on [distributed tracing](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/).
+Because we may be participating in a distributed trace, we will need to work with `traceparent` and `tracecontext` headers when initializing the span. There is an example of how ASP.NET does this [here](https://github.com/dotnet/aspnetcore/blob/main/src/Hosting/Hosting/src/Internal/HostingApplicationDiagnostics.cs#L248) or .NET [here](https://github.com/dotnet/runtime/blob/4f9ae42d861fcb4be2fcd5d3d55d5f227d30e723/src/libraries/System.Net.Http/src/System/Net/Http/DiagnosticsHandler.cs?ref=jimmybogard.com#L254). See also this article on [distributed tracing](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/).
 
 #### Performer Attributes
 
@@ -242,24 +244,24 @@ The Semantic Conventions for Messaging Systems provides a common set of attribut
 
 A number of attributes will need to be retrieved from the transport, as they are specific to the transport and not available on the message itself:
 
-* messaging.operation: an attribute that describes the above (also used in the name)
-* messaging.system: what broker did we obtain the message from?
-* server.address: what is the address of that broker
+* `messaging.operation`: an attribute that describes the above (also used in the name)
+* `messaging.system`: what broker did we obtain the message from?
+* `server.address`: what is the address of that broker
 
 As this information is dynamic the other we should put it into the header bag when reading from the broker and retrieve it from there when creating the span.
 
 We should check Activity.IsAllDataRequested and only add the attributes if it is. Likely options we would need:
 
-* MessageInformation (message.*) => what is the message?
-* MessageBody => (message.body)what is the message body?
-* MessageHeaders => (message.headers) what is the metadata of the message?
-* ServerInformation => (server.*) what is the server information?
+* `MessageInformation` (`message.*`) => what is the message?
+* `MessageBody` => (`message.body`)what is the message body?
+* `MessageHeaders` => (`message.headers`) what is the metadata of the message?
+* `ServerInformation` => (`server.*`) what is the server information?
 
 ### Propogating Context from a Producer
 
 Because we may be participating in a distributed trace, we will need to set the traceparent and tracecontext headers on the outgoing message. Because we might be an intermediary we need to preserve any remote context by setting the traceparent to the originator of the flow, not reset it to ourselves. 
 
-We will use traceparent and tracestate as message headers as defined in the (Cloud Events Distributed Tracing Extension)[https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md] to allow context propogation.
+We will use `traceparent` and `tracestate` as message headers as defined in the [Cloud Events Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md) to allow context propogation.
 
 ## Consequences
 
