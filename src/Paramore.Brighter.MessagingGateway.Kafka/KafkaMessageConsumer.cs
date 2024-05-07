@@ -196,8 +196,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 })
                 .SetErrorHandler((consumer, error) =>
                 {
-                    s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code,
-                        error.Reason, error.IsFatal);
+                    var hasFatalError = error.IsFatal;
+                    
+                    if (hasFatalError ) 
+                        s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason, true);
+                    else
+                        s_logger.LogWarning("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason, false);
                 })
                 .Build();
 

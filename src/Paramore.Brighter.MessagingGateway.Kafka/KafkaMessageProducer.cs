@@ -132,9 +132,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _producer = new ProducerBuilder<string, byte[]>(_producerConfig)
                 .SetErrorHandler((_, error) =>
                 {
-                    s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason,
-                        error.IsFatal);
                     _hasFatalProducerError = error.IsFatal;
+                    
+                    if (_hasFatalProducerError) 
+                        s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason, true);
+                    else
+                        s_logger.LogWarning("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason, false);
+                    
                 })
                 .Build();
             _publisher = new KafkaMessagePublisher(_producer, _headerBuilder);
