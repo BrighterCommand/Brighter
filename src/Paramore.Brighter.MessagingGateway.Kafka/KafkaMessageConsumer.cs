@@ -57,6 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new SemaphoreSlim(1, 1);
         private bool _disposedValue;
+        private bool _hasFatalError;
 
         /// <summary>
         /// Constructs a KafkaMessageConsumer using Confluent's Consumer Builder. We set up callbacks to handle assigned, revoked or lost partitions as
@@ -196,8 +197,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 })
                 .SetErrorHandler((consumer, error) =>
                 {
-                    s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code,
-                        error.Reason, error.IsFatal);
+                    _hasFatalError = error.IsFatal;
+                    
+                    if (_hasFatalError ) 
+                        s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason, true);
+                    else
+                        s_logger.LogWarning("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason, false);
                 })
                 .Build();
 
@@ -281,6 +286,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
         public Message[] Receive(int timeoutInMilliseconds)
         {
+            if (_hasFatalError)
+                throw new ChannelFailureException("Fatal error on Kafka consumer, see logs for details");
+            
             try
             {
                 
