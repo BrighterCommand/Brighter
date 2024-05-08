@@ -7,7 +7,7 @@ namespace Paramore.Brighter
     public class ProducerRegistry : IAmAProducerRegistry
     {
 
-        private Dictionary<string, IAmAMessageProducer> _messageProducers;
+        private readonly Dictionary<string, IAmAMessageProducer> _messageProducers;
         private readonly bool _hasProducers;
 
         public ProducerRegistry(Dictionary<string, IAmAMessageProducer> messageProducers)
@@ -57,6 +57,14 @@ namespace Paramore.Brighter
                 return _messageProducers.First().Value;
 
             throw new ConfigurationException("No producers configured for the external service bus");
+        }
+
+        public IEnumerable<KeyValuePair<string, IAmAMessageProducer>> KeyedProducers
+        {
+            get
+            {
+                return _messageProducers;    
+            }
         }
 
         /// <summary>

@@ -20,6 +20,11 @@ namespace Paramore.Brighter
         IAmAMessageProducer GetDefaultProducer();
         
         /// <summary>
+        /// Get an iterable list of topics and their associated producers
+        /// </summary>
+        IEnumerable<KeyValuePair<string, IAmAMessageProducer>> KeyedProducers { get; }
+        
+        /// <summary>
         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
         /// </summary>
         /// <param name="topic">The topic we want to find the producer for</param>
