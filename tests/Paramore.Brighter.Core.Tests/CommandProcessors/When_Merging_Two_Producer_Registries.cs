@@ -30,7 +30,7 @@ public class ProducerRegistryTests
     }
 
     [Fact]
-    public void When_Merging_With_A_Null__Rhs_Registry()
+    public void When_Merging_With_A_Null_Rhs_Registry()
     {
         var producerRegistryOne = new ProducerRegistry(
             new Dictionary<string, IAmAMessageProducer>{{"TestOne", new FakeMessageProducer()}}
@@ -45,7 +45,7 @@ public class ProducerRegistryTests
     }
     
     [Fact]
-    public void When_Merging_With_A_Null__Lhs_Registry()
+    public void When_Merging_With_A_Null_Lhs_Registry()
     {
         //arrange
         var producerRegistryTwo = new ProducerRegistry(
