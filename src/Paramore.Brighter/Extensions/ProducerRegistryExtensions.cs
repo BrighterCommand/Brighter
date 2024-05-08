@@ -7,6 +7,12 @@ namespace Paramore.Brighter.Extensions
     {
         public static IAmAProducerRegistry Merge(this IAmAProducerRegistry lhs, IAmAProducerRegistry rhs)
         {
+            if (rhs == null)
+                return lhs;
+            
+            if (lhs == null)
+                return rhs;
+            
             var producers = 
                 lhs
                 .KeyedProducers.Concat(rhs.KeyedProducers)

@@ -28,4 +28,72 @@ public class ProducerRegistryTests
         producerRegistry.LookupBy("TestTwo").Should().NotBeNull();
     
     }
+
+    [Fact]
+    public void When_Merging_With_A_Null__Rhs_Registry()
+    {
+        var producerRegistryOne = new ProducerRegistry(
+            new Dictionary<string, IAmAMessageProducer>{{"TestOne", new FakeMessageProducer()}}
+        );
+
+        //act
+        var producerRegistry = producerRegistryOne.Merge(null);
+        
+        //assert
+        producerRegistry.LookupBy("TestOne").Should().NotBeNull();
+        
+    }
+    
+    [Fact]
+    public void When_Merging_With_A_Null__Lhs_Registry()
+    {
+        //arrange
+        var producerRegistryTwo = new ProducerRegistry(
+            new Dictionary<string, IAmAMessageProducer>{{"TestTwo", new FakeMessageProducer()}}
+        );
+        
+        //act
+        var producerRegistry =ProducerRegistryExtensions.Merge(null, producerRegistryTwo);
+        
+        //assert
+        producerRegistry.LookupBy("TestTwo").Should().NotBeNull();
+    
+    }
+    
+    [Fact]
+    public void When_Merging_With_An_Empty_Rhs_Registry()
+    {
+        //arrange
+        var producerRegistryOne = new ProducerRegistry(
+            new Dictionary<string, IAmAMessageProducer>{{"TestOne", new FakeMessageProducer()}}
+        );
+        
+        var producerRegistryTwo = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>());
+        
+        //act
+        var producerRegistry = producerRegistryOne.Merge(producerRegistryTwo);
+        
+        //assert
+        producerRegistry.LookupBy("TestOne").Should().NotBeNull();
+    
+    }
+    
+    [Fact]
+    public void When_Merging_With_An_Empty_Lhs_Registry()
+    {
+        //arrange
+        var producerRegistryOne = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>());
+        
+        var producerRegistryTwo = new ProducerRegistry(
+            new Dictionary<string, IAmAMessageProducer>{{"TestTwo", new FakeMessageProducer()}}
+        );
+        
+        //act
+        var producerRegistry = producerRegistryOne.Merge(producerRegistryTwo);
+        
+        //assert
+        producerRegistry.LookupBy("TestTwo").Should().NotBeNull();
+    
+    }
+    
 }
