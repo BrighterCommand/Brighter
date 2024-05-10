@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Inbox;
 using Polly;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 using Paramore.Brighter.Inbox.Handlers;
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
      public class CommandProcessorBuildDefaultInboxSendAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly InMemoryInbox _inbox = new InMemoryInbox();
+        private readonly InMemoryInbox _inbox = new(new FakeTimeProvider());
 
         public CommandProcessorBuildDefaultInboxSendAsyncTests()
         {
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
              subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
              
              var container = new ServiceCollection();
-             container.AddSingleton<MyCommandHandlerAsync>(handler);
+             container.AddSingleton(handler);
              container.AddSingleton<IAmAnInboxAsync>(_inbox);
              container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
              container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
@@ -44,10 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
              var inboxConfiguration = new InboxConfiguration(
-                _inbox,
-                InboxScope.All, //grab all the events
-                onceOnly: true, //only allow once
-                actionOnExists: OnceOnlyAction.Throw //throw on duplicates (we should  be the only entry after)
+                _inbox //throw on duplicates (we should  be the only entry after)
             );
 
            _commandProcessor = new CommandProcessor(
@@ -61,9 +58,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 },
                 inboxConfiguration: inboxConfiguration
                 );
-            
         }
- 
         
         [Fact]
         public async Task WhenInsertingADefaultInboxIntoTheSendPipeline()

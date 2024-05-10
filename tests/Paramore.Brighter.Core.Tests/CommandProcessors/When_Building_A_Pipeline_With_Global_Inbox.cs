@@ -3,6 +3,7 @@ using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 using Paramore.Brighter.Inbox.Handlers;
@@ -18,14 +19,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public PipelineGlobalInboxTests()
         {
-            IAmAnInboxSync inbox = new InMemoryInbox();
+            IAmAnInboxSync inbox = new InMemoryInbox(new FakeTimeProvider());
             
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             
             var container = new ServiceCollection();
             container.AddTransient<MyCommandHandler>();
-            container.AddSingleton<IAmAnInboxSync>(inbox);
+            container.AddSingleton(inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
  
@@ -33,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             _requestContext = new RequestContext();
             
-            InboxConfiguration inboxConfiguration = new InboxConfiguration();
+            InboxConfiguration inboxConfiguration = new();
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
             PipelineBuilder<MyCommand>.ClearPipelineCache(); 

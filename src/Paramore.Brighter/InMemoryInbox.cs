@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         /// <param name="requestBody">The request body.</param>
         /// <param name="writeTime">The request arrived at when.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        private InboxItem(Type requestType, string requestBody, DateTime writeTime, string contextKey)
+        public InboxItem(Type requestType, string requestBody, DateTime writeTime, string contextKey)
         {
             RequestType = requestType;
             RequestBody = requestBody;
@@ -52,18 +52,10 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InboxItem"/> class.
-        /// </summary>
-        /// <param name="requestType">Type of the command.</param>
-        /// <param name="requestBody">The command body.</param>
-        public InboxItem(Type requestType, string requestBody, string contextKey)
-            : this(requestType, requestBody, DateTime.UtcNow, contextKey) {}
-
-        /// <summary>
         /// Gets or sets the command body.
         /// </summary>
         /// <value>The command body.</value>
-        public string RequestBody { get; set; }
+        public string RequestBody { get; set; }                                                                           
         
         /// <summary>
         /// Gets the type of the command.
@@ -108,7 +100,7 @@ namespace Paramore.Brighter
     /// It is possible to use multiple performers within one process as competing consumers, and if you want to use an InMemoryInbox this is the most
     /// viable strategy - otherwise use an out-of-process inbox that provides shared state to all consumers
     /// </summary>
-    public class InMemoryInbox : InMemoryBox<InboxItem>, IAmAnInboxSync, IAmAnInboxAsync
+    public class InMemoryInbox(TimeProvider timeProvider) : InMemoryBox<InboxItem>(timeProvider), IAmAnInboxSync, IAmAnInboxAsync
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -133,13 +125,13 @@ namespace Paramore.Brighter
             string key = InboxItem.CreateKey(command.Id, contextKey);
             if (!Exists<T>(command.Id, contextKey))
             {
-                if (!_requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, contextKey)))
+                if (!Requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, timeProvider.GetUtcNow().DateTime, contextKey)))
                 {
                     throw new Exception($"Could not add command: {command.Id} to the Inbox");
                 }
             }
 
-            _requests[key].RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+            Requests[key].RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
         }
 
         /// <summary>
@@ -181,7 +173,7 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            if (_requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
+            if (Requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
             {
                 return JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);
             }
@@ -193,7 +185,7 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
 
-            return _requests.ContainsKey(InboxItem.CreateKey(id, contextKey));
+            return Requests.ContainsKey(InboxItem.CreateKey(id, contextKey));
         }
 
         /// <summary>

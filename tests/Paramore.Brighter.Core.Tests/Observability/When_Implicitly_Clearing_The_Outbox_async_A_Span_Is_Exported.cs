@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
@@ -21,12 +22,14 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
     private readonly MyEvent _event;
     private readonly TracerProvider _traceProvider;
     private readonly List<Activity> _exportedActivities;
+    private FakeTimeProvider _timeProvider;
 
     public ImplicitClearingAsyncObservabilityTests()
     {
         const string topic = "MyEvent";
-        
-        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox();
+
+        _timeProvider = new FakeTimeProvider();
+        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox(_timeProvider);
         _event = new MyEvent("TestEvent");
 
         var registry = new SubscriberRegistry();
@@ -94,8 +97,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
             _commandProcessor.ClearAsyncOutbox(10, 0);
         }
 
-        //wait for Background Process
-        await Task.Delay(1000);
+        await _timeProvider.Delay(TimeSpan.FromMilliseconds(100)); //Allow time for clear to run
 
         _traceProvider.ForceFlush();
 

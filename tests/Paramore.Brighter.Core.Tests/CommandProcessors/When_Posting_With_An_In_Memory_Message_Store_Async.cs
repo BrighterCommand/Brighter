@@ -28,6 +28,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
 using Polly.Registry;
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _outbox = new InMemoryOutbox();
+            _outbox = new InMemoryOutbox(new FakeTimeProvider());
             _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
             _message = new Message(

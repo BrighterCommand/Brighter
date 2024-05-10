@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
@@ -37,7 +38,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public async Task When_expiring_a_cache_entry_no_longer_there()
         {
             //Arrange
-            var outbox = new InMemoryOutbox
+            var timeProvider = new FakeTimeProvider();
+            var outbox = new InMemoryOutbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
@@ -53,11 +55,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Act
             outbox.Add(messageToAdd);
             
-            await Task.Delay(500); //give the entry to time to expire
+            timeProvider.Advance(TimeSpan.FromMilliseconds(500)); //give the entry to time to expire
             
             //Trigger a cache clean
             await outbox.GetAsync(messageId);
-            
+
             await Task.Delay(500); //Give the sweep time to run
             
             var message = await outbox.GetAsync(messageId);
@@ -70,7 +72,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public async Task When_over_ttl_but_no_sweep_run()
         {
                //Arrange
-               var outbox = new InMemoryOutbox
+               var timeProvider = new FakeTimeProvider();
+               var outbox = new InMemoryOutbox(timeProvider)
                {
                    //set low time to live but long sweep perioc
                    EntryTimeToLive = TimeSpan.FromMilliseconds(50),
@@ -86,7 +89,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                //Act
                await outbox.AddAsync(messageToAdd);
                
-               await Task.Delay(50); //TTL has passed, but not expired yet
+               timeProvider.Advance(TimeSpan.FromMilliseconds(50)); //TTL has passed, but not expired yet
    
                var message = await outbox.GetAsync(messageId);
                

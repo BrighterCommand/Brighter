@@ -22,10 +22,10 @@ namespace Paramore.Brighter
     /// Base class for in-memory inboxes, handles TTL on entries and cache clearing requirements
     /// </summary>
     /// <typeparam name="T">An entry in the box, needs to a writetime so we know if we can clear it from the box</typeparam>
-    public class InMemoryBox<T> where T: IHaveABoxWriteTime
+    public class InMemoryBox<T>(TimeProvider timeProvider) where T: IHaveABoxWriteTime
     {
-        protected readonly ConcurrentDictionary<string, T> _requests = new ConcurrentDictionary<string, T>();
-        private DateTime _lastScanAt = DateTime.UtcNow;
+        protected readonly ConcurrentDictionary<string, T> Requests = new ConcurrentDictionary<string, T>();
+        private DateTime _lastScanAt = timeProvider.GetUtcNow().DateTime;
         private readonly object _cleanupRunningLockObject = new object();
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// For diagnostics 
         /// </summary>
-        public int EntryCount => _requests.Count;
+        public int EntryCount => Requests.Count;
      
         /// <summary>
         /// How many messages should we retain, before we compact the Outbox
@@ -61,7 +61,7 @@ namespace Paramore.Brighter
 
         protected void ClearExpiredMessages()
         {
-            var now = DateTime.UtcNow;
+            var now = timeProvider.GetUtcNow().DateTime;
 
             if (now - _lastScanAt < ExpirationScanInterval)
                 return;
@@ -84,14 +84,14 @@ namespace Paramore.Brighter
                 try
                 {
                     var expiredEntries =
-                        _requests
+                        Requests
                             .Where<KeyValuePair<string, T>>(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
                             .Select(entry => entry.Key);
 
                     foreach (var key in expiredEntries)
                     {
                         //if this fails ignore, killed by something else like compaction
-                        _requests.TryRemove(key, out _);
+                        Requests.TryRemove(key, out _);
                     }
 
                 }
@@ -131,7 +131,7 @@ namespace Paramore.Brighter
                 try
                 {
                     var removalList =
-                        _requests
+                        Requests
                             .OrderBy(entry => entry.Value.WriteTime)
                             .Take(entriesToRemove)
                             .Select(entry => entry.Key);
@@ -139,7 +139,7 @@ namespace Paramore.Brighter
                     foreach (var key in removalList)
                     {
                         //ignore errors, likely just something else has cleared it such as TTL eviction
-                        _requests.TryRemove(key, out _);
+                        Requests.TryRemove(key, out _);
                     }
                 }
                 finally
