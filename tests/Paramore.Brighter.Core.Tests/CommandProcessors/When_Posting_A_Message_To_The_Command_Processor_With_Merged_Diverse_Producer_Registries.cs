@@ -10,7 +10,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors;
 
-public class CommandProcessorMergedProducerRegistryTests
+[Collection("CommandProcessor")]
+public class CommandProcessorMergedProducerRegistryTests :IDisposable
 {   
     [Fact]
     public void When_Merging_With_An_Empty_Rhs_Registry()
@@ -77,5 +78,10 @@ public class CommandProcessorMergedProducerRegistryTests
         
         //assert
         fakeMessageProducerOne.MessageWasSent.Should().BeTrue();
+    }
+    
+    public void Dispose()
+    {
+        CommandProcessor.ClearExtServiceBus();
     }
 }
