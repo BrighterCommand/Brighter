@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly InMemoryOutbox _outbox;
-        private readonly TimeProvider _timeProvider;
+        private readonly FakeTimeProvider _timeProvider;
 
         public PostFailureLimitCommandTests()
         {
@@ -90,9 +90,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     var command = new MyCommand{Value = $"Hello World: {sentList.Count() + 1}"};
                     _commandProcessor.Post(command);
                     sentList.Add(command.Id);
+                    
+                    _timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
                     //We need to wait for the sweeper thread to check the outstanding in the outbox
-                    await _timeProvider.Delay(TimeSpan.FromMilliseconds(50));
+                    await Task.Delay(50);
 
                 } while (sentList.Count < 10);
             }

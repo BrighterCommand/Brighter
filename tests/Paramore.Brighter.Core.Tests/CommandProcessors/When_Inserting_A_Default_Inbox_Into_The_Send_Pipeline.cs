@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             var container = new ServiceCollection();
             container.AddTransient<MyCommandHandler>();
-            container.AddSingleton<IAmAnInboxSync, InMemoryInbox>();
+            container.AddSingleton<IAmAnInboxSync>(new InMemoryInbox(new FakeTimeProvider()));
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 

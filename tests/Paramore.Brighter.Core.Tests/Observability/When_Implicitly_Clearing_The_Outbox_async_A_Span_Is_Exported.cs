@@ -97,7 +97,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
             _commandProcessor.ClearAsyncOutbox(10, 0);
         }
 
-        await _timeProvider.Delay(TimeSpan.FromMilliseconds(100)); //Allow time for clear to run
+        await Task.Delay(100); //Allow time for clear to run 
 
         _traceProvider.ForceFlush();
 
