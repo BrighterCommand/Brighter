@@ -5,6 +5,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -23,7 +24,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
         public CommandProcessorUsingInboxAsyncTests()
         {
-            _inbox = new InMemoryInbox();
+            _inbox = new InMemoryInbox(new FakeTimeProvider());
 
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandHandlerAsync>();

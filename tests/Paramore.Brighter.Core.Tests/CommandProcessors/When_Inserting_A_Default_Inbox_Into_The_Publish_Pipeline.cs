@@ -6,6 +6,7 @@ using Paramore.Brighter.Inbox;
 using Polly;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Handlers;
 using Xunit;
@@ -16,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     public class CommandProcessorBuildDefaultInboxPublishTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly InMemoryInbox _inbox = new InMemoryInbox();
+        private readonly InMemoryInbox _inbox = new InMemoryInbox(new FakeTimeProvider());
 
         public CommandProcessorBuildDefaultInboxPublishTests()
         {
@@ -27,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             subscriberRegistry.Add(typeof(MyEvent), typeof(MyGlobalInboxEventHandler));
 
             var container = new ServiceCollection();
-            container.AddSingleton<MyGlobalInboxEventHandler>(handler);
+            container.AddSingleton(handler);
             container.AddSingleton<IAmAnInboxSync>(_inbox);
             container.AddSingleton<UseInboxHandler<MyEvent>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});

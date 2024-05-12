@@ -5,6 +5,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 using Paramore.Brighter.Inbox.Handlers;
@@ -17,20 +18,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private Pipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
-        private readonly InboxConfiguration _inboxConfiguration;
-        private IAmAnInboxSync _inbox;
 
 
         public PipelineGlobalInboxWhenUseInboxTests()
         {
-            _inbox = new InMemoryInbox();
+            IAmAnInboxSync inbox = new InMemoryInbox(new FakeTimeProvider());
             
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandInboxedHandler>();
             
             var container = new ServiceCollection();
             container.AddTransient<MyCommandInboxedHandler>();
-            container.AddSingleton<IAmAnInboxSync>(_inbox);
+            container.AddSingleton(inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
  
@@ -39,12 +38,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             _requestContext = new RequestContext();
             
-            _inboxConfiguration = new InboxConfiguration(
+            InboxConfiguration inboxConfiguration = new(
                 scope: InboxScope.All, 
                 onceOnly: true, 
                 actionOnExists: OnceOnlyAction.Throw);
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, _inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
             
         }
 

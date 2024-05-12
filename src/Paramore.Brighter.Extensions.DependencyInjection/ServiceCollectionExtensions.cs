@@ -182,7 +182,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var outbox = busConfiguration.Outbox;
             if (outbox == null)
             {
-                outbox = new InMemoryOutbox();
+                outbox = new InMemoryOutbox(TimeProvider.System);
             }
 
             //we create the outbox from interfaces from the determined transaction type to prevent the need

@@ -28,6 +28,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Xunit;
 
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_reading_from_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox(new FakeTimeProvider());
             
             var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
@@ -66,7 +67,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_marking_dispatched_in_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox(new FakeTimeProvider());
             
             var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
@@ -91,7 +92,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_looking_for_undispatched_messages_in_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var timeProvider = new FakeTimeProvider();
+            var outbox = new InMemoryOutbox(timeProvider);
             
             var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
@@ -101,6 +103,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             //Act
             outbox.Add(messageToAdd);
+            
+            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
             var outstandingMessages = outbox.OutstandingMessages(0);
             
@@ -114,7 +118,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_there_are_multiple_items_retrieve_by_id()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox(new FakeTimeProvider());
 
             var messageIds = new string[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
             for(int i =0; i <= 4; i++)
@@ -131,7 +135,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public async Task When_there_are_multiple_items_and_some_are_dispatched()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var timeProvider = new FakeTimeProvider();
+            var outbox = new InMemoryOutbox(timeProvider);
 
             var messageIds = new string[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
             for(int i =0; i <= 4; i++)
@@ -142,7 +147,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             outbox.MarkDispatched(messageIds[0], now);
             outbox.MarkDispatched(messageIds[4], now);
 
-            await Task.Delay(500);
+            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
             var sentMessages = outbox.DispatchedMessages(5000);
             var outstandingMessages = outbox.OutstandingMessages(0);

@@ -28,6 +28,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
@@ -37,14 +38,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     public class PostFailureLimitCommandTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private IAmAMessageProducer _producer;
-        private InMemoryOutbox _outbox;
+        private readonly InMemoryOutbox _outbox;
+        private readonly FakeTimeProvider _timeProvider;
 
         public PostFailureLimitCommandTests()
         {
             const string topic = "MyCommand";
             
-            _producer = new FakeErroringMessageProducerSync{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            IAmAMessageProducer producer = new FakeErroringMessageProducerSync{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
             var messageMapperRegistry =
                 new MessageMapperRegistry(
@@ -52,10 +53,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            _outbox = new InMemoryOutbox();
+            _timeProvider = new FakeTimeProvider();
+            _outbox = new InMemoryOutbox(_timeProvider);
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { topic, _producer }, }); 
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { topic, producer }, }); 
             
             var externalBus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
@@ -88,6 +90,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     var command = new MyCommand{Value = $"Hello World: {sentList.Count() + 1}"};
                     _commandProcessor.Post(command);
                     sentList.Add(command.Id);
+                    
+                    _timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
                     //We need to wait for the sweeper thread to check the outstanding in the outbox
                     await Task.Delay(50);

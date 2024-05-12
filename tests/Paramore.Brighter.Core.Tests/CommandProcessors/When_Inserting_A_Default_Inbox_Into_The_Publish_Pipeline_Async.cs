@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Inbox;
 using Polly;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox.Handlers;
 using Xunit;
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     public class CommandProcessorBuildDefaultInboxPublishAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly InMemoryInbox _inbox = new InMemoryInbox();
+        private readonly InMemoryInbox _inbox = new InMemoryInbox(new FakeTimeProvider());
 
         public CommandProcessorBuildDefaultInboxPublishAsyncTests()
         {
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
 
             var container = new ServiceCollection();
-            container.AddSingleton<MyEventHandlerAsync>(handler);
+            container.AddSingleton(handler);
             container.AddSingleton<IAmAnInboxAsync>(_inbox);
             container.AddTransient<UseInboxHandlerAsync<MyEvent>>();
             container.AddSingleton<IBrighterOptions>(
@@ -45,10 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
             var inboxConfiguration = new InboxConfiguration(
-                _inbox,
-                InboxScope.All, //grab all the events
-                onceOnly: true, //only allow once
-                actionOnExists: OnceOnlyAction.Throw //throw on duplicates (we should  be the only entry after)
+                _inbox //throw on duplicates (we should  be the only entry after)
             );
 
             _commandProcessor = new CommandProcessor(

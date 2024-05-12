@@ -1,6 +1,8 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Xunit;
@@ -14,12 +16,13 @@ public class When_Retrieving_Messages_based_on_Age
     public void When_outstanding_in_outbox_they_are_retrieved_correctly()
     {
         var minimumAgeInMs = 500;
-        var outbox = new InMemoryOutbox();
+        var timeProvider = new FakeTimeProvider();
+        var outbox = new InMemoryOutbox(timeProvider);
         
         outbox.Add(new MessageTestDataBuilder());
         outbox.Add(new MessageTestDataBuilder());
         
-        Thread.Sleep(minimumAgeInMs);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(minimumAgeInMs));
         
         outbox.Add(new MessageTestDataBuilder());
         outbox.Add(new MessageTestDataBuilder());
@@ -43,12 +46,13 @@ public class When_Retrieving_Messages_based_on_Age
     public async Task When_outstanding_in_outbox_they_are_retrieved_correctly_async()
     {
         var minimumAgeInMs = 1000;
-        var outbox = new InMemoryOutbox();
+        var timeProvider = new FakeTimeProvider();
+        var outbox = new InMemoryOutbox(timeProvider);
         
         await outbox.AddAsync(new MessageTestDataBuilder());
         await outbox.AddAsync(new MessageTestDataBuilder());
         
-        await Task.Delay(minimumAgeInMs * 2);
+        timeProvider.Advance(TimeSpan.FromMilliseconds(minimumAgeInMs * 2));
         
         await outbox.AddAsync(new MessageTestDataBuilder());
         await outbox.AddAsync(new MessageTestDataBuilder());

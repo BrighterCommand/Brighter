@@ -97,7 +97,7 @@ namespace Paramore.Brighter
             _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
             //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
-            if (outbox is null) outbox = new InMemoryOutbox();
+            if (outbox is null) outbox = new InMemoryOutbox(TimeProvider.System);
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
             
