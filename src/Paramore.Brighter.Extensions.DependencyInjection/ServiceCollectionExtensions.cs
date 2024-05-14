@@ -96,6 +96,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  producer, offering guaranteed, at least once, delivery.
         ///  NOTE: there may be a database specific Use*OutBox available. If so, use that in preference to this generic method
         /// If not null, registers singletons with the service collection :-
+        ///  - IAmAnOutbox - what messages have we posted
         ///  - IAmAnOutboxSync - what messages have we posted
         ///  - ImAnOutboxAsync - what messages have we posted (async pipeline compatible)
         /// </summary>
@@ -105,6 +106,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public static IBrighterBuilder UseExternalOutbox(this IBrighterBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null, int outboxBulkChunkSize = 100)
         {
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => outbox, ServiceLifetime.Singleton));
+            
             if (outbox is IAmAnOutboxSync<Message>)
             {
                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => outbox, ServiceLifetime.Singleton));

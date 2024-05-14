@@ -23,6 +23,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public static IBrighterBuilder UseDynamoDbOutbox(
             this IBrighterBuilder brighterBuilder, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildDynamoDbOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildDynamoDbOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildDynamoDbOutbox, serviceLifetime));
 
