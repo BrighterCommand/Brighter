@@ -206,6 +206,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     brighterBuilder.Services.Add(asyncOutboxdescriptor);
                 }
             }
+            
+            // If no distributed locking service is added, then add the in memory variant
+            var distributedLock = busConfiguration.DistributedLock ?? new InMemoryLock();
+            brighterBuilder.Services.AddSingleton(distributedLock);
 
             if (busConfiguration.UseRpc)
             {

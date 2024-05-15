@@ -147,6 +147,11 @@ namespace Paramore.Brighter
         /// The Outbox we wish to use for messaging
         /// </summary>
         public IAmAnOutbox Outbox { get; set; }
+        
+        /// <summary>
+        /// The Distributed Locking Service
+        /// </summary>
+        public IDistributedLock DistributedLock { get; set; }
 
         /// <summary>
         /// The maximum amount of messages to deposit into the outbox in one transmissions.
