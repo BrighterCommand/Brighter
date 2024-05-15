@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -13,10 +12,12 @@ namespace Paramore.Brighter.Core.Tests.Archiving;
 
 public class ServiceBusMessageStoreArchiverTests 
 {
-    [Fact]
-    public void When_Archiving_Old_Messages_From_The_Outbox()
+    private readonly InMemoryOutbox _outbox;
+    private readonly InMemoryArchiveProvider _archiveProvider;
+    private readonly ExternalBusService<Message,CommittableTransaction> _bus;
+
+    public ServiceBusMessageStoreArchiverTests()
     {
-        //arrange
         const string topic = "MyTopic";
 
         var producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
@@ -45,41 +46,72 @@ public class ServiceBusMessageStoreArchiverTests
         }; 
         
         var timeProvider = new FakeTimeProvider();
-        var outbox = new InMemoryOutbox(timeProvider);
-        var archiveProvider = new InMemoryArchiveProvider();
+        _outbox = new InMemoryOutbox(timeProvider);
+        _archiveProvider = new InMemoryArchiveProvider();
         
-        IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+        _bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
             policyRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
-            outbox,
-            archiveProvider 
-        );
-
+            _outbox,
+            _archiveProvider 
+        ); 
+    }
+    
+    [Fact]
+    public void When_Archiving_All_Messages_From_The_Outbox()
+    {
+        //arrange
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        outbox.Add(messageOne);
-        outbox.MarkDispatched(messageOne.Id);
+        _outbox.Add(messageOne);
+        _outbox.MarkDispatched(messageOne.Id);
         
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        outbox.Add(messageTwo);
-        outbox.MarkDispatched(messageTwo.Id);
+        _outbox.Add(messageTwo);
+        _outbox.MarkDispatched(messageTwo.Id);
         
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        outbox.Add(messageThree);
-        outbox.MarkDispatched(messageThree.Id);
+        _outbox.Add(messageThree);
+        _outbox.MarkDispatched(messageThree.Id);
 
         //act
-        outbox.EntryCount.Should().Be(3);
+        _outbox.EntryCount.Should().Be(3);
         
-        bus.Archive(20000);
+        _bus.Archive(20000);
         
         //assert
-        outbox.EntryCount.Should().Be(0);
-        archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageOne.Id, messageOne));
-        archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
-        archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageThree.Id, messageThree));
+        _outbox.EntryCount.Should().Be(0);
+        _archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageOne.Id, messageOne));
+        _archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
+        _archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageThree.Id, messageThree));
+    }
+    
+    [Fact]
+    public void When_Archiving_Some_Messages_From_The_Outbox()
+    {
+        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        _outbox.Add(messageOne);
+        _outbox.MarkDispatched(messageOne.Id);
+        
+        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        _outbox.Add(messageTwo);
+        _outbox.MarkDispatched(messageTwo.Id);
+        
+        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        _outbox.Add(messageThree);
+
+        //act
+        _outbox.EntryCount.Should().Be(3);
+        
+        _bus.Archive(20000);
+        
+        //assert
+        _outbox.EntryCount.Should().Be(1);
+        _archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageOne.Id, messageOne));
+        _archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
+        _archiveProvider.ArchivedMessages.Should().NotContain((new KeyValuePair<string, Message>(messageThree.Id, messageThree)));
         
     }
 }
