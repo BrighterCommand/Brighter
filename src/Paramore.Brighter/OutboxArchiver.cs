@@ -39,30 +39,22 @@ namespace Paramore.Brighter
     /// <typeparam name="TTransaction">The transaction type of the Db</typeparam>
     public class OutboxArchiver<TMessage, TTransaction> where TMessage: Message
     {
+        private readonly IAmAnExternalBusService _bus;
         private const string ARCHIVE_OUTBOX = "Archive Outbox";
         
-        private readonly int _batchSize;
-        private readonly IAmAnOutboxSync<TMessage, TTransaction> _outboxSync;
-        private readonly IAmAnOutboxAsync<TMessage, TTransaction> _outboxAsync;
-        private readonly IAmAnArchiveProvider _archiveProvider;
         private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
         
         private const string SUCCESS_MESSAGE = "Successfully archiver {NumberOfMessageArchived} out of {MessagesToArchive}, batch size : {BatchSize}";
 
-        public OutboxArchiver(IAmAnOutbox outbox,IAmAnArchiveProvider archiveProvider, int batchSize = 100)
+        public OutboxArchiver(IAmAnExternalBusService bus)
         {
-            _batchSize = batchSize;
-            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncBox)
-                _outboxSync = syncBox;
-            
-            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncBox)
-                _outboxAsync = asyncBox;
-
-            _archiveProvider = archiveProvider;
+            _bus = bus;
         }
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
+        /// Outbox Archiver will swallow any errors during the archive process, but record them. Assumption is
+        /// that these are transient errors which can be retried
         /// </summary>
         /// <param name="minimumAge">Minimum age in hours</param>
         public void Archive(int minimumAge)
@@ -71,22 +63,11 @@ namespace Paramore.Brighter
 
             try
             {
-                var messages = _outboxSync.DispatchedMessages(minimumAge, _batchSize);
-
-                if (!messages.Any()) return;
-                foreach (var message in messages)
-                {
-                    _archiveProvider.ArchiveMessage(message);
-                }
-
-                _outboxSync.Delete(messages.Select(e => e.Id).ToArray());
-                _logger.LogInformation(SUCCESS_MESSAGE, messages.Count(), messages.Count(), _batchSize);
+                _bus.Archive(minimumAge);  
             }
             catch (Exception e)
             {
                 activity?.SetStatus(ActivityStatusCode.Error, e.Message);
-                _logger.LogError(e, "Error while archiving from the outbox");
-                throw;
             }
             finally
             {
@@ -97,29 +78,23 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
+        /// Outbox Archiver will swallow any errors during the archive process, but record them. Assumption is
+        /// that these are transient errors which can be retried       
         /// </summary>
         /// <param name="minimumAge">Minimum age in hours</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <param name="parallelArchiving">Send messages to archive provider in parallel</param>
-        public async Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken, bool parallelArchiving = false)
+        public async Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken)
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
             
             try
             {
-                var messages = await _outboxAsync.DispatchedMessagesAsync(
-                    minimumAge, _batchSize, cancellationToken:cancellationToken);
-
-                if (!messages.Any()) return;
-
-                await _outboxAsync.DeleteAsync(
-                    messages.Select(e => e.Id).ToArray(), cancellationToken: cancellationToken);
+                await _bus.ArchiveAsync(minimumAge, cancellationToken);
             }
             catch (Exception e)
             {
                 activity?.SetStatus(ActivityStatusCode.Error, e.Message);
-                _logger.LogError(e, "Error while archiving from the outbox");
-                throw;
             }
             finally
             {

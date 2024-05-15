@@ -199,6 +199,11 @@ namespace Paramore.Brighter
         /// </summary>
         public bool UseRpc { get; set; }
 
+        /// <summary>
+        /// How big should the batch size be for archiving messages
+        /// </summary>
+        public int ArchiveBatchSize { get; set; }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.
