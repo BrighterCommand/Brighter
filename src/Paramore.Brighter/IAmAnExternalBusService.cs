@@ -10,15 +10,15 @@ namespace Paramore.Brighter
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">Minimum age in hours</param>
+        /// <param name="millisecondsDispatchedSince">Minimum age in milliseconds</param>
         void Archive(int millisecondsDispatchedSince);
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>
-        /// <param name="minimumAge">Minimum age in hours</param>
+        /// <param name="millisecondsDispatchedSince"></param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken);
+        Task ArchiveAsync(int millisecondsDispatchedSince, CancellationToken cancellationToken);
         
         /// <summary>
         /// Used with RPC to call a remote service via the external bus
