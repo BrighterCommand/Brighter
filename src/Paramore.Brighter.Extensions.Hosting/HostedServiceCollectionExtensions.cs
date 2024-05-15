@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             brighterBuilder.Services.TryAddSingleton<TimedOutboxArchiverOptions>(options);
             brighterBuilder.Services.AddSingleton<IAmAnArchiveProvider>(archiveProvider);
             
-            brighterBuilder.Services.AddHostedService<TimedOutboxArchiver<Message, TTransaction>>();
+            brighterBuilder.Services.AddHostedService<TimedOutboxArchiver>();
 
             return brighterBuilder;
         }
