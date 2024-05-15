@@ -118,4 +118,39 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         _archiveProvider.ArchivedMessages.Should().Contain(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
         _archiveProvider.ArchivedMessages.Should().NotContain(new KeyValuePair<string, Message>(messageThree.Id, messageThree));
     }
+    
+    [Fact]
+    public async Task When_Archiving_No_Messages_From_The_Outbox()
+    {
+        //arrange
+        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        await _outbox.AddAsync(messageOne);
+        
+        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        await _outbox.AddAsync(messageTwo);
+        
+        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        await _outbox.AddAsync(messageThree);
+
+        //act
+        _outbox.EntryCount.Should().Be(3);
+        
+        await _bus.ArchiveAsync(20000, new CancellationToken());
+        
+        //assert
+        _outbox.EntryCount.Should().Be(3);
+        _archiveProvider.ArchivedMessages.Should().NotContain(new KeyValuePair<string, Message>(messageOne.Id, messageOne));
+        _archiveProvider.ArchivedMessages.Should().NotContain(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
+        _archiveProvider.ArchivedMessages.Should().NotContain(new KeyValuePair<string, Message>(messageThree.Id, messageThree));
+    }
+    
+    [Fact]
+    public async Task When_Archiving_An_Empty_Outbox()
+    {
+        //act
+        await _bus.ArchiveAsync(20000, new CancellationToken());
+        
+        //assert
+        _outbox.EntryCount.Should().Be(0);
+    }
 }

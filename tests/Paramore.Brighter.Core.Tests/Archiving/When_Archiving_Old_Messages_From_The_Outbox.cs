@@ -114,4 +114,37 @@ public class ServiceBusMessageStoreArchiverTests
         _archiveProvider.ArchivedMessages.Should().NotContain((new KeyValuePair<string, Message>(messageThree.Id, messageThree)));
         
     }
+    
+    [Fact]
+    public void When_Archiving_No_Messages_From_The_Outbox()
+    {
+        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        _outbox.Add(messageOne);
+        
+        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        _outbox.Add(messageTwo);
+        
+        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        _outbox.Add(messageThree);
+
+        //act
+        _outbox.EntryCount.Should().Be(3);
+        
+        _bus.Archive(20000);
+        
+        //assert
+        _outbox.EntryCount.Should().Be(3);
+        _archiveProvider.ArchivedMessages.Should().NotContain(new KeyValuePair<string, Message>(messageOne.Id, messageOne));
+        _archiveProvider.ArchivedMessages.Should().NotContain(new KeyValuePair<string, Message>(messageTwo.Id, messageTwo));
+        _archiveProvider.ArchivedMessages.Should().NotContain((new KeyValuePair<string, Message>(messageThree.Id, messageThree)));
+    }
+    
+    [Fact]
+    public void When_Archiving_An_Empty_The_Outbox()
+    {
+        _bus.Archive(20000);
+        
+        //assert
+        _outbox.EntryCount.Should().Be(0);
+    }
 }
