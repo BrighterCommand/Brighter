@@ -115,6 +115,16 @@ namespace Paramore.Brighter
     public class ExternalBusConfiguration : IAmExternalBusConfiguration
     {
         /// <summary>
+        /// How big should the batch size be for archiving messages
+        /// </summary>
+        public int ArchiveBatchSize { get; set; }
+
+        /// <summary>
+        /// If we want to archive messages, abstracts archival storage
+        /// </summary>
+        public IAmAnArchiveProvider ArchiveProvider { get; set; }
+        
+        /// <summary>
         /// How do obtain a connection to the Outbox that is not part of a shared transaction.
         /// NOTE: Must implement IAmARelationalDbConnectionProvider
         /// </summary>
@@ -198,12 +208,6 @@ namespace Paramore.Brighter
         /// Do we want to support RPC on an external bus?
         /// </summary>
         public bool UseRpc { get; set; }
-
-        /// <summary>
-        /// How big should the batch size be for archiving messages
-        /// </summary>
-        public int ArchiveBatchSize { get; set; }
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.
