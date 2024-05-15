@@ -10,8 +10,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>
-        /// <param name="minimumAge">Minimum age in hours</param>
-        void Archive(int minimumAge);
+        /// <param name="millisecondsDispatchedSince">Minimum age in hours</param>
+        void Archive(int millisecondsDispatchedSince);
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider

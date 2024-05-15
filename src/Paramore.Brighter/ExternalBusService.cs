@@ -241,12 +241,12 @@ namespace Paramore.Brighter
         /// Archive Message from the outbox to the outbox archive provider
         /// Throws any archiving exception
         /// </summary>
-        /// <param name="minimumAge">Minimum age in hours</param>
-        public void Archive(int minimumAge)
+        /// <param name="millisecondsDispatchedSince">Minimum age in hours</param>
+        public void Archive(int millisecondsDispatchedSince)
         {
             try
             {
-                var messages = _outBox.DispatchedMessages(minimumAge, _archiveBatchSize);
+                var messages = _outBox.DispatchedMessages(millisecondsDispatchedSince, _archiveBatchSize);
                 
                 s_logger.LogInformation(
                     "Found {NumberOfMessageArchived} message to archive to {MessagesToArchive}, batch size : {BatchSize}", 
@@ -402,7 +402,7 @@ namespace Paramore.Brighter
         {
             var span = Activity.Current;
             span?.AddTag("amountToClear", amountToClear);
-            span?.AddTag("minimumAge", minimumAge);
+            span?.AddTag("millisecondsSinceSent", minimumAge);
             span?.AddTag("async", useAsync);
             span?.AddTag("bulk", useBulk);
 
@@ -554,7 +554,7 @@ namespace Paramore.Brighter
   
         private async Task BackgroundDispatchUsingSync(
             int amountToClear, 
-            int minimumAge,
+            int millisecondsSinceSent,
             Dictionary<string, object> args
             )
         {
@@ -564,7 +564,7 @@ namespace Paramore.Brighter
                 await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
-                    var messages = _outBox.OutstandingMessages(minimumAge, amountToClear, args: args);
+                    var messages = _outBox.OutstandingMessages(millisecondsSinceSent, amountToClear, args: args);
                     span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX,
                         tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } }));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
@@ -595,7 +595,10 @@ namespace Paramore.Brighter
             }
         }
         
-        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk,
+        private async Task BackgroundDispatchUsingAsync(
+            int amountToClear, 
+            int milliSecondsSinceSent, 
+            bool useBulk,
             Dictionary<string, object> args)
         {
             var span = Activity.Current;
@@ -605,7 +608,7 @@ namespace Paramore.Brighter
                 try
                 {
                     var messages =
-                        await _asyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear, args: args);
+                        await _asyncOutbox.OutstandingMessagesAsync(milliSecondsSinceSent, amountToClear, args: args);
                     span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
@@ -696,8 +699,10 @@ namespace Paramore.Brighter
             }).ToList();
         }
 
-        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<IRequest> requests,
-            CancellationToken cancellationToken = default) where T : class, IRequest
+        private async Task<List<Message>> BulkMapMessagesAsync<T>(
+            IEnumerable<IRequest> requests,
+            CancellationToken cancellationToken = default
+        ) where T : class, IRequest
         {
             var messages = new List<Message>();
             foreach (var request in requests)
