@@ -21,6 +21,10 @@ namespace Paramore.Brighter.Extensions.Hosting
             
             brighterBuilder.Services.TryAddSingleton<TimedOutboxSweeperOptions>(options);
             brighterBuilder.Services.AddHostedService<TimedOutboxSweeper>();
+            
+            // If no distributed locking service is added, then add the in memory variant
+            brighterBuilder.Services.TryAddSingleton<IDistributedLock>(new InMemoryLock());
+            
             return brighterBuilder;
         }
 
@@ -34,6 +38,9 @@ namespace Paramore.Brighter.Extensions.Hosting
             brighterBuilder.Services.AddSingleton<IAmAnArchiveProvider>(archiveProvider);
             
             brighterBuilder.Services.AddHostedService<TimedOutboxArchiver>();
+            
+            // If no distributed locking service is added, then add the in memory variant
+            brighterBuilder.Services.TryAddSingleton<IDistributedLock>(new InMemoryLock());
 
             return brighterBuilder;
         }
