@@ -8,6 +8,19 @@ namespace Paramore.Brighter
     public interface IAmAnExternalBusService : IDisposable
     {
         /// <summary>
+        /// Archive Message from the outbox to the outbox archive provider
+        /// </summary>
+        /// <param name="millisecondsDispatchedSince">Minimum age in milliseconds</param>
+        void Archive(int millisecondsDispatchedSince);
+
+        /// <summary>
+        /// Archive Message from the outbox to the outbox archive provider
+        /// </summary>
+        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        Task ArchiveAsync(int millisecondsDispatchedSince, CancellationToken cancellationToken);
+        
+        /// <summary>
         /// Used with RPC to call a remote service via the external bus
         /// </summary>
         /// <param name="outMessage">The message to send</param>
@@ -107,14 +120,5 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>true if defined</returns>
         bool HasOutbox();
-
-        /// <summary>
-        /// Retry an action via the policy engine
-        /// </summary>
-        /// <param name="action">The Action to try</param>
-        /// <returns></returns>
-        bool Retry(Action action);
-
- 
     }
 }

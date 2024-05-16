@@ -797,7 +797,7 @@ namespace Paramore.Brighter
             //we do this to create the channel on the broker, or we won't have anything to send to; we 
             //retry in case the subscription is poor. An alternative would be to extract the code from
             //the channel to create the subscription, but this does not do much on a new queue
-            _bus.Retry(() => responseChannel.Purge());
+            Retry(() => responseChannel.Purge());
 
             var outMessage = _bus.CreateMessageFromRequest(request);
 
@@ -810,7 +810,7 @@ namespace Paramore.Brighter
 
             //now we block on the receiver to try and get the message, until timeout.
             s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
-            _bus.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+            Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
             TResponse response = default(TResponse);
             if (responseMessage.Header.MessageType != MessageType.MT_NONE)
@@ -905,6 +905,23 @@ namespace Paramore.Brighter
                 default:
                     return true;
             }
+        }
+        
+        private bool Retry(Action action)
+        {
+            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
+            var result = policy.ExecuteAndCapture(action);
+            if (result.Outcome != OutcomeType.Successful)
+            {
+                if (result.FinalException != null)
+                {
+                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+                }
+
+                return false;
+            }
+
+            return true;
         }
         
         private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)
