@@ -12,13 +12,17 @@ namespace Paramore.Brighter.Extensions.Hosting
     public class TimedOutboxSweeper : IHostedService, IDisposable
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly IDistributedLock _distributedLock;
         private readonly TimedOutboxSweeperOptions _options;
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer _timer;
-        
-        public TimedOutboxSweeper (IServiceScopeFactory serviceScopeFactory, TimedOutboxSweeperOptions options)
+        private const string LockingResourceName = "OutboxSweeper";
+
+        public TimedOutboxSweeper(IServiceScopeFactory serviceScopeFactory, IDistributedLock distributedLock,
+            TimedOutboxSweeperOptions options)
         {
             _serviceScopeFactory = serviceScopeFactory;
+            _distributedLock = distributedLock;
             _options = options;
         }
 
@@ -33,33 +37,41 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private void DoWork(object state)
         {
-            s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
-
-            var scope = _serviceScopeFactory.CreateScope();
-            try
+            if (_distributedLock.ObtainLock(LockingResourceName))
             {
-                IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
+                s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
 
-                var outBoxSweeper = new OutboxSweeper(
-                    millisecondsSinceSent: _options.MinimumMessageAge,
-                    commandProcessor: commandProcessor,
-                    _options.BatchSize,
-                    _options.UseBulk,
-                    _options.Args);
+                var scope = _serviceScopeFactory.CreateScope();
+                try
+                {
+                    IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
 
-                if (_options.UseBulk)
-                    outBoxSweeper.SweepAsyncOutbox();
-                else
-                    outBoxSweeper.Sweep();
+                    var outBoxSweeper = new OutboxSweeper(
+                        millisecondsSinceSent: _options.MinimumMessageAge,
+                        commandProcessor: commandProcessor,
+                        _options.BatchSize,
+                        _options.UseBulk,
+                        _options.Args);
+
+                    if (_options.UseBulk)
+                        outBoxSweeper.SweepAsyncOutbox();
+                    else
+                        outBoxSweeper.Sweep();
+                }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e, "Error while sweeping the outbox.");
+                    throw;
+                }
+                finally
+                {
+                    _distributedLock.ReleaseLock(LockingResourceName);
+                    scope.Dispose();
+                }
             }
-            catch (Exception e)
+            else
             {
-                s_logger.LogError(e, "Error while sweeping the outbox.");
-                throw;
-            }
-            finally
-            {
-                scope.Dispose();
+                s_logger.LogWarning("Outbox Sweeper is still running - abandoning attempt.");
             }
             
             s_logger.LogInformation("Outbox Sweeper sleeping");

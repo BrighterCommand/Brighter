@@ -217,6 +217,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             return brighterBuilder;
         }
+        
+        /// <summary>
+        /// Use a distributed locking mechanism for processes that can not run in parallel 
+        /// </summary>
+        /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
+        /// <param name="distributedLock">The Distributed Lock Provider</param>
+        /// <returns>The Brighter builder to allow chaining of requests</returns>
+        public static IBrighterBuilder UseDistributedLock(this IBrighterBuilder brighterBuilder, IDistributedLock distributedLock)
+        {
+            brighterBuilder.Services.AddSingleton<IDistributedLock>(distributedLock);
+            
+            return brighterBuilder;
+        }
 
         /// <summary>
         /// Configure a Feature Switch registry to control handlers to be feature switched at runtime
