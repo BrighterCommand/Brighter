@@ -334,11 +334,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
-        public void Delete(params Guid[] messageIds)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Returns messages that have yet to be dispatched
         /// </summary>
@@ -373,10 +368,27 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             throw new NotImplementedException();
         }
-
-        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        
+        /// <summary>
+        /// Delete messages from the Outbox
+        /// </summary>
+        /// <param name="messageIds">The messages to delete</param>
+        public void Delete(Guid[] messageIds)
         {
-            throw new NotImplementedException();
+            DeleteAsync(messageIds, new CancellationToken()).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Delete messages from the Outbox
+        /// </summary>
+        /// <param name="messageIds">The messages to delete</param>
+        /// <param name="cancellationToken">Cancel an in-flight request to delete from the Outbox</param>
+        public async Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken = default)
+        {
+            foreach (var messageId in messageIds)
+            {
+                await _context.DeleteAsync<MessageItem>(messageId.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
+            }
         }
 
         public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,

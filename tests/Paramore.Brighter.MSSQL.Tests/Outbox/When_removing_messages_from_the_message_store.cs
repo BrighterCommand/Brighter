@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             AddMessagesToOutbox();
             _retrievedMessages = await _sqlOutbox.GetAsync();
 
-            await _sqlOutbox.DeleteAsync(CancellationToken.None, _retrievedMessages.First().Id);
+            await _sqlOutbox.DeleteAsync([_retrievedMessages.First().Id], CancellationToken.None);
 
             var remainingMessages = await _sqlOutbox.GetAsync();
 
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
             
-            await _sqlOutbox.DeleteAsync(CancellationToken.None, remainingMessages.Select(m => m.Id).ToArray());
+            await _sqlOutbox.DeleteAsync(remainingMessages.Select(m => m.Id).ToArray(), CancellationToken.None);
 
             var messages = await _sqlOutbox.GetAsync();
 

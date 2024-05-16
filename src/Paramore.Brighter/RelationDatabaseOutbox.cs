@@ -314,9 +314,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Delete the specified messages
         /// </summary>
-        /// <param name="cancellationToken">The Cancellation Token</param>
         /// <param name="messageIds">The id of the message to delete</param>
-        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
         {
             if(!messageIds.Any())
                 return Task.CompletedTask;

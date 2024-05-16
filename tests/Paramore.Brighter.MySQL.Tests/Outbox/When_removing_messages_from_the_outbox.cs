@@ -86,7 +86,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlOutboxSync.Add(messages);
             _retrievedMessages = await _mySqlOutboxSync.GetAsync();
 
-            await _mySqlOutboxSync.DeleteAsync(CancellationToken.None, _retrievedMessages.First().Id);
+            await _mySqlOutboxSync.DeleteAsync([_retrievedMessages.First().Id], CancellationToken.None);
 
             var remainingMessages = await _mySqlOutboxSync.GetAsync();
 
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
             
-            await _mySqlOutboxSync.DeleteAsync(CancellationToken.None, remainingMessages.Select(m => m.Id).ToArray());
+            await _mySqlOutboxSync.DeleteAsync(remainingMessages.Select(m => m.Id).ToArray(), CancellationToken.None);
 
             var finalMessages = await _mySqlOutboxSync.GetAsync();
 

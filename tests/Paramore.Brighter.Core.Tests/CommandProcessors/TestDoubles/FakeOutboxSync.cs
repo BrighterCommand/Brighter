@@ -144,7 +144,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
         }
 
-        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
         {
             Delete(messageIds);
             return Task.CompletedTask;

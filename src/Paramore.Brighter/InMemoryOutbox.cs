@@ -363,7 +363,7 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
         {
             Delete(messageIds);
             return Task.CompletedTask;

@@ -365,7 +365,7 @@ namespace Paramore.Brighter.Outbox.EventStore
             return outstandingMessages.Where(om => !dispatchedIds.Contains(om.Id));
         }
 
-        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        public Task DeleteAsync(Guid[] messageIds, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

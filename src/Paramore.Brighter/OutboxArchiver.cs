@@ -97,7 +97,7 @@ namespace Paramore.Brighter
                     successfullyArchivedMessages = messages.Select(m => m.Id).ToArray();
                 }
                 
-                await _outboxAsync.DeleteAsync(cancellationToken, successfullyArchivedMessages);
+                await _outboxAsync.DeleteAsync(successfullyArchivedMessages, cancellationToken);
                 _logger.LogInformation(SUCCESS_MESSAGE, messages.Count(), messages.Count(), _batchSize);
             }
             catch (Exception e)
