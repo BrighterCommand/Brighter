@@ -11,19 +11,21 @@ namespace Paramore.Brighter.Extensions.Hosting
 
     public class TimedOutboxArchiver(
         IServiceScopeFactory serviceScopeFactory,
+        IDistributedLock distributedLock,
         TimedOutboxArchiverOptions options)
         : IHostedService, IDisposable
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer _timer;
 
-        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private const string LockingResourceName = "Archiver";
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
             s_logger.LogInformation("Outbox Archiver Service is starting");
 
-            _timer = new Timer(async (e) => await Archive(e, cancellationToken), null, TimeSpan.Zero, TimeSpan.FromSeconds(options.TimerInterval));
+            _timer = new Timer(async (e) => await Archive(e, cancellationToken), null, TimeSpan.Zero,
+                TimeSpan.FromSeconds(options.TimerInterval));
 
             return Task.CompletedTask;
         }
@@ -44,7 +46,7 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private async Task Archive(object state, CancellationToken cancellationToken)
         {
-            if (await _semaphore.WaitAsync(TimeSpan.Zero, cancellationToken))
+            if (await distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken))
             {
                 var scope = serviceScopeFactory.CreateScope();
                 s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
@@ -60,7 +62,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 }
                 finally
                 {
-                    _semaphore.Release();
+                    await distributedLock.ReleaseLockAsync(LockingResourceName, cancellationToken);
                 }
 
                 s_logger.LogInformation("Outbox Sweeper sleeping");
