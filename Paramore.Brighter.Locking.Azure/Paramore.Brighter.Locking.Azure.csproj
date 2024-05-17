@@ -4,8 +4,10 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Title>This is the Azure Distributed Locking Provider.</Title>
+        <Title></Title>
         <Authors>Paul Reardon</Authors>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Description>This is the Azure Distributed Locking Provider.</Description>
     </PropertyGroup>
 
     <ItemGroup>
