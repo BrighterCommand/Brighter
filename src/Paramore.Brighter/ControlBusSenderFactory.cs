@@ -54,7 +54,6 @@ namespace Paramore.Brighter
                 mapperRegistry: mapper,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
-                requestContextFactory: new InMemoryRequestContextFactory(),
                 outbox: outbox
                 ); 
             

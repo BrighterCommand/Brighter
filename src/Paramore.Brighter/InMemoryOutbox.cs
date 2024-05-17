@@ -67,7 +67,7 @@ namespace Paramore.Brighter
     /// so you can use multiple instances safely as well
     /// </summary>
 #pragma warning disable CS0618
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
+    public class InMemoryOutbox(TimeProvider timeProvider) : InMemoryBox<OutboxEntry>(timeProvider), IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 #pragma warning restore CS0618
     {
         /// <summary>
@@ -90,9 +90,9 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             EnforceCapacityLimit();
 
-            if (!_requests.ContainsKey(message.Id))
+            if (!Requests.ContainsKey(message.Id))
             {
-                if (!_requests.TryAdd(message.Id, new OutboxEntry {Message = message, WriteTime = DateTime.UtcNow}))
+                if (!Requests.TryAdd(message.Id, new OutboxEntry {Message = message, WriteTime = timeProvider.GetUtcNow().DateTime}))
                 {
                     throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                 }
@@ -188,7 +188,7 @@ namespace Paramore.Brighter
         {
             foreach (string messageId in messageIds)
             {
-                _requests.TryRemove(messageId.ToString(), out _);
+                Requests.TryRemove(messageId.ToString(), out _);
             }
         }
 
@@ -226,8 +226,8 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            DateTime dispatchedSince = DateTime.UtcNow.AddMilliseconds( -1 * millisecondsDispatchedSince);
-            return _requests.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
+            DateTime dispatchedSince = timeProvider.GetUtcNow().DateTime.AddMilliseconds( -1 * millisecondsDispatchedSince);
+            return Requests.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
@@ -265,7 +265,7 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            return _requests.TryGetValue(messageId, out OutboxEntry entry) ? entry.Message : null;
+            return Requests.TryGetValue(messageId, out OutboxEntry entry) ? entry.Message : null;
         }
 
         /// <summary>
@@ -351,9 +351,9 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            if (_requests.TryGetValue(id, out OutboxEntry entry))
+            if (Requests.TryGetValue(id, out OutboxEntry entry))
             {
-                entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
+                entry.TimeFlushed = dispatchedAt ?? timeProvider.GetUtcNow().DateTime;
             }
         }
 
@@ -373,9 +373,10 @@ namespace Paramore.Brighter
            )
         {
             ClearExpiredMessages();
-            
-            DateTime sentBefore = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
-            var outstandingMessages = _requests.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
+
+            var now = timeProvider.GetUtcNow();
+            var sentBefore = now.AddMilliseconds( -1 * millSecondsSinceSent);
+            var outstandingMessages = Requests.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
             return outstandingMessages;

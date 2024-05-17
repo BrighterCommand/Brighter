@@ -115,6 +115,16 @@ namespace Paramore.Brighter
     public class ExternalBusConfiguration : IAmExternalBusConfiguration
     {
         /// <summary>
+        /// How big should the batch size be for archiving messages
+        /// </summary>
+        public int ArchiveBatchSize { get; set; }
+
+        /// <summary>
+        /// If we want to archive messages, abstracts archival storage
+        /// </summary>
+        public IAmAnArchiveProvider ArchiveProvider { get; set; }
+        
+        /// <summary>
         /// How do obtain a connection to the Outbox that is not part of a shared transaction.
         /// NOTE: Must implement IAmARelationalDbConnectionProvider
         /// </summary>
@@ -137,6 +147,11 @@ namespace Paramore.Brighter
         /// The Outbox we wish to use for messaging
         /// </summary>
         public IAmAnOutbox Outbox { get; set; }
+        
+        /// <summary>
+        /// The Distributed Locking Service
+        /// </summary>
+        public IDistributedLock DistributedLock { get; set; }
 
         /// <summary>
         /// The maximum amount of messages to deposit into the outbox in one transmissions.
@@ -198,7 +213,6 @@ namespace Paramore.Brighter
         /// Do we want to support RPC on an external bus?
         /// </summary>
         public bool UseRpc { get; set; }
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.

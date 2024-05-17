@@ -11,7 +11,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
     /// <summary>
     /// Used for Sweeper tests, will not clear the message!!!
     /// </summary>
-    public class FakeCommandProcessor : IAmACommandProcessor
+    public class FakeCommandProcessor(TimeProvider timeProvider) : IAmACommandProcessor
     {
         /// <summary>
         /// Message has been dispatched (to the bus or directly to the handler)
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         
         public string DepositPost<T>(T request, RequestContext requestContext = null, Dictionary<string, object> args = null) where T : class, IRequest
         {
-            Deposited.Enqueue(new DepositedMessage(request));
+            Deposited.Enqueue(new DepositedMessage(request, timeProvider));
             return request.Id;
         }
         
@@ -182,7 +182,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, RequestContext requestContext = null, Dictionary<string, object> args = null)
         {
             var depositedMessages = Deposited.Where(m =>
-                m.EnqueuedTime < DateTime.Now.AddMilliseconds(-1 * minimumAge) &&
+                m.EnqueuedTime < timeProvider.GetUtcNow().DateTime.AddMilliseconds(-1 * minimumAge) &&
                 !Dispatched.ContainsKey(m.Request.Id))
                 .Take(amountToClear)
                 .Select(m => m.Request.Id)
@@ -240,10 +240,10 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         public IRequest Request { get; }
         public DateTime EnqueuedTime { get; }
 
-        public DepositedMessage(IRequest request)
+        public DepositedMessage(IRequest request, TimeProvider timeProvider)
         {
             Request = request;
-            EnqueuedTime = DateTime.UtcNow;
+            EnqueuedTime = timeProvider.GetUtcNow().DateTime;
         }
     }
 }

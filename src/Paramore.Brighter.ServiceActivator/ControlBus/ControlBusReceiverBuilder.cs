@@ -162,7 +162,6 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 mapperRegistry: outgoingMessageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
-                requestContextFactory: new InMemoryRequestContextFactory(),
                 outbox: outbox
             );  
             

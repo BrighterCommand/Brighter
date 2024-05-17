@@ -169,7 +169,6 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
-            _requestContextFactory,
             fakeOutbox
         );
         
@@ -215,7 +214,6 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
-            _requestContextFactory,
             fakeOutbox
         );
         
@@ -261,7 +259,6 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
-            _requestContextFactory,
             fakeOutbox
         );
         
@@ -311,7 +308,6 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
-            _requestContextFactory,
             fakeOutbox
         );
         

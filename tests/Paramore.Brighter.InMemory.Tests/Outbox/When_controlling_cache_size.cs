@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Xunit;
 
@@ -39,7 +40,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             const int limit = 5;
             
-            var outbox = new InMemoryOutbox
+            var timeProvider = new FakeTimeProvider(); 
+            var outbox = new InMemoryOutbox(timeProvider)
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5
@@ -65,7 +67,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             const int limit = 5;
             
-            var outbox = new InMemoryOutbox
+            var timeProvider = new FakeTimeProvider();
+            var outbox = new InMemoryOutbox(timeProvider)
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5
@@ -76,7 +79,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             for (int i = 0; i <= limit - 1; i++)
             {
                 outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
-                await Task.Delay(1000);
+                timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
             }
 
             //Act

@@ -98,7 +98,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// We want to use double lock to let us pass parameters to the constructor from the first instance
         /// </summary>
-        private static IAmAnExternalBusService s_bus;
+        private static IAmAnExternalBusService s_bus = null;
         private static readonly object s_padlock = new object();
 
         /// <summary>
@@ -915,8 +915,7 @@ namespace Paramore.Brighter
             //we do this to create the channel on the broker, or we won't have anything to send to; we 
             //retry in case the subscription is poor. An alternative would be to extract the code from
             //the channel to create the subscription, but this does not do much on a new queue
-
-            s_bus.Retry(() => responseChannel.Purge());
+            Retry(() => responseChannel.Purge());
 
             var span = CreateSpan(CLEAROUTBOX);
             var context = InitRequestContext(span, requestContext);
@@ -931,10 +930,9 @@ namespace Paramore.Brighter
 
                 Message responseMessage = null;
 
-
-                //now we block on the receiver to try and get the message, until timeout.
-                s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
-                s_bus.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+            //now we block on the receiver to try and get the message, until timeout.
+            s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
+            Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
                 TResponse response = default(TResponse);
                 if (responseMessage.Header.MessageType != MessageType.MT_NONE)
@@ -1022,6 +1020,23 @@ namespace Paramore.Brighter
                 default:
                     return true;
             }
+        }
+        
+        private bool Retry(Action action)
+        {
+            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
+            var result = policy.ExecuteAndCapture(action);
+            if (result.Outcome != OutcomeType.Successful)
+            {
+                if (result.FinalException != null)
+                {
+                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+                }
+
+                return false;
+            }
+
+            return true;
         }
         
         // Create an instance of the ExternalBusService if one not already set for this app. Note that we do not support reinitialization here, so once you have

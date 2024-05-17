@@ -22,6 +22,7 @@ namespace Paramore.Brighter
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         private readonly IPolicyRegistry<string> _policyRegistry;
+        private readonly IAmAnArchiveProvider _archiveProvider;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction> _outBox;
@@ -29,9 +30,12 @@ namespace Paramore.Brighter
         private readonly int _outboxTimeout;
         private readonly int _outboxBulkChunkSize;
         private readonly IAmAProducerRegistry _producerRegistry;
-        
+        private readonly int _archiveBatchSize;
+
         private static readonly SemaphoreSlim s_clearSemaphoreToken = new SemaphoreSlim(1, 1);
+
         private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
+
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
         private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
 
@@ -57,50 +61,56 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The mapper registry; it should also implement IAmAMessageMapperRegistryAsync</param>
         /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
-        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
+        /// <param name="archiveProvider">When archiving rows from the Outbox, abstracts to where we should send them</param>
         /// <param name="outboxBulkChunkSize">The size of a chunk for bulk work</param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
         /// <param name="maxOutStandingCheckIntervalMilliSeconds">How long before we check for maxOutStandingMessages</param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
+        /// <param name="archiveBatchSize">What batch size to use when archiving from the Outbox</param>
         public ExternalBusService(
-            IAmAProducerRegistry producerRegistry,  
+            IAmAProducerRegistry producerRegistry,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            IAmARequestContextFactory requestContextFactory,
             IAmAnOutbox outbox = null,
+            IAmAnArchiveProvider archiveProvider = null,
             int outboxBulkChunkSize = 100,
             int outboxTimeout = 300,
             int maxOutStandingMessages = -1,
             int maxOutStandingCheckIntervalMilliSeconds = 1000,
-            Dictionary<string, object> outBoxBag = null)
+            Dictionary<string, object> outBoxBag = null,
+            int archiveBatchSize = 100)
         {
             _producerRegistry = producerRegistry ?? throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _policyRegistry = policyRegistry?? throw new ConfigurationException("Missing Policy Registry for External Bus Services");
-            
+            _archiveProvider = archiveProvider;
             if (mapperRegistry is null) 
                 throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
             if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
             if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
-                throw new ConfigurationException("A Command Processor with an external bus must have a message transformer factory");
-            
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message transformer factory");
+
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+            _transformPipelineBuilderAsync =
+                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
             //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
-            outbox ??= new InMemoryOutbox();
+            if (outbox is null) outbox = new InMemoryOutbox(TimeProvider.System);
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
-            
+
             _outboxBulkChunkSize = outboxBulkChunkSize;
             _outboxTimeout = outboxTimeout;
             _maxOutStandingMessages = maxOutStandingMessages;
             _maxOutStandingCheckIntervalMilliSeconds = maxOutStandingCheckIntervalMilliSeconds;
             _outBoxBag = outBoxBag;
+            _archiveBatchSize = archiveBatchSize;
 
             ConfigureCallbacks();
         }
@@ -127,13 +137,11 @@ namespace Paramore.Brighter
         /// <summary>
         /// Adds a message to the outbox
         /// </summary>
-        /// <param name="request">The request that we are storing (used for id)</param>
         /// <param name="message">The message to store in the outbox</param>
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="overridingTransactionProvider">The provider of the transaction for the outbox</param>
         /// <param name="continueOnCapturedContext">Use the same thread for a callback</param>
         /// <param name="cancellationToken">Allow cancellation of the message</param>
-        /// <typeparam name="TRequest">The type of request we are saving</typeparam>
         /// <typeparam name="TTransaction">The type of the transaction used to add to the Outbox</typeparam>
         /// <exception cref="ChannelFailureException">Thrown if we cannot write to the Outbox</exception>
         public async Task AddToOutboxAsync(
@@ -187,7 +195,8 @@ namespace Paramore.Brighter
                 var written = await RetryAsync(
                     async ct =>
                     {
-                        await _asyncOutbox.AddAsync(chunk, _outboxTimeout, overridingTransactionProvider, ct).ConfigureAwait(continueOnCapturedContext);
+                        await _asyncOutbox.AddAsync(chunk, _outboxTimeout, overridingTransactionProvider, ct)
+                            .ConfigureAwait(continueOnCapturedContext);
                     },
                     continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
@@ -206,11 +215,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Adds a message to the outbox
         /// </summary>
-        /// <param name="request">The request the message is composed from (used for diagnostics)</param>
         /// <param name="message">The message we intend to send</param>
         /// <param name="overridingTransactionProvider">A transaction provider that gives us the transaction to use with the Outbox</param>
         /// <param name="requestContext">The context of the request pipeline</param>
-        /// <typeparam name="TRequest">The type of the request we have converted into a message</typeparam>
         /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
         public void AddToOutbox(
             TMessage message,
@@ -243,7 +250,7 @@ namespace Paramore.Brighter
             IEnumerable<TMessage> messages,
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
-            )
+        )
         {
             CheckOutboxOutstandingLimit();
 
@@ -262,6 +269,76 @@ namespace Paramore.Brighter
                         tags: new ActivityTagsCollection { { "MessageIds", idsAsString } }
                     )
                 );
+            }
+        }
+
+        /// <summary>
+        /// Archive Message from the outbox to the outbox archive provider
+        /// Throws any archiving exception
+        /// </summary>
+        /// <param name="millisecondsDispatchedSince">Minimum age in hours</param>
+        public void Archive(int millisecondsDispatchedSince)
+        {
+            try
+            {
+                var messages = _outBox.DispatchedMessages(millisecondsDispatchedSince, _archiveBatchSize);
+
+                s_logger.LogInformation(
+                    "Found {NumberOfMessageArchived} message to archive, batch size : {BatchSize}",
+                    messages.Count(), _archiveBatchSize
+                );
+
+                if (!messages.Any()) return;
+
+                foreach (var message in messages)
+                {
+                    _archiveProvider.ArchiveMessage(message);
+                }
+
+                _outBox.Delete(messages.Select(e => e.Id).ToArray());
+
+                s_logger.LogInformation(
+                    "Successfully archived {NumberOfMessageArchived}, batch size : {BatchSize}",
+                    messages.Count(),
+                    _archiveBatchSize
+                );
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Error while archiving from the outbox");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Archive Message from the outbox to the outbox archive provider
+        /// Throws any archiving exception
+        /// </summary>
+        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        public async Task ArchiveAsync(int millisecondsDispatchedSince, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var messages = await _asyncOutbox.DispatchedMessagesAsync(
+                    millisecondsDispatchedSince, _archiveBatchSize, cancellationToken: cancellationToken
+                );
+
+                if (!messages.Any()) return;
+                
+                foreach (var message in messages)
+                {
+                    await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
+                } 
+
+                await _asyncOutbox.DeleteAsync(messages.Select(e => e.Id).ToArray(),
+                    cancellationToken: cancellationToken
+                );
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Error while archiving from the outbox");
+                throw;
             }
         }
 
@@ -379,7 +456,7 @@ namespace Paramore.Brighter
         {
             var span = Activity.Current;
             span?.AddTag("amountToClear", amountToClear);
-            span?.AddTag("minimumAge", minimumAge);
+            span?.AddTag("millisecondsSinceSent", minimumAge);
             span?.AddTag("async", useAsync);
             span?.AddTag("bulk", useBulk);
 
@@ -430,7 +507,7 @@ namespace Paramore.Brighter
             Message message = await MapMessageAsync(request, requestContext, cancellationToken);
             return message;
         }
-        
+
         /// <summary>
         /// Given a set of messages, map them to requests
         /// </summary>
@@ -440,27 +517,27 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         public Task<List<Message>> CreateMessagesFromRequests(
-            Type requestType, 
+            Type requestType,
             IEnumerable<IRequest> requests,
             RequestContext requestContext,
             CancellationToken cancellationToken)
         {
             var parameters = new object[] { requests, requestContext, cancellationToken };
 
-            var hasAsyncPipeline = (bool) typeof(TransformPipelineBuilderAsync)
+            var hasAsyncPipeline = (bool)typeof(TransformPipelineBuilderAsync)
                 .GetMethod(nameof(TransformPipelineBuilderAsync.HasPipeline),
                     BindingFlags.Instance | BindingFlags.Public)
                 .MakeGenericMethod(requestType)
                 .Invoke(this._transformPipelineBuilderAsync, null);
-            
+
             if (hasAsyncPipeline)
             {
-                return (Task<List<Message>>) GetType()
+                return (Task<List<Message>>)GetType()
                     .GetMethod(nameof(BulkMapMessagesAsync), BindingFlags.Instance | BindingFlags.NonPublic)
                     .MakeGenericMethod(requestType)
-                    .Invoke(this, parameters); 
+                    .Invoke(this, parameters);
             }
-            
+
             var tcs = new TaskCompletionSource<List<Message>>();
             tcs.SetResult((List<Message>)GetType()
                 .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
@@ -493,7 +570,6 @@ namespace Paramore.Brighter
                 request = _transformPipelineBuilder
                     .BuildUnwrapPipeline<TRequest>()
                     .Unwrap(message, requestContext);
-
             } 
             else
             {
@@ -502,6 +578,237 @@ namespace Paramore.Brighter
         } 
 
         /// <summary>
+        /// Do we have an async outbox defined?
+        /// </summary>
+        /// <returns>true if defined</returns>
+        public bool HasAsyncOutbox()
+        {
+            return _asyncOutbox != null;
+        }
+
+        /// <summary>
+        /// Do we have a synchronous outbox defined?
+        /// </summary>
+        /// <returns>true if defined</returns>
+        public bool HasOutbox()
+        {
+            return _outBox != null;
+        }
+
+        /// <summary>
+        /// Retry an action via the policy engine
+        /// </summary>
+        /// <param name="action">The Action to try</param>
+        /// <returns></returns>
+        public bool Retry(Action action)
+        {
+            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
+            var result = policy.ExecuteAndCapture(action);
+            if (result.Outcome != OutcomeType.Successful)
+            {
+                if (result.FinalException != null)
+                {
+                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+                    CheckOutstandingMessages();
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+  
+        private async Task BackgroundDispatchUsingSync(
+            int amountToClear, 
+            int millisecondsSinceSent,
+            RequestContext requestContext,
+            Dictionary<string, object> args
+        )
+        {
+            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
+            {
+                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
+                try
+                {
+                    var messages = _outBox.OutstandingMessages(millisecondsSinceSent, amountToClear, args: args);
+                    requestContext.Span?.AddEvent(
+                        new ActivityEvent(
+                            GETMESSAGESFROMOUTBOX,
+                            tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } })
+                    );
+                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
+                        messages.Count(), amountToClear);
+                    
+                    Dispatch(messages, requestContext, args);
+                    
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Ok);
+                    s_logger.LogInformation("Messages have been cleared");
+                }
+                catch (Exception e)
+                {
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
+                    s_logger.LogError(e, "Error while dispatching from outbox");
+                }
+                finally
+                {
+                    s_clearSemaphoreToken.Release();
+                    s_backgroundClearSemaphoreToken.Release();
+                }
+
+                CheckOutstandingMessages();
+            }
+            else
+            {
+                requestContext.Span?.SetStatus(ActivityStatusCode.Error);
+                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
+            }
+        }
+        
+        private async Task BackgroundDispatchUsingAsync(
+            int amountToClear, 
+            int milliSecondsSinceSent, 
+            bool useBulk,
+            RequestContext requestContext,
+            Dictionary<string, object> args
+        )
+        {
+            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
+            {
+                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
+                try
+                {
+                    var messages =
+                        await _asyncOutbox.OutstandingMessagesAsync(milliSecondsSinceSent, amountToClear, args: args);
+                    requestContext.Span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
+
+                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
+                        messages.Count(), amountToClear);
+
+                    if (useBulk)
+                    {
+                        await BulkDispatchAsync(messages, requestContext, CancellationToken.None);
+                    }
+                    else
+                    {
+                        await DispatchAsync(messages, requestContext,false, CancellationToken.None);
+                    }
+
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Ok);
+                    s_logger.LogInformation("Messages have been cleared");
+                }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e, "Error while dispatching from outbox");
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
+                }
+                finally
+                {
+                    s_clearSemaphoreToken.Release();
+                    s_backgroundClearSemaphoreToken.Release();
+                }
+
+                CheckOutstandingMessages();
+            }
+            else
+            {
+                requestContext.Span?.SetStatus(ActivityStatusCode.Error);
+                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
+            }
+        }
+
+        private async Task BulkDispatchAsync(IEnumerable<Message> posts, CancellationToken cancellationToken)
+        {
+            var span = Activity.Current;
+            //Chunk into Topics
+            var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
+
+            foreach (var topicBatch in messagesByTopic)
+            {
+                var producer = _producerRegistry.LookupBy(topicBatch.Key);
+
+                if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
+                {
+                    var messages = topicBatch.ToArray();
+                    s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}",
+                        messages.Length, topicBatch.Key);
+                    span?.AddEvent(new ActivityEvent(BULKDISPATCHMESSAGE,
+                        tags: new ActivityTagsCollection
+                        {
+                            { "Topic", topicBatch.Key }, { "Number Of Messages", messages.Length }
+                        }));
+                    var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
+
+                    await foreach (var successfulMessage in dispatchesMessages)
+                    {
+                        if (!(producer is ISupportPublishConfirmation))
+                        {
+                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(
+                                    successfulMessage, DateTime.UtcNow, cancellationToken: ct),
+                                cancellationToken: cancellationToken);
+                        }
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("No async bulk message producer defined.");
+                }
+            }
+        }
+
+        private IEnumerable<IEnumerable<TMessage>> ChunkMessages(IEnumerable<TMessage> messages)
+        {
+            return Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)_outboxBulkChunkSize)))
+                .Select(i => new List<TMessage>(messages
+                    .Skip(i * _outboxBulkChunkSize)
+                    .Take(_outboxBulkChunkSize)
+                    .ToArray()));
+        }
+
+        private void CheckOutboxOutstandingLimit()
+        {
+            bool hasOutBox = (_outBox != null || _asyncOutbox != null);
+            if (!hasOutBox)
+                return;
+
+            s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", _outStandingCount);
+            // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
+            bool exceedsOutstandingMessageLimit =
+                _maxOutStandingMessages != -1 && _outStandingCount > _maxOutStandingMessages;
+
+            if (exceedsOutstandingMessageLimit)
+                throw new OutboxLimitReachedException(
+                    $"The outbox limit of {_maxOutStandingMessages} has been exceeded");
+        }
+
+        private void CheckOutstandingMessages()
+        {
+            var now = DateTime.UtcNow;
+            var checkInterval =
+                TimeSpan.FromMilliseconds(_maxOutStandingCheckIntervalMilliSeconds);
+
+
+            var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
+            
+            s_logger.LogDebug(
+                "Time since last check is {SecondsSinceLastCheck} seconds",
+                timeSinceLastCheck.TotalSeconds
+            );
+            
+            if (timeSinceLastCheck < checkInterval)
+            {
+                s_logger.LogDebug($"Check not ready to run yet");
+                return;
+            }
+
+            s_logger.LogDebug(
+                "Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait",
+                DateTime.UtcNow, timeSinceLastCheck.TotalSeconds
+            );
+            //This is expensive, so use a background thread
+            Task.Run(OutstandingMessagesCheck);
+        }
+        
+               /// <summary>
         /// Configure the callbacks for the producers 
         /// </summary>
         private void ConfigureCallbacks()
@@ -562,197 +869,6 @@ namespace Paramore.Brighter
             return false;
         }
         
-        /// <summary>
-        /// Do we have an async outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        public bool HasAsyncOutbox()
-        {
-            return _asyncOutbox != null;
-        }
-
-        /// <summary>
-        /// Do we have a synchronous outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        public bool HasOutbox()
-        {
-            return _outBox != null;
-        }
-
-        /// <summary>
-        /// Retry an action via the policy engine
-        /// </summary>
-        /// <param name="action">The Action to try</param>
-        /// <returns></returns>
-        public bool Retry(Action action)
-        {
-            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
-            var result = policy.ExecuteAndCapture(action);
-            if (result.Outcome != OutcomeType.Successful)
-            {
-                if (result.FinalException != null)
-                {
-                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
-                    CheckOutstandingMessages();
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-  
-        private async Task BackgroundDispatchUsingSync(
-            int amountToClear, 
-            int minimumAge,
-            RequestContext requestContext,
-            Dictionary<string, object> args
-        )
-        {
-            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
-            {
-                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
-                try
-                {
-                    var messages = _outBox.OutstandingMessages(minimumAge, amountToClear, args: args);
-                    requestContext.Span?.AddEvent(
-                        new ActivityEvent(
-                            GETMESSAGESFROMOUTBOX,
-                            tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } })
-                    );
-                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
-                        messages.Count(), amountToClear);
-                    
-                    Dispatch(messages, requestContext, args);
-                    
-                    requestContext.Span?.SetStatus(ActivityStatusCode.Ok);
-                    s_logger.LogInformation("Messages have been cleared");
-                }
-                catch (Exception e)
-                {
-                    requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
-                    s_logger.LogError(e, "Error while dispatching from outbox");
-                }
-                finally
-                {
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
-                }
-
-                CheckOutstandingMessages();
-            }
-            else
-            {
-                requestContext.Span?.SetStatus(ActivityStatusCode.Error);
-                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
-            }
-        }
-        
-        private async Task BackgroundDispatchUsingAsync(
-            int amountToClear, 
-            int minimumAge, 
-            bool useBulk,
-            RequestContext requestContext,
-            Dictionary<string, object> args
-        )
-        {
-            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
-            {
-                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
-                try
-                {
-                    var messages =
-                        await _asyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear, args: args);
-                    requestContext.Span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
-
-                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
-                        messages.Count(), amountToClear);
-
-                    if (useBulk)
-                    {
-                        await BulkDispatchAsync(messages, requestContext, CancellationToken.None);
-                    }
-                    else
-                    {
-                        await DispatchAsync(messages, requestContext,false, CancellationToken.None);
-                    }
-
-                    requestContext.Span?.SetStatus(ActivityStatusCode.Ok);
-                    s_logger.LogInformation("Messages have been cleared");
-                }
-                catch (Exception e)
-                {
-                    s_logger.LogError(e, "Error while dispatching from outbox");
-                    requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
-                }
-                finally
-                {
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
-                }
-
-                CheckOutstandingMessages();
-            }
-            else
-            {
-                requestContext.Span?.SetStatus(ActivityStatusCode.Error);
-                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
-            }
-        }
-        
-        private IEnumerable<IEnumerable<TMessage>> ChunkMessages(IEnumerable<TMessage> messages)
-        {
-            return Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)_outboxBulkChunkSize)))
-                .Select(i => new List<TMessage>(messages
-                    .Skip(i * _outboxBulkChunkSize)
-                    .Take(_outboxBulkChunkSize)
-                    .ToArray()));
-        }
-
-        private void CheckOutboxOutstandingLimit()
-        {
-            bool hasOutBox = (_outBox != null || _asyncOutbox != null);
-            if (!hasOutBox)
-                return;
-            
-            s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", _outStandingCount);
-            // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
-            bool exceedsOutstandingMessageLimit = _maxOutStandingMessages != -1 && _outStandingCount > _maxOutStandingMessages;
-
-            if (exceedsOutstandingMessageLimit)
-                throw new OutboxLimitReachedException(
-                    $"The outbox limit of {_maxOutStandingMessages} has been exceeded");
-        }
-
-        private void CheckOutstandingMessages()
-        {
-            var now = DateTime.UtcNow;
-            var checkInterval =
-                TimeSpan.FromMilliseconds(_maxOutStandingCheckIntervalMilliSeconds);
-
-
-            var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
-            
-            s_logger.LogDebug(
-                "Time since last check is {SecondsSinceLastCheck} seconds",
-                timeSinceLastCheck.TotalSeconds
-            );
-            
-            if (timeSinceLastCheck < checkInterval)
-            {
-                s_logger.LogDebug($"Check not ready to run yet");
-                return;
-            }
-
-            s_logger.LogDebug(
-                "Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait",
-                DateTime.UtcNow, timeSinceLastCheck.TotalSeconds
-            );
-            //This is expensive, so use a background thread
-            Task.Run(() => OutstandingMessagesCheck());
-        }
- 
         private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object> args = null)
         {
             foreach (var message in posts)
@@ -938,7 +1054,7 @@ namespace Paramore.Brighter
             if (publication == null)
                 throw new ConfigurationException(
                     $"No publication found for request {request.GetType().Name}");
-            
+
             Message message;
             if (_transformPipelineBuilder.HasPipeline<TRequest>())
             {
@@ -961,7 +1077,7 @@ namespace Paramore.Brighter
             if (publication == null)
                 throw new ConfigurationException(
                     $"No publication found for request {request.GetType().Name}");
-            
+
             Message message;
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
@@ -990,7 +1106,7 @@ namespace Paramore.Brighter
                     _outStandingCount = _outBox
                         .OutstandingMessages(
                             _maxOutStandingCheckIntervalMilliSeconds,
-                            args: _outBoxBag 
+                            args: _outBoxBag
                         )
                         .Count();
                     return;

@@ -185,7 +185,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var outbox = busConfiguration.Outbox;
             if (outbox == null)
             {
-                outbox = new InMemoryOutbox();
+                outbox = new InMemoryOutbox(TimeProvider.System);
             }
 
             //we create the outbox from interfaces from the determined transaction type to prevent the need
@@ -209,6 +209,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     brighterBuilder.Services.Add(asyncOutboxdescriptor);
                 }
             }
+            
+            // If no distributed locking service is added, then add the in memory variant
+            var distributedLock = busConfiguration.DistributedLock ?? new InMemoryLock();
+            brighterBuilder.Services.AddSingleton(distributedLock);
 
             if (busConfiguration.UseRpc)
             {
@@ -219,7 +223,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
            
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnExternalBusService),
                (serviceProvider) => BuildExternalBus(
-                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
+                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox, busConfiguration.ArchiveProvider
                    ),
                ServiceLifetime.Singleton));
 
@@ -319,7 +323,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             Type transactionType,
             ExternalBusConfiguration busConfiguration,
             IPolicyRegistry<string> policyRegistry,
-            IAmAnOutbox outbox) 
+            IAmAnOutbox outbox, IAmAnArchiveProvider archiver = null) 
         {
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
@@ -331,13 +335,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 MessageMapperRegistry(serviceProvider),
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),
-                RequestContextFactory(serviceProvider),
                 outbox,
+                archiver,
                 busConfiguration.OutboxBulkChunkSize,
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
                 busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
-                busConfiguration.OutBoxBag);
+                busConfiguration.OutBoxBag,
+                busConfiguration.ArchiveBatchSize);
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.InMemory.Tests.Data;
 using Xunit;
@@ -17,7 +18,8 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Arrange
             const string contextKey = "Inbox_Cache_Expiry_Tests";
             
-            var inbox = new InMemoryInbox
+            var timeProvider = new FakeTimeProvider();
+            var inbox = new InMemoryInbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
@@ -29,7 +31,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Act
             await inbox.AddAsync(command, contextKey);
             
-            await Task.Delay(500); //give the entry to time to expire
+            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
             
             //Trigger a cache clean
             SimpleCommand foundCommand = null;
@@ -57,7 +59,8 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Arrange
             const string contextKey = "Inbox_Cache_Expiry_Tests";
             
-            var inbox = new InMemoryInbox
+            var timeProvider = new FakeTimeProvider();
+            var inbox = new InMemoryInbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(500),
@@ -71,8 +74,11 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             {
                 await inbox.AddAsync(command, contextKey);
             }
+            
+            //expire these
+            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
-            await Task.Delay(2000);  //expire these items
+            await Task.Delay(500); //Give the sweep time to run
 
             var lateCommands = new SimpleCommand[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
 
