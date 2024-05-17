@@ -39,7 +39,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageHeader(_myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId, 
+                    replyTo: replyTo, contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
 

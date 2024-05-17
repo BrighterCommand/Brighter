@@ -34,7 +34,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Creates this instance.
         /// </summary>
-        /// <returns>RequestContext.</returns>
+        /// <returns>RequestContextFactory.</returns>
         RequestContext Create();
     }
 }

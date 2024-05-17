@@ -43,7 +43,9 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public HeartbeatMessageToReplyTests()
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
-            var header = new MessageHeader(Guid.NewGuid().ToString(), TOPIC, MessageType.MT_COMMAND, DateTime.UtcNow, _correlationId);
+            var header = new MessageHeader(Guid.NewGuid().ToString(), TOPIC, MessageType.MT_COMMAND, 
+                timeStamp: DateTime.UtcNow, correlationId:_correlationId
+            );
             var body = new MessageBody(MESSAGE_BODY);
             _message = new Message(header, body);
         }

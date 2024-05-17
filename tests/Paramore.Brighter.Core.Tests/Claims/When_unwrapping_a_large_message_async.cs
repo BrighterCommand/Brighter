@@ -54,7 +54,7 @@ public class AsyncLargeMessagePaylodUnwrapTests
  
         //set the headers, so that we have a claim check listed
         var message = new Message(
-            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
@@ -62,7 +62,7 @@ public class AsyncLargeMessagePaylodUnwrapTests
 
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-        var transformedMessage = await transformPipeline.UnwrapAsync(message);
+        var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
         
         //assert
         //contents should be from storage

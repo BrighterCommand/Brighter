@@ -60,7 +60,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 routingKey: new RoutingKey("fakekey")
             );
             
-            _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { connection }, messageMapperRegistry);
+            _dispatcher = new Dispatcher(
+                _commandProcessor, 
+                new List<Subscription> { connection },
+                messageMapperRegistry,
+                requestContextFactory: new InMemoryRequestContextFactory()
+            );
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = connection.RoutingKey});

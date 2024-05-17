@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -41,26 +42,29 @@ namespace Paramore.Brighter.ServiceActivator
     public class MessagePumpAsync<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
         private readonly UnwrapPipelineAsync<TRequest> _unwrapPipeline;
-        
+
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
+        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public MessagePumpAsync(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistryAsync messageMapperRegistry, 
-            IAmAMessageTransformerFactoryAsync messageTransformerFactory) 
-            : base(commandProcessorProvider)
+            IAmAMessageTransformerFactoryAsync messageTransformerFactory,
+            IAmARequestContextFactory requestContextFactory) 
+            : base(commandProcessorProvider, requestContextFactory)
         {
             var transformPipelineBuilder = new TransformPipelineBuilderAsync(messageMapperRegistry, messageTransformerFactory);
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
 
-        protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
+        protected override void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
         {
             s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
 
             var messageType = messageHeader.MessageType;
             
@@ -70,25 +74,34 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    RunDispatch(SendAsync, request);
+                    RunDispatch(SendAsync, request, requestContext);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    RunDispatch(PublishAsync, request);
+                    RunDispatch(PublishAsync, request, requestContext);
                     break;
                 }
             }
         }
 
-        protected override TRequest TranslateMessage(Message message)
+        protected override TRequest TranslateMessage(Message message, RequestContext requestContext)
         {
-            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
-            return RunTranslate(TranslateAsync, message);
+            s_logger.LogDebug(
+                "MessagePump: Translate message {Id} on thread # {ManagementThreadId}", 
+                message.Id, Thread.CurrentThread.ManagedThreadId
+            );
+            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
+            
+            return RunTranslate(TranslateAsync, message, requestContext);
         }
 
-        private static void RunDispatch(Action<TRequest, CancellationToken> act, TRequest request, CancellationToken cancellationToken = default)
+        private static void RunDispatch(
+            Action<TRequest, RequestContext, CancellationToken> act, TRequest request, 
+            RequestContext requestContext, 
+            CancellationToken cancellationToken = default
+        )
         {
             if (act == null) throw new ArgumentNullException(nameof(act));
 
@@ -102,7 +115,7 @@ namespace Paramore.Brighter.ServiceActivator
                 
                 context.OperationStarted();
                 
-                act(request, cancellationToken);
+                act(request, requestContext, cancellationToken);
 
                 context.OperationCompleted();
 
@@ -115,7 +128,12 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
         
-        private static TRequest RunTranslate(Func<Message, CancellationToken, Task<TRequest>> act, Message message, CancellationToken cancellationToken = default)
+        private static TRequest RunTranslate(
+            Func<Message, RequestContext, CancellationToken, Task<TRequest>> act, 
+            Message message, 
+            RequestContext requestContext,
+            CancellationToken cancellationToken = default
+        )
         {
             if (act == null) throw new ArgumentNullException(nameof(act));
 
@@ -128,7 +146,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                 context.OperationStarted();
 
-                var future = act(message, cancellationToken);
+                var future = act(message, requestContext, cancellationToken);
                 
                 future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
 
@@ -151,21 +169,21 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
         
-        private async void PublishAsync(TRequest request, CancellationToken cancellationToken = default)
+        private async void PublishAsync(TRequest request, RequestContext requestContext, CancellationToken cancellationToken = default)
         {
-            await CommandProcessorProvider.Get().PublishAsync(request, continueOnCapturedContext: true, cancellationToken);
+            await CommandProcessorProvider.Get().PublishAsync(request, requestContext, continueOnCapturedContext: true, cancellationToken);
         }
 
-        private async void SendAsync(TRequest request, CancellationToken cancellationToken = default)
+        private async void SendAsync(TRequest request, RequestContext requestContext, CancellationToken cancellationToken = default)
         {
-            await CommandProcessorProvider.Get().SendAsync(request, continueOnCapturedContext: true, cancellationToken);
+            await CommandProcessorProvider.Get().SendAsync(request,requestContext, continueOnCapturedContext: true, cancellationToken);
         }
 
-        private async Task<TRequest> TranslateAsync(Message message, CancellationToken cancellationToken = default)
+        private async Task<TRequest> TranslateAsync(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
         {
             try
             {
-                return await _unwrapPipeline.UnwrapAsync(message, cancellationToken);
+                return await _unwrapPipeline.UnwrapAsync(message, requestContext, cancellationToken);
             }
             catch (ConfigurationException)
             {

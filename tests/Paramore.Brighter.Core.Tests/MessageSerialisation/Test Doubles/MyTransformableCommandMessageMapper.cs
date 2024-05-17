@@ -6,11 +6,13 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
 public class MyTransformableCommandMessageMapper : IAmAMessageMapper<MyTransformableCommand>
 {
+    public IRequestContext Context { get; set; }
+
     [MySimpleWrapWith(0)]
     public Message MapToMessage(MyTransformableCommand request, Publication publication)
     {
         return new Message(
-            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), DateTime.UtcNow),
+            new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType(), timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)))
             );
     }

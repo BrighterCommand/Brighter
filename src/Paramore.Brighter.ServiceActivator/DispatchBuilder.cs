@@ -43,6 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
         private IEnumerable<Subscription> _subscriptions;
         private IAmAMessageTransformerFactory _messageTransformerFactory;
         private IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private IAmARequestContextFactory _requestContextFactory;
 
         private DispatchBuilder() { }
 
@@ -59,10 +60,15 @@ namespace Paramore.Brighter.ServiceActivator
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
         /// <param name="commandProcessorFactory">The command processor Factory.</param>
+        /// <param name="requestContextFactory">The factory used to create a request context for a pipeline</param>
         /// <returns>INeedAMessageMapper.</returns>
-        public INeedAMessageMapper CommandProcessorFactory(Func<IAmACommandProcessorProvider> commandProcessorFactory)
+        public INeedAMessageMapper CommandProcessorFactory(
+            Func<IAmACommandProcessorProvider> commandProcessorFactory,
+            IAmARequestContextFactory requestContextFactory
+            )
         {
             _commandProcessorFactory = commandProcessorFactory;
+            _requestContextFactory = requestContextFactory;
             return this;
         }
 
@@ -128,7 +134,10 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(_commandProcessorFactory, _subscriptions, _messageMapperRegistry, _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync);
+            return new Dispatcher(_commandProcessorFactory, _subscriptions, _messageMapperRegistry, 
+                _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync, 
+                _requestContextFactory
+            );
         }
 
 
@@ -145,8 +154,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
         /// <param name="commandProcessorFactory">The command processor provider Factory.</param>
+        /// <param name="requestContextFactory">The factory used to create a request context for a pipeline</param>
         /// <returns>INeedAMessageMapper.</returns>
-        INeedAMessageMapper CommandProcessorFactory(Func<IAmACommandProcessorProvider> commandProcessorFactory);
+        INeedAMessageMapper CommandProcessorFactory(
+            Func<IAmACommandProcessorProvider> commandProcessorFactory,
+            IAmARequestContextFactory requestContextFactory
+            );
     }
 
     /// <summary>

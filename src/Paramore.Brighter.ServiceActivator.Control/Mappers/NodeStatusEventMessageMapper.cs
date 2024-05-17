@@ -6,7 +6,9 @@ namespace Paramore.Brighter.ServiceActivator.Control.Mappers;
 public class NodeStatusEventMessageMapper : IAmAMessageMapper<NodeStatusEvent>
 {
     private readonly string topicName = "control.heartbeat";
-    
+
+    public IRequestContext Context { get; set; }
+
     public Message MapToMessage(NodeStatusEvent request, Publication publication)
     {
         var header = new MessageHeader(messageId: request.Id, topic: topicName, messageType: MessageType.MT_EVENT);

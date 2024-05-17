@@ -32,7 +32,7 @@ public class MessageUnwrapRequestTests
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         _message = new Message(
-            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
@@ -44,7 +44,7 @@ public class MessageUnwrapRequestTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = _transformPipeline.Unwrap(_message);
+        var request = _transformPipeline.Unwrap(_message, new RequestContext());
         
         //assert
         request.Value.Should().Be( MySimpleTransformAsync.TRANSFORM_VALUE);

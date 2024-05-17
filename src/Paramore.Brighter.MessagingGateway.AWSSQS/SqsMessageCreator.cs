@@ -61,6 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var receiptHandle = HeaderResult<string>.Empty();
             var replyTo = HeaderResult<string>.Empty();
             
+            //TODO:CLOUD_EVENTS parse from headers
 
             Message message;
             try
@@ -75,19 +76,22 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 replyTo = ReadReplyTo(sqsMessage);
                 receiptHandle = ReadReceiptHandle(sqsMessage);
 
-                var messageHeader = timeStamp.Success
-                    ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, 0)
-                    : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
+                var messageHeader = new MessageHeader(
+                    messageId: messageId.Result,
+                    topic: topic.Result,
+                    messageType.Result,
+                    source: null,
+                    type: "",
+                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                    correlationId:correlationId.Success ? correlationId.Result : "",
+                    replyTo: replyTo.Success ? replyTo.Result : "",
+                    contentType: contentType.Success ? contentType.Result : "",
+                    handledCount: handledCount.Result,
+                    dataSchema: null,
+                    subject: null,
+                    delayedMilliseconds: 0
+                );
 
-                if (correlationId.Success)
-                    messageHeader.CorrelationId = correlationId.Result;
-
-                if (replyTo.Success)
-                    messageHeader.ReplyTo = replyTo.Result;
-
-                if (contentType.Success)
-                    messageHeader.ContentType = contentType.Result;
-                   
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage, messageHeader.ContentType));
                     
                 //deserialize the bag 

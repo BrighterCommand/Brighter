@@ -26,7 +26,8 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _topic = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId, 
+                    replyTo:replyTo, contentType:contentType),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
 

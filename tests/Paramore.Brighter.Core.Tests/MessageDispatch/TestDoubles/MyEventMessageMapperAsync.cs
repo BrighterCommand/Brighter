@@ -33,6 +33,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
     internal class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
     {
+        public IRequestContext Context { get; set; }
+
         public Task<Message> MapToMessageAsync(MyEvent request, Publication publication, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<Message>();

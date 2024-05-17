@@ -22,7 +22,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var timeProvider = new FakeTimeProvider();
             var outbox = new InMemoryOutbox(timeProvider);
             var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
             var messages = new Message[]
             {
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var timeProvider = new FakeTimeProvider();
             var outbox = new InMemoryOutbox(timeProvider);
             var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
             var messages = new Message[]
             {
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var timeProvider = new FakeTimeProvider();
             var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
             Message oldMessage = new MessageTestDataBuilder();
             commandProcessor.DepositPost(oldMessage.ToStubRequest());
@@ -128,7 +128,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var timeProvider = new FakeTimeProvider();
             var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
             Message oldMessage = new MessageTestDataBuilder();
             commandProcessor.DepositPost(oldMessage.ToStubRequest());

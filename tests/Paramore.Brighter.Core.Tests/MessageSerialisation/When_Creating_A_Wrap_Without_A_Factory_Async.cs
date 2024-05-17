@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapperAsync");
 
         //wrap should just do message mapper                                          
-        var message = await _transformPipeline.WrapAsync(_myCommand, _publication);
+        var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

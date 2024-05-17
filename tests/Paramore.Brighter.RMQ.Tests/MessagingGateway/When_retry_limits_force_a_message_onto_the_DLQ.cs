@@ -36,7 +36,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Requeue" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId, "", contentType),
+                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: correlationId, 
+                    contentType: contentType
+                ),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -96,7 +98,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 null);
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
+                null, new InMemoryRequestContextFactory())
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };

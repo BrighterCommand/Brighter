@@ -61,19 +61,23 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 timeStamp = ReadTimestamp();
                 replyTo = ReadReplyTo();
                 receiptHandle = ReadReceiptHandle(sqsMessage);
+                
+                //TODO:CLOUD_EVENTS parse from headers
 
-                var messageHeader = timeStamp.Success
-                    ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, 0)
-                    : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
-
-                if (correlationId.Success)
-                    messageHeader.CorrelationId = correlationId.Result;
-
-                if (replyTo.Success)
-                    messageHeader.ReplyTo = replyTo.Result;
-
-                if (contentType.Success)
-                    messageHeader.ContentType = contentType.Result;
+                var messageHeader = new MessageHeader(
+                    messageId: messageId.Result,
+                    topic: topic.Result,
+                    messageType: messageType.Result,
+                    source: null,
+                    type: "",
+                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                    correlationId: correlationId.Success ? correlationId.Result : "",
+                    replyTo: replyTo.Result,
+                    contentType: contentType.Result,
+                    handledCount: handledCount.Result,
+                    dataSchema: null,
+                    subject: null,
+                    delayedMilliseconds: 0);
 
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage));
 

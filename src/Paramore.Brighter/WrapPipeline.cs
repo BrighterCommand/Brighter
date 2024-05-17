@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,7 +48,8 @@ namespace Paramore.Brighter
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
-            IEnumerable<IAmAMessageTransform> transforms)
+            IEnumerable<IAmAMessageTransform> transforms
+            )
         {
             MessageMapper = messageMapper;
             Transforms = transforms;
@@ -75,12 +77,21 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="request">The request to wrap</param>
+        /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <param name="publication">The publication for this channel, provides metadata such as topic or Cloud Events attributes</param>
         /// <returns>The message created from the request via the pipeline</returns>
-        public Message Wrap(TRequest request, Publication publication)
+        public Message Wrap(TRequest request, RequestContext requestContext, Publication publication)
         {
+            requestContext.Span ??= Activity.Current;
+
+            MessageMapper.Context = requestContext;
             var message = MessageMapper.MapToMessage(request, publication);
-            Transforms.Each(transform => message = transform.Wrap(message, publication));
+            
+            Transforms.Each(transform =>
+            {
+                transform.Context = requestContext;
+                message = transform.Wrap(message, publication);
+            });
             return message;
         }
     }

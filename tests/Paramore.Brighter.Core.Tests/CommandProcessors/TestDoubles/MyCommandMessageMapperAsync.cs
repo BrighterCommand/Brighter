@@ -32,6 +32,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyCommandMessageMapperAsync : IAmAMessageMapperAsync<MyCommand>
     {
+        public IRequestContext Context { get; set; }
+
         public async Task<Message> MapToMessageAsync(MyCommand request, Publication publication, CancellationToken cancellationToken = default)
         {
             using MemoryStream stream = new MemoryStream();

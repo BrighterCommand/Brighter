@@ -9,6 +9,8 @@ public class TestTransform : IAmAMessageTransformAsync, IAmAMessageTransform
     public List<object> WrapInitializerList { get; set; } = new List<object>();
     public List<object> UnwrapInitializerList { get; set; } = new List<object>();
     
+    public IRequestContext Context { get; set; }
+    
     public void Dispose()
     {
         WrapInitializerList.Clear();

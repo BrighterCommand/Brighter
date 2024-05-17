@@ -67,7 +67,10 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactory">The transform factory, can be null</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
-        public TransformPipelineBuilder(IAmAMessageMapperRegistry mapperRegistry, IAmAMessageTransformerFactory messageTransformerFactory)
+        public TransformPipelineBuilder(
+            IAmAMessageMapperRegistry mapperRegistry, 
+            IAmAMessageTransformerFactory messageTransformerFactory
+            )
         {
             _mapperRegistry = mapperRegistry ??
                               throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
@@ -77,10 +80,9 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Builds a pipeline.
-        /// Anything marked with <see cref=""/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
-        /// Anything marked with
+        /// Anything marked with <see cref="WrapWithAttribute"/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
         /// </summary>
-        /// <typeparam name="TRequest"></typeparam>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
         public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
         {
@@ -114,6 +116,13 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <summary>
+        /// Builds a pipeline.
+        /// Anything marked with <see cref="UnwrapWithAttribute"/> will run after the <see cref="IAmAMessageMapper{TRequest}"/>
+        /// </summary>
+        /// <param name="requestContext">The context of this request</param>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <returns></returns>
         public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>() where TRequest : class, IRequest
         {
             try

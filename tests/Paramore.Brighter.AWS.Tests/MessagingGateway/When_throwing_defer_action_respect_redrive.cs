@@ -60,7 +60,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: replyTo, contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -106,7 +107,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
+                null, new InMemoryRequestContextFactory())
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };

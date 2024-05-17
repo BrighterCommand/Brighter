@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <returns>Configuration values</returns>
         public override object[] InitializerParams()
         {
-            return new object[] { _compressionMethod};
+            return [_compressionMethod];
         }
 
         /// <summary>

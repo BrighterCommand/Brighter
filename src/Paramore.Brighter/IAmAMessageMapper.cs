@@ -40,6 +40,12 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapper<TRequest> : IAmAMessageMapper where TRequest : class, IRequest
     {
         /// <summary>
+        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+        /// </summary>
+        /// <value>The context.</value>
+        IRequestContext Context { get; set; }
+        
+        /// <summary>
         /// Maps to message.
         /// </summary>
         /// <param name="request">The request.</param>

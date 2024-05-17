@@ -72,10 +72,24 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 }
                 else
                 {
-                    var messageHeader = timeStamp.Success
-                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, 
-                            handledCount.Result, delayedMilliseconds.Result)
-                        : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
+                    //TODO:CLOUD_EVENTS parse from headers
+                    
+                    var messageHeader = new MessageHeader(
+                        messageId: messageId.Result,
+                        topic: topic.Result,
+                        messageType.Result,
+                        source: null,
+                        type: "",
+                        timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                        correlationId: "",
+                        replyTo: replyTo.Result,
+                        contentType: "",
+                        handledCount: handledCount.Result,
+                        dataSchema: null,
+                        subject: null,
+                        delayedMilliseconds: delayedMilliseconds.Result
+                        );
+                        
 
                     //this effectively transfers ownership of our buffer 
                     message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type));

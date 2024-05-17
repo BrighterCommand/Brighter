@@ -38,7 +38,7 @@ public class MessageWrapRequestTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = _transformPipeline.Wrap(_myCommand, _publication);
+        var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
         
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());

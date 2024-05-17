@@ -22,12 +22,12 @@ Because some Cloud Events values are user-defined we will need to allow user-def
 
 To pass the publication to the mapper, we have to know the publication for the topic that we are sending to. We already have a Producer Registry and it makes sense to add the Publication to that, so that we can look up the Publication used to build the Producer. The Producer Registry is part of the External Bus. The Message Mapper is called by the Command Processor today, not by the External Bus. As we only need a message mapper with an external bus, this dependency can be moved into the external bus, and out of the CommandProcessor.
 
-
 This will result in the following breaking changes:
 
 * Message Id will change from a GUID to a string
 * Correlation Id will change from a GUID to a string
 * Our Bag should support our usage of OTel via [CloudEvents attributes](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md) over an explicit property; we should revise how we handle OTel
+* Claim Check will start to use DataRef instead of a value in the Header Bag
 
 We will need to add the following CloudEvents properties which have no equivalent in MessageHeader:
 
@@ -37,24 +37,13 @@ We will need to add the following CloudEvents properties which have no equivalen
 * Subject: a string giving the subject of the event
 * Time: a string giving the time of the event
 * SpecVersion: a string giving the version of the CloudEvents spec
+* DataRef: Used with a claim check
+* TraceParent: Used for OTel
+* TraceState: Used for OTel
 
 Our transports will need to be able to interpret metadata where it comes from cloud events, and where it comes from native headers (see the [AMQP specification for CloudEvents](https://github.com/cloudevents/spec/blob/main/cloudevents/bindings/amqp-protocol-binding.md) as an example). In all cases we should try to read native headers first, then CloudEvents headers and overwrite the native headers with the CloudEvents headers if they exist. Our existing option types for reading headers should support this approach. When writing, we should write both native and CloudEvents headers.
 
 In addition we have a number of Brighter metadata fields that are not part of CloudEvents. We will need to decide how to handle these. We could add them as extensions to CloudEvents, or we could add them as custom header values. We will need to decide on a case by case basis, depending on the transport's native headers.
-
-To identify CloudEvents properties we will introduce a CloudEvents attribute to markup header properties:
-
-[CloudEventAttribute type: CloudEventsAttribute.Required]
-
-Where CloudEventsAttribute.Required is an enum with the following values:
-
-* Required: The property is required by CloudEvents
-* Optional: The property is optional by CloudEvents
-* Extension: The property is an extension to CloudEvents
-* NotUsed: The property is not used by CloudEvents
-
-Where header values are Required, we should not allow them to be empty or null and should throw an exception from the constructor. This will impact our existing MT_EMPTY message, which will instead need to use null object values.
-
 
 ## Consequences
                   

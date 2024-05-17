@@ -6,6 +6,8 @@ namespace Paramore.Brighter.Monitoring.Mappers
 {
     public class MonitorEventMessageMapper : IAmAMessageMapper<MonitorEvent>
     {
+        public IRequestContext Context { get; set; }
+
         /// <summary>
         /// Maps to message.
         /// </summary>

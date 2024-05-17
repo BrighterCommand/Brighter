@@ -38,6 +38,12 @@ namespace Paramore.Brighter
     public interface IAmAMessageTransformAsync : IDisposable
     {
         /// <summary>
+        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+        /// </summary>
+        /// <value>The context.</value>
+        IRequestContext Context { get; set; }
+        
+        /// <summary>
         /// Initializes from the <see cref="TransformAttribute"/> wrap attribute parameters. Use when you need to provide parameter information from the
         /// attribute to the transform. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
         /// the attribute itself can only use primitives.
