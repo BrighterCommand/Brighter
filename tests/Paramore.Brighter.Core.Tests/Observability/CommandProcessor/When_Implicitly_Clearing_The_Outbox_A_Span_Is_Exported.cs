@@ -14,11 +14,11 @@ using Polly;
 using Polly.Registry;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.Observability;
+namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor;
 [Collection("Observability")]
 public class ImplicitClearingObservabilityTests : IDisposable
 {
-    private readonly CommandProcessor _commandProcessor;
+    private readonly Brighter.CommandProcessor _commandProcessor;
     private readonly MyEvent _event;
     private readonly TracerProvider _traceProvider;
     private readonly List<Activity> _exportedActivities;
@@ -57,7 +57,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
             .Handle<Exception>()
             .Retry();
 
-        var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}};
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
             {topic, new FakeMessageProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
@@ -73,9 +73,9 @@ public class ImplicitClearingObservabilityTests : IDisposable
             maxOutStandingMessages: -1
         );
 
-        CommandProcessor.ClearServiceBus();
+        Brighter.CommandProcessor.ClearServiceBus();
         
-        _commandProcessor = new CommandProcessor(
+        _commandProcessor = new Brighter.CommandProcessor(
             registry, 
             handlerFactory, 
             new InMemoryRequestContextFactory(),
@@ -108,7 +108,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
 
     public void Dispose()
     {
-        CommandProcessor.ClearServiceBus();
+        Brighter.CommandProcessor.ClearServiceBus();
         _traceProvider?.Dispose();
     }
 }

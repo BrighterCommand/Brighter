@@ -33,6 +33,7 @@ using System.Transactions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Exception = System.Exception;
@@ -56,11 +57,13 @@ namespace Paramore.Brighter
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
+        private readonly BrighterTracer _tracer;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
         // the following are not readonly to allow setting them to null on dispose
         private readonly IAmAChannelFactory _responseChannelFactory;
+        private readonly InstrumentationOptions _instrumentationOptions;
 
         private const string CREATEEVENT = "Cloud Events Create: {0}";
         private const string CLEAROUTBOX = "Clear Outbox";
@@ -111,13 +114,16 @@ namespace Paramore.Brighter
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
+        /// <param name="tracer">What is the tracer we will use for telemetry</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        public CommandProcessor(IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
-            InboxConfiguration inboxConfiguration = null)
+            InboxConfiguration inboxConfiguration = null,
+            BrighterTracer tracer = null,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _subscriberRegistry = subscriberRegistry;
 
@@ -134,6 +140,8 @@ namespace Paramore.Brighter
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+            _tracer = tracer;
+            _instrumentationOptions = instrumentationOptions;
         }
 
         /// <summary>
@@ -150,6 +158,8 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
+        /// <param name="tracer">What is the tracer we will use for telemetry</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -159,11 +169,14 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IEnumerable<Subscription> replySubscriptions = null,
-            IAmAChannelFactory responseChannelFactory = null
-            )
+            IAmAChannelFactory responseChannelFactory = null,
+            BrighterTracer tracer = null,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
         {
             _responseChannelFactory = responseChannelFactory;
+            _tracer = tracer;
+            _instrumentationOptions = instrumentationOptions;
             _replySubscriptions = replySubscriptions;
 
             InitExtServiceBus(bus); 
@@ -179,20 +192,25 @@ namespace Paramore.Brighter
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
-        public CommandProcessor(
-            IAmARequestContextFactory requestContextFactory,
+        /// <param name="tracer">What is the tracer we will use for telemetry</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        public CommandProcessor(IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAnExternalBusService bus,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IEnumerable<Subscription> replySubscriptions = null)
+            IEnumerable<Subscription> replySubscriptions = null,
+            BrighterTracer tracer = null,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _replySubscriptions = replySubscriptions;
-            
+            _tracer = tracer;
+            _instrumentationOptions = instrumentationOptions;
+
             InitExtServiceBus(bus); 
         }
 
@@ -209,7 +227,7 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
-            var span = CreateSpan(string.Format(PROCESSCOMMAND, typeof(T).Name));
+            var span = _tracer?.CreateSpan(CommandProcessorSpan.Send, command, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);

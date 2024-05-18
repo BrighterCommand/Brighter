@@ -14,11 +14,11 @@ using Polly;
 using Polly.Registry;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.Observability;
+namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor;
 [Collection("Observability")]
 public class ImplicitClearingAsyncObservabilityTests : IDisposable
 {
-    private readonly CommandProcessor _commandProcessor;
+    private readonly Brighter.CommandProcessor _commandProcessor;
     private readonly MyEvent _event;
     private readonly TracerProvider _traceProvider;
     private readonly List<Activity> _exportedActivities;
@@ -62,7 +62,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
             .Handle<Exception>()
             .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-        var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {Brighter.CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
             {topic, new FakeMessageProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
@@ -78,8 +78,8 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
             maxOutStandingMessages: -1
         );
         
-        CommandProcessor.ClearServiceBus();
-        _commandProcessor = new CommandProcessor(
+        Brighter.CommandProcessor.ClearServiceBus();
+        _commandProcessor = new Brighter.CommandProcessor(
             registry, 
             handlerFactory, 
             new InMemoryRequestContextFactory(), 
@@ -112,7 +112,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
 
     public void Dispose()
     {
-        CommandProcessor.ClearServiceBus();
+        Brighter.CommandProcessor.ClearServiceBus();
         _traceProvider?.Dispose();
     }
 }

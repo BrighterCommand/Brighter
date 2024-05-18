@@ -36,7 +36,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Observability\CommandProcessor\" />
     <Folder Include="Observability\ServiceActivator\" />
   </ItemGroup>
 </Project>

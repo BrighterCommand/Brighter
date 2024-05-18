@@ -32,6 +32,7 @@ using Paramore.Brighter.Logging;
 using System.Text.Json;
 using System.Transactions;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -62,6 +63,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = new BrighterOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
+            services.TryAddSingleton<BrighterTracer>();
 
             return BrighterHandlerBuilder(services, options);
         }
