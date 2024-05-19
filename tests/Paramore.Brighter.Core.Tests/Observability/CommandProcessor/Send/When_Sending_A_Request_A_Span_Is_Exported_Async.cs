@@ -42,7 +42,7 @@ public class AsyncCommandProcessorSendObservabilityTests
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
         var receivedMessages = new Dictionary<string, string>();
-        var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(receivedMessages));
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(receivedMessages));
         
         var retryPolicy = Policy
             .Handle<Exception>()

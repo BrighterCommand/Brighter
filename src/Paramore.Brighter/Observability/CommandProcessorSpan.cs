@@ -26,5 +26,7 @@ namespace Paramore.Brighter.Observability;
 
 public enum CommandProcessorSpan
 {
-    Send = 0
+    Send = 0,       //Send a command
+    Create = 1,     //A batch operation, such as publishing an event or clearing a message
+    Publish = 2     //Publish an event
 }

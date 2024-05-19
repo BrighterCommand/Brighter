@@ -24,29 +24,23 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter
 {
-    internal class TestHandlerFactorySync<TRequest, TRequestHandler> : IAmAHandlerFactorySync
-        where TRequest : class, IRequest
-        where TRequestHandler : class, IHandleRequests<TRequest>
+    /// <summary>
+    /// A simple handler factory that creates a handler for a given request type.
+    /// Intended for use with tests, where you want to create a handler for a given request type
+    /// </summary>
+    public class SimpleHandlerFactorySync(Func<Type, IHandleRequests> factoryMethod) : IAmAHandlerFactorySync
     {
-        private readonly Func<TRequestHandler> _factoryMethod;
-
-        public TestHandlerFactorySync(Func<TRequestHandler> factoryMethod)
-        {
-            _factoryMethod = factoryMethod;
-        }
-
         public IHandleRequests Create(Type handlerType)
         {
-            return _factoryMethod();
+            return factoryMethod(handlerType);
         }
 
         public void Release(IHandleRequests handler)
         {
             var disposable = handler as IDisposable;
             disposable?.Dispose();
-            handler = null;
         }
     }
 }

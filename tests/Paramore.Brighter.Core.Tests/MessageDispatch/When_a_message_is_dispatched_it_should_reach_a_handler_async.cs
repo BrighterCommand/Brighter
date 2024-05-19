@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsyncWithContinuation>();
 
-            var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyEventHandlerAsyncWithContinuation>(() => new MyEventHandlerAsyncWithContinuation());
+            var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyEventHandlerAsyncWithContinuation());
             var commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,

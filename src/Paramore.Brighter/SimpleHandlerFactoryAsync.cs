@@ -24,40 +24,35 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter
 {
-    class TestHandlerFactoryAsync<TRequest, TRequestHandler> : IAmAHandlerFactorySync, IAmAHandlerFactoryAsync where TRequest : class, IRequest where TRequestHandler : class, IHandleRequestsAsync<TRequest>
+    /// <summary>
+    /// A simple handler factory that creates a handler for a given request type.
+    /// Intended for use with tests, where you want to create a handler for a given request type
+    /// </summary>
+    public class SimpleHandlerFactoryAsync(Func<Type, IHandleRequestsAsync> factoryMethod) : IAmAHandlerFactoryAsync
     {
-        private readonly Func<TRequestHandler> _factoryMethod;
-
-        public TestHandlerFactoryAsync(Func<TRequestHandler> factoryMethod)
+        /// <summary>
+        /// Create a handler for a given request type
+        /// </summary>
+        /// <param name="handlerType">The type of request</param>
+        /// <returns></returns>
+        public IHandleRequestsAsync Create(Type handlerType)
         {
-            _factoryMethod = factoryMethod;
+            return factoryMethod(handlerType);
         }
 
-        IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
-        {
-            return _factoryMethod();
-        }
-
+        /// <summary>
+        /// Dispose of the handler
+        /// </summary>
+        /// <param name="handler">The handler to dispose</param>
         public void Release(IHandleRequestsAsync handler)
         {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
+            if (handler is IDisposable disposable)
             {
                 disposable.Dispose();
             }
             handler = null;
-        }
-
-        public IHandleRequests Create(Type handlerType)
-        {
-            return Create(handlerType);
-        }
-
-        public void Release(IHandleRequests handler)
-        {
-            Release(handler);
         }
     }
 }

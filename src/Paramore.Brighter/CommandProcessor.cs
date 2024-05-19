@@ -312,10 +312,11 @@ namespace Paramore.Brighter
         {
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
-
-            var span = CreateSpan(string.Format(PROCESSEVENT, typeof(T).Name));
+            
+            var span = _tracer?.CreateSpan(CommandProcessorSpan.Create, @event, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
+            var handlerSpans = new Dictionary<string, Activity>();
             try
             {
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
@@ -333,13 +334,18 @@ namespace Paramore.Brighter
                 {
                     try
                     {
-                        handleRequests.Handle(@event);
+                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpan.Publish, @event, span, options: _instrumentationOptions);
+                         context.Span =handlerSpans[handleRequests.Name.ToString()];
+                         handleRequests.Handle(@event);
+                         context.Span = span;
                     }
                     catch (Exception e)
                     {
                         exceptions.Add(e);
                     }
                 }
+                
+                LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
                 {
@@ -351,6 +357,7 @@ namespace Paramore.Brighter
             }
             finally
             {
+                EndChildSpans(handlerSpans);
                 EndSpan(span);
             }
         }
@@ -1005,6 +1012,15 @@ namespace Paramore.Brighter
                     $"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
         
+        private void EndChildSpans(Dictionary<string, Activity> handlerSpans)
+        {
+            if (!handlerSpans.Any()) return;
+            
+            foreach (var handlerSpan in handlerSpans)
+            {
+                EndSpan(handlerSpan.Value);
+            }
+        }
   
         private void EndSpan(Activity span)
         {
@@ -1039,24 +1055,7 @@ namespace Paramore.Brighter
                     return true;
             }
         }
-        
-        private bool Retry(Action action)
-        {
-            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
-            var result = policy.ExecuteAndCapture(action);
-            if (result.Outcome != OutcomeType.Successful)
-            {
-                if (result.FinalException != null)
-                {
-                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-        
+ 
         // Create an instance of the ExternalBusService if one not already set for this app. Note that we do not support reinitialization here, so once you have
         // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         // if needed as a "get out of gaol" card.
@@ -1079,6 +1078,43 @@ namespace Paramore.Brighter
             context.FeatureSwitches = _featureSwitchRegistry;
             return context;
         }
+        
+        private void LinkSpans(Dictionary<string, Activity> handlerSpans)
+        {
+          if (!handlerSpans.Any()) return;
+          
+          var handlerNames = handlerSpans.Keys.ToList();
+          foreach (var handlerName in handlerNames)
+          {
+             var handlerSpan = handlerSpans[handlerName];
+             foreach (var hs in handlerSpans)
+             {
+                if (hs.Key != handlerName)
+                {
+                    //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released
+                    //handlerspan.AddLink(new ActivityLink(handlerspan.Value.Context));
+                }
+             }
+          }
+        }
+        
+        private bool Retry(Action action)
+        {
+            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
+            var result = policy.ExecuteAndCapture(action);
+            if (result.Outcome != OutcomeType.Successful)
+            {
+                if (result.FinalException != null)
+                {
+                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
         
         private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)
         {

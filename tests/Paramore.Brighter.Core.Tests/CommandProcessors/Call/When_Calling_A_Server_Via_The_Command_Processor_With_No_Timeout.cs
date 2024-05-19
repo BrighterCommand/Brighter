@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
-            var handlerFactory = new TestHandlerFactorySync<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
+            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyResponseHandler());
 
             var retryPolicy = Policy
                 .Handle<Exception>()

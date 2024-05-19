@@ -35,7 +35,7 @@ public class RequestContextFromFactoryTests : IDisposable
        //arrange
        var registry = new SubscriberRegistry();
        registry.Register<MyCommand, MyContextAwareCommandHandler>();
-       var handlerFactory = new TestHandlerFactorySync<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler());
+       var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler());
        var myCommand = new MyCommand();
 
        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
@@ -57,7 +57,7 @@ public class RequestContextFromFactoryTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyContextAwareCommandHandlerAsync>();
-        var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyContextAwareCommandHandlerAsync>(() => new MyContextAwareCommandHandlerAsync());
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareCommandHandlerAsync());
         var myCommand = new MyCommand();
 
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
@@ -79,7 +79,7 @@ public class RequestContextFromFactoryTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.Register<MyEvent, MyContextAwareEventHandler>();
-        var handlerFactory = new TestHandlerFactorySync<MyEvent, MyContextAwareEventHandler>(() => new MyContextAwareEventHandler());
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareEventHandler());
         var myEvent = new MyEvent();
 
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
@@ -101,7 +101,7 @@ public class RequestContextFromFactoryTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyEvent, MyContextAwareEventHandlerAsync>();
-        var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyContextAwareEventHandlerAsync>(() => new MyContextAwareEventHandlerAsync());
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareEventHandlerAsync());
         var myEvent = new MyEvent();
 
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());

@@ -39,7 +39,7 @@ public class CommandProcessorSendObservabilityTests
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
         
-        var handlerFactory = new TestHandlerFactorySync<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler());
         
         var retryPolicy = Policy
             .Handle<Exception>()
