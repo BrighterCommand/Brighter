@@ -20,8 +20,8 @@ public class CommandProcessorSendObservabilityTests
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
-    private readonly BrighterTracer _tracer;
-    private readonly Activity _parentActivity;
+    private BrighterTracer _tracer;
+    private Activity _parentActivity;
 
     public CommandProcessorSendObservabilityTests()
     {
@@ -35,8 +35,7 @@ public class CommandProcessorSendObservabilityTests
             .Build();
         
         _tracer = new BrighterTracer();
-        _parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
-        
+       
         Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
@@ -61,13 +60,16 @@ public class CommandProcessorSendObservabilityTests
     }
 
     [Fact]
-    public void When_Sending_A_Request_A_Span_Is_Exported()
+    public void When_Sending_A_Request_With_Span_In_Context_A_Child_Span_Is_Exported()
     {
-        //act
-        var command = new MyCommand{Value = "My Test String"};
+        //arrange
+        _parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
+        
+         var command = new MyCommand{Value = "My Test String"};
         var context = new RequestContext();
         context.Span = _parentActivity;
         
+        //act
         _commandProcessor.Send(command, context);
         _parentActivity.Stop();
         
@@ -77,6 +79,69 @@ public class CommandProcessorSendObservabilityTests
         _exportedActivities.Count.Should().Be(2);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
         _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpan.Send.ToSpanName()}").Should().BeTrue();
+        _exportedActivities.First().ParentId.Should().Be(_parentActivity.Id);
+        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && (string)t.Value == command.Id).Should().BeTrue();
+        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestType && (string)t.Value == nameof(MyCommand)).Should().BeTrue(); 
+        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && (string)t.Value == JsonSerializer.Serialize(command)).Should().BeTrue();
+        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.Operation && (string)t.Value == "send").Should().BeTrue();
+        
+        _exportedActivities.First().Events.Count().Should().Be(1);
+        _exportedActivities.First().Events.First().Name.Should().Be(nameof(MyCommandHandler));
+        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyCommandHandler)).Should().BeTrue();
+        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value == true).Should().BeTrue();
+    }
+    
+    [Fact]
+    public void When_Sending_A_Request_With_Span_In_ActivityCurrent_A_Child_Span_Is_Exported()
+    {
+        //arrange
+        _parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
+        
+        var command = new MyCommand{Value = "My Test String"};
+        var context = new RequestContext();
+        Activity.Current = _parentActivity;
+        
+        //act
+        _commandProcessor.Send(command, context);
+        _parentActivity.Stop();
+        
+        _traceProvider.ForceFlush();
+        
+        //assert
+        _exportedActivities.Count.Should().Be(2);
+        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpan.Send.ToSpanName()}").Should().BeTrue();
+        _exportedActivities.First().ParentId.Should().Be(_parentActivity.Id);
+        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && (string)t.Value == command.Id).Should().BeTrue();
+        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestType && (string)t.Value == nameof(MyCommand)).Should().BeTrue(); 
+        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && (string)t.Value == JsonSerializer.Serialize(command)).Should().BeTrue();
+        _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.Operation && (string)t.Value == "send").Should().BeTrue();
+        
+        _exportedActivities.First().Events.Count().Should().Be(1);
+        _exportedActivities.First().Events.First().Name.Should().Be(nameof(MyCommandHandler));
+        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyCommandHandler)).Should().BeTrue();
+        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+        _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value == true).Should().BeTrue();
+    }
+    
+    [Fact]
+    public void When_Sending_A_Request_With_No_Context_Or_Span_In_ActivityCurrent_A_Root_Span_Is_Exported()
+    {
+        //arrange
+        var command = new MyCommand{Value = "My Test String"};
+        var context = new RequestContext();
+        
+        //act
+        _commandProcessor.Send(command, context);
+        
+        _traceProvider.ForceFlush();
+        
+        //assert
+        _exportedActivities.Count.Should().Be(1);
+        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpan.Send.ToSpanName()}").Should().BeTrue();
+        _exportedActivities.First().ParentId.Should().BeNull();
         _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && (string)t.Value == command.Id).Should().BeTrue();
         _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestType && (string)t.Value == nameof(MyCommand)).Should().BeTrue(); 
         _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && (string)t.Value == JsonSerializer.Serialize(command)).Should().BeTrue();
