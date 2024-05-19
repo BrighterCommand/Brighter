@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Observability\CommandProcessor\Fallback\" />
     <Folder Include="Observability\ServiceActivator\" />
   </ItemGroup>
 </Project>

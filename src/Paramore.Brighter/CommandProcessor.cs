@@ -272,7 +272,7 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = CreateSpan(string.Format(PROCESSCOMMAND, typeof(T).Name));
+            var span = _tracer?.CreateSpan(CommandProcessorSpan.Send, command, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
