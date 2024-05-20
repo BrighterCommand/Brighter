@@ -329,7 +329,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.ServiceAc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Sqlite.Dapper", "src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj", "{3384FBF0-5DCB-452D-8288-FAD1D0023089}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.Azure", "Paramore.Brighter.Locking.Azure\Paramore.Brighter.Locking.Azure.csproj", "{021F3B51-A640-4C0D-9B47-FB4E32DF6715}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.Azure", "src\Paramore.Brighter.Locking.Azure\Paramore.Brighter.Locking.Azure.csproj", "{021F3B51-A640-4C0D-9B47-FB4E32DF6715}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
