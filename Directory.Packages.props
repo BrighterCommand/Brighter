@@ -77,7 +77,7 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="5.0.1" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="3.2.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.2.2" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.1" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageVersion Include="System.Text.Json" Version="8.0.3" />
@@ -90,7 +90,7 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.1' ">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="5.0.17" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.17" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="5.0.17" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.4" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.17" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="5.0.17" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.17" />
@@ -99,7 +99,7 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="6.0.26" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.26" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.26" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.4" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.26" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="6.0.26" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.26" />
@@ -108,7 +108,7 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'net7.0' ">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="7.0.16" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.16" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.16" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.4" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.16" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="7.0.16" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.16" />
