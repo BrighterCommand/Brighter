@@ -25,7 +25,7 @@
     </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Paramore.Brighter.Locking.Azure\Paramore.Brighter.Locking.Azure.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.Azure\Paramore.Brighter.Locking.Azure.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Archive.Azure\Paramore.Brighter.Archive.Azure.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.Azure\Paramore.Brighter.Transformers.Azure.csproj" />
   </ItemGroup>
