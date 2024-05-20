@@ -385,11 +385,12 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = CreateSpan(string.Format(PROCESSEVENT, typeof(T).Name));
+            var span = _tracer?.CreateSpan(CommandProcessorSpan.Create, @event, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
-            try
+            var handlerSpans = new Dictionary<string, Activity>();
+             try
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
                     @event.Id);
@@ -402,17 +403,22 @@ namespace Paramore.Brighter
                 );
 
                 var exceptions = new List<Exception>();
-                foreach (var handler in handlerChain)
+                foreach (var handleRequests in handlerChain)
                 {
                     try
                     {
-                        await handler.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpan.Publish, @event, span, options: _instrumentationOptions);
+                         context.Span =handlerSpans[handleRequests.Name.ToString()];
+                         await handleRequests.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                         context.Span = span;
                     }
                     catch (Exception e)
                     {
                         exceptions.Add(e);
                     }
                 }
+                
+                LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
                     span?.SetStatus(ActivityStatusCode.Error);
@@ -426,6 +432,7 @@ namespace Paramore.Brighter
             }
             finally
             {
+                EndChildSpans(handlerSpans);
                 EndSpan(span);
             }
         }
