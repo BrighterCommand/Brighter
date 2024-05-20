@@ -30,7 +30,6 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using System.Text.Json;
-using FakeItEasy;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {

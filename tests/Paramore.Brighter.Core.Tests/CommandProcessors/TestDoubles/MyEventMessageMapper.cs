@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
 using Paramore.Brighter.Extensions;
 
-namespace Paramore.Brighter.Core.Tests.Observability.TestDoubles;
+namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-public class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
+internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
 {
     public IRequestContext Context { get; set; }
 

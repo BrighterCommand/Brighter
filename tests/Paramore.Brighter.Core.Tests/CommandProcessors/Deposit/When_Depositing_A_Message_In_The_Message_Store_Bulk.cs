@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Polly;
 using Polly.Registry;
 using Xunit;

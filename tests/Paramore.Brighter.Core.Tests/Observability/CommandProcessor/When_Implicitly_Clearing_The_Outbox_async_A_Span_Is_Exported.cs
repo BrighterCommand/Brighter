@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
+using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly;
@@ -30,7 +31,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
 
         _timeProvider = new FakeTimeProvider();
         IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox(_timeProvider);
-        _event = new MyEvent("TestEvent");
+        _event = new MyEvent();
 
         var registry = new SubscriberRegistry();
         registry.Register<MyEvent, MyEventHandler>();

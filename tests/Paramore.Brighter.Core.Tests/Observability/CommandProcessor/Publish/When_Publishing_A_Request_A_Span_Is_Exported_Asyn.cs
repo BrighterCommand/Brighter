@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using FluentAssertions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -15,14 +16,13 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Publish;
 
-[Collection("Observability")]
-public class CommandProcessorPublishObservabilityTests 
+public class AsyncCommandProcessorPublishObservabilityTests 
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
 
-    public CommandProcessorPublishObservabilityTests()
+    public AsyncCommandProcessorPublishObservabilityTests()
     {
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -38,17 +38,17 @@ public class CommandProcessorPublishObservabilityTests
         Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
-        registry.Register<MyEvent, MyEventHandler>();
-        registry.Register<MyEvent, MyOtherEventHandler>();
+        registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
+        registry.RegisterAsync<MyEvent, MyOtherEventHandlerAsync>();
         
-        var handlerFactory = new SimpleHandlerFactorySync(type =>
+        var handlerFactory = new SimpleHandlerFactoryAsync(type =>
         {
             switch (type.Name)
             {
-                case nameof(MyEventHandler):
-                    return new MyEventHandler(new Dictionary<string, string>());
-                case nameof(MyOtherEventHandler):
-                    return new MyOtherEventHandler(new Dictionary<string, string>());
+                case nameof(MyEventHandlerAsync):
+                    return new MyEventHandlerAsync(new Dictionary<string, string>());
+                case nameof(MyOtherEventHandlerAsync):
+                    return new MyOtherEventHandlerAsync(new Dictionary<string, string>());
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type.Name), type.Name, null);
             }
@@ -56,9 +56,9 @@ public class CommandProcessorPublishObservabilityTests
 
         var retryPolicy = Policy
             .Handle<Exception>()
-            .Retry();
+            .RetryAsync();
         
-        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
         
         Brighter.CommandProcessor.ClearServiceBus();
 
@@ -73,7 +73,7 @@ public class CommandProcessorPublishObservabilityTests
     }
 
     [Fact]
-    public void When_Publishing_A_Request_With_Span_In_Context_Child_Spans_Are_Exported()
+    public async Task When_Publishing_A_Request_With_Span_In_Context_Child_Spans_Are_Exported()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
@@ -83,7 +83,7 @@ public class CommandProcessorPublishObservabilityTests
         context.Span = parentActivity;
         
         //act
-        _commandProcessor.Publish(@event, context);
+        await _commandProcessor.PublishAsync(@event, context);
         parentActivity?.Stop();
         
         _traceProvider.ForceFlush();
@@ -109,9 +109,9 @@ public class CommandProcessorPublishObservabilityTests
         first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
         
         first.Events.Count().Should().Be(1);
-        first.Events.First().Name.Should().Be(nameof(MyEventHandler));
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandler)).Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+        first.Events.First().Name.Should().Be(nameof(MyEventHandlerAsync));
+        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)).Should().BeTrue();
+        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
         first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
         
         //--second publish
@@ -123,9 +123,9 @@ public class CommandProcessorPublishObservabilityTests
         second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
         
          second.Events.Count().Should().Be(1);
-         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandler));
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandler)).Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandlerAsync));
+         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)).Should().BeTrue();
+         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
          second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
          
          //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released
@@ -139,7 +139,7 @@ public class CommandProcessorPublishObservabilityTests
     }
 
     [Fact]
-    public void When_Publishing_A_Request_With_Span_In_ActivityCurrent_Child_Spans_Are_Exported()
+    public async Task When_Publishing_A_Request_With_Span_In_ActivityCurrent_Child_Spans_Are_Exported()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
@@ -149,7 +149,7 @@ public class CommandProcessorPublishObservabilityTests
         Activity.Current = parentActivity;
         
         //act
-        _commandProcessor.Publish(@event, context);
+        await _commandProcessor.PublishAsync(@event, context);
         parentActivity?.Stop();
         
         _traceProvider.ForceFlush();
@@ -175,9 +175,9 @@ public class CommandProcessorPublishObservabilityTests
         first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
         
         first.Events.Count().Should().Be(1);
-        first.Events.First().Name.Should().Be(nameof(MyEventHandler));
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandler)).Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+        first.Events.First().Name.Should().Be(nameof(MyEventHandlerAsync));
+        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)).Should().BeTrue();
+        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
         first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
         
         //--second publish
@@ -189,9 +189,9 @@ public class CommandProcessorPublishObservabilityTests
         second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
         
          second.Events.Count().Should().Be(1);
-         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandler));
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandler)).Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandlerAsync));
+         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)).Should().BeTrue();
+         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
          second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
          
          //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released
@@ -205,14 +205,14 @@ public class CommandProcessorPublishObservabilityTests
     }
 
     [Fact]
-    public void When_Sending_A_Request_With_No_Context_Or_Span_In_ActivityCurrent_A_Root_Span_Is_Exported()
+    public async Task When_Sending_A_Request_With_No_Context_Or_Span_In_ActivityCurrent_A_Root_Span_Is_Exported()
     {
         //arrange
         var @event = new MyEvent();
         var context = new RequestContext();
         
         //act
-        _commandProcessor.Publish(@event, context);
+        await _commandProcessor.PublishAsync(@event, context);
         
         _traceProvider.ForceFlush();
         
@@ -237,9 +237,9 @@ public class CommandProcessorPublishObservabilityTests
         first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
         
         first.Events.Count().Should().Be(1);
-        first.Events.First().Name.Should().Be(nameof(MyEventHandler));
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandler)).Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+        first.Events.First().Name.Should().Be(nameof(MyEventHandlerAsync));
+        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandlerAsync)).Should().BeTrue();
+        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
         first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
         
         //--second publish
@@ -251,9 +251,9 @@ public class CommandProcessorPublishObservabilityTests
         second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
         
          second.Events.Count().Should().Be(1);
-         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandler));
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandler)).Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandlerAsync));
+         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandlerAsync)).Should().BeTrue();
+         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "async").Should().BeTrue();
          second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
          
          //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released

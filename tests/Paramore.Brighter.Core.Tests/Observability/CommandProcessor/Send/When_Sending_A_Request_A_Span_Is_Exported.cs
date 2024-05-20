@@ -15,6 +15,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Send;
 
+[Collection("Observability")]
 public class CommandProcessorSendObservabilityTests 
 {
     private readonly List<Activity> _exportedActivities;
@@ -46,6 +47,8 @@ public class CommandProcessorSendObservabilityTests
             .Retry();
         
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
+        
+        Brighter.CommandProcessor.ClearServiceBus();
 
         _commandProcessor = new Brighter.CommandProcessor(
             registry,

@@ -3,9 +3,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 
-namespace Paramore.Brighter.Core.Tests.Observability.TestDoubles;
+namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-public class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
+internal class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
 {
     public IRequestContext Context { get; set; }
 

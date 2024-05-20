@@ -30,7 +30,6 @@ using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {

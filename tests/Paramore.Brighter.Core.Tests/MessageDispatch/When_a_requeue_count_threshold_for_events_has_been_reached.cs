@@ -39,7 +39,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
-        private readonly MyEvent _event;
 
         public MessagePumpEventRequeueCountThresholdTests()
         {
@@ -54,15 +53,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
-            _event = new MyEvent();
+            MyEvent @event = new();
 
             var message1 = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
-                new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options))
+                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             var message2 = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
-                new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options))
+                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             _channel.Enqueue(message1);
             _channel.Enqueue(message2);
