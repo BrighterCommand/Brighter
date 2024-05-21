@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null) 
+             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
                 { Channel = channel, TimeoutInMilliseconds = 5000 };
 
             var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));

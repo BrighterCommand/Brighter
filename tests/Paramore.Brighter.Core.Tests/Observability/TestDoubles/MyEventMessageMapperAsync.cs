@@ -7,6 +7,8 @@ namespace Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 
 public class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
 {
+    public IRequestContext Context { get; set; }
+
     public Task<Message> MapToMessageAsync(MyEvent request, Publication publication, CancellationToken ct = default)
     {
         var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());

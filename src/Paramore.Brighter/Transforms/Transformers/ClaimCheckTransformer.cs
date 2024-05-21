@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -29,12 +29,23 @@ using Paramore.Brighter.Transforms.Storage;
 
 namespace Paramore.Brighter.Transforms.Transformers
 {
+    /// <summary>
+    /// Moves the payload of a message to storage, when the payload exceeds a certain threshold size, and inserts a
+    /// claim check into the message header
+    /// Obeys <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/dataref.md">Cloud Events</see>
+    /// specification of Claim Check for interoperability - this is a breaking change from V9.X.X
+    /// </summary>
     public class ClaimCheckTransformer : IAmAMessageTransform
     {
-        public const string CLAIM_CHECK = "claim_check_header";
         private readonly IAmAStorageProvider _store;
         private int _thresholdInBytes;
         private bool _retainLuggage;
+        
+        /// <summary>
+        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+        /// </summary>
+        /// <value>The context.</value>
+        public IRequestContext Context { get; set; }
 
         /// <summary>
         /// A claim check moves the payload of a message, which when wrapping checks for a payloads that exceeds a certain threshold size, and inserts those
@@ -62,6 +73,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         public void Dispose()
         {
         }
+
 
         /// <summary>
         /// We assume that the initializer list contains
@@ -107,7 +119,7 @@ namespace Paramore.Brighter.Transforms.Transformers
 
             var id = _store.Store(stream);
 
-            message.Header.Bag[CLAIM_CHECK] = id;
+            message.Header.DataRef = id;
             message.Body = new MessageBody($"Claim Check {id}");
 
             return message;
@@ -120,16 +132,16 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <returns></returns>
         public Message Unwrap(Message message)
         {
-            if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
+            if (!string.IsNullOrEmpty(message.Header.DataRef))
             {
-                var id = (string)objId;
+                var id = message.Header.DataRef;
                 var luggage = new StreamReader(_store.Retrieve(id)).ReadToEnd();
                 var newBody = new MessageBody(luggage);
                 message.Body = newBody;
                 if (!_retainLuggage)
                 {
                     _store.Delete(id);
-                    message.Header.Bag.Remove(CLAIM_CHECK);
+                    message.Header.DataRef = null;
                 }
             }
 

@@ -6,6 +6,8 @@ namespace Greetings.Ports.Mappers
 {
     public class AddGreetingMessageMapper : IAmAMessageMapper<AddGreetingCommand>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(AddGreetingCommand request, Publication publication)
         {
             var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: MessageType.MT_COMMAND);

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,7 +48,8 @@ namespace Paramore.Brighter
         public WrapPipelineAsync(
             IAmAMessageMapperAsync<TRequest> messageMapperAsync, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync, 
-            IEnumerable<IAmAMessageTransformAsync> transforms)
+            IEnumerable<IAmAMessageTransformAsync> transforms
+            )
         {
             MessageMapper = messageMapperAsync;
             Transforms = transforms;
@@ -76,12 +78,20 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to wrap</param>
         /// <param name="publication">The publication for this channel, provides metadata such as topic or Cloud Events attributes</param>
+        /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
-        public async Task<Message> WrapAsync(TRequest request, Publication publication, CancellationToken cancellationToken = default)
+        public async Task<Message> WrapAsync(TRequest request, RequestContext requestContext, Publication publication, CancellationToken cancellationToken = default)
         {
-            var message = await MessageMapper.MapToMessageAsync(request, publication, cancellationToken);
-            await Transforms.EachAsync(async transform => message = await transform.WrapAsync(message, publication, cancellationToken));
+            requestContext.Span ??= Activity.Current;
+            
+            MessageMapper.Context = requestContext; 
+            var message = await MessageMapper.MapToMessageAsync(request, publication, cancellationToken); 
+            await Transforms.EachAsync(async transform =>
+            {
+                transform.Context = requestContext;
+                message = await transform.WrapAsync(message, publication, cancellationToken);
+            }); 
             return message;
         }
     }

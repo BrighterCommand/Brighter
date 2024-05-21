@@ -5,6 +5,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
     internal class FailingEventMessageMapper : IAmAMessageMapper<MyFailingMapperEvent>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(MyFailingMapperEvent request, Publication publication)
         {
             throw new JsonException();

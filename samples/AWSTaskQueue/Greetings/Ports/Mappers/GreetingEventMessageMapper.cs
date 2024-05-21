@@ -31,6 +31,8 @@ namespace Greetings.Ports.Mappers
 {
     public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(GreetingEvent request, Publication publication)
         {
             var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: MessageType.MT_EVENT);

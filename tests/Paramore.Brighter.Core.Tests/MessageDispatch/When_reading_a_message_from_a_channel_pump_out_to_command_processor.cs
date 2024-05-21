@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 null);
             messagerMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messagerMapperRegistry, null) 
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messagerMapperRegistry, null, new InMemoryRequestContextFactory()) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000 };
 
             _event = new MyEvent();

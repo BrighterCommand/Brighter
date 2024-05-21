@@ -44,7 +44,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _contentType = "application/json";
 
             _message = new Message(
-                new MessageHeader(_command.Id, _topicName, MessageType.MT_COMMAND, _correlationId, contentType: _contentType),
+                new MessageHeader(_command.Id, _topicName, MessageType.MT_COMMAND, correlationId:_correlationId, 
+                    contentType: _contentType
+                ),
                 new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
             );
 

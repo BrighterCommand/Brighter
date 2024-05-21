@@ -110,7 +110,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor()
         {
-            _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 500);
+            _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOutInMilliseconds: 500);
             
             //should send a message via the messaging gateway
             _producer.MessageWasSent.Should().BeTrue();

@@ -10,6 +10,8 @@ namespace GreetingsWeb.Mappers
 {
     public class GreetingMadeMessageMapperAsync : IAmAMessageMapperAsync<GreetingMade>
     {
+        public IRequestContext Context { get; set; }
+
         public async Task<Message> MapToMessageAsync(GreetingMade request, Publication publication, CancellationToken cancellationToken = default)
         {
             //NOTE: We are showing an async pipeline here, but it is often overkill by comparison to using 

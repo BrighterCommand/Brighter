@@ -58,22 +58,26 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public async Task When_a_message_consumer_reads_multiple_messages()
         {
             var messageOne = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid().ToString(), string.Empty, _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content one")
                 );
             
             var messageTwo= new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid().ToString(), string.Empty, _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content two")
                 );
            
             var messageThree= new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid().ToString(), string.Empty, _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content three")
                 );
              
             var messageFour= new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid().ToString(), string.Empty, _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content four")
                 );
              

@@ -36,7 +36,9 @@ namespace Greetings.Ports.Mappers
     {
         //NOTE: Typically you should use the Serdes provided by the Kafka client, but we're using the .NET serializer here
         //See the Schema Registry sample for an example of how to use the Confluent Serdes serializer
-            
+
+        public IRequestContext Context { get; set; }
+
         public async Task<Message> MapToMessageAsync(GreetingEvent request, Publication publication, CancellationToken cancellationToken = default)
         {
            

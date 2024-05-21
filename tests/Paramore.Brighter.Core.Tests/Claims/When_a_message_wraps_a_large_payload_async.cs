@@ -27,7 +27,7 @@ public class AsyncClaimCheckLargePayloadTests
         _body = DataGenerator.CreateString(6000);
         _topic = "test_topic";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(_body));
     }
     

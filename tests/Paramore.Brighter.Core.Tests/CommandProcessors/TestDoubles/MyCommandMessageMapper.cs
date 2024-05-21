@@ -29,6 +29,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyCommandMessageMapper : IAmAMessageMapper<MyCommand>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(MyCommand request, Publication publication)
         {
             var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());

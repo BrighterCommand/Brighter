@@ -29,6 +29,8 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
     internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
     {
+        public IRequestContext Context { get; set; }
+
         public Message MapToMessage(MyEvent request, Publication publication)
         {
             var header = new MessageHeader(request.Id, topic:publication.Topic, request.RequestToMessageType());

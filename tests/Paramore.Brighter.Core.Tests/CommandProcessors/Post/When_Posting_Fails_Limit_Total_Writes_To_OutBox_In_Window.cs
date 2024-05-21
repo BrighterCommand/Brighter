@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: messageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
-                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),     
                 outbox: _outbox,
                 maxOutStandingMessages:3,
                 maxOutStandingCheckIntervalMilliSeconds:250

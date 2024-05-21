@@ -53,7 +53,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = _transformPipeline.WrapAsync(_myCommand, _publication).Result;
+        var message = _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication).Result;
 
         //assert
         message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();

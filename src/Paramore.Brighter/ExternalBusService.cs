@@ -16,7 +16,8 @@ namespace Paramore.Brighter
     /// Provide services to CommandProcessor that persist across the lifetime of the application. Allows separation from elements that have a lifetime linked
     /// to the scope of a request, or are transient for DI purposes
     /// </summary>
-    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService where TMessage : Message
+    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService, IAmAnExternalBusService<TMessage, TTransaction>
+        where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
@@ -31,7 +32,6 @@ namespace Paramore.Brighter
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly int _archiveBatchSize;
 
-
         private static readonly SemaphoreSlim s_clearSemaphoreToken = new SemaphoreSlim(1, 1);
 
         private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
@@ -40,11 +40,9 @@ namespace Paramore.Brighter
         private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
 
         private const string ADDMESSAGETOOUTBOX = "Add message to outbox";
-        private const string ARCHIVE_OUTBOX = "Archive Outbox";
         private const string BULKDISPATCHMESSAGE = "Bulk dispatching messages";
-        private const string DEPOSITPOST = "Deposit Post";
         private const string DISPATCHMESSAGE = "Dispatching message";
-        private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the outbox";
+        private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the Outbox";
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
 
@@ -71,7 +69,8 @@ namespace Paramore.Brighter
         /// <param name="maxOutStandingCheckIntervalMilliSeconds">How long before we check for maxOutStandingMessages</param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="archiveBatchSize">What batch size to use when archiving from the Outbox</param>
-        public ExternalBusService(IAmAProducerRegistry producerRegistry,
+        public ExternalBusService(
+            IAmAProducerRegistry producerRegistry,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
@@ -85,15 +84,11 @@ namespace Paramore.Brighter
             Dictionary<string, object> outBoxBag = null,
             int archiveBatchSize = 100)
         {
-            _producerRegistry = producerRegistry ??
-                                throw new ConfigurationException("Missing Producer Registry for External Bus Services");
-            _policyRegistry = policyRegistry ??
-                              throw new ConfigurationException("Missing Policy Registry for External Bus Services");
+            _producerRegistry = producerRegistry ?? throw new ConfigurationException("Missing Producer Registry for External Bus Services");
+            _policyRegistry = policyRegistry?? throw new ConfigurationException("Missing Policy Registry for External Bus Services");
             _archiveProvider = archiveProvider;
-
-            if (mapperRegistry is null)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
+            if (mapperRegistry is null) 
+                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
             if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
                 throw new ConfigurationException(
                     "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
@@ -129,7 +124,7 @@ namespace Paramore.Brighter
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (_disposed)
                 return;
@@ -142,19 +137,19 @@ namespace Paramore.Brighter
         /// <summary>
         /// Adds a message to the outbox
         /// </summary>
-        /// <param name="request">The request that we are storing (used for id)</param>
         /// <param name="message">The message to store in the outbox</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="overridingTransactionProvider">The provider of the transaction for the outbox</param>
         /// <param name="continueOnCapturedContext">Use the same thread for a callback</param>
         /// <param name="cancellationToken">Allow cancellation of the message</param>
-        /// <typeparam name="TRequest">The type of request we are saving</typeparam>
-        /// <exception cref="ChannelFailureException">Thrown if we cannot write to the outbox</exception>
-        public async Task AddToOutboxAsync<TRequest>(
-            TRequest request,
+        /// <typeparam name="TTransaction">The type of the transaction used to add to the Outbox</typeparam>
+        /// <exception cref="ChannelFailureException">Thrown if we cannot write to the Outbox</exception>
+        public async Task AddToOutboxAsync(
             TMessage message,
+            RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : IRequest
+            CancellationToken cancellationToken = default) 
         {
             CheckOutboxOutstandingLimit();
 
@@ -167,15 +162,20 @@ namespace Paramore.Brighter
                 continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
             if (!written)
-                throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
-            Activity.Current?.AddEvent(new ActivityEvent(ADDMESSAGETOOUTBOX,
-                tags: new ActivityTagsCollection { { "MessageId", message.Id } }));
+                throw new ChannelFailureException($"Could not write request {message.Id} to the outbox");
+            
+            requestContext.Span?.AddEvent(
+                new ActivityEvent(
+                    ADDMESSAGETOOUTBOX, 
+                    tags: new ActivityTagsCollection { { "MessageId", message.Id } })
+                );
         }
 
         /// <summary>
         /// Adds a message to the outbox
         /// </summary>
         /// <param name="messages">The messages to store in the outbox</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="overridingTransactionProvider"></param>
         /// <param name="continueOnCapturedContext">Use the same thread for a callback</param>
         /// <param name="cancellationToken">Allow cancellation of the message</param>
@@ -183,6 +183,7 @@ namespace Paramore.Brighter
         /// <exception cref="ChannelFailureException">Thrown if we cannot write to the outbox</exception>
         public async Task AddToOutboxAsync(
             IEnumerable<TMessage> messages,
+            RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
@@ -201,36 +202,53 @@ namespace Paramore.Brighter
 
                 if (!written)
                     throw new ChannelFailureException($"Could not write {chunk.Count()} requests to the outbox");
+                
+                var idsAsString = string.Join(", ", chunk.Select(msg => msg.Id.ToString()).ToArray());
+                requestContext.Span?.AddEvent(
+                    new ActivityEvent(
+                        ADDMESSAGETOOUTBOX, 
+                        tags: new ActivityTagsCollection { { "MessageIds", idsAsString } })
+                    );
             }
         }
 
         /// <summary>
         /// Adds a message to the outbox
         /// </summary>
-        /// <param name="request">The request the message is composed from (used for diagnostics)</param>
         /// <param name="message">The message we intend to send</param>
         /// <param name="overridingTransactionProvider">A transaction provider that gives us the transaction to use with the Outbox</param>
-        /// <typeparam name="TTransaction">The transaction type for the Outbox</typeparam>
-        /// <typeparam name="TRequest">The type of the request we have converted into a message</typeparam>
-        /// <exception cref="ChannelFailureException"></exception>
-        public void AddToOutbox<TRequest>(
-            TRequest request,
+        /// <param name="requestContext">The context of the request pipeline</param>
+        /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
+        public void AddToOutbox(
             TMessage message,
-            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null)
-            where TRequest : class, IRequest
+            RequestContext requestContext,
+            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
+        )
         {
             CheckOutboxOutstandingLimit();
 
             var written = Retry(() => { _outBox.Add(message, _outboxTimeout, overridingTransactionProvider); });
 
             if (!written)
-                throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
-            Activity.Current?.AddEvent(new ActivityEvent(ADDMESSAGETOOUTBOX,
-                tags: new ActivityTagsCollection { { "MessageId", message.Id } }));
+                throw new ChannelFailureException($"Could not write message {message.Id} to the outbox");
+            
+            requestContext.Span?.AddEvent(
+                new ActivityEvent(
+                    ADDMESSAGETOOUTBOX, 
+                    tags: new ActivityTagsCollection { { "MessageId", message.Id } })
+                );
         }
 
+        /// <summary>
+        /// Adds messages to the Outbox
+        /// </summary>
+        /// <param name="messages">The set of messages to add</param>
+        /// <param name="requestContext">The request context for the pipeline</param>
+        /// <param name="overridingTransactionProvider">If the write is part of a transaction where do we get it from</param>
+        /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
         public void AddToOutbox(
             IEnumerable<TMessage> messages,
+            RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
         )
         {
@@ -243,6 +261,14 @@ namespace Paramore.Brighter
 
                 if (!written)
                     throw new ChannelFailureException($"Could not write {chunk.Count()} messages to the outbox");
+                
+                var idsAsString = string.Join(", ", chunk.Select(msg => msg.Id.ToString()).ToArray());
+                requestContext.Span?.AddEvent(
+                    new ActivityEvent(
+                        ADDMESSAGETOOUTBOX,
+                        tags: new ActivityTagsCollection { { "MessageIds", idsAsString } }
+                    )
+                );
             }
         }
 
@@ -258,7 +284,7 @@ namespace Paramore.Brighter
                 var messages = _outBox.DispatchedMessages(millisecondsDispatchedSince, _archiveBatchSize);
 
                 s_logger.LogInformation(
-                    "Found {NumberOfMessageArchived} message to archive to {MessagesToArchive}, batch size : {BatchSize}",
+                    "Found {NumberOfMessageArchived} message to archive, batch size : {BatchSize}",
                     messages.Count(), _archiveBatchSize
                 );
 
@@ -335,10 +361,15 @@ namespace Paramore.Brighter
         /// This is the clear outbox for explicit clearing of messages.
         /// </summary>
         /// <param name="posts">The ids of the posts that you would like to clear</param>
-        /// <param name="args"></param>
+        /// <param name="requestContext">The request context for the pipeline</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        public void ClearOutbox(string[] posts, Dictionary<string, object> args = null)
+        public void ClearOutbox(
+            string[] posts, 
+            RequestContext requestContext, 
+            Dictionary<string, object> args = null
+        )
         {
             if (!HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
@@ -353,7 +384,7 @@ namespace Paramore.Brighter
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    Dispatch(new[] { message }, args);
+                    Dispatch(new[] { message }, requestContext, args);
                 }
             }
             finally
@@ -369,14 +400,18 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="posts">The ids of the posts that you would like to clear</param>
         /// <param name="continueOnCapturedContext">Should we use the same thread in the callback</param>
+        /// <param name="requestContext">The request context for the pipeline</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allow cancellation of the operation</param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        public async Task ClearOutboxAsync(IEnumerable<string> posts,
+        public async Task ClearOutboxAsync(
+            IEnumerable<string> posts,
+            RequestContext requestContext,
             bool continueOnCapturedContext = false,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default
+        )
         {
             if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
@@ -390,7 +425,7 @@ namespace Paramore.Brighter
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    await DispatchAsync(new[] { message }, continueOnCapturedContext, cancellationToken);
+                    await DispatchAsync(new[] { message }, requestContext, continueOnCapturedContext, cancellationToken);
                 }
             }
             finally
@@ -408,13 +443,16 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
         /// <param name="useAsync">Use the Async outbox and Producer</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
+        /// <param name="requestContext">The request context for the pipeline</param>  
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
         public void ClearOutbox(
             int amountToClear,
             int minimumAge,
             bool useAsync,
             bool useBulk,
-            Dictionary<string, object> args = null)
+            RequestContext requestContext,
+            Dictionary<string, object> args = null
+        )
         {
             var span = Activity.Current;
             span?.AddTag("amountToClear", amountToClear);
@@ -427,16 +465,15 @@ namespace Paramore.Brighter
                 if (!HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
 
-                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, args),
+                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
                     CancellationToken.None);
             }
-
             else
             {
                 if (!HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
 
-                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, args));
+                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args));
             }
         }
 
@@ -444,13 +481,12 @@ namespace Paramore.Brighter
         /// Given a request, run the transformation pipeline to create a message
         /// </summary>
         /// <param name="request">The request</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="TRequest">the type of the request</typeparam>
-        /// <typeparam name="TTransaction"></typeparam>
         /// <returns></returns>
-        public Message CreateMessageFromRequest<TRequest>(TRequest request) where TRequest : class, IRequest
+        public Message CreateMessageFromRequest<TRequest>(TRequest request, RequestContext requestContext) where TRequest : class, IRequest
         {
-            var message = MapMessage(request);
-            AddTelemetryToMessage<TRequest>(message);
+            var message = MapMessage(request, requestContext);
             return message;
         }
 
@@ -458,15 +494,17 @@ namespace Paramore.Brighter
         /// Given a request, run the transformation pipeline to create a message 
         /// </summary>
         /// <param name="request">The request</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="cancellationToken">Cancel the in-flight operation</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <typeparam name="TTransaction"></typeparam>
         /// <returns></returns>
-        public async Task<Message> CreateMessageFromRequestAsync<TRequest>(TRequest request,
-            CancellationToken cancellationToken) where TRequest : class, IRequest
+        public async Task<Message> CreateMessageFromRequestAsync<TRequest>(
+            TRequest request,
+            RequestContext requestContext,
+            CancellationToken cancellationToken
+        ) where TRequest : class, IRequest
         {
-            Message message = await MapMessageAsync(request, cancellationToken);
-            AddTelemetryToMessage<TRequest>(message);
+            Message message = await MapMessageAsync(request, requestContext, cancellationToken);
             return message;
         }
 
@@ -475,14 +513,16 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestType">The type of the request</param>
         /// <param name="requests">The list of requests</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         public Task<List<Message>> CreateMessagesFromRequests(
             Type requestType,
             IEnumerable<IRequest> requests,
+            RequestContext requestContext,
             CancellationToken cancellationToken)
         {
-            var parameters = new object[] { requests, cancellationToken };
+            var parameters = new object[] { requests, requestContext, cancellationToken };
 
             var hasAsyncPipeline = (bool)typeof(TransformPipelineBuilderAsync)
                 .GetMethod(nameof(TransformPipelineBuilderAsync.HasPipeline),
@@ -501,8 +541,8 @@ namespace Paramore.Brighter
             var tcs = new TaskCompletionSource<List<Message>>();
             tcs.SetResult((List<Message>)GetType()
                 .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
-                .MakeGenericMethod(requestType)
-                .Invoke(this, new[] { requests }));
+                .MakeGenericMethod(requestType)                                                             
+                .Invoke(this, new object[] { requests, requestContext }));
             return tcs.Task;
         }
 
@@ -511,16 +551,17 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message that forms a reply to a call</param>
         /// <param name="request">The request constructed from that message</param>
+        /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
-        public void CreateRequestFromMessage<TRequest>(Message message, out TRequest request)
+        public void CreateRequestFromMessage<TRequest>(Message message, RequestContext requestContext, out TRequest request)
             where TRequest : class, IRequest
         {
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
                 request = _transformPipelineBuilderAsync
                     .BuildUnwrapPipeline<TRequest>()
-                    .UnwrapAsync(message)
+                    .UnwrapAsync(message, requestContext)
                     .GetAwaiter()
                     .GetResult();
             }
@@ -528,13 +569,13 @@ namespace Paramore.Brighter
             {
                 request = _transformPipelineBuilder
                     .BuildUnwrapPipeline<TRequest>()
-                    .Unwrap(message);
-            }
+                    .Unwrap(message, requestContext);
+            } 
             else
             {
-                throw new ArgumentOutOfRangeException("No message mapper defined for request");
+                throw new ArgumentOutOfRangeException(nameof(request),"No message mapper defined for request");
             }
-        }
+        } 
 
         /// <summary>
         /// Do we have an async outbox defined?
@@ -554,48 +595,62 @@ namespace Paramore.Brighter
             return _outBox != null;
         }
 
-
-        private void AddTelemetryToMessage<T>(Message message)
+        /// <summary>
+        /// Retry an action via the policy engine
+        /// </summary>
+        /// <param name="action">The Action to try</param>
+        /// <returns></returns>
+        public bool Retry(Action action)
         {
-            var activity = Activity.Current ??
-                           ApplicationTelemetry.ActivitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
-
-            if (activity != null)
+            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
+            var result = policy.ExecuteAndCapture(action);
+            if (result.Outcome != OutcomeType.Successful)
             {
-                message.Header.AddTelemetryInformation(activity, typeof(T).ToString());
+                if (result.FinalException != null)
+                {
+                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+                    CheckOutstandingMessages();
+                }
+
+                return false;
             }
+
+            return true;
         }
-
-
+  
         private async Task BackgroundDispatchUsingSync(
-            int amountToClear,
+            int amountToClear, 
             int millisecondsSinceSent,
+            RequestContext requestContext,
             Dictionary<string, object> args
         )
         {
-            var span = Activity.Current;
             if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
                     var messages = _outBox.OutstandingMessages(millisecondsSinceSent, amountToClear, args: args);
-                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX,
-                        tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } }));
+                    requestContext.Span?.AddEvent(
+                        new ActivityEvent(
+                            GETMESSAGESFROMOUTBOX,
+                            tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } })
+                    );
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
-                    Dispatch(messages, args);
+                    
+                    Dispatch(messages, requestContext, args);
+                    
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Ok);
                     s_logger.LogInformation("Messages have been cleared");
-                    span?.SetStatus(ActivityStatusCode.Ok);
                 }
                 catch (Exception e)
                 {
-                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                     s_logger.LogError(e, "Error while dispatching from outbox");
                 }
                 finally
                 {
-                    span?.Dispose();
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -604,19 +659,19 @@ namespace Paramore.Brighter
             }
             else
             {
-                span?.SetStatus(ActivityStatusCode.Error)
-                    .Dispose();
+                requestContext.Span?.SetStatus(ActivityStatusCode.Error);
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
-
+        
         private async Task BackgroundDispatchUsingAsync(
-            int amountToClear,
-            int milliSecondsSinceSent,
+            int amountToClear, 
+            int milliSecondsSinceSent, 
             bool useBulk,
-            Dictionary<string, object> args)
+            RequestContext requestContext,
+            Dictionary<string, object> args
+        )
         {
-            var span = Activity.Current;
             if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
@@ -624,31 +679,30 @@ namespace Paramore.Brighter
                 {
                     var messages =
                         await _asyncOutbox.OutstandingMessagesAsync(milliSecondsSinceSent, amountToClear, args: args);
-                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
+                    requestContext.Span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
 
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, CancellationToken.None);
+                        await BulkDispatchAsync(messages, requestContext, CancellationToken.None);
                     }
                     else
                     {
-                        await DispatchAsync(messages, false, CancellationToken.None);
+                        await DispatchAsync(messages, requestContext,false, CancellationToken.None);
                     }
 
-                    span?.SetStatus(ActivityStatusCode.Ok);
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Ok);
                     s_logger.LogInformation("Messages have been cleared");
                 }
                 catch (Exception e)
                 {
                     s_logger.LogError(e, "Error while dispatching from outbox");
-                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
+                    requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                 }
                 finally
                 {
-                    span?.Dispose();
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -657,8 +711,7 @@ namespace Paramore.Brighter
             }
             else
             {
-                span?.SetStatus(ActivityStatusCode.Error)
-                    .Dispose();
+                requestContext.Span?.SetStatus(ActivityStatusCode.Error);
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
@@ -690,7 +743,7 @@ namespace Paramore.Brighter
                         if (!(producer is ISupportPublishConfirmation))
                         {
                             await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(
-                                    successfulMessage, DateTime.UtcNow, cancellationToken: cancellationToken),
+                                    successfulMessage, DateTime.UtcNow, cancellationToken: ct),
                                 cancellationToken: cancellationToken);
                         }
                     }
@@ -700,36 +753,6 @@ namespace Paramore.Brighter
                     throw new InvalidOperationException("No async bulk message producer defined.");
                 }
             }
-        }
-
-        private List<Message> BulkMapMessages<T>(IEnumerable<IRequest> requests) where T : class, IRequest
-        {
-            return requests.Select(r =>
-            {
-                var publication = _producerRegistry.LookupPublication<T>();
-                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
-                var message = wrapPipeline.Wrap((T)r, publication);
-                AddTelemetryToMessage<T>(message);
-                return message;
-            }).ToList();
-        }
-
-        private async Task<List<Message>> BulkMapMessagesAsync<T>(
-            IEnumerable<IRequest> requests,
-            CancellationToken cancellationToken = default
-        ) where T : class, IRequest
-        {
-            var messages = new List<Message>();
-            foreach (var request in requests)
-            {
-                var publication = _producerRegistry.LookupPublication<T>();
-                var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
-                var message = await wrapPipeline.WrapAsync((T)request, publication, cancellationToken);
-                AddTelemetryToMessage<T>(message);
-                messages.Add(message);
-            }
-
-            return messages;
         }
 
         private IEnumerable<IEnumerable<TMessage>> ChunkMessages(IEnumerable<TMessage> messages)
@@ -765,8 +788,12 @@ namespace Paramore.Brighter
 
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
-            s_logger.LogDebug("Time since last check is {SecondsSinceLastCheck} seconds.",
-                timeSinceLastCheck.TotalSeconds);
+            
+            s_logger.LogDebug(
+                "Time since last check is {SecondsSinceLastCheck} seconds",
+                timeSinceLastCheck.TotalSeconds
+            );
+            
             if (timeSinceLastCheck < checkInterval)
             {
                 s_logger.LogDebug($"Check not ready to run yet");
@@ -775,11 +802,15 @@ namespace Paramore.Brighter
 
             s_logger.LogDebug(
                 "Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait",
-                DateTime.UtcNow, timeSinceLastCheck.TotalSeconds);
+                DateTime.UtcNow, timeSinceLastCheck.TotalSeconds
+            );
             //This is expensive, so use a background thread
-            Task.Run(() => OutstandingMessagesCheck());
+            Task.Run(OutstandingMessagesCheck);
         }
-
+        
+               /// <summary>
+        /// Configure the callbacks for the producers 
+        /// </summary>
         private void ConfigureCallbacks()
         {
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
@@ -790,6 +821,12 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <summary>
+        /// If a producer supports a callback then we can use this to mark a message as dispatched in an asynchronous
+        /// Outbox
+        /// </summary>
+        /// <param name="producer">The producer to add a callback for</param>
+        /// <returns></returns>
         private void ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducer producer)
         {
             if (producer is ISupportPublishConfirmation producerSync)
@@ -807,6 +844,11 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <summary>
+        /// If a producer supports a callback then we can use this to mark a message as dispatched in a synchronous
+        /// Outbox
+        /// </summary>
+        /// <param name="producer">The producer to add a callback for</param>
         private bool ConfigurePublisherCallbackMaybe(IAmAMessageProducer producer)
         {
             if (producer is ISupportPublishConfirmation producerSync)
@@ -816,6 +858,7 @@ namespace Paramore.Brighter
                     if (success)
                     {
                         s_logger.LogInformation("Sent message: Id:{Id}", id);
+                        
                         if (_outBox != null)
                             Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
                     }
@@ -825,18 +868,25 @@ namespace Paramore.Brighter
 
             return false;
         }
-
-        private void Dispatch(IEnumerable<Message> posts, Dictionary<string, object> args = null)
+        
+        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object> args = null)
         {
             foreach (var message in posts)
             {
-                Activity.Current?.AddEvent(new ActivityEvent(DISPATCHMESSAGE,
-                    tags: new ActivityTagsCollection
-                    {
-                        { "Topic", message.Header.Topic }, { "MessageId", message.Id }
-                    }));
-                s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic,
-                    message.Id.ToString());
+                requestContext.Span?.AddEvent(
+                    new ActivityEvent(
+                        DISPATCHMESSAGE,
+                        tags: new ActivityTagsCollection
+                        {
+                            { "Topic", message.Header.Topic }, { "MessageId", message.Id }
+                        }
+                    )
+                );
+                
+                s_logger.LogInformation(
+                    "Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic,
+                    message.Id
+                );
 
                 var producer = _producerRegistry.LookupBy(message.Header.Topic);
 
@@ -858,19 +908,106 @@ namespace Paramore.Brighter
                     throw new InvalidOperationException("No sync message producer defined.");
             }
         }
+ 
+        private async Task BulkDispatchAsync(IEnumerable<Message> posts, RequestContext requestContext, CancellationToken cancellationToken)
+        {
+            //Chunk into Topics
+            var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
 
-        private async Task DispatchAsync(IEnumerable<Message> posts, bool continueOnCapturedContext,
+            foreach (var topicBatch in messagesByTopic)
+            {
+                var producer = _producerRegistry.LookupBy(topicBatch.Key);
+
+                if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
+                {
+                    var messages = topicBatch.ToArray();
+                    
+                    s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}",
+                        messages.Length, topicBatch.Key
+                    );
+                    
+                    requestContext.Span?.AddEvent(
+                        new ActivityEvent(
+                            BULKDISPATCHMESSAGE,
+                            tags: new ActivityTagsCollection
+                            {
+                                { "Topic", topicBatch.Key }, { "Number Of Messages", messages.Length }
+                            }
+                        )
+                    );
+                    
+                    var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
+
+                    await foreach (var successfulMessage in dispatchesMessages)
+                    {
+                        if (!(producer is ISupportPublishConfirmation))
+                        {
+                            await RetryAsync(async _ => 
+                                    await _asyncOutbox.MarkDispatchedAsync(
+                                        successfulMessage, DateTime.UtcNow, cancellationToken: cancellationToken
+                                    ),
+                                cancellationToken: cancellationToken
+                            );
+                        }
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("No async bulk message producer defined.");
+                }
+            }
+        }
+        
+        private List<Message> BulkMapMessages<T>(IEnumerable<IRequest> requests, RequestContext requestContext) where T : class, IRequest
+        {
+            return requests.Select(r =>
+            {
+                var publication = _producerRegistry.LookupPublication<T>();
+                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
+                var message = wrapPipeline.Wrap((T)r, requestContext, publication);
+                return message;
+            }).ToList();
+        }
+
+        private async Task<List<Message>> BulkMapMessagesAsync<T>(
+            IEnumerable<IRequest> requests,
+            RequestContext requestContext,
+            CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            var messages = new List<Message>();
+            foreach (var request in requests)
+            {
+                var publication = _producerRegistry.LookupPublication<T>();
+                var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
+                var message = await wrapPipeline.WrapAsync((T)request, requestContext, publication, cancellationToken);
+                messages.Add(message);
+            }
+
+            return messages;
+        }
+
+        private async Task DispatchAsync(
+            IEnumerable<Message> posts,
+            RequestContext requestContext,
+            bool continueOnCapturedContext,
             CancellationToken cancellationToken)
         {
             foreach (var message in posts)
             {
-                Activity.Current?.AddEvent(new ActivityEvent(DISPATCHMESSAGE,
-                    tags: new ActivityTagsCollection
-                    {
-                        { "Topic", message.Header.Topic }, { "MessageId", message.Id }
-                    }));
-                s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic,
-                    message.Id.ToString());
+                s_logger.LogInformation(
+                    "Decoupled invocation of message: Topic:{Topic} Id:{Id}",
+                    message.Header.Topic, message.Id
+                ); 
+                
+                requestContext.Span?.AddEvent(
+                    new ActivityEvent(
+                        DISPATCHMESSAGE,
+                        tags: new ActivityTagsCollection
+                        {
+                            { "Topic", message.Header.Topic }, { "MessageId", message.Id }
+                        }
+                    )
+                );
 
                 var producer = _producerRegistry.LookupBy(message.Header.Topic);
 
@@ -880,7 +1017,7 @@ namespace Paramore.Brighter
                     {
                         //mark dispatch handled by a callback - set in constructor
                         await RetryAsync(
-                                async ct =>
+                                async _ =>
                                     await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
                                 continueOnCapturedContext,
                                 cancellationToken)
@@ -889,25 +1026,28 @@ namespace Paramore.Brighter
                     else
                     {
                         var sent = await RetryAsync(
-                                async ct =>
-                                    await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                                async _ => await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
                                 continueOnCapturedContext,
-                                cancellationToken)
-                            .ConfigureAwait(continueOnCapturedContext);
+                                cancellationToken
+                            )
+                            .ConfigureAwait(continueOnCapturedContext
+                        );
 
                         if (sent)
                             await RetryAsync(
-                                async ct => await _asyncOutbox.MarkDispatchedAsync(message.Id, DateTime.UtcNow,
-                                    cancellationToken: cancellationToken),
-                                cancellationToken: cancellationToken);
+                                async _ => await _asyncOutbox.MarkDispatchedAsync(
+                                    message.Id, DateTime.UtcNow, cancellationToken: cancellationToken
+                                ),
+                                cancellationToken: cancellationToken
+                            );
                     }
                 }
                 else
                     throw new InvalidOperationException("No async message producer defined.");
             }
         }
-
-        private Message MapMessage<TRequest>(TRequest request)
+        
+        private Message MapMessage<TRequest>(TRequest request, RequestContext requestContext)
             where TRequest : class, IRequest
         {
             var publication = _producerRegistry.LookupPublication<TRequest>();
@@ -920,17 +1060,17 @@ namespace Paramore.Brighter
             {
                 message = _transformPipelineBuilder
                     .BuildWrapPipeline<TRequest>()
-                    .Wrap(request, publication);
-            }
+                    .Wrap(request, requestContext, publication);
+            }                                                
             else
             {
-                throw new ArgumentOutOfRangeException("No message mapper defined for request");
+                throw new ArgumentOutOfRangeException(nameof(request), "No message mapper defined for request");
             }
 
             return message;
         }
 
-        private async Task<Message> MapMessageAsync<TRequest>(TRequest request, CancellationToken cancellationToken)
+        private async Task<Message> MapMessageAsync<TRequest>(TRequest request, RequestContext requestContext, CancellationToken cancellationToken)
             where TRequest : class, IRequest
         {
             var publication = _producerRegistry.LookupPublication<TRequest>();
@@ -943,11 +1083,11 @@ namespace Paramore.Brighter
             {
                 message = await _transformPipelineBuilderAsync
                     .BuildWrapPipeline<TRequest>()
-                    .WrapAsync(request, publication, cancellationToken);
+                    .WrapAsync(request, requestContext, publication, cancellationToken);
             }
             else
             {
-                throw new ArgumentOutOfRangeException("No message mapper defined for request");
+                throw new ArgumentOutOfRangeException(nameof(request), "No message mapper defined for request");
             }
 
             return message;
@@ -986,24 +1126,6 @@ namespace Paramore.Brighter
                 s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
                 s_checkOutstandingSemaphoreToken.Release();
             }
-        }
-
-        public bool Retry(Action action)
-        {
-            var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
-            var result = policy.ExecuteAndCapture(action);
-            if (result.Outcome != OutcomeType.Successful)
-            {
-                if (result.FinalException != null)
-                {
-                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
-                    CheckOutstandingMessages();
-                }
-
-                return false;
-            }
-
-            return true;
         }
 
         private async Task<bool> RetryAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false,

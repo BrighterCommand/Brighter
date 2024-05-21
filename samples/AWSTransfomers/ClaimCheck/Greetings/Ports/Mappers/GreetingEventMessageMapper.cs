@@ -32,6 +32,8 @@ namespace Greetings.Ports.Mappers
 {
     public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
     {
+        public IRequestContext Context { get; set; }
+
         [ClaimCheck(step:0, thresholdInKb: 256)]
         public Message MapToMessage(GreetingEvent request, Publication publication)
         {

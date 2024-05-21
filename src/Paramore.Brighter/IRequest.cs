@@ -39,11 +39,5 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The identifier.</value>
         string Id { get; set; }
-
-        /// <summary>
-        /// Gets or sets the span that this operation live within
-        /// </summary>
-        [JsonIgnore]
-        Activity Span { get; set; }
     }
 }

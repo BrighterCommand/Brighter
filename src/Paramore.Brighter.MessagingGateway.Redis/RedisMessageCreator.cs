@@ -132,6 +132,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             //correlation id
             var correlationId = ReadCorrelationId(headers);
             
+            //TODO:CLOUD_EVENTS parse from headers
 
             if (!messageId.Success)
             {
@@ -139,9 +140,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             else
             {
-                var messageHeader = timeStamp.Success
-                    ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result)
-                    : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
+                var messageHeader = new MessageHeader(
+                    messageId: messageId.Result, 
+                    topic:topic.Result, 
+                    messageType:messageType.Result,
+                    source: null,
+                    type: "",
+                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                    correlationId: "",
+                    replyTo: replyTo.Result,
+                    contentType: "",
+                    handledCount: handledCount.Result,
+                    dataSchema: null,
+                    subject: null,
+                    delayedMilliseconds: delayedMilliseconds.Result);
 
                 if (replyTo.Success)
                 {

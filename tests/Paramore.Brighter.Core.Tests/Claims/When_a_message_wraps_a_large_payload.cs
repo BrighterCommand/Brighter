@@ -27,7 +27,7 @@ public class ClaimCheckLargePayloadTests
         _body = DataGenerator.CreateString(6000);
         _topic = "test_topic";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(_body));
     }
     
@@ -38,11 +38,11 @@ public class ClaimCheckLargePayloadTests
         var luggageCheckedMessage = _transformer.Wrap(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //assert
-        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object storedData);
+        bool hasLuggage = !string.IsNullOrEmpty(luggageCheckedMessage.Header.DataRef);
 
         hasLuggage.Should().BeTrue();
 
-        var claimCheck = (string)storedData;
+        var claimCheck = luggageCheckedMessage.Header.DataRef;
 
         var luggage = new StreamReader(_store.Retrieve(claimCheck)).ReadToEnd(); 
         

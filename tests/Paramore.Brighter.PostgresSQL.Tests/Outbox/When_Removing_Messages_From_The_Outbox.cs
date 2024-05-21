@@ -48,9 +48,15 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _postgresSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
-            _firstMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            _secondMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            _thirdMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            _firstMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, 
+                timeStamp:DateTime.UtcNow.AddHours(-3)), new MessageBody("Body")
+            );
+            _secondMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, 
+                timeStamp:DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2")
+            );
+            _thirdMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, 
+                timeStamp:DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3")
+            );
             
         }
 

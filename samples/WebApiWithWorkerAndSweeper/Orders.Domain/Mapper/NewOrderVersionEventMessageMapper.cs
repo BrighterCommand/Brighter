@@ -6,6 +6,8 @@ namespace Orders.Domain.Mapper;
 
 public class NewOrderVersionEventMessageMapper : IAmAMessageMapper<NewOrderVersionEvent>
 {
+    public IRequestContext Context { get; set; }
+
     public Message MapToMessage(NewOrderVersionEvent request, Publication publication)
     {
         var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: MessageType.MT_EVENT);

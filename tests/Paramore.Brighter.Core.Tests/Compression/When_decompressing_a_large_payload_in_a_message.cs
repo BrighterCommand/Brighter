@@ -33,7 +33,11 @@ public class UncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+                timeStamp: DateTime.UtcNow, contentType: mimeType
+                ),
+            body
+        );
         
         message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
         
@@ -68,7 +72,11 @@ public class UncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+                timeStamp:DateTime.UtcNow, contentType: mimeType
+            ),
+            body
+        );
         
         message.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
         
@@ -103,7 +111,11 @@ public class UncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+                timeStamp: DateTime.UtcNow, contentType: mimeType
+            ),
+            body
+        );
         
         message.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER] = MessageBody.APPLICATION_JSON;
         

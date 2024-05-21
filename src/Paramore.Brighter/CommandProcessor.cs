@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -63,8 +62,10 @@ namespace Paramore.Brighter
         // the following are not readonly to allow setting them to null on dispose
         private readonly IAmAChannelFactory _responseChannelFactory;
 
-        private const string PROCESSCOMMAND = "Process Command";
-        private const string PROCESSEVENT = "Process Event";
+        private const string CREATEEVENT = "Cloud Events Create: {0}";
+        private const string CLEAROUTBOX = "Clear Outbox";
+        private const string PROCESSCOMMAND = "Process Command Type: {0}";
+        private const string PROCESSEVENT = "Process Event Type: {0}";
 
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -97,8 +98,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// We want to use double lock to let us pass parameters to the constructor from the first instance
         /// </summary>
-        private static IAmAnExternalBusService _bus = null;
-        private static readonly object padlock = new object();
+        private static IAmAnExternalBusService s_bus = null;
+        private static readonly object s_padlock = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class
@@ -145,12 +146,8 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over</param>
-        /// <param name="mapperRegistry">The mapper registry; it should also implement IAmAMessageMapperRegistryAsync</param>
-        /// <param name="mapperRegistryAsync">The async mapper registry</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
-        /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         public CommandProcessor(
@@ -178,12 +175,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
-        /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for a message mapper<</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
@@ -201,32 +195,29 @@ namespace Paramore.Brighter
             
             InitExtServiceBus(bus); 
         }
-        
+
         /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <exception cref="System.ArgumentException">
         /// </exception>
-        public void Send<T>(T command) where T : class, IRequest
+        public void Send<T>(T command, RequestContext requestContext = null) where T : class, IRequest
         {
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
-            var span = GetSpan(PROCESSCOMMAND);
-            command.Span = span.span;
-
-            var requestContext = _requestContextFactory.Create();
-            requestContext.Policies = _policyRegistry;
-            requestContext.FeatureSwitches = _featureSwitchRegistry;
+            var span = CreateSpan(string.Format(PROCESSCOMMAND, typeof(T).Name));
+            var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
             try
             {
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
                     command.Id);
-                var handlerChain = builder.Build(requestContext);
+                var handlerChain = builder.Build(context);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
@@ -234,12 +225,12 @@ namespace Paramore.Brighter
             }
             catch (Exception)
             {
-                span.span?.SetStatus(ActivityStatusCode.Error);
+                span?.SetStatus(ActivityStatusCode.Error);
                 throw;
             }
             finally
             {
-                EndSpan(span.span);
+                EndSpan(span);
             }
         }
 
@@ -248,28 +239,30 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public async Task SendAsync<T>(
+            T command, 
+            RequestContext requestContext = null, 
+            bool continueOnCapturedContext = false, 
+            CancellationToken cancellationToken = default
+        )
             where T : class, IRequest
         {
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = GetSpan(PROCESSCOMMAND);
-            command.Span = span.span;
-
-            var requestContext = _requestContextFactory.Create();
-            requestContext.Policies = _policyRegistry;
-            requestContext.FeatureSwitches = _featureSwitchRegistry;
+            var span = CreateSpan(string.Format(PROCESSCOMMAND, typeof(T).Name));
+            var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             try
             {
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
                     command.GetType(), command.Id);
-                var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
+                var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
@@ -278,12 +271,12 @@ namespace Paramore.Brighter
             }
             catch (Exception)
             {
-                span.span?.SetStatus(ActivityStatusCode.Error);
+                span?.SetStatus(ActivityStatusCode.Error);
                 throw;
             }
             finally
             {
-                EndSpan(span.span);
+                EndSpan(span);
             }
         }
 
@@ -296,53 +289,51 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
-        public void Publish<T>(T @event) where T : class, IRequest
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        public void Publish<T>(T @event, RequestContext requestContext = null) where T : class, IRequest
         {
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
-            var span = GetSpan(PROCESSEVENT);
-            @event.Span = span.span;
+            var span = CreateSpan(string.Format(PROCESSEVENT, typeof(T).Name));
+            var context = InitRequestContext(span, requestContext);
 
-            var requestContext = _requestContextFactory.Create();
-            requestContext.Policies = _policyRegistry;
-            requestContext.FeatureSwitches = _featureSwitchRegistry;
-
-            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
-            s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
-                @event.Id);
-            var handlerChain = builder.Build(requestContext);
-
-            var handlerCount = handlerChain.Count();
-
-            s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
-                @event.GetType(), @event.Id);
-
-            var exceptions = new List<Exception>();
-            foreach (var handleRequests in handlerChain)
+            try
             {
-                try
-                {
-                    handleRequests.Handle(@event);
-                }
-                catch (Exception e)
-                {
-                    exceptions.Add(e);
-                }
-            }
+                using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
+                s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
+                    @event.Id);
+                var handlerChain = builder.Build(context);
 
-            if (span.created)
-            {
+                var handlerCount = handlerChain.Count();
+
+                s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
+                   @event.GetType(), @event.Id);
+
+                var exceptions = new List<Exception>();
+                foreach (var handleRequests in handlerChain)
+                {
+                    try
+                    {
+                        handleRequests.Handle(@event);
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
+                }
+
                 if (exceptions.Any())
-                    span.span?.SetStatus(ActivityStatusCode.Error);
-                EndSpan(span.span);
+                {
+                    span?.SetStatus(ActivityStatusCode.Error);
+                    throw new AggregateException(
+                        "Failed to publish to one more handlers successfully, see inner exceptions for details",
+                        exceptions);
+                }
             }
-
-            if (exceptions.Any())
+            finally
             {
-                throw new AggregateException(
-                    "Failed to publish to one more handlers successfully, see inner exceptions for details",
-                    exceptions);
+                EndSpan(span);
             }
         }
 
@@ -355,11 +346,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PublishAsync<T>(
             T @event,
+            RequestContext requestContext = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
             where T : class, IRequest
@@ -367,49 +360,48 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = GetSpan(PROCESSEVENT);
-            @event.Span = span.span;
-
-            var requestContext = _requestContextFactory.Create();
-            requestContext.Policies = _policyRegistry;
-            requestContext.FeatureSwitches = _featureSwitchRegistry;
+            var span = CreateSpan(string.Format(PROCESSEVENT, typeof(T).Name));
+            var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
-            s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
-                @event.Id);
-
-            var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
-            var handlerCount = handlerChain.Count();
-
-            s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
-                @event.GetType(), @event.Id);
-
-            var exceptions = new List<Exception>();
-            foreach (var handler in handlerChain)
+            try
             {
-                try
-                {
-                    await handler.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-                }
-                catch (Exception e)
-                {
-                    exceptions.Add(e);
-                }
-            }
+                s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
+                    @event.Id);
 
+                var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
+                var handlerCount = handlerChain.Count();
 
-            if (span.created)
-            {
+                s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
+                    @event.GetType(), @event.Id
+                );
+
+                var exceptions = new List<Exception>();
+                foreach (var handler in handlerChain)
+                {
+                    try
+                    {
+                        await handler.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
+                }
+
                 if (exceptions.Any())
-                    span.span?.SetStatus(ActivityStatusCode.Error);
-                EndSpan(span.span);
-            }
+                    span?.SetStatus(ActivityStatusCode.Error);
 
-            if (exceptions.Count > 0)
+                if (exceptions.Count > 0)
+                {
+                    throw new AggregateException(
+                        "Failed to async publish to one more handlers successfully, see inner exceptions for details",
+                        exceptions);
+                }
+            }
+            finally
             {
-                throw new AggregateException(
-                    "Failed to async publish to one more handlers successfully, see inner exceptions for details",
-                    exceptions);
+                EndSpan(span);
             }
         }
 
@@ -418,18 +410,23 @@ namespace Paramore.Brighter
         /// You will need to configure a service that reads from the task queue to process the message
         /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
         /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
-        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}(T)"/> or a
-        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}(T)"/>
+        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}"/> or a
+        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}"/>
         /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use Deposit,
         /// and then after you have committed your transaction use ClearOutbox
         /// </summary>
         /// <param name="request">The request.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of request</typeparam>
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
-        public void Post<TRequest>(TRequest request, Dictionary<string, object> args = null) where TRequest : class, IRequest
+        public void Post<TRequest>(
+            TRequest request, 
+            RequestContext requestContext = null, 
+            Dictionary<string, object> args = null
+        ) where TRequest : class, IRequest
         {
-            ClearOutbox(new []{DepositPost(request, (IAmABoxTransactionProvider<CommittableTransaction>)null, args)}, args);
+            ClearOutbox(new []{DepositPost(request, (IAmABoxTransactionProvider<CommittableTransaction>)null, requestContext, args)}, requestContext, args);
         }
 
         /// <summary>
@@ -437,12 +434,13 @@ namespace Paramore.Brighter
         /// You will need to configure a service that reads from the task queue to process the message
         /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
         /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
-        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}(T)"/> or a
-        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}(T)"/>
+        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}"/> or a
+        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}"/>
         /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use DepositAsync,
         /// and then after you have committed your transaction use ClearOutboxAsync
         /// </summary>
         /// <param name="request">The request.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
@@ -450,15 +448,16 @@ namespace Paramore.Brighter
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PostAsync<TRequest>(
-            TRequest request, 
+            TRequest request,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default
             )
             where TRequest : class, IRequest
         {
-            var messageId = await DepositPostAsync(request, (IAmABoxTransactionProvider<CommittableTransaction>)null, args, continueOnCapturedContext, cancellationToken);
-            await ClearOutboxAsync(new string[] { messageId }, args, continueOnCapturedContext, cancellationToken);
+            var messageId = await DepositPostAsync(request, (IAmABoxTransactionProvider<CommittableTransaction>)null, requestContext, args, continueOnCapturedContext, cancellationToken);
+            await ClearOutboxAsync(new[] { messageId }, requestContext, args, continueOnCapturedContext, cancellationToken);
         }
 
         /// <summary>
@@ -469,13 +468,14 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string DepositPost<TRequest>(TRequest request, Dictionary<string, object> args = null) 
+        public string DepositPost<TRequest>(TRequest request, RequestContext requestContext = null, Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
         {
-            return DepositPost<TRequest, CommittableTransaction>(request, null, args); 
+            return DepositPost<TRequest, CommittableTransaction>(request, null, requestContext, args); 
         }
 
         /// <summary>
@@ -487,6 +487,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of Db transaction used by the Outbox</typeparam>
@@ -494,22 +495,33 @@ namespace Paramore.Brighter
         public string DepositPost<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
-
-            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
             
-            if (!bus.HasOutbox())
-                throw new InvalidOperationException("No outbox defined.");
+            var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
+            var context = InitRequestContext(span, requestContext);
 
-            Message message = bus.CreateMessageFromRequest(request);
+            try
+            {
+                Message message = s_bus.CreateMessageFromRequest(request, context);
+                
+                var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
 
-            bus.AddToOutbox(request, message, transactionProvider);
+                if (!bus.HasOutbox())
+                    throw new InvalidOperationException("No outbox defined.");
 
-            return message.Id;
-         }
+                bus.AddToOutbox(message, context, transactionProvider);
+
+                return message.Id;
+            }
+            finally
+            {
+                EndSpan(span);
+            }
+        }
 
         /// <summary>
         /// Adds a messages into the outbox, and returns the id of the saved message.
@@ -519,13 +531,14 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, Dictionary<string, object> args = null) 
+        public string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext requestContext = null, Dictionary<string, object> args = null) 
             where TRequest : class, IRequest
         {
-            return DepositPost<TRequest, CommittableTransaction >(requests, null, args); 
+            return DepositPost<TRequest, CommittableTransaction >(requests, null, requestContext, args); 
         }
 
         /// <summary>
@@ -537,6 +550,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
@@ -544,26 +558,41 @@ namespace Paramore.Brighter
         public string[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
-            Dictionary<string, object> args = null) where TRequest : class, IRequest
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null
+        ) where TRequest : class, IRequest
         {
             s_logger.LogInformation("Save bulk requests request: {RequestType}", typeof(TRequest));
             
-            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
-            
-            var successfullySentMessage = new List<string>();
+            var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
+            var context = InitRequestContext(span, requestContext);
 
-            foreach (var batch in SplitRequestBatchIntoTypes(requests))
+            try
             {
-                var messages = bus.CreateMessagesFromRequests(batch.Key, batch, new CancellationToken()).GetAwaiter().GetResult();
+                var successfullySentMessage = new List<string>();
 
-                s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
+                foreach (var batch in SplitRequestBatchIntoTypes(requests))
+                {
+                    var messages = s_bus.CreateMessagesFromRequests(
+                        batch.Key, batch, context, new CancellationToken()
+                    ).GetAwaiter().GetResult();
 
-                bus.AddToOutbox(messages, transactionProvider);
+                    s_logger.LogInformation(
+                        "Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count()
+                    );
 
-                successfullySentMessage.AddRange(messages.Select(m => m.Id));
+                    var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
+                    bus.AddToOutbox(messages, context, transactionProvider);
+
+                    successfullySentMessage.AddRange(messages.Select(m => m.Id));
+                }
+
+                return successfullySentMessage.ToArray();
             }
-
-            return successfullySentMessage.ToArray();
+            finally
+            {
+                EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -576,6 +605,7 @@ namespace Paramore.Brighter
         /// use the specialized version of this method that takes a transaction provider.
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -583,6 +613,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public async Task<string> DepositPostAsync<TRequest>(
             TRequest request,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
@@ -590,6 +621,7 @@ namespace Paramore.Brighter
             return await DepositPostAsync<TRequest, CommittableTransaction>(
                 request,
                 null,
+                requestContext,
                 args,
                 continueOnCapturedContext,
                 cancellationToken);
@@ -604,6 +636,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -613,22 +646,33 @@ namespace Paramore.Brighter
         public async Task<string> DepositPostAsync<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
             
-            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
+            var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
+            var context = InitRequestContext(span, requestContext);
 
-            if (!bus.HasAsyncOutbox())
-                throw new InvalidOperationException("No async outbox defined.");
+            try
+            {
+                Message message = await s_bus.CreateMessageFromRequestAsync(request, context, cancellationToken);
+                
+                var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
+                
+                if (!bus.HasAsyncOutbox())
+                    throw new InvalidOperationException("No async outbox defined.");
 
-            Message message = await bus.CreateMessageFromRequestAsync(request, cancellationToken);
+                await bus.AddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext, cancellationToken);
 
-            await bus.AddToOutboxAsync(request, message, transactionProvider, continueOnCapturedContext, cancellationToken);
-
-            return message.Id;
+                return message.Id;
+            }
+            finally
+            {
+                EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -639,6 +683,7 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -646,6 +691,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public async Task<string[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
@@ -653,6 +699,7 @@ namespace Paramore.Brighter
             return await DepositPostAsync<TRequest, CommittableTransaction>(
                 requests,
                 null,
+                requestContext,
                 args,
                 continueOnCapturedContext,
                 cancellationToken); 
@@ -667,6 +714,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider used with the Outbox</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -676,26 +724,44 @@ namespace Paramore.Brighter
         public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            var bus = ((ExternalBusService<Message, TTransaction>)_bus);
             
-            var successfullySentMessage = new List<string>();
+            var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
+            var context = InitRequestContext(span, requestContext);
 
-            foreach (var batch in SplitRequestBatchIntoTypes(requests))
+            try
             {
-                var messages = await bus.CreateMessagesFromRequests(batch.Key, batch.ToArray(), cancellationToken);
+                var successfullySentMessage = new List<string>();
 
-                s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
+                foreach (var batch in SplitRequestBatchIntoTypes(requests))
+                {
+                    var messages = await s_bus.CreateMessagesFromRequests(
+                        batch.Key, batch.ToArray(), context, cancellationToken
+                    );
 
-                await bus.AddToOutboxAsync(messages, transactionProvider, continueOnCapturedContext, cancellationToken);
+                    s_logger.LogInformation(
+                        "Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count()
+                    );
+                    
+                    var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
 
-                successfullySentMessage.AddRange(messages.Select(m => m.Id));
+                    await bus.AddToOutboxAsync(
+                        messages, context, transactionProvider, continueOnCapturedContext, cancellationToken
+                    );
+
+                    successfullySentMessage.AddRange(messages.Select(m => m.Id));
+                }
+
+                return successfullySentMessage.ToArray();
             }
-
-            return successfullySentMessage.ToArray();
+            finally
+            {
+                EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -703,10 +769,21 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
         /// </summary>
         /// <param name="ids">The message ids to flush</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearOutbox(string[] ids, Dictionary<string, object> args = null)
+        public void ClearOutbox(string[] ids, RequestContext requestContext = null, Dictionary<string, object> args = null)
         {
-            _bus.ClearOutbox(ids, null);
+            var span = CreateSpan(CLEAROUTBOX);
+            var context = InitRequestContext(span, requestContext);
+            
+            try
+            {
+                s_bus.ClearOutbox(ids, context, args);
+            }
+            finally
+            {
+                EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -716,10 +793,26 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>       
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
+        public void ClearOutbox(
+            int amountToClear = 100, 
+            int minimumAge = 5000, 
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null
+            )
         {
-            _bus.ClearOutbox(amountToClear, minimumAge, false, false, args);
+            var span = CreateSpan(CLEAROUTBOX);
+            var context = InitRequestContext(span, requestContext);
+
+            try
+            {
+                s_bus.ClearOutbox(amountToClear, minimumAge, false, false, context, args);
+            }
+            finally
+            {
+                EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -727,16 +820,28 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="posts">The ids to flush</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should the callback run on a new thread?</param>
         /// <param name="cancellationToken">The token to cancel a running asynchronous operation</param>
         public async Task ClearOutboxAsync(
             IEnumerable<string> posts,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {
-            await _bus.ClearOutboxAsync(posts, continueOnCapturedContext, args, cancellationToken);
+            var span = CreateSpan(CLEAROUTBOX);
+            var context = InitRequestContext(span, requestContext);
+            
+            try
+            {
+                await s_bus.ClearOutboxAsync(posts, context, continueOnCapturedContext, args, cancellationToken);
+            }
+            finally
+            {
+                EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -747,15 +852,27 @@ namespace Paramore.Brighter
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         public void ClearAsyncOutbox(
             int amountToClear = 100,
             int minimumAge = 5000,
             bool useBulk = false,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null
         )
         {
-            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, args);
+            var span = CreateSpan(CLEAROUTBOX);
+            var context = InitRequestContext(span, requestContext);
+
+            try
+            {
+                s_bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, context, args);
+            }
+            finally
+            {
+                EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -767,9 +884,10 @@ namespace Paramore.Brighter
         /// Because the operation blocks, there is a mandatory timeout
         /// </summary>
         /// <param name="request">What message do we want a reply to</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
         /// <exception cref="NotImplementedException"></exception>
-        public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds)
+        public TResponse Call<T, TResponse>(T request, RequestContext requestContext = null, int timeOutInMilliseconds = 500)
             where T : class, ICall where TResponse : class, IResponse
         {
             if (timeOutInMilliseconds <= 0)
@@ -799,48 +917,58 @@ namespace Paramore.Brighter
             //the channel to create the subscription, but this does not do much on a new queue
             Retry(() => responseChannel.Purge());
 
-            var outMessage = _bus.CreateMessageFromRequest(request);
+            var span = CreateSpan(CLEAROUTBOX);
+            var context = InitRequestContext(span, requestContext);
 
-            //We don't store the message, if we continue to fail further retry is left to the sender 
-            //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
-            s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
-            _bus.CallViaExternalBus<T, TResponse>(outMessage);
+            try
+            {
+                var outMessage = s_bus.CreateMessageFromRequest(request, context);
 
-            Message responseMessage = null;
+                //We don't store the message, if we continue to fail further retry is left to the sender 
+                s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
+                s_bus.CallViaExternalBus<T, TResponse>(outMessage);
+
+                Message responseMessage = null;
 
             //now we block on the receiver to try and get the message, until timeout.
             s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
             Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
-            TResponse response = default(TResponse);
-            if (responseMessage.Header.MessageType != MessageType.MT_NONE)
+                TResponse response = default(TResponse);
+                if (responseMessage.Header.MessageType != MessageType.MT_NONE)
+                {
+                    s_logger.LogDebug("Reply received from {ChannelName}", channelName);
+                    //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
+                    s_bus.CreateRequestFromMessage(responseMessage, context, out response);
+                    Send(response);
+                }
+
+
+                s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
+
+                return response;
+            } 
+            finally
             {
-                s_logger.LogDebug("Reply received from {ChannelName}", channelName);
-                //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                _bus.CreateRequestFromMessage(responseMessage, out response);
-                Send(response);
+                EndSpan(span);
             }
-
-            s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
-
-            return response;
         }
-        
-        /// <summary>
+
+            /// <summary>
         /// The external service bus is a singleton as it has app lifetime to manage an Outbox.
         /// This method clears the external service bus, so that the next attempt to use it will create a fresh one
         /// It is mainly intended for testing, to allow the external service bus to be reset between tests
         /// </summary>
         public static void ClearServiceBus()
         {
-            if (_bus != null)
+            if (s_bus != null)
             {
-                lock (padlock)
+                lock (s_padlock)
                 {
-                    if (_bus != null)
+                    if (s_bus != null)
                     {
-                        _bus.Dispose();
-                        _bus = null;
+                        s_bus.Dispose();
+                        s_bus = null;
                     }
                 }
             }
@@ -859,20 +987,7 @@ namespace Paramore.Brighter
                     $"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
         
-        // Create an instance of the ExternalBusService if one not already set for this app. Note that we do not support reinitialization here, so once you have
-        // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
-        // if needed as a "get out of gaol" card.
-        private static void InitExtServiceBus(IAmAnExternalBusService bus)
-        {
-            if (_bus == null)
-            {
-                lock (padlock)
-                {
-                    _bus ??= bus;
-                }
-            }
-        }
-        
+  
         private void EndSpan(Activity span)
         {
             if (span?.Status == ActivityStatusCode.Unset)
@@ -880,14 +995,14 @@ namespace Paramore.Brighter
             span?.Dispose();
         }
 
-        private (Activity span, bool created) GetSpan(string activityName)
+        private Activity CreateSpan(string activityName)
         {
-            bool create = Activity.Current == null;
+            bool hasParent = Activity.Current != null;
 
-            if (create)
-                return (ApplicationTelemetry.ActivitySource.StartActivity(activityName, ActivityKind.Server), create);
+            if (hasParent)
+                return ApplicationTelemetry.ActivitySource.StartActivity(activityName, ActivityKind.Server, Activity.Current.Context);
             else
-                return (Activity.Current, create);
+                return ApplicationTelemetry.ActivitySource.StartActivity(activityName, ActivityKind.Server);
         }
         
         private bool HandlerFactoryIsNotEitherIAmAHandlerFactorySyncOrAsync(IAmAHandlerFactory handlerFactory)
@@ -922,6 +1037,29 @@ namespace Paramore.Brighter
             }
 
             return true;
+        }
+        
+        // Create an instance of the ExternalBusService if one not already set for this app. Note that we do not support reinitialization here, so once you have
+        // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
+        // if needed as a "get out of gaol" card.
+        private static void InitExtServiceBus(IAmAnExternalBusService bus)
+        {
+            if (s_bus == null)
+            {
+                lock (s_padlock)
+                {
+                    s_bus ??= bus;
+                }
+            }
+        }
+        
+        private RequestContext InitRequestContext(Activity span, RequestContext requestContext)
+        {
+            var context = requestContext ?? _requestContextFactory.Create();
+            context.Span = span;
+            context.Policies = _policyRegistry;
+            context.FeatureSwitches = _featureSwitchRegistry;
+            return context;
         }
         
         private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)
