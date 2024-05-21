@@ -45,8 +45,9 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
         connection.Open();
 
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT pg_try_advisory_lock(@RESOURCE)";
-        command.Parameters.AddWithValue("@RESOURCE", resource.GetHashCode());
+        command.CommandText = "SELECT pg_try_advisory_lock(@RESOURCE_HASH_CODE, @RESOURCE_LEN)";
+        command.Parameters.AddWithValue("@RESOURCE_HASH_CODE", resource.GetHashCode());
+        command.Parameters.AddWithValue("@RESOURCE_LEN", resource.Length);
         var scalar = command.ExecuteScalar();
         if (scalar is not (null or true))
         {
