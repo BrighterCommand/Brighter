@@ -21,8 +21,9 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
         await connection.OpenAsync(cancellationToken);
 
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT pg_try_advisory_lock(@RESOURCE)";
-        command.Parameters.AddWithValue("@RESOURCE", resource.GetHashCode());
+        command.CommandText = "SELECT pg_try_advisory_lock(@RESOURCE_HASH_CODE, @RESOURCE_LEN)";
+        command.Parameters.AddWithValue("@RESOURCE_HASH_CODE", resource.GetHashCode());
+        command.Parameters.AddWithValue("@RESOURCE_LEN", resource.Length);
         var scalar = await command.ExecuteScalarAsync(cancellationToken);
         if (scalar is not (null or true))
         {
