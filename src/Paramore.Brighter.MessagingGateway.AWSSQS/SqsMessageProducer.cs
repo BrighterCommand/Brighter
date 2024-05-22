@@ -101,21 +101,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             ConfirmTopicExists(message.Header.Topic);
 
-            using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
+            using var client = CreateSnsClient();
+            var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
+            var messageId = publisher.Publish(message);
+            if (messageId != null)
             {
-                var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
-                var messageId = publisher.Publish(message);
-                if (messageId != null)
-                {
-                    s_logger.LogDebug(
-                        "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-                        message.Header.Topic, message.Id, messageId);
-                    return;
-                }
-
-                throw new InvalidOperationException(
-                    string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
+                s_logger.LogDebug(
+                    "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+                    message.Header.Topic, message.Id, messageId);
+                return;
             }
+
+            throw new InvalidOperationException(
+                string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
         }
 
         /// <summary>
@@ -137,6 +135,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             
         }
-       
-   }
+
+        private AmazonSimpleNotificationServiceClient CreateSnsClient()
+        {
+            var config = new AmazonSimpleNotificationServiceConfig
+            {
+                RegionEndpoint = _connection.Region
+            };
+
+            if (_connection.ClientConfigAction != null)
+            {
+                _connection.ClientConfigAction(config);
+            }
+
+            return new AmazonSimpleNotificationServiceClient(_connection.Credentials, config);
+        }
+    }
 }
