@@ -53,16 +53,16 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             
             //Act
-            outbox.Add(messageToAdd);
+            outbox.Add(messageToAdd, new RequestContext());
             
             timeProvider.Advance(TimeSpan.FromMilliseconds(500)); //give the entry to time to expire
             
             //Trigger a cache clean
-            await outbox.GetAsync(messageId);
+            await outbox.GetAsync(messageId, new RequestContext());
 
             await Task.Delay(500); //Give the sweep time to run
             
-            var message = await outbox.GetAsync(messageId);
+            var message = await outbox.GetAsync(messageId, new RequestContext());
             
             //Assert
             message.Should().BeNull();
@@ -87,11 +87,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                
                
                //Act
-               await outbox.AddAsync(messageToAdd);
+               await outbox.AddAsync(messageToAdd, new RequestContext());
                
                timeProvider.Advance(TimeSpan.FromMilliseconds(50)); //TTL has passed, but not expired yet
    
-               var message = await outbox.GetAsync(messageId);
+               var message = await outbox.GetAsync(messageId, new RequestContext());
                
                //Assert
                message.Should().NotBeNull();

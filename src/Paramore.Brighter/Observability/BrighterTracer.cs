@@ -112,4 +112,26 @@ public class BrighterTracer : IDisposable
         
         span.AddEvent(new ActivityEvent(handlerName, DateTimeOffset.UtcNow, tags));
     }
+
+    public static void CreateMapperEvent(
+        Message message, 
+        Publication publication, 
+        Activity span, 
+        string mapperName,
+        bool isAsync,
+        bool isSink = false)
+    {
+        var tags = new ActivityTagsCollection();
+        tags.Add(BrighterSemanticConventions.HandlerName, mapperName);
+        tags.Add(BrighterSemanticConventions.HandlerType, isAsync ? "async" : "sync");
+        tags.Add(BrighterSemanticConventions.IsSink, isSink);
+        tags.Add(BrighterSemanticConventions.MessageId, message.Id);
+        tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
+        tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey);
+        tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+        tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header));
+        
+        span.AddEvent(new ActivityEvent(mapperName, DateTimeOffset.UtcNow, tags));
+    }
 }

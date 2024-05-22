@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public void When_writing_a_message_with_minimal_header_information_to_the_outbox()
         {
-            _storedMessage = _sqlOutbox.Get(_message.Id);
+            _storedMessage = _sqlOutbox.Get(_message.Id, new RequestContext());
 
             //_should_read_the_message_from_the__sql_outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);

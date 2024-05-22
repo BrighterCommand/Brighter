@@ -31,11 +31,26 @@ namespace Paramore.Brighter
     public interface IAmExternalBusConfiguration
     {
         /// <summary>
-        /// The registry is a collection of producers 
+        /// How big should the batch size be for archiving messages
         /// </summary>
-        /// <value>The registry of producers</value>
-        IAmAProducerRegistry ProducerRegistry { get; set; }
+        public int ArchiveBatchSize { get; set; }
 
+        /// <summary>
+        /// If we want to archive messages, abstracts archival storage
+        /// </summary>
+        public IAmAnArchiveProvider ArchiveProvider { get; set; }
+        
+        /// <summary>
+        /// How do obtain a connection to the Outbox that is not part of a shared transaction.
+        /// NOTE: Must implement IAmARelationalDbConnectionProvider
+        /// </summary>
+        Type ConnectionProvider { get; set; }
+ 
+        /// <summary>
+        /// The Distributed Locking Service
+        /// </summary>
+        public IDistributedLock DistributedLock { get; set; }
+        
         /// <summary>
         /// Gets the message mapper registry.
         /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
@@ -81,6 +96,12 @@ namespace Paramore.Brighter
         Dictionary<string, object> OutBoxBag { get; set; }
         
         /// <summary>
+        /// The registry is a collection of producers 
+        /// </summary>
+        /// <value>The registry of producers</value>
+        IAmAProducerRegistry ProducerRegistry { get; set; }
+        
+        /// <summary>
         /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
         /// this tends to he handled by a Dispatcher not a Command Processor. 
         /// </summary>
@@ -92,6 +113,11 @@ namespace Paramore.Brighter
         IEnumerable<Subscription> ReplyQueueSubscriptions { get; set; }
         
         /// <summary>
+        /// Do you want to override the default in memory request context factory? Used for callbacks
+        /// </summary>
+        IAmARequestContextFactory RequestContextFactory { get; set; }
+        
+        /// <summary>
         /// The transaction provider for the outbox
         /// </summary>
         Type TransactionProvider { get; set; }
@@ -100,12 +126,6 @@ namespace Paramore.Brighter
         /// Do we want to support RPC on an external bus?
         /// </summary>
         bool UseRpc { get; set; }
-
-        /// <summary>
-        /// How do obtain a connection to the Outbox that is not part of a shared transaction.
-        /// NOTE: Must implement IAmARelationalDbConnectionProvider
-        /// </summary>
-        Type ConnectionProvider { get; set; }
 
     }
 
@@ -131,6 +151,11 @@ namespace Paramore.Brighter
         public Type ConnectionProvider { get; set; }
         
         /// <summary>
+        /// The Distributed Locking Service
+        /// </summary>
+        public IDistributedLock DistributedLock { get; set; }
+        
+        /// <summary>
         /// The registry is a collection of producers 
         /// </summary>
         /// <value>The registry of producers</value>
@@ -148,11 +173,7 @@ namespace Paramore.Brighter
         /// </summary>
         public IAmAnOutbox Outbox { get; set; }
         
-        /// <summary>
-        /// The Distributed Locking Service
-        /// </summary>
-        public IDistributedLock DistributedLock { get; set; }
-
+   
         /// <summary>
         /// The maximum amount of messages to deposit into the outbox in one transmissions.
         /// This is to stop insert statements getting too big
@@ -195,6 +216,11 @@ namespace Paramore.Brighter
         /// this tends to he handled by a Dispatcher not a Command Processor. 
         /// </summary>
         public IAmAChannelFactory ResponseChannelFactory { get; set; }
+        
+        /// <summary>
+        /// Do you want to override the default in memory request context factory? Used for callbacks
+        /// </summary>
+        public IAmARequestContextFactory RequestContextFactory { get; set; }
         
         /// <summary>
         /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods

@@ -118,6 +118,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //act
             var requests = new List<IRequest> {_myCommand, _myCommandTwo, _myEvent } ;
             var postedMessageId = _commandProcessor.DepositPost(requests);
+            var context = new RequestContext();
             
             //assert
             
@@ -126,20 +127,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _eventProducer.MessageWasSent.Should().BeFalse();
             
             //message should correspond to the command
-            var depositedPost = _fakeOutbox.Get(_message.Id);
+            var depositedPost = _fakeOutbox.Get(_message.Id, context);
             depositedPost.Id.Should().Be(_message.Id);
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
-            var depositedPost2 = _fakeOutbox.Get(_messageTwo.Id);
+            var depositedPost2 = _fakeOutbox.Get(_messageTwo.Id, context);
             depositedPost2.Id.Should().Be(_messageTwo.Id);
             depositedPost2.Body.Value.Should().Be(_messageTwo.Body.Value);
             depositedPost2.Header.Topic.Should().Be(_messageTwo.Header.Topic);
             depositedPost2.Header.MessageType.Should().Be(_messageTwo.Header.MessageType);
             
             var depositedPost3 = _fakeOutbox
-                .OutstandingMessages(0)
+                .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _messageThree.Id);
             //message should correspond to the command
             depositedPost3.Id.Should().Be(_messageThree.Id);
@@ -148,7 +149,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost3.Header.MessageType.Should().Be(_messageThree.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = _fakeOutbox.OutstandingMessages(0);
+            var outstandingMessages = _fakeOutbox.OutstandingMessages(0, context);
             outstandingMessages.Count().Should().Be(3);
         }
         

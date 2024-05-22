@@ -7,6 +7,7 @@ public static class CommandProcessorSpanExtenstions
    public static string ToSpanName(this CommandProcessorSpan span) => span switch
    {
        CommandProcessorSpan.Create => "create",
+       CommandProcessorSpan.Deposit => "deposit",
        CommandProcessorSpan.Publish => "publish",
        CommandProcessorSpan.Send => "send",
        _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)

@@ -68,9 +68,10 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _mySqlOutbox.AddAsync(_messageEarliest);
+            var context = new RequestContext();
+            await _mySqlOutbox.AddAsync(_messageEarliest, context);
 
-            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id, context);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

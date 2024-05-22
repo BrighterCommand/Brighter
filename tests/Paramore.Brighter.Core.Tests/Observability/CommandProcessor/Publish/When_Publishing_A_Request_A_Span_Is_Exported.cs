@@ -79,9 +79,8 @@ public class CommandProcessorPublishObservabilityTests
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
 
         var @event = new MyEvent();
-        var context = new RequestContext();
-        context.Span = parentActivity;
-        
+        var context = new RequestContext { Span = parentActivity };
+
         //act
         _commandProcessor.Publish(@event, context);
         parentActivity?.Stop();

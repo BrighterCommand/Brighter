@@ -108,8 +108,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         [Fact]
         public async Task When_Implicit_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
-            await _fakeOutbox.AddAsync(_message);
-            await _fakeOutbox.AddAsync(_message2);
+            var context = new RequestContext();
+            await _fakeOutbox.AddAsync(_message, context);
+            await _fakeOutbox.AddAsync(_message2, context);
 
             _commandProcessor.ClearAsyncOutbox(1,1);
 
@@ -135,15 +136,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var sentMessage = _producer.SentMessages.FirstOrDefault(m => m.Id == _message.Id);
             sentMessage.Should().NotBeNull();
-            sentMessage.Id.Should().Be(_message.Id);
-            sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
-            sentMessage.Body.Value.Should().Be(_message.Body.Value);
+            sentMessage?.Id.Should().Be(_message.Id);
+            sentMessage?.Header.Topic.Should().Be(_message.Header.Topic);
+            sentMessage?.Body.Value.Should().Be(_message.Body.Value);
 
             var sentMessage2 = _producer.SentMessages.FirstOrDefault(m => m.Id == _message2.Id);
             sentMessage2.Should().NotBeNull();
-            sentMessage2.Id.Should().Be(_message2.Id);
-            sentMessage2.Header.Topic.Should().Be(_message2.Header.Topic);
-            sentMessage2.Body.Value.Should().Be(_message2.Body.Value);
+            sentMessage2?.Id.Should().Be(_message2.Id);
+            sentMessage2?.Header.Topic.Should().Be(_message2.Header.Topic);
+            sentMessage2?.Body.Value.Should().Be(_message2.Body.Value);
         }
 
         public void Dispose()

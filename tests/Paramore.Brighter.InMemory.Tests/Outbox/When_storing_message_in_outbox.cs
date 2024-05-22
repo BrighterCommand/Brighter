@@ -50,9 +50,10 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             
             //Act
-            outbox.Add(messageToAdd);
+            var context = new RequestContext();
+            outbox.Add(messageToAdd, context);
 
-            var retrievedMessage = outbox.Get(messageId);
+            var retrievedMessage = outbox.Get(messageId, context);
             
             //Assert
             retrievedMessage.Should().NotBeNull();
@@ -76,11 +77,12 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             
             //Act
-            outbox.Add(messageToAdd);
+            var context = new RequestContext();
+            outbox.Add(messageToAdd, context);
             var dispatchedAt = DateTime.UtcNow;
-            outbox.MarkDispatched(messageId, dispatchedAt);
+            outbox.MarkDispatched(messageId, context, dispatchedAt);
 
-            var dispatchedMessages = outbox.DispatchedMessages(500);
+            var dispatchedMessages = outbox.DispatchedMessages(500, context);
 
             //Assert
             dispatchedMessages.Count().Should().Be(1);
@@ -102,11 +104,12 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             
             //Act
-            outbox.Add(messageToAdd);
+            var context = new RequestContext();
+            outbox.Add(messageToAdd, context);
             
             timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
-            var outstandingMessages = outbox.OutstandingMessages(0);
+            var outstandingMessages = outbox.OutstandingMessages(0, context);
             
             //Assert
             outstandingMessages.Count().Should().Be(1);
@@ -120,12 +123,16 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             var outbox = new InMemoryOutbox(new FakeTimeProvider());
 
-            var messageIds = new string[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
+            var messageIds = new[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
+            var context = new RequestContext();
             for(int i =0; i <= 4; i++)
-                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
+            {
+                RequestContext requestContext = context;
+                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]), requestContext);
+            }
 
             //Act 
-            var message = outbox.Get(messageIds[2]);
+            var message = outbox.Get(messageIds[2], context);
             
             //Assert
             message.Id.Should().Be(messageIds[2]);
@@ -139,18 +146,22 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             var outbox = new InMemoryOutbox(timeProvider);
 
             var messageIds = new string[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
+            var context = new RequestContext();
             for(int i =0; i <= 4; i++)
-                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
+            {
+                RequestContext requestContext = context;
+                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]), requestContext);
+            }
 
             //Act 
             var now = DateTime.UtcNow;
-            outbox.MarkDispatched(messageIds[0], now);
-            outbox.MarkDispatched(messageIds[4], now);
+            outbox.MarkDispatched(messageIds[0], context, now);
+            outbox.MarkDispatched(messageIds[4], context, now);
 
             timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
-            var sentMessages = outbox.DispatchedMessages(5000);
-            var outstandingMessages = outbox.OutstandingMessages(0);
+            var sentMessages = outbox.DispatchedMessages(5000, context);
+            var outstandingMessages = outbox.OutstandingMessages(0, context);
 
             //Assert
             sentMessages.Count().Should().Be(2);

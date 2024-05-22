@@ -53,7 +53,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Outbox()
         {
-            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id, new RequestContext());
 
             //should return a empty message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

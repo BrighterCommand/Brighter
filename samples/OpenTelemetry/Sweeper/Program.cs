@@ -32,10 +32,13 @@ IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<stri
     {"default", new FakeMessageProducer{Publication = {  }}}
 });
 
+var requestContextFactory = new InMemoryRequestContextFactory();
+
 builder.Services.AddBrighter()
     .UseExternalBus((configure) =>
     {
         configure.ProducerRegistry = producerRegistry;
+        configure.RequestContextFactory = requestContextFactory;
     })
     .UseOutboxSweeper(options =>
     {
@@ -52,7 +55,8 @@ if (outBox == null)
 outBox.Add(
     new Message(
         new MessageHeader(Guid.NewGuid().ToString(), "Test.Topic", MessageType.MT_COMMAND, timeStamp:DateTime.UtcNow),
-        new MessageBody("Hello"))
+        new MessageBody("Hello")),
+    requestContextFactory.Create()
     );
 
 app.Run();

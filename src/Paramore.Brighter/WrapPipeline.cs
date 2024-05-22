@@ -28,6 +28,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -86,11 +87,13 @@ namespace Paramore.Brighter
 
             MessageMapper.Context = requestContext;
             var message = MessageMapper.MapToMessage(request, publication);
+            BrighterTracer.CreateMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, true);
             
             Transforms.Each(transform =>
             {
                 transform.Context = requestContext;
                 message = transform.Wrap(message, publication);
+                BrighterTracer.CreateMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false);
             });
             return message;
         }

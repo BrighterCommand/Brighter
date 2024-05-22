@@ -31,7 +31,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             foreach (var message in messages)
             {
-                outbox.Add(message);
+                outbox.Add(message, new RequestContext());
                 commandProcessor.Post(message.ToStubRequest());
             }
 
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             foreach (var message in messages)
             {
-                outbox.Add(message);
+                outbox.Add(message, new RequestContext());
                 commandProcessor.Post(message.ToStubRequest());
             }
 

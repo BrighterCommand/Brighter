@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -27,13 +26,14 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
     [Fact]
     public async Task When_Marking_A_Message_As_Dispatched_In_The_Outbox_Async()
     {
-        await _dynamoDbOutbox.AddAsync(_message);
-        await _dynamoDbOutbox.MarkDispatchedAsync(_message.Id, DateTime.UtcNow);
+        var context = new RequestContext();
+        await _dynamoDbOutbox.AddAsync(_message, context);
+        await _dynamoDbOutbox.MarkDispatchedAsync(_message.Id, context, DateTime.UtcNow);
         
         var args = new Dictionary<string, object>(); 
         args.Add("Topic", "test_topic");
 
-        var messages = _dynamoDbOutbox.DispatchedMessages(0, 100, 1, args:args);
+        var messages = _dynamoDbOutbox.DispatchedMessages(0, context,100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
         message.Body.Should().Be(_message.Body);
@@ -42,13 +42,14 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
     [Fact]
     public void When_Marking_A_Message_As_Dispatched_In_The_Outbox()
     {
-        _dynamoDbOutbox.Add(_message);  
-        _dynamoDbOutbox.MarkDispatched(_message.Id, DateTime.UtcNow);
+        var context = new RequestContext();
+        _dynamoDbOutbox.Add(_message, context);  
+        _dynamoDbOutbox.MarkDispatched(_message.Id, context, DateTime.UtcNow);
 
         var args = new Dictionary<string, object>(); 
         args.Add("Topic", "test_topic");
 
-        var messages = _dynamoDbOutbox.DispatchedMessages(0, 100, 1, args:args);
+        var messages = _dynamoDbOutbox.DispatchedMessages(0, context, 100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
         message.Body.Should().Be(_message.Body);

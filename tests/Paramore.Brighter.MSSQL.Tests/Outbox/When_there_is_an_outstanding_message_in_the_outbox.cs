@@ -12,38 +12,36 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
     {
         private readonly Message _dispatchedMessage;
         private readonly MsSqlOutbox _sqlOutbox;
-        private readonly MsSqlTestHelper _msSqlTestHelper;
 
         public OutstandingMessagesTests()
         {
-            _msSqlTestHelper = new MsSqlTestHelper();
-            _msSqlTestHelper.SetupMessageDb();
+            MsSqlTestHelper msSqlTestHelper = new();
+            msSqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new MsSqlOutbox(msSqlTestHelper.OutboxConfiguration);
             _dispatchedMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _sqlOutbox.Add(_dispatchedMessage);
+            _sqlOutbox.Add(_dispatchedMessage, new RequestContext());
 
             //wait to create an outstanding period
             Task.Delay(1000).Wait();
-
         }
         
         [Fact]
         public void When_there_is_an_outstanding_message_in_the_outbox()
         {
-            var outstandingMessage = _sqlOutbox.OutstandingMessages(100).SingleOrDefault();
+            var outstandingMessage = _sqlOutbox.OutstandingMessages(100, new RequestContext()).SingleOrDefault();
 
             outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
+            outstandingMessage?.Id.Should().Be(_dispatchedMessage.Id);
         }
         
         [Fact]
         public async Task When_there_is_an_outstanding_message_in_the_outbox_async()
         {
-            var outstandingMessage = (await _sqlOutbox.OutstandingMessagesAsync(100)).SingleOrDefault();
+            var outstandingMessage = (await _sqlOutbox.OutstandingMessagesAsync(100, new RequestContext())).SingleOrDefault();
 
             outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
+            outstandingMessage?.Id.Should().Be(_dispatchedMessage.Id);
         }
     }
 }

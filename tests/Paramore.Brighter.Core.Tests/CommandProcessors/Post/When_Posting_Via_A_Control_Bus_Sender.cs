@@ -38,19 +38,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class ControlBusSenderPostMessageTests : IDisposable
     {
-        private readonly CommandProcessor _commandProcessor;
         private readonly ControlBusSender _controlBusSender;
-        private readonly MyCommand _myCommand = new MyCommand();
+        private readonly MyCommand _myCommand = new();
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducer _producer;
 
         public ControlBusSenderPostMessageTests()
         {
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _producer = new FakeMessageProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            FakeMessageProducer producer = new() {Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
@@ -71,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, producer},});
             
             _fakeOutbox = new FakeOutbox();
             
@@ -85,13 +83,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             );
 
             CommandProcessor.ClearServiceBus();
-            _commandProcessor = new CommandProcessor(
+            CommandProcessor commandProcessor = new(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
                 bus
             );
 
-            _controlBusSender = new ControlBusSender(_commandProcessor);
+            _controlBusSender = new ControlBusSender(commandProcessor);
         }
 
         [Fact]
@@ -101,7 +99,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _fakeOutbox
-              .DispatchedMessages(120000, 1)
+              .DispatchedMessages(120000, new RequestContext(), 1)
               .SingleOrDefault();
               
             message.Should().NotBeNull();

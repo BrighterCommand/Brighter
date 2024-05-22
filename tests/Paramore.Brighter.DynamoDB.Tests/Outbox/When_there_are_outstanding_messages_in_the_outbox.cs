@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -27,13 +26,14 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     [Fact]
     public async Task When_there_are_outstanding_messages_in_the_outbox_async()
     {
-        await _dynamoDbOutbox.AddAsync(_message);
+        var context = new RequestContext();
+        await _dynamoDbOutbox.AddAsync(_message, context);
 
         await Task.Delay(1000);
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
-        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, 100, 1, args);
+        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 1, args);
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
@@ -44,13 +44,14 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     [Fact]
     public async Task When_there_are_outstanding_messages_in_the_outbox()
     {
-        _dynamoDbOutbox.Add(_message);
+        var context = new RequestContext();
+        _dynamoDbOutbox.Add(_message, context);
 
         await Task.Delay(1000);
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
-        var messages =_dynamoDbOutbox.OutstandingMessages(0, 100, 1, args);
+        var messages =_dynamoDbOutbox.OutstandingMessages(0, context, 100, 1, args);
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);

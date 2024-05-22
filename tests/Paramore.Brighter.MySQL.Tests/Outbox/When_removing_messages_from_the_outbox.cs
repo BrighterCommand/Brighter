@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,12 +41,14 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private readonly Message _firstMessage;
         private readonly Message _secondMessage;
         private readonly Message _thirdMessage;
+        private readonly RequestContext _context;
 
         public MySqlOutboxDeletingMessagesTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
+            _context = new RequestContext();
 
             _firstMessage = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, 
@@ -73,21 +74,22 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            _mySqlOutbox.Add(_firstMessage);
-            _mySqlOutbox.Add(_secondMessage);
-            _mySqlOutbox.Add(_thirdMessage);
+            _mySqlOutbox.Add(_firstMessage, _context);
+            _mySqlOutbox.Add(_secondMessage, _context);
+            _mySqlOutbox.Add(_thirdMessage, _context);
             
-            _mySqlOutbox.Delete([_firstMessage.Id]);
+            _mySqlOutbox.Delete([_firstMessage.Id], _context);
 
-            var remainingMessages = _mySqlOutbox.OutstandingMessages(0);
+            var remainingMessages = _mySqlOutbox.OutstandingMessages(0, _context);
 
-            remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_secondMessage);
-            remainingMessages.Should().Contain(_thirdMessage);
+            var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
+            msgs.Should().HaveCount(2);
+            msgs.Should().Contain(_secondMessage);
+            msgs.Should().Contain(_thirdMessage);
             
-            _mySqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id});
+            _mySqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id}, _context);
 
-            var messages = _mySqlOutbox.OutstandingMessages(0);
+            var messages = _mySqlOutbox.OutstandingMessages(0, _context);
 
             messages.Should().HaveCount(0);
         }
@@ -95,21 +97,22 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_Removing_Messages_From_The_OutboxAsync()
         {
-            _mySqlOutbox.Add(_firstMessage);
-            _mySqlOutbox.Add(_secondMessage);
-            _mySqlOutbox.Add(_thirdMessage);
+            _mySqlOutbox.Add(_firstMessage, _context);
+            _mySqlOutbox.Add(_secondMessage, _context);
+            _mySqlOutbox.Add(_thirdMessage, _context);
 
-            await _mySqlOutbox.DeleteAsync(new []{_firstMessage.Id}, cancellationToken: CancellationToken.None);
+            await _mySqlOutbox.DeleteAsync(new []{_firstMessage.Id}, _context, cancellationToken: CancellationToken.None);
 
-            var remainingMessages = await _mySqlOutbox.OutstandingMessagesAsync(0);
-                                                                                                       
-            remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_secondMessage);
-            remainingMessages.Should().Contain(_thirdMessage);
+            var remainingMessages = await _mySqlOutbox.OutstandingMessagesAsync(0, _context);
+
+            var messages = remainingMessages as Message[] ?? remainingMessages.ToArray();
+            messages.Should().HaveCount(2);
+            messages.Should().Contain(_secondMessage);
+            messages.Should().Contain(_thirdMessage);
             
-            await _mySqlOutbox.DeleteAsync(new []{_secondMessage.Id, _thirdMessage.Id}, cancellationToken: CancellationToken.None);
+            await _mySqlOutbox.DeleteAsync(new []{_secondMessage.Id, _thirdMessage.Id}, _context, cancellationToken: CancellationToken.None);
 
-            var finalMessages = await _mySqlOutbox.OutstandingMessagesAsync(0);
+            var finalMessages = await _mySqlOutbox.OutstandingMessagesAsync(0, _context);
 
             finalMessages.Should().HaveCount(0);
         }

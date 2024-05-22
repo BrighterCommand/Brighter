@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             await _commandProcessor.PostAsync(_myCommand);
 
-            var message = await _outbox.GetAsync(_myCommand.Id);
+            var message = await _outbox.GetAsync(_myCommand.Id, new RequestContext());
             //_should_store_the_message_in_the_sent_command_message_repository
             message.Should().NotBeNull();
             //_should_send_a_message_via_the_messaging_gateway

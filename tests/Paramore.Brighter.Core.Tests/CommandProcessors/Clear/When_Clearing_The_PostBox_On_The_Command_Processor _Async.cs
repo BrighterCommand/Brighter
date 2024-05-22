@@ -105,7 +105,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         [Fact]
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
-            await _fakeOutbox.AddAsync(_message);
+            var context = new RequestContext();
+            await _fakeOutbox.AddAsync(_message, context);
             
             await _commandProcessor.ClearOutboxAsync(new []{_message.Id});
 

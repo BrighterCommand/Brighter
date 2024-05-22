@@ -87,6 +87,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         {
             //act
             var postedMessageId = await _commandProcessor.DepositPostAsync(_myCommand);
+            var context  = new RequestContext();
             
             //assert
             //message should not be posted
@@ -94,7 +95,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             //message should be in the store
             var depositedPost = _fakeOutbox
-                .OutstandingMessages(0)
+                .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 
             depositedPost.Should().NotBeNull();
@@ -106,7 +107,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = await _fakeOutbox.OutstandingMessagesAsync(0);
+            var outstandingMessages = await _fakeOutbox.OutstandingMessagesAsync(0, context);
             var outstandingMessage = outstandingMessages.Single();
             outstandingMessage.Id.Should().Be(_message.Id);
         }

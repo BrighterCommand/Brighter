@@ -122,8 +122,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         public async Task When_depositing_a_message_in_the_outbox()
         {
             //act
+            var context = new RequestContext();
             var requests = new List<IRequest> {_myCommand, _myCommand2, _myEvent } ;
             await _commandProcessor.DepositPostAsync(requests);
+            
             
             //assert
             //message should not be posted
@@ -132,17 +134,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             //message should be in the store
             var depositedPost = _fakeOutbox
-                .OutstandingMessages(0)
+                .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
             
             //message should be in the store
             var depositedPost2 = _fakeOutbox
-                .OutstandingMessages(0)
+                .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message2.Id);
             
             //message should be in the store
             var depositedPost3 = _fakeOutbox
-                .OutstandingMessages(0)
+                .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message3.Id);
 
             depositedPost.Should().NotBeNull();

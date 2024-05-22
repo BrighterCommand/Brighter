@@ -116,7 +116,8 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
-        public CommandProcessor(IAmASubscriberRegistry subscriberRegistry,
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -194,7 +195,8 @@ namespace Paramore.Brighter
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
-        public CommandProcessor(IAmARequestContextFactory requestContextFactory,
+        public CommandProcessor(
+            IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAnExternalBusService bus,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
@@ -533,8 +535,8 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
             
-            var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
-            var context = InitRequestContext(span, requestContext);
+             var span = _tracer?.CreateSpan(CommandProcessorSpan.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
+             var context = InitRequestContext(span, requestContext);
 
             try
             {
@@ -958,7 +960,7 @@ namespace Paramore.Brighter
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
-                s_bus.CallViaExternalBus<T, TResponse>(outMessage);
+                s_bus.CallViaExternalBus<T, TResponse>(outMessage, requestContext);
 
                 Message responseMessage = null;
 

@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         }
 
         [Fact]
-        public async void When_Posting_Fails_Limit_Total_Writes_To_OutBox_In_Window()
+        public async Task When_Posting_Fails_Limit_Total_Writes_To_OutBox_In_Window()
         {
             var sentList = new List<string>(); 
             bool shouldThrowException = false;
@@ -109,7 +109,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             //should store the message in the sent outbox
             foreach (var id in sentList)
             {
-                _outbox.Get(id).Should().NotBeNull();
+                _outbox.Get(id, new RequestContext()).Should().NotBeNull();
             }
         }
 

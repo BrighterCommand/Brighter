@@ -66,10 +66,9 @@ public class CommandProcessorSendObservabilityTests
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
         
-         var command = new MyCommand{Value = "My Test String"};
-        var context = new RequestContext();
-        context.Span = parentActivity;
-        
+        var command = new MyCommand{Value = "My Test String"};
+        var context = new RequestContext { Span = parentActivity };
+
         //act
         _commandProcessor.Send(command, context);
         parentActivity?.Stop();

@@ -76,13 +76,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             var bytes = System.Text.Encoding.UTF8.GetBytes("message body"); 
             
             _messageEarliest = new Message(messageHeader, new MessageBody(bytes, contentType:"application/octet-stream", CharacterEncoding.Raw));
-            _sqlOutbox.Add(_messageEarliest);
+            _sqlOutbox.Add(_messageEarliest, new RequestContext());
         }
         
         [Fact]
         public void When_Writing_A_Message_To_The_Outbox()
         {
-            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id, new RequestContext());
             //should read the message from the sql outbox
             _storedMessage.Body.Bytes.Should().Equal(_messageEarliest.Body.Bytes);
             var bodyAsString =  Encoding.UTF8.GetString(_storedMessage.Body.Bytes);

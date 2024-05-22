@@ -102,7 +102,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         [Fact]
         public void When_Clearing_The_PostBox_On_The_Command_Processor()
         {
-            _fakeOutbox.Add(_message);
+            //arrange 
+            var context = new RequestContext();
+            _fakeOutbox.Add(_message, context);
             
             _commandProcessor.ClearOutbox(new []{_message.Id});
 
@@ -111,9 +113,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var sentMessage = _producer.SentMessages.FirstOrDefault();
             sentMessage.Should().NotBeNull();
-            sentMessage.Id.Should().Be(_message.Id);
-            sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
-            sentMessage.Body.Value.Should().Be(_message.Body.Value);
+            sentMessage?.Id.Should().Be(_message.Id);
+            sentMessage?.Header.Topic.Should().Be(_message.Header.Topic);
+            sentMessage?.Body.Value.Should().Be(_message.Body.Value);
         }
 
         public void Dispose()

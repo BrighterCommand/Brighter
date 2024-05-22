@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json;
-using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
@@ -80,9 +79,12 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         [Fact]
         public void When_writing_a_utf8_message_to_the_dynamo_db_outbox()
         {
+            //arrange
+            var context = new RequestContext();
+            
             //act
-            _dynamoDbOutbox.Add(_messageEarliest);
-            _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id);
+            _dynamoDbOutbox.Add(_messageEarliest, context);
+            _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id, context);
 
             //assert
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

@@ -92,14 +92,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         [Fact]
         public void When_Posting_With_An_In_Memory_Outbox()
         {
-            _commandProcessor.Post(_myCommand);
+            var context = new RequestContext();
+            _commandProcessor.Post(_myCommand, context);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            _outbox.Get(_myCommand.Id).Should().NotBeNull();
+            _outbox.Get(_myCommand.Id, context).Should().NotBeNull();
             //_should_send_a_message_via_the_messaging_gateway
             _producer.MessageWasSent.Should().BeTrue();
             // _should_convert_the_command_into_a_message
-            _outbox.Get(_myCommand.Id).Should().Be(_message);
+            _outbox.Get(_myCommand.Id, context).Should().Be(_message);
         }
 
         public void Dispose()

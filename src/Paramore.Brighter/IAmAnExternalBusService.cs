@@ -16,22 +16,25 @@ namespace Paramore.Brighter
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>
         /// <param name="millisecondsDispatchedSince">Minimum age in milliseconds</param>
-        void Archive(int millisecondsDispatchedSince);
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
+        void Archive(int millisecondsDispatchedSince, RequestContext requestContext);
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>
-        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="millisecondsDispatchedSince">How stale is the message that we want to archive</param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        Task ArchiveAsync(int millisecondsDispatchedSince, CancellationToken cancellationToken);
+        Task ArchiveAsync(int millisecondsDispatchedSince, RequestContext requestContext, CancellationToken cancellationToken);
         
         /// <summary>
         /// Used with RPC to call a remote service via the external bus
         /// </summary>
         /// <param name="outMessage">The message to send</param>
+        /// <param name="requestContext">The context of the request pipeline</param>        
         /// <typeparam name="T">The type of the call</typeparam>
         /// <typeparam name="TResponse">The type of the response</typeparam>
-        void CallViaExternalBus<T, TResponse>(Message outMessage)
+        void CallViaExternalBus<T, TResponse>(Message outMessage, RequestContext requestContext)
             where T : class, ICall where TResponse : class, IResponse;
 
         /// <summary>
@@ -128,15 +131,6 @@ namespace Paramore.Brighter
         /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
         void CreateRequestFromMessage<TRequest>(Message message, RequestContext requestContext, out TRequest request)
             where TRequest : class, IRequest;
-        
-
-        /// <summary>
-        /// Retry an action via the policy engine
-        /// </summary>
-        /// <param name="action">The Action to try</param>
-        /// <returns></returns>
-        bool Retry(Action action);
-
     }
     
     /// <summary>

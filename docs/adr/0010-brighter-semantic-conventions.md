@@ -96,7 +96,7 @@ The span kind will always be Internal. This is because the command processor is 
 | `deposit` | A request is transfomed into a message and stored in an Outbox                      |
 | `clear`     | Requests in the Outbox are dispatched to a messaging broker via a messaging gateway |
 
-Note that we Publish, Deposit and Clear may be batch operations which result in multiple invocations of our pipeline. In a batch we will create a parent span (itself probably a child of another span that triggered it) and add each item within the batch as an activity via an activity link on the parent span. 
+Note that we Publish, Deposit and Clear may be batch operations which result in multiple invocations of our pipeline. In a batch we will create a parent `create` span (itself probably a child of another span that triggered it) and add each item within the batch as an activity via an activity link on the parent span. 
 
 #### Deposit Operation Spans, External Call Spans
 
@@ -106,7 +106,7 @@ The Command Processor span for a Deposit covers the entire transform and mapper 
 
 Storing the message in an Outbox should create a span, with low-cardinality (i.e. name of Outbox or Inbox operation) as per the [Otel specification](https://opentelemetry.io/docs/specs/semconv/database/database-spans/).
 
-A transformer is middleware used in the message mapping pipeline that turns a request into a message. A transformer may call externally, for exammple to object storage or a schema registry. These external calls should create a new span that has the Deposit Operation Span as a parent.
+A transformer is middleware used in the message mapping pipeline that turns a request into a message. A transformer may call externally, for example to object storage or a schema registry. These external calls should create a new span that has the Deposit Operation Span as a parent.
 
 In some cases semantic conventions will exist for these external calls. *For example see object storage: See the [OTel documentation for S3]*
 
@@ -181,8 +181,8 @@ Other attributes are available in Brighter today:
 
 We may also wish to make the payload available (although it is not part of the Semantic Conventions).
 
-* `messaging.message.body`: what is the message payload?
-* `messaging.message.headers`: what are the message headers?
+* `messaging.messagebody`: what is the message payload?
+* `messaging.messageheaders`: what are the message headers?
 
 We should check Activity.IsAllDataRequested and only add the attributes if it is. Likely options we would need:
 

@@ -64,22 +64,24 @@ public class ServiceBusMessageStoreArchiverTests
     public void When_Archiving_All_Messages_From_The_Outbox()
     {
         //arrange
+        var context = new RequestContext();
+        
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageOne);
-        _outbox.MarkDispatched(messageOne.Id);
+        _outbox.Add(messageOne, context);
+        _outbox.MarkDispatched(messageOne.Id, context);
         
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageTwo);
-        _outbox.MarkDispatched(messageTwo.Id);
+        _outbox.Add(messageTwo, context);
+        _outbox.MarkDispatched(messageTwo.Id, context);
         
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageThree);
-        _outbox.MarkDispatched(messageThree.Id);
+        _outbox.Add(messageThree, context);
+        _outbox.MarkDispatched(messageThree.Id, context);
 
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(20000);
+        _bus.Archive(20000, context);
         
         //assert
         _outbox.EntryCount.Should().Be(0);
@@ -91,21 +93,23 @@ public class ServiceBusMessageStoreArchiverTests
     [Fact]
     public void When_Archiving_Some_Messages_From_The_Outbox()
     {
+        //arrange
+        var context = new RequestContext();
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageOne);
-        _outbox.MarkDispatched(messageOne.Id);
+        _outbox.Add(messageOne, context);
+        _outbox.MarkDispatched(messageOne.Id, context);
         
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageTwo);
-        _outbox.MarkDispatched(messageTwo.Id);
+        _outbox.Add(messageTwo, context);
+        _outbox.MarkDispatched(messageTwo.Id, context);
         
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageThree);
+        _outbox.Add(messageThree, context);
 
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(20000);
+        _bus.Archive(20000, context);
         
         //assert
         _outbox.EntryCount.Should().Be(1);
@@ -118,19 +122,20 @@ public class ServiceBusMessageStoreArchiverTests
     [Fact]
     public void When_Archiving_No_Messages_From_The_Outbox()
     {
+        var context = new RequestContext();
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageOne);
+        _outbox.Add(messageOne, context);
         
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageTwo);
+        _outbox.Add(messageTwo, context);
         
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        _outbox.Add(messageThree);
+        _outbox.Add(messageThree, context);
 
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(20000);
+        _bus.Archive(20000, context);
         
         //assert
         _outbox.EntryCount.Should().Be(3);
@@ -142,7 +147,8 @@ public class ServiceBusMessageStoreArchiverTests
     [Fact]
     public void When_Archiving_An_Empty_The_Outbox()
     {
-        _bus.Archive(20000);
+        var context = new RequestContext();
+        _bus.Archive(20000, context);
         
         //assert
         _outbox.EntryCount.Should().Be(0);

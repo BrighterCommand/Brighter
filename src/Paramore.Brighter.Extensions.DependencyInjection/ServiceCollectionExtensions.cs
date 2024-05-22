@@ -225,7 +225,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
            
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnExternalBusService),
                (serviceProvider) => BuildExternalBus(
-                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox, busConfiguration.ArchiveProvider
+                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
                    ),
                ServiceLifetime.Singleton));
 
@@ -325,7 +325,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             Type transactionType,
             ExternalBusConfiguration busConfiguration,
             IPolicyRegistry<string> policyRegistry,
-            IAmAnOutbox outbox, IAmAnArchiveProvider archiver = null) 
+            IAmAnOutbox outbox) 
         {
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
@@ -338,7 +338,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),
                 outbox,
-                archiver,
+                busConfiguration.ArchiveProvider,
                 busConfiguration.OutboxBulkChunkSize,
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,

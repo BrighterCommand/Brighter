@@ -202,38 +202,48 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
-            public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
+            public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
             {
                 //discard message
             }
 
-            public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
+            public void Add(IEnumerable<Message> messages, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
             {
                //discard message 
             }
             
-            public void Delete(string[] messageIds, Dictionary<string, object> args = null)
+            public void Delete(string[] messageIds, RequestContext requestContext, Dictionary<string, object> args = null)
             {
                 //ignore
             }
 
-            public Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
+            public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object> args = null)
             {
                  return null;
             }
 
-            public void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+            public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
             {
                 //ignore
             }
 
-            public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
-                int outboxTimeout = -1, Dictionary<string, object> args = null)
+            public IEnumerable<Message> DispatchedMessages(
+                double millisecondsDispatchedSince, 
+                RequestContext requestContext,
+                int pageSize = 100, 
+                int pageNumber = 1,
+                int outboxTimeout = -1, 
+                Dictionary<string, object> args = null
+            )
             {
                 return Array.Empty<Message>();
             }
 
-            public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
+            public IEnumerable<Message> OutstandingMessages(
+                double millSecondsSinceSent, 
+                RequestContext requestContext,
+                int pageSize = 100, 
+                int pageNumber = 1,
                 Dictionary<string, object> args = null)
             {
                 return Array.Empty<Message>(); 
