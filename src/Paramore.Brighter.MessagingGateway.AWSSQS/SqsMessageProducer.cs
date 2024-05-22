@@ -80,7 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             ConfirmTopicExists(message.Header.Topic);
 
-            using var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region);
+            using var client = CreateSnsClient();
             var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
             var messageId = publisher.Publish(message);
             if (messageId != null)
@@ -114,6 +114,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             
         }
-       
-   }
+
+        private AmazonSimpleNotificationServiceClient CreateSnsClient()
+        {
+            var config = new AmazonSimpleNotificationServiceConfig
+            {
+                RegionEndpoint = _connection.Region
+            };
+
+            if (_connection.ClientConfigAction != null)
+            {
+                _connection.ClientConfigAction(config);
+            }
+
+            return new AmazonSimpleNotificationServiceClient(_connection.Credentials, config);
+        }
+    }
 }

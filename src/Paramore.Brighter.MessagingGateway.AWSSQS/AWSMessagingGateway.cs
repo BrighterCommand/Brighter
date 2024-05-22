@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Net;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Microsoft.Extensions.Logging;
@@ -54,7 +53,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
         {
-            using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
+            var snsConfig = new AmazonSimpleNotificationServiceConfig
+            {
+                RegionEndpoint = _awsConnection.Region,
+            };
+
+            if (_awsConnection.ClientConfigAction != null)
+            {
+                _awsConnection.ClientConfigAction(snsConfig);
+            }
+
+            using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, snsConfig);
             var attributes = new Dictionary<string, string>();
             if (snsAttributes != null)
             {
@@ -93,11 +102,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             switch (findTopicBy)
             {
                 case TopicFindBy.Arn:
-                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 case TopicFindBy.Convention:
-                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 case TopicFindBy.Name:
-                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 default:
                     throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey");
             }

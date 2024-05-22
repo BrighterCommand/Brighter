@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
@@ -31,9 +32,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private readonly AmazonSimpleNotificationServiceClient _snsClient;
 
-        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region)
+        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
         {
-            _snsClient = new AmazonSimpleNotificationServiceClient(credentials, region);
+            var config = new AmazonSimpleNotificationServiceConfig
+            {
+                RegionEndpoint = region
+            };
+
+            if (clientConfigAction != null)
+            {
+                clientConfigAction(config);
+            }
+
+            _snsClient = new AmazonSimpleNotificationServiceClient(credentials, config);
         }
         
         public ValidateTopicByName(AmazonSimpleNotificationServiceClient snsClient)

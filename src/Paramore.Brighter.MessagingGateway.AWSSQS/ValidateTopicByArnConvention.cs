@@ -35,11 +35,22 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly RegionEndpoint _region;
         private AmazonSecurityTokenServiceClient _stsClient;
 
-        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region) : base(credentials, region)
+        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null) 
+            : base(credentials, region, clientConfigAction)
         {
             _region = region;
 
-            _stsClient = new AmazonSecurityTokenServiceClient(credentials, region);
+            var config = new AmazonSecurityTokenServiceConfig
+            {
+                RegionEndpoint = _region,
+            };
+
+            if (clientConfigAction != null)
+            {
+                clientConfigAction(config);
+            }
+
+            _stsClient = new AmazonSecurityTokenServiceClient(credentials, config);
         }
 
         public override (bool, string TopicArn) Validate(string topic)
