@@ -11,9 +11,7 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
     private readonly BlobContainerClient _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
     private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobLockingProviderOptions>();
 
-    private readonly Dictionary<string, string> _leases = new Dictionary<string, string>();
-
-    public async Task<bool> ObtainLockAsync(string resource, CancellationToken cancellationToken)
+    public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
         var client = GetBlobClient(resource);
 
@@ -31,17 +29,16 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
         try
         {
             var response = await client.GetBlobLeaseClient().AcquireAsync(options.LeaseValidity, cancellationToken: cancellationToken);
-            _leases.Add(NormaliseResourceName(resource), response.Value.LeaseId);
-            return true;
+            return response.Value.LeaseId;
         }
         catch (RequestFailedException e)
         {
             _logger.LogInformation("Could not Acquire Lease on Blob {LockResourceName}", resource);
-            return false;
+            return null;
         }
     }
 
-    public bool ObtainLock(string resource)
+    public string? ObtainLock(string resource)
     {
         var client = GetBlobClient(resource);
         
@@ -59,41 +56,37 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
         try
         {
             var response = client.GetBlobLeaseClient().Acquire(options.LeaseValidity);
-            _leases.Add(NormaliseResourceName(resource), response.Value.LeaseId);
-            return true;
+            return response.Value.LeaseId;
         }
         catch (RequestFailedException e)
         {
             _logger.LogInformation("Could not Acquire Lease on Blob {LockResourceName}", resource);
-            return false;
+            return null;
         }
     }
 
-    public async Task ReleaseLockAsync(string resource, CancellationToken cancellationToken)
+    public async Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
     {
-        var client = GetBlobLeaseClientForResource(resource);
+        var client = GetBlobLeaseClientForResource(resource, lockId);
         if(client == null)
             return;
         await client.ReleaseAsync(cancellationToken: cancellationToken);
-        _leases.Remove(NormaliseResourceName(resource));
     }
 
-    public void ReleaseLock(string resource)
+    public void ReleaseLock(string resource, string lockId)
     {
-        var client = GetBlobLeaseClientForResource(resource);
+        var client = GetBlobLeaseClientForResource(resource, lockId);
         if(client == null)
             return;
         client.Release();
-        _leases.Remove(NormaliseResourceName(resource));
     }
 
-    private BlobLeaseClient? GetBlobLeaseClientForResource(string resource)
+    private BlobLeaseClient? GetBlobLeaseClientForResource(string resource, string lockId)
     {
-        if (_leases.ContainsKey(NormaliseResourceName(resource)))
-            return GetBlobClient(resource).GetBlobLeaseClient(_leases[NormaliseResourceName(resource)]);
+        return GetBlobClient(resource).GetBlobLeaseClient(lockId);
         
-        _logger.LogInformation("No lock found for {LockResourceName}", resource);
-        return null;
+        // _logger.LogInformation("No lock found for {LockResourceName}", resource);
+        // return null;
     }
     
     private BlobClient GetBlobClient(string resource)

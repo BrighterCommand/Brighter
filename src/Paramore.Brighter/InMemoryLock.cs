@@ -10,31 +10,31 @@ namespace Paramore.Brighter
     {
         private readonly Dictionary<string, SemaphoreSlim> _semaphores = new Dictionary<string, SemaphoreSlim>();
 
-        public async Task<bool> ObtainLockAsync(string resource, CancellationToken cancellationToken)
+        public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
         {
             var normalisedResourceName = resource.ToLower();
             if (!_semaphores.ContainsKey(normalisedResourceName))
                 _semaphores.Add(normalisedResourceName, new SemaphoreSlim(1, 1));
 
-            return await _semaphores[normalisedResourceName].WaitAsync(TimeSpan.Zero, cancellationToken);
+            return (await _semaphores[normalisedResourceName].WaitAsync(TimeSpan.Zero, cancellationToken)) ? "" : null;
         }
 
-        public bool ObtainLock(string resource)
+        public string? ObtainLock(string resource)
         {
             var normalisedResourceName = resource.ToLower();
             if (!_semaphores.ContainsKey(normalisedResourceName))
                 _semaphores.Add(normalisedResourceName, new SemaphoreSlim(1, 1));
 
-            return _semaphores[normalisedResourceName].Wait(TimeSpan.Zero);
+            return _semaphores[normalisedResourceName].Wait(TimeSpan.Zero) ? "" : null;
         }
 
-        public Task ReleaseLockAsync(string resource, CancellationToken cancellationToken)
+        public Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
         {
-            ReleaseLock(resource);
+            ReleaseLock(resource, lockId);
             return Task.CompletedTask;
         }
 
-        public void ReleaseLock(string resource)
+        public void ReleaseLock(string resource, string lockId)
         {
             var normalisedResourceName = resource.ToLower();
             if (_semaphores.TryGetValue(normalisedResourceName, out SemaphoreSlim semaphore))

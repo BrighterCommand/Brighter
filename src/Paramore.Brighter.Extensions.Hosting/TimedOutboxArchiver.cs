@@ -54,7 +54,8 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private async Task Archive(object state, CancellationToken cancellationToken)
         {
-            if (await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken))
+            var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
+            if (lockId != null)
             {
                 s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
                 try
@@ -72,7 +73,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 }
                 finally
                 {
-                    await _distributedLock.ReleaseLockAsync(LockingResourceName, cancellationToken);
+                    await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, cancellationToken);
                 }
 
                 s_logger.LogInformation("Outbox Sweeper sleeping");
