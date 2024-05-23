@@ -38,6 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="credentials">A credentials object for an AWS service</param>
         /// <param name="region">The AWS region to connect to</param>
+        /// <param name="clientConfigAction">An optional action to apply to the configuration of AWS service clients</param>
         public AWSMessagingGatewayConnection(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
         {
             Credentials = credentials;
