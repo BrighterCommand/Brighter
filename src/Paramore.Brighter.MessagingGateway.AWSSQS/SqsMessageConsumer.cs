@@ -80,7 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             Amazon.SQS.Model.Message[] sqsMessages;
             try
             {
-                client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+                client = CreateSqsClient();
                 var urlResponse = client.GetQueueUrlAsync(_queueName).GetAwaiter().GetResult();
 
                 s_logger.LogDebug("SqsMessageConsumer: Preparing to retrieve next message from queue {URL}",
@@ -148,14 +148,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                using (var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
-                {
-                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle)).Wait();
+                using var client = CreateSqsClient();
+                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
+                client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle)).Wait();
 
-                    s_logger.LogInformation("SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}", message.Id, receiptHandle,
-                        urlResponse.QueueUrl);
-                }
+                s_logger.LogInformation("SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}", message.Id, receiptHandle,
+                    urlResponse.QueueUrl);
             }
             catch (Exception exception)
             {
@@ -182,17 +180,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     message.Id, receiptHandle, _queueName
                     );
 
-                using (var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
+                using var client = CreateSqsClient();
+                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
+                if (_hasDlq)
                 {
-                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    if (_hasDlq)
-                    {
-                        client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
-                    }
-                    else
-                    {
-                        client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle).Wait();
-                    }
+                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
+                }
+                else
+                {
+                    client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle).Wait();
                 }
             }
             catch (Exception exception)
@@ -209,15 +205,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             try
             {
-                using (var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
-                {
-                    s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
+                using var client = CreateSqsClient();
+                s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
+                
+                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
+                client.PurgeQueueAsync(urlResponse.QueueUrl).Wait();
 
-                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    client.PurgeQueueAsync(urlResponse.QueueUrl).Wait();
-
-                    s_logger.LogInformation("SqsMessageConsumer: Purged the queue {ChannelName}", _queueName);
-                }
+                s_logger.LogInformation("SqsMessageConsumer: Purged the queue {ChannelName}", _queueName);
             }
             catch (Exception exception)
             {
@@ -243,7 +237,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 s_logger.LogInformation("SqsMessageConsumer: re-queueing the message {Id}", message.Id);
 
-                using (var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
+                using (var client = CreateSqsClient())
                 {
                     var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
                     client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
@@ -262,13 +256,41 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private string FindTopicArnByName(RoutingKey topicName)
         {
-            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
+            using var snsClient = CreateSnsClient();
+            var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
+            if (topic == null)
+                throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");
+            return topic.TopicArn;
+        }
+
+        private AmazonSQSClient CreateSqsClient()
+        {
+            var config = new AmazonSQSConfig
             {
-                var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
-                if (topic == null)
-                    throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");
-                return topic.TopicArn;
+                RegionEndpoint = _awsConnection.Region
+            };
+
+            if (_awsConnection.ClientConfigAction != null)
+            {
+                _awsConnection.ClientConfigAction(config);
             }
+
+            return new AmazonSQSClient(_awsConnection.Credentials, config);
+        }
+
+        private AmazonSimpleNotificationServiceClient CreateSnsClient()
+        {
+            var config = new AmazonSimpleNotificationServiceConfig
+            {
+                RegionEndpoint = _awsConnection.Region
+            };
+
+            if (_awsConnection.ClientConfigAction != null)
+            {
+                _awsConnection.ClientConfigAction(config);
+            }
+
+            return new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, config);
         }
 
         /// <summary>
