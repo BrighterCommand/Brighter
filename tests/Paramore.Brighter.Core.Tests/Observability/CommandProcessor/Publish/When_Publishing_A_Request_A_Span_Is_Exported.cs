@@ -90,14 +90,14 @@ public class CommandProcessorPublishObservabilityTests
         //assert
         _exportedActivities.Count.Should().Be(4);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Create.ToSpanName()}");
+        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         createActivity.Should().NotBeNull();
         createActivity.ParentId.Should().Be(parentActivity?.Id);
         
         //parent span and child spans for each publish operation
-        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Publish.ToSpanName()}").Should().Be(2);
+        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").Should().Be(2);
         
-        var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Publish.ToSpanName()}").ToList();
+        var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
         var first = publishActivities.First();
@@ -156,14 +156,14 @@ public class CommandProcessorPublishObservabilityTests
         //assert
         _exportedActivities.Count.Should().Be(4);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Create.ToSpanName()}");
+        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         createActivity.Should().NotBeNull();
         createActivity.ParentId.Should().Be(parentActivity?.Id);
         
         //parent span and child spans for each publish operation
-        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Publish.ToSpanName()}").Should().Be(2);
+        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").Should().Be(2);
         
-        var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Publish.ToSpanName()}").ToList();
+        var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
         var first = publishActivities.First();
@@ -218,14 +218,14 @@ public class CommandProcessorPublishObservabilityTests
         //assert
         _exportedActivities.Count.Should().Be(3);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Create.ToSpanName()}");
+        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         createActivity.Should().NotBeNull();
         createActivity.ParentId.Should().BeNull();
         
         //parent span and child spans for each publish operation
-        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Publish.ToSpanName()}").Should().Be(2);
+        _exportedActivities.Count(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").Should().Be(2);
         
-        var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Publish.ToSpanName()}").ToList();
+        var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
         var first = publishActivities.First();

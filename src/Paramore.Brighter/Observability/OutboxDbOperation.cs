@@ -22,17 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace Paramore.Brighter.Observability;
 
-[Flags]
-public enum InstrumentationOptions
+/// <summary>
+/// The operation being peformed on the outbox
+/// </summary>
+public enum OutboxDbOperation
 {
-    None = 0,
-    RequestInformation = 1,                                     //(.requestid, .requestids, .requesttype, .operation) => what is the request?
-    RequestBody = 2,                                            //(.requestbody) => what is the request body?
-    RequestContext = 4,                                         //(.requestcontext) => what is the request context?
-    All = RequestInformation | RequestBody | RequestContext     //(.requestid, .requestids, .requesttype, .operation, .requestbody, .requestcontext) => what is the whole request?
+    Add = 0,       //Add a message to the outbox
 }
 
+//The Db system being used by an Outbox or Inbox

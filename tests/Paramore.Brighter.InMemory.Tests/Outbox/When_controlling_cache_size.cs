@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
@@ -41,7 +42,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             const int limit = 5;
             
             var timeProvider = new FakeTimeProvider(); 
-            var outbox = new InMemoryOutbox(timeProvider)
+            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider)
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5
@@ -69,7 +70,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             const int limit = 5;
             
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(timeProvider)
+            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider)
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5

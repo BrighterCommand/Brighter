@@ -1,7 +1,7 @@
 ﻿#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Diagnostics;
-using System.Reflection;
 using System.Text.Json;
 
 namespace Paramore.Brighter.Observability;
@@ -65,30 +64,30 @@ public class BrighterTracer : IDisposable
     /// <summary>
     /// Create a span for a request in CommandProcessor
     /// </summary>
-    /// <param name="span">What type of span are we creating</param>
+    /// <param name="operation">What type of span are we creating</param>
     /// <param name="request">What is the request that we are tracking with this span</param>
     /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
     /// <param name="links">Are there links to other spans that we should add to this span</param>
     /// <param name="options">How deep should the instrumentation go?</param>
-    /// <returns>A span (or dotnet Activity) for the current request</returns>
+    /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
     public Activity CreateSpan<TRequest>(
-        CommandProcessorSpan span, 
+        CommandProcessorSpanOperation operation, 
         TRequest request, 
         Activity parentActivity = null,
         ActivityLink[] links = null, 
         InstrumentationOptions options = InstrumentationOptions.All
     ) where TRequest : class, IRequest
     {
-        var spanName = $"{request.GetType().Name} {span.ToSpanName()}";
+        var spanName = $"{request.GetType().Name} {operation.ToSpanName()}";
         var kind = ActivityKind.Internal;
-        var parentId = parentActivity?.Id ?? default;
+        var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
 
         var tags = new ActivityTagsCollection();
-        tags.Add(BrighterSemanticConventions.RequestId, request.Id.ToString());
+        tags.Add(BrighterSemanticConventions.RequestId, request.Id);
         tags.Add(BrighterSemanticConventions.RequestType, request.GetType().Name);
         tags.Add(BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request));
-        tags.Add(BrighterSemanticConventions.Operation, span.ToSpanName());
+        tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
 
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -102,7 +101,61 @@ public class BrighterTracer : IDisposable
 
         return activity;
     }
-    
+
+    /// <summary>
+    /// Create a span for an outbox operation
+    /// </summary>
+    /// <param name="info">The attributes of the db operation</param>
+    /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
+    public Activity CreateDbSpan(OutboxSpanInfo info, Activity parentActivity, InstrumentationOptions options)
+    {
+        var spanName = !string.IsNullOrEmpty(info.dbTable) 
+            ? $"{info.dbOperation} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
+        
+        var kind = ActivityKind.Client;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection();
+        if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
+        tags.Add(BrighterSemanticConventions.DbName, info.dbName);
+        tags.Add(BrighterSemanticConventions.DbTable, info.dbTable);
+        tags.Add(BrighterSemanticConventions.DbOperation, info.dbOperation);
+        if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
+        tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystem);
+        if (! string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
+        if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
+        if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
+        if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
+        if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
+        
+        if (info.dbAttributes != null)
+           foreach (var pair in info.dbAttributes)
+               tags.Add(pair.Key, pair.Value);
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
+        
+    /// <summary>
+    /// Create an event to denote that we have passed through an event handler
+    /// Will be called by the base RequestHandler class's Handle method; invoked at the end of the user defined Handle
+    /// method
+    /// </summary>
+    /// <param name="span">The span to raise an event for</param>
+    /// <param name="handlerName">The name of the handler</param>
+    /// <param name="isAsync">Is the handler async?</param>
+    /// <param name="isSink">Is this the last handler in the chain?</param>
     public static void CreateHandlerEvent(Activity span, string handlerName, bool isAsync, bool isSink = false)
     {
         var tags = new ActivityTagsCollection();
@@ -113,6 +166,16 @@ public class BrighterTracer : IDisposable
         span.AddEvent(new ActivityEvent(handlerName, DateTimeOffset.UtcNow, tags));
     }
 
+    /// <summary>
+    /// Adds an event to a span for each transform/mapper that we pass through in the pipeline
+    /// Event is raised before we run the transform
+    /// </summary>
+    /// <param name="message">The message that we want to transform</param>
+    /// <param name="publication">The publication that the message is produced to</param>
+    /// <param name="span">The span to add the event to</param>
+    /// <param name="mapperName">The name of this mapper</param>
+    /// <param name="isAsync">Is this an async pipeline?</param>
+    /// <param name="isSink">Is this the mapper, true, or a transform, false?</param>
     public static void CreateMapperEvent(
         Message message, 
         Publication publication, 
@@ -134,4 +197,6 @@ public class BrighterTracer : IDisposable
         
         span.AddEvent(new ActivityEvent(mapperName, DateTimeOffset.UtcNow, tags));
     }
+
+
 }

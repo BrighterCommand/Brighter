@@ -11,6 +11,7 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -29,7 +30,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
         const string topic = "MyEvent";
 
         TimeProvider timeProvider = new FakeTimeProvider();
-        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox(timeProvider);
+        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
         _event = new MyEvent();
 
         var registry = new SubscriberRegistry();

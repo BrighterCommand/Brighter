@@ -187,7 +187,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var outbox = busConfiguration.Outbox;
             if (outbox == null)
             {
-                outbox = new InMemoryOutbox(TimeProvider.System);
+                outbox = new InMemoryOutbox(_tracer, TimeProvider.System);
             }
 
             //we create the outbox from interfaces from the determined transaction type to prevent the need
@@ -337,8 +337,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 MessageMapperRegistry(serviceProvider),
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),
+                Tracer(serviceProvider),
                 outbox,
                 busConfiguration.ArchiveProvider,
+                RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxBulkChunkSize,
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
@@ -446,6 +448,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IAmARequestContextFactory RequestContextFactory(IServiceProvider provider)
         {
             return provider.GetService<IAmARequestContextFactory>();
+        }
+        
+        private static object Tracer(IServiceProvider serviceProvider)
+        {
+            return serviceProvider.GetService<BrighterTracer>();
         }
 
         /// <summary>

@@ -30,11 +30,13 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -67,7 +69,12 @@ namespace Paramore.Brighter
     /// so you can use multiple instances safely as well
     /// </summary>
 #pragma warning disable CS0618
-    public class InMemoryOutbox(TimeProvider timeProvider) : InMemoryBox<OutboxEntry>(timeProvider), IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
+    public class InMemoryOutbox(
+        BrighterTracer tracer, 
+        TimeProvider timeProvider, 
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
+        ) : InMemoryBox<OutboxEntry>(timeProvider), 
+        IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
 #pragma warning restore CS0618
     {
         /// <summary>
@@ -88,6 +95,14 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
         public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
         {
+            var span = tracer?.CreateDbSpan(
+                new OutboxSpanInfo(DbSystem.brighter, InMemoryAttributes.DbName, OutboxDbOperation.Add, "requests"),  
+                requestContext?.Span, 
+                options: instrumentationOptions
+                );
+            
+            var context = InitRequestContext(span, requestContext);
+            
             ClearExpiredMessages();
             EnforceCapacityLimit();
 
@@ -425,6 +440,16 @@ namespace Paramore.Brighter
             tcs.SetResult(OutstandingMessages(millSecondsSinceSent, requestContext, pageSize, pageNumber, args));
 
             return tcs.Task;
+        }
+        
+        private RequestContext InitRequestContext(Activity span, RequestContext requestContext)
+        {
+            //We don't take a dependency on a IAmARequestContextFactory, because the call will always be in the context
+            // of the external service bus which does have a factory and should have created a context for us if there was not one,
+            // so this is a null object pattern to support tests etc.
+            var context = requestContext ?? new RequestContext();
+            context.Span = span;
+            return context;
         }
     }
 }

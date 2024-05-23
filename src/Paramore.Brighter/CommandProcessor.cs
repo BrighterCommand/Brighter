@@ -229,7 +229,7 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
-            var span = _tracer?.CreateSpan(CommandProcessorSpan.Send, command, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, command, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
@@ -274,7 +274,7 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = _tracer?.CreateSpan(CommandProcessorSpan.Send, command, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, command, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
@@ -315,7 +315,7 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
             
-            var span = _tracer?.CreateSpan(CommandProcessorSpan.Create, @event, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             var handlerSpans = new Dictionary<string, Activity>();
@@ -336,7 +336,7 @@ namespace Paramore.Brighter
                 {
                     try
                     {
-                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpan.Publish, @event, span, options: _instrumentationOptions);
+                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
                          context.Span =handlerSpans[handleRequests.Name.ToString()];
                          handleRequests.Handle(@event);
                          context.Span = span;
@@ -387,7 +387,7 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = _tracer?.CreateSpan(CommandProcessorSpan.Create, @event, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
@@ -409,7 +409,7 @@ namespace Paramore.Brighter
                 {
                     try
                     {
-                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpan.Publish, @event, span, options: _instrumentationOptions);
+                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
                          context.Span =handlerSpans[handleRequests.Name.ToString()];
                          await handleRequests.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
                          context.Span = span;
@@ -535,7 +535,7 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
             
-             var span = _tracer?.CreateSpan(CommandProcessorSpan.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
+             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
              var context = InitRequestContext(span, requestContext);
 
             try

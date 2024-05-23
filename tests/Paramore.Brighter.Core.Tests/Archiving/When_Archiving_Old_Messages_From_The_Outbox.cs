@@ -4,6 +4,7 @@ using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -46,7 +47,7 @@ public class ServiceBusMessageStoreArchiverTests
         }; 
         
         var timeProvider = new FakeTimeProvider();
-        _outbox = new InMemoryOutbox(timeProvider);
+        _outbox = new InMemoryOutbox(new BrighterTracer(),timeProvider);
         _archiveProvider = new InMemoryArchiveProvider();
         
         _bus = new ExternalBusService<Message, CommittableTransaction>(

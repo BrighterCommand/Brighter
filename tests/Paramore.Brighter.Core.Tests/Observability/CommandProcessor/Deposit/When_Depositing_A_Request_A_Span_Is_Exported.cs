@@ -10,7 +10,6 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
@@ -56,7 +55,7 @@ public class CommandProcessorDepositObservabilityTests
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
         
         TimeProvider timeProvider = new FakeTimeProvider();
-        _outbox = new InMemoryOutbox(timeProvider);
+        _outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
         
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
@@ -109,7 +108,7 @@ public class CommandProcessorDepositObservabilityTests
         //assert
         _exportedActivities.Count.Should().Be(3);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        var depositActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpan.Deposit.ToSpanName()}");
+        var depositActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Deposit.ToSpanName()}");
         depositActivity.Should().NotBeNull();
         depositActivity.ParentId.Should().Be(parentActivity?.Id);
         

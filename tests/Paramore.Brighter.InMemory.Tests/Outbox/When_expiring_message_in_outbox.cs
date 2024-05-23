@@ -27,6 +27,7 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
@@ -39,7 +40,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(timeProvider)
+            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
@@ -73,7 +74,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
                //Arrange
                var timeProvider = new FakeTimeProvider();
-               var outbox = new InMemoryOutbox(timeProvider)
+               var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider)
                {
                    //set low time to live but long sweep perioc
                    EntryTimeToLive = TimeSpan.FromMilliseconds(50),

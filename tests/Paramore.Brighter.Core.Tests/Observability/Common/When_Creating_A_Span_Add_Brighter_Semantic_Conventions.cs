@@ -41,7 +41,7 @@ public class BrighterTracerSpanTests : IDisposable
         var command = new MyCommand { Value = "My Test String" };
 
         //act
-        var childActivity = _tracer.CreateSpan(CommandProcessorSpan.Send, command, _parentActivity,
+        var childActivity = _tracer.CreateSpan(CommandProcessorSpanOperation.Send, command, _parentActivity,
             options: InstrumentationOptions.All);
         
         childActivity.Stop();
@@ -54,7 +54,7 @@ public class BrighterTracerSpanTests : IDisposable
 
         //check the created activity
         childActivity.ParentId.Should().Be(_parentActivity.Id);
-        childActivity.DisplayName.Should().Be($"{nameof(MyCommand)} {CommandProcessorSpan.Send.ToSpanName()}");
+        childActivity.DisplayName.Should().Be($"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}");
         childActivity.Source.Name.Should().Be(BrighterSemanticConventions.SourceName);
         var tagDictionary = childActivity.Tags.ToDictionary(pair => pair.Key, pair => pair.Value);
         tagDictionary.Should().ContainKey(BrighterSemanticConventions.RequestId);
@@ -64,19 +64,19 @@ public class BrighterTracerSpanTests : IDisposable
         tagDictionary.Should().ContainKey(BrighterSemanticConventions.RequestBody);
         tagDictionary[BrighterSemanticConventions.RequestBody].Should().Be(System.Text.Json.JsonSerializer.Serialize(command));
         tagDictionary.Should().ContainKey(BrighterSemanticConventions.Operation);
-        tagDictionary[BrighterSemanticConventions.Operation].Should().Be(CommandProcessorSpan.Send.ToSpanName());
+        tagDictionary[BrighterSemanticConventions.Operation].Should().Be(CommandProcessorSpanOperation.Send.ToSpanName());
 
 
         //check via the exporter as well
         _exportedActivities.Count.Should().Be(2);
         _exportedActivities.Any(a => a.Source.Name == BrighterSemanticConventions.SourceName).Should().BeTrue();
-        var childSpan = _exportedActivities.First(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpan.Send.ToSpanName()}"); 
+        var childSpan = _exportedActivities.First(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}"); 
         childSpan.Should().NotBeNull();
         childSpan.ParentId.Should().Be(_parentActivity.Id);
         childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && (string)t.Value == command.Id.ToString()).Should().BeTrue();
         childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestType && (string)t.Value == command.GetType().Name).Should().BeTrue();
         childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && (string)t.Value == System.Text.Json.JsonSerializer.Serialize(command)).Should().BeTrue();
-        childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.Operation && (string)t.Value == CommandProcessorSpan.Send.ToSpanName()).Should().BeTrue();
+        childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.Operation && (string)t.Value == CommandProcessorSpanOperation.Send.ToSpanName()).Should().BeTrue();
     }
 
     public void Dispose()

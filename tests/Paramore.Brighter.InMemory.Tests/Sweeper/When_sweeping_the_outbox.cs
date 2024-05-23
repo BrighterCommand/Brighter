@@ -6,6 +6,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
@@ -20,7 +21,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             const int milliSecondsSinceSent = 500;
 
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(timeProvider);
+            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
             var commandProcessor = new FakeCommandProcessor(timeProvider);
             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
@@ -55,7 +56,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             const int milliSecondsSinceSent = 500;
 
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(timeProvider);
+            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
             var commandProcessor = new FakeCommandProcessor(timeProvider);
             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 

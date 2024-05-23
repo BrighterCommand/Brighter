@@ -161,7 +161,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: outgoingMessageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
-                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: TODO,
                 outbox: outbox
             );  
             

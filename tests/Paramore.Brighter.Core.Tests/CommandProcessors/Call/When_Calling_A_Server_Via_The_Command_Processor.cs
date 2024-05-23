@@ -5,6 +5,7 @@ using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly;
 using Polly.Registry;
@@ -89,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                new InMemoryOutbox(new FakeTimeProvider()));
+                new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider()));
         
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(

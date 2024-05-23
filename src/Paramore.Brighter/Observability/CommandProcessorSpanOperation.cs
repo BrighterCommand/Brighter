@@ -22,17 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace Paramore.Brighter.Observability;
 
-[Flags]
-public enum InstrumentationOptions
+public enum CommandProcessorSpanOperation
 {
-    None = 0,
-    RequestInformation = 1,                                     //(.requestid, .requestids, .requesttype, .operation) => what is the request?
-    RequestBody = 2,                                            //(.requestbody) => what is the request body?
-    RequestContext = 4,                                         //(.requestcontext) => what is the request context?
-    All = RequestInformation | RequestBody | RequestContext     //(.requestid, .requestids, .requesttype, .operation, .requestbody, .requestcontext) => what is the whole request?
+    Send = 0,       //Send a command
+    Create = 1,     //A batch operation, such as publishing an event or clearing a message
+    Publish = 2,     //Publish an event
+    Deposit = 3,     //Deposit a message in the outbox
 }
-

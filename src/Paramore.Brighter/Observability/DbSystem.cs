@@ -22,17 +22,61 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace Paramore.Brighter.Observability;
 
-[Flags]
-public enum InstrumentationOptions
+public enum DbSystem
 {
-    None = 0,
-    RequestInformation = 1,                                     //(.requestid, .requestids, .requesttype, .operation) => what is the request?
-    RequestBody = 2,                                            //(.requestbody) => what is the request body?
-    RequestContext = 4,                                         //(.requestcontext) => what is the request context?
-    All = RequestInformation | RequestBody | RequestContext     //(.requestid, .requestids, .requesttype, .operation, .requestbody, .requestcontext) => what is the whole request?
+    adabas,
+    brighter,
+    cache,
+    cassandra,
+    clickhouse,
+    cloudscape,
+    cockroachdb,
+    coldfusion,
+    cosmosdb,
+    couchbase,
+    couchdb,
+    db2,
+    derby,
+    dynamodb,
+    edb,
+    elasticsearch,
+    filemaker,
+    firebird,
+    firstsql,
+    geode,
+    h2,
+    hanadb,
+    hbase,
+    hive,
+    hsqldb,
+    informix,
+    ingres,
+    instantdb,
+    interbase,
+    mariadb,
+    maxdb,
+    memcached,
+    mongodb,
+    mssql,
+    mssqlcompact,
+    mysql,
+    neo4j,
+    netezza,
+    opensearch,
+    oracle,
+    other_sql, 
+    pervasive,
+    pointbase,
+    postgresql,
+    progress,
+    redis,
+    redshift,
+    spanner,
+    sqlite,
+    sybase,
+    teradata,
+    trino,
+    vertica,
 }
-

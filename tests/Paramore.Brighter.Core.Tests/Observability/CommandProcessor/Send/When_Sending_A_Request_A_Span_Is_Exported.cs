@@ -78,7 +78,7 @@ public class CommandProcessorSendObservabilityTests
         //assert
         _exportedActivities.Count.Should().Be(2);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpan.Send.ToSpanName()}").Should().BeTrue();
+        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}").Should().BeTrue();
         _exportedActivities.First().ParentId.Should().Be(parentActivity?.Id);
         _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id).Should().BeTrue();
         _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) }).Should().BeTrue(); 
@@ -111,7 +111,7 @@ public class CommandProcessorSendObservabilityTests
         //assert
         _exportedActivities.Count.Should().Be(2);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpan.Send.ToSpanName()}").Should().BeTrue();
+        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}").Should().BeTrue();
         _exportedActivities.First().ParentId.Should().Be(parentActivity?.Id);
         _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id).Should().BeTrue();
         _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) }).Should().BeTrue(); 
@@ -140,7 +140,7 @@ public class CommandProcessorSendObservabilityTests
         //assert
         _exportedActivities.Count.Should().Be(1);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
-        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpan.Send.ToSpanName()}").Should().BeTrue();
+        _exportedActivities.Any(a => a.DisplayName == $"{nameof(MyCommand)} {CommandProcessorSpanOperation.Send.ToSpanName()}").Should().BeTrue();
         _exportedActivities.First().ParentId.Should().BeNull();
         _exportedActivities.First().Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == command.Id).Should().BeTrue();
         _exportedActivities.First().Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyCommand) }).Should().BeTrue(); 

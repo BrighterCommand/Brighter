@@ -29,6 +29,7 @@ using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -41,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly InMemoryOutbox _outbox = new InMemoryOutbox(new FakeTimeProvider());
+        private readonly InMemoryOutbox _outbox = new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider());
         private readonly FakeMessageProducerWithPublishConfirmation _producer; 
 
         public CommandProcessorWithInMemoryOutboxTests()

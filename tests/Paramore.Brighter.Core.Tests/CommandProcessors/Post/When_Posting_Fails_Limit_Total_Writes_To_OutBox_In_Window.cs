@@ -30,6 +30,7 @@ using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
@@ -54,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             _timeProvider = new FakeTimeProvider();
-            _outbox = new InMemoryOutbox(_timeProvider);
+            _outbox = new InMemoryOutbox(new BrighterTracer(), _timeProvider);
 
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { topic, producer }, }); 

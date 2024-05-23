@@ -53,7 +53,7 @@ namespace Paramore.Brighter
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: mapper,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
-                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: TODO,
                 outbox: outbox
                 ); 
             

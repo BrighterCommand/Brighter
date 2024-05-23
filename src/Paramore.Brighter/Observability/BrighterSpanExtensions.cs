@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,12 +22,33 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.Observability;
 
-public enum CommandProcessorSpan
+/// <summary>
+/// Provide a helper method to turn span enums into strings (lowercase)
+/// </summary>
+public static class BrighterSpanExtensions
 {
-    Send = 0,       //Send a command
-    Create = 1,     //A batch operation, such as publishing an event or clearing a message
-    Publish = 2,     //Publish an event
-    Deposit = 3,     //Deposit a message in the outbox
+   ///<summary>
+   /// Provide a string representation of the span
+   /// </summary>
+   public static string ToSpanName(this CommandProcessorSpanOperation operation) => operation switch
+   {
+       CommandProcessorSpanOperation.Create => "create",
+       CommandProcessorSpanOperation.Deposit => "deposit",
+       CommandProcessorSpanOperation.Publish => "publish",
+       CommandProcessorSpanOperation.Send => "send",
+       _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
+   };
+
+   ///<summary>
+   /// Provide a string representation of the span
+   /// </summary>   
+   public static string ToSpanName(this OutboxDbOperation span) => span switch
+   {
+       OutboxDbOperation.Add => "add",
+       _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
+   };
 }
