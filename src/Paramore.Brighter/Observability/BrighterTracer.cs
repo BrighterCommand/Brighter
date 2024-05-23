@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Observability;
 /// <summary>
 /// The Brighter Tracer class abstracts the OpenTelemetry ActivitySource, providing a simple interface to create spans for Brighter
 /// </summary>
-public class BrighterTracer : IDisposable
+public class BrighterTracer : IAmABrighterTracer
 {
     private readonly TimeProvider _timeProvider;
 

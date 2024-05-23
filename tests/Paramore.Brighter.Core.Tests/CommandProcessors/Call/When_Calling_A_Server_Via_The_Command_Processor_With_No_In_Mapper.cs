@@ -58,6 +58,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 { CommandProcessor.RETRYPOLICY, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
+
+            var tracer = new BrighterTracer();
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -65,7 +67,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider())
+                tracer,
+                new InMemoryOutbox( new FakeTimeProvider()) {Tracer = tracer}
                 );
         
             CommandProcessor.ClearServiceBus();

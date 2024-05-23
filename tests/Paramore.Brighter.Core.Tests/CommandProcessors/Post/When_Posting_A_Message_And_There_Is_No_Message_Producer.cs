@@ -28,6 +28,7 @@ using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Registry;
@@ -46,12 +47,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly RetryPolicy _retryPolicy;
         private readonly CircuitBreakerPolicy _circuitBreakerPolicy;
+        private readonly IAmABrighterTracer _tracer;
 
         public CommandProcessorPostMissingMessageProducerTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
+            _tracer = new BrighterTracer();
+            _fakeOutbox = new FakeOutbox() {Tracer = _tracer};
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
@@ -83,6 +86,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 _messageMapperRegistry,
                  new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
+                _tracer,
                 _fakeOutbox)
             );               
 

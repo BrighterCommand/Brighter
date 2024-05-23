@@ -83,14 +83,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 {
                     { topic, _producer },
                 });
-        
+
+            var tracer = new BrighterTracer();
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry,           
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider()));
+                tracer,
+                new InMemoryOutbox(new FakeTimeProvider()){Tracer = tracer});
         
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(

@@ -55,7 +55,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             _timeProvider = new FakeTimeProvider();
-            _outbox = new InMemoryOutbox(new BrighterTracer(), _timeProvider);
+            var tracer = new BrighterTracer();
+            _outbox = new InMemoryOutbox(_timeProvider) {Tracer = tracer};
 
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { topic, producer }, }); 
@@ -66,6 +67,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 mapperRegistry: messageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),     
+                tracer,
                 outbox: _outbox,
                 maxOutStandingMessages:3,
                 maxOutStandingCheckIntervalMilliSeconds:250

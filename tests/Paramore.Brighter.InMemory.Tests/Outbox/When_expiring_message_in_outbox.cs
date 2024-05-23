@@ -40,11 +40,12 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider)
+            var outbox = new InMemoryOutbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
-                ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
+                ExpirationScanInterval = TimeSpan.FromMilliseconds(100),
+                Tracer = new BrighterTracer(timeProvider)
             };
             
             var messageId = Guid.NewGuid().ToString();
@@ -74,11 +75,12 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
                //Arrange
                var timeProvider = new FakeTimeProvider();
-               var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider)
+               var outbox = new InMemoryOutbox(timeProvider)
                {
                    //set low time to live but long sweep perioc
                    EntryTimeToLive = TimeSpan.FromMilliseconds(50),
-                   ExpirationScanInterval = TimeSpan.FromMilliseconds(10000)
+                   ExpirationScanInterval = TimeSpan.FromMilliseconds(10000),
+                   Tracer = new BrighterTracer(timeProvider)
                };
                
                var messageId = Guid.NewGuid().ToString();

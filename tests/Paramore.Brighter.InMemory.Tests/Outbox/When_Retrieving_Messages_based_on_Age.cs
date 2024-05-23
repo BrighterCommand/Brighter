@@ -18,7 +18,7 @@ public class When_Retrieving_Messages_based_on_Age
     {
         var minimumAgeInMs = 500;
         var timeProvider = new FakeTimeProvider();
-        var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+        var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
         var context = new RequestContext();
         outbox.Add(new MessageTestDataBuilder(), context);
@@ -49,7 +49,7 @@ public class When_Retrieving_Messages_based_on_Age
     {
         var minimumAgeInMs = 1000;
         var timeProvider = new FakeTimeProvider();
-        var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+        var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
         var context = new RequestContext();
         await outbox.AddAsync(new MessageTestDataBuilder(), context);

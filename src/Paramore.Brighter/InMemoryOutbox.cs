@@ -70,7 +70,6 @@ namespace Paramore.Brighter
     /// </summary>
 #pragma warning disable CS0618
     public class InMemoryOutbox(
-        BrighterTracer tracer, 
         TimeProvider timeProvider, 
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
         ) : InMemoryBox<OutboxEntry>(timeProvider), 
@@ -85,6 +84,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
+        
+        /// <summary>
+        /// The Tracer that we want to use to capture telemetry
+        /// We inject this so that we can use the same tracer as the calling application
+        /// You do not need to set this property as we will set it when setting up the External Service Bus
+        /// </summary>
+        public IAmABrighterTracer Tracer { private get; set; } 
 
         /// <summary>
         /// Adds the specified message
@@ -95,7 +101,7 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
         public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
         {
-            var span = tracer?.CreateDbSpan(
+            var span = Tracer?.CreateDbSpan(
                 new OutboxSpanInfo(DbSystem.brighter, InMemoryAttributes.DbName, OutboxDbOperation.Add, "requests"),  
                 requestContext?.Span, 
                 options: instrumentationOptions

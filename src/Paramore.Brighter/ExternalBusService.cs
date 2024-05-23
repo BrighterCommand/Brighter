@@ -77,7 +77,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            BrighterTracer tracer,
+            IAmABrighterTracer tracer,
             IAmAnOutbox outbox = null,
             IAmAnArchiveProvider archiveProvider = null,
             IAmARequestContextFactory requestContextFactory = null,
@@ -106,7 +106,9 @@ namespace Paramore.Brighter
                 new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
             //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
-            if (outbox is null) outbox = new InMemoryOutbox(tracer, TimeProvider.System);
+            outbox ??= new InMemoryOutbox(TimeProvider.System);
+            outbox.Tracer = tracer;
+            
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
 

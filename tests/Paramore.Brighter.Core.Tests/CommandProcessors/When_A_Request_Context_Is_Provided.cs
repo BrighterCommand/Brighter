@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Xunit;
 
@@ -160,8 +161,9 @@ public class RequestContextPresentTests : IDisposable
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
-            
-        var fakeOutbox = new FakeOutbox();
+
+        var tracer = new BrighterTracer();
+        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -169,6 +171,7 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -206,7 +209,8 @@ public class RequestContextPresentTests : IDisposable
                 } },
             });
             
-        var fakeOutbox = new FakeOutbox();
+        var tracer = new BrighterTracer();
+        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -214,6 +218,7 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -251,7 +256,8 @@ public class RequestContextPresentTests : IDisposable
                 } },
             });
             
-        var fakeOutbox = new FakeOutbox();
+        var tracer = new BrighterTracer();
+        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -259,6 +265,7 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -300,6 +307,7 @@ public class RequestContextPresentTests : IDisposable
                 } },
             });
             
+        var tracer = new BrighterTracer();
         var fakeOutbox = new FakeOutbox();
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -308,6 +316,7 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         

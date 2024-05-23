@@ -42,8 +42,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_reading_from_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider());
-            
+            var outbox = new InMemoryOutbox(new FakeTimeProvider()) { Tracer = new BrighterTracer() };
+
             var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_marking_dispatched_in_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider());
+            var outbox = new InMemoryOutbox(new FakeTimeProvider()){Tracer = new BrighterTracer()};
             
             var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+            var outbox = new InMemoryOutbox(timeProvider){Tracer = new BrighterTracer()};
             
             var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
@@ -122,7 +122,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_there_are_multiple_items_retrieve_by_id()
         {
             //Arrange
-            var outbox = new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider());
+            var outbox = new InMemoryOutbox( new FakeTimeProvider()){Tracer = new BrighterTracer()};
 
             var messageIds = new[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
             var context = new RequestContext();
@@ -144,7 +144,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+            var outbox = new InMemoryOutbox(timeProvider){Tracer = new BrighterTracer()};
 
             var messageIds = new string[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
             var context = new RequestContext();

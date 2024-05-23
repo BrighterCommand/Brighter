@@ -39,8 +39,6 @@ public class CommandProcessorDepositObservabilityTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
         
-        BrighterTracer tracer = new();
-       
         Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
@@ -54,8 +52,9 @@ public class CommandProcessorDepositObservabilityTests
         
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
         
-        TimeProvider timeProvider = new FakeTimeProvider();
-        _outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+        var timeProvider = new FakeTimeProvider();
+        var tracer = new BrighterTracer(timeProvider);
+        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
@@ -73,6 +72,7 @@ public class CommandProcessorDepositObservabilityTests
             messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             _outbox,
             maxOutStandingMessages: -1
         );

@@ -29,7 +29,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -94,6 +96,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
+                new BrighterTracer(new FakeTimeProvider()),
                 _fakeOutbox
             );
 

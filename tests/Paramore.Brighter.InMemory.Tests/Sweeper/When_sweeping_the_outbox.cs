@@ -21,7 +21,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             const int milliSecondsSinceSent = 500;
 
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+            var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
             var commandProcessor = new FakeCommandProcessor(timeProvider);
             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             const int milliSecondsSinceSent = 500;
 
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+            var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
             var commandProcessor = new FakeCommandProcessor(timeProvider);
             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 

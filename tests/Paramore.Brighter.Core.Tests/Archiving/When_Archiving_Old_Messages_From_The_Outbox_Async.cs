@@ -50,7 +50,8 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         }; 
         
         var timeProvider = new FakeTimeProvider();
-        _outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+        var tracer = new BrighterTracer();
+        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
         _archiveProvider = new InMemoryArchiveProvider();
         
         _bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -59,6 +60,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer, 
             _outbox,
             _archiveProvider 
         );

@@ -42,10 +42,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             const int limit = 5;
             
             var timeProvider = new FakeTimeProvider(); 
-            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider)
+            var outbox = new InMemoryOutbox(timeProvider)
             {
                 EntryLimit = limit,
-                CompactionPercentage = 0.5
+                CompactionPercentage = 0.5,
+                Tracer = new BrighterTracer(timeProvider)
             };
 
             var context = new RequestContext();
@@ -70,10 +71,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             const int limit = 5;
             
             var timeProvider = new FakeTimeProvider();
-            var outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider)
+            var outbox = new InMemoryOutbox(timeProvider) 
             {
                 EntryLimit = limit,
-                CompactionPercentage = 0.5
+                CompactionPercentage = 0.5,
+                Tracer = new BrighterTracer(timeProvider)
             };
 
             var messageIds = new string[] {Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString()};

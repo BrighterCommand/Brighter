@@ -5,7 +5,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -98,7 +100,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                     { eventTopic, _eventProducer }
                 }); 
             
-            _fakeOutbox = new FakeOutbox();
+            var tracer = new BrighterTracer(new FakeTimeProvider());
+            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -106,6 +109,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
+                tracer,
                 _fakeOutbox
             );
         

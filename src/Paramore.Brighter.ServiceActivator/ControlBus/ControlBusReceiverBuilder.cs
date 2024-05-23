@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Transactions;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -161,7 +162,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: outgoingMessageMapperRegistry,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
-                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: TODO,
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
+                tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
                 outbox: outbox
             );  
             
@@ -202,6 +204,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
+            public IAmABrighterTracer Tracer { private get; set; } 
+            
             public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
             {
                 //discard message

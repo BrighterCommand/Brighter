@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = new BrighterOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
-            services.TryAddSingleton<BrighterTracer>();
+            services.TryAddSingleton<IAmABrighterTracer>(new BrighterTracer());
 
             return BrighterHandlerBuilder(services, options);
         }
@@ -187,7 +187,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var outbox = busConfiguration.Outbox;
             if (outbox == null)
             {
-                outbox = new InMemoryOutbox(_tracer, TimeProvider.System);
+                outbox = new InMemoryOutbox(TimeProvider.System);
             }
 
             //we create the outbox from interfaces from the determined transaction type to prevent the need

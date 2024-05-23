@@ -29,8 +29,9 @@ public class ImplicitClearingObservabilityTests : IDisposable
     {
         const string topic = "MyEvent";
 
-        TimeProvider timeProvider = new FakeTimeProvider();
-        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox(new BrighterTracer(), timeProvider);
+        var timeProvider = new FakeTimeProvider();
+        var tracer = new BrighterTracer(timeProvider);
+        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         _event = new MyEvent();
 
         var registry = new SubscriberRegistry();
@@ -70,6 +71,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
             messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             outbox,
             maxOutStandingMessages: -1
         );

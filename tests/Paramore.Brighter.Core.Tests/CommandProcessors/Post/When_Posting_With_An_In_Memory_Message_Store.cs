@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly InMemoryOutbox _outbox = new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider());
+        private readonly InMemoryOutbox _outbox;
         private readonly FakeMessageProducerWithPublishConfirmation _producer; 
 
         public CommandProcessorWithInMemoryOutboxTests()
@@ -73,12 +73,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
             
+            var timeProvider = new FakeTimeProvider();
+            var tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
+            
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
+                tracer,
                 _outbox
             );
 

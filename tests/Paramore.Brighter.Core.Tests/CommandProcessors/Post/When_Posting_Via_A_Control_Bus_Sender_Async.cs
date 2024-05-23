@@ -52,7 +52,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _myCommand.Value = "Hello World";
 
-            _outbox = new InMemoryOutbox(new BrighterTracer(), new FakeTimeProvider());
+            var timeProvider = new FakeTimeProvider();
+            var tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             const string topic = "MyCommand";
@@ -82,6 +84,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
+                tracer,
                 _outbox
             );
 

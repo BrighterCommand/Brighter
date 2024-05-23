@@ -33,6 +33,7 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
@@ -46,6 +47,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly Random _random = new Random();
 
         public bool ContinueOnCapturedContext { get; set; }
+        
+        /// <summary>
+        /// The Tracer that we want to use to capture telemetry
+        /// We inject this so that we can use the same tracer as the calling application
+        /// You do not need to set this property as we will set it when setting up the External Service Bus
+        /// </summary>
+        public IAmABrighterTracer Tracer { private get; set; } 
 
         /// <summary>
         ///  Initialises a new instance of the <see cref="DynamoDbOutbox"/> class.

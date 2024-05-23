@@ -29,6 +29,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
@@ -37,6 +38,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         private readonly List<OutboxEntry> _posts = new List<OutboxEntry>();
 
         public bool ContinueOnCapturedContext { get; set; }
+        
+        public IAmABrighterTracer Tracer { private get; set; } 
 
         public void Add(
             Message message, 
