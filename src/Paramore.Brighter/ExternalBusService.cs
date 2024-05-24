@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -239,7 +240,22 @@ namespace Paramore.Brighter
         )
         {
             CheckOutboxOutstandingLimit();
+            
+            var tags = new ActivityTagsCollection
+            {
+                { BrighterSemanticConventions.OutboxSharedTransaction, overridingTransactionProvider != null },
+                { BrighterSemanticConventions.OutboxType, "sync" },
+                { BrighterSemanticConventions.MessageId, message.Id },
+                { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
+                { BrighterSemanticConventions.MessageBodySize, Convert.ToString(message.Body.Bytes.Length) },
+                { BrighterSemanticConventions.MessageBody, message.Body.Value },
+                { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
+                { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
+                { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
+            };
 
+            requestContext.Span?.AddEvent(new ActivityEvent(BrighterSemanticConventions.AddToOutbox, tags: tags));
+ 
             var written = Retry(() => 
                 { _outBox.Add(message, requestContext, _outboxTimeout, overridingTransactionProvider); }, 
                 requestContext
@@ -247,12 +263,7 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write message {message.Id} to the outbox");
-            
-            requestContext.Span?.AddEvent(
-                new ActivityEvent(
-                    ADDMESSAGETOOUTBOX, 
-                    tags: new ActivityTagsCollection { { "MessageId", message.Id } })
-                );
+
         }
 
         /// <summary>

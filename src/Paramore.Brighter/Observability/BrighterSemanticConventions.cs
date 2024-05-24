@@ -46,6 +46,7 @@ public static class BrighterSemanticConventions
     public const string MessageBody = "messaging.message.body";
     public const string MessageHeaders = "messaging.message.headers";
     public const string MessageId = "messaging.message.id";
+    public const string MessageType = "messaging.message.type";
     public const string MessagingDestination = "messaging.destination";
     public const string MessagingDestinationPartitionId = "messaging.destination.partition.id";
     public const string MessageBodySize = "messaging.message.body.size";

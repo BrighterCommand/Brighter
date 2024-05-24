@@ -24,7 +24,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.Json;
 
 namespace Paramore.Brighter.Observability;
@@ -112,7 +114,7 @@ public class BrighterTracer : IAmABrighterTracer
     public Activity CreateDbSpan(OutboxSpanInfo info, Activity parentActivity, InstrumentationOptions options)
     {
         var spanName = !string.IsNullOrEmpty(info.dbTable) 
-            ? $"{info.dbOperation} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
+            ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
         
         var kind = ActivityKind.Client;
         var parentId = parentActivity?.Id;
@@ -121,10 +123,10 @@ public class BrighterTracer : IAmABrighterTracer
         var tags = new ActivityTagsCollection();
         if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
         tags.Add(BrighterSemanticConventions.DbName, info.dbName);
+        tags.Add(BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName());
         tags.Add(BrighterSemanticConventions.DbTable, info.dbTable);
-        tags.Add(BrighterSemanticConventions.DbOperation, info.dbOperation);
         if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
-        tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystem);
+        tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName());
         if (! string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
         if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
         if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
@@ -146,7 +148,7 @@ public class BrighterTracer : IAmABrighterTracer
 
         return activity;
     }
-        
+ 
     /// <summary>
     /// Create an event to denote that we have passed through an event handler
     /// Will be called by the base RequestHandler class's Handle method; invoked at the end of the user defined Handle
@@ -185,8 +187,8 @@ public class BrighterTracer : IAmABrighterTracer
         bool isSink = false)
     {
         var tags = new ActivityTagsCollection();
-        tags.Add(BrighterSemanticConventions.HandlerName, mapperName);
-        tags.Add(BrighterSemanticConventions.HandlerType, isAsync ? "async" : "sync");
+        tags.Add(BrighterSemanticConventions.MapperName, mapperName);
+        tags.Add(BrighterSemanticConventions.MapperType, isAsync ? "async" : "sync");
         tags.Add(BrighterSemanticConventions.IsSink, isSink);
         tags.Add(BrighterSemanticConventions.MessageId, message.Id);
         tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
@@ -198,5 +200,28 @@ public class BrighterTracer : IAmABrighterTracer
         span.AddEvent(new ActivityEvent(mapperName, DateTimeOffset.UtcNow, tags));
     }
 
+    /// <summary>
+    /// Ends a span by correctly setting its status and then disposing of it
+    /// </summary>
+    /// <param name="span">The span to end</param>
+    public void EndSpan(Activity span)
+    {
+        if (span?.Status == ActivityStatusCode.Unset)
+            span.SetStatus(ActivityStatusCode.Ok);
+        span?.Dispose();
+    }
 
+    /// <summary>
+    /// Ends a collection of named spans
+    /// </summary>
+    /// <param name="handlerSpans"></param>
+    public void EndSpans(Dictionary<string, Activity> handlerSpans)
+    {
+        if (!handlerSpans.Any()) return;
+            
+        foreach (var handlerSpan in handlerSpans)
+        {
+            EndSpan(handlerSpan.Value);
+        }
+    }
 }

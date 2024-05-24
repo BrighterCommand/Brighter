@@ -67,8 +67,6 @@ namespace Paramore.Brighter
 
         private const string CREATEEVENT = "Cloud Events Create: {0}";
         private const string CLEAROUTBOX = "Clear Outbox";
-        private const string PROCESSCOMMAND = "Process Command Type: {0}";
-        private const string PROCESSEVENT = "Process Event Type: {0}";
 
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -101,8 +99,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// We want to use double lock to let us pass parameters to the constructor from the first instance
         /// </summary>
-        private static IAmAnExternalBusService s_bus = null;
-        private static readonly object s_padlock = new object();
+        private static IAmAnExternalBusService s_bus;
+        private static readonly object s_padlock = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class
@@ -221,7 +219,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <exception cref="System.ArgumentException">
         /// </exception>
         public void Send<T>(T command, RequestContext requestContext = null) where T : class, IRequest
@@ -250,7 +248,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -259,7 +257,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
@@ -296,7 +294,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -309,7 +307,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         public void Publish<T>(T @event, RequestContext requestContext = null) where T : class, IRequest
         {
             if (_handlerFactorySync == null)
@@ -359,8 +357,8 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndChildSpans(handlerSpans);
-                EndSpan(span);
+                _tracer?.EndSpans(handlerSpans);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -373,7 +371,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
@@ -434,8 +432,8 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndChildSpans(handlerSpans);
-                EndSpan(span);
+                _tracer?.EndSpans(handlerSpans);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -450,7 +448,7 @@ namespace Paramore.Brighter
         /// and then after you have committed your transaction use ClearOutbox
         /// </summary>
         /// <param name="request">The request.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of request</typeparam>
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
@@ -474,7 +472,7 @@ namespace Paramore.Brighter
         /// and then after you have committed your transaction use ClearOutboxAsync
         /// </summary>
         /// <param name="request">The request.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
@@ -499,10 +497,10 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
@@ -517,11 +515,11 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of Db transaction used by the Outbox</typeparam>
@@ -553,7 +551,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -562,10 +560,10 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
@@ -580,11 +578,11 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
@@ -625,7 +623,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -639,7 +637,7 @@ namespace Paramore.Brighter
         /// use the specialized version of this method that takes a transaction provider.
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -670,7 +668,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -705,7 +703,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -717,7 +715,7 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -748,7 +746,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider used with the Outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -794,16 +792,16 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
         /// <summary>
         /// Flushes the messages in the id list from the Outbox.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPost{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/>
         /// </summary>
         /// <param name="ids">The message ids to flush</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         public void ClearOutbox(string[] ids, RequestContext requestContext = null, Dictionary<string, object> args = null)
         {
@@ -816,18 +814,18 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
         /// <summary>
         /// Flushes any outstanding message box message to the broker.
         /// This will be run on a background task.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPost{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/>
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
-         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>       
+         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>       
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         public void ClearOutbox(
             int amountToClear = 100, 
@@ -845,16 +843,16 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"/> to the broker.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostAsync{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object},bool,System.Threading.CancellationToken)"/>
         /// </summary>
         /// <param name="posts">The ids to flush</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should the callback run on a new thread?</param>
         /// <param name="cancellationToken">The token to cancel a running asynchronous operation</param>
@@ -874,19 +872,19 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
         /// <summary>
         /// Flushes any outstanding message box message to the broker.
         /// This will be run on a background task.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostAsync{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object},bool,System.Threading.CancellationToken)"/>
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         public void ClearAsyncOutbox(
             int amountToClear = 100,
@@ -905,7 +903,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -918,7 +916,7 @@ namespace Paramore.Brighter
         /// Because the operation blocks, there is a mandatory timeout
         /// </summary>
         /// <param name="request">What message do we want a reply to</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
         /// <exception cref="NotImplementedException"></exception>
         public TResponse Call<T, TResponse>(T request, RequestContext requestContext = null, int timeOutInMilliseconds = 500)
@@ -984,7 +982,7 @@ namespace Paramore.Brighter
             } 
             finally
             {
-                EndSpan(span);
+                _tracer?.EndSpan(span);
             }
         }
 
@@ -1021,23 +1019,6 @@ namespace Paramore.Brighter
                     $"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
         
-        private void EndChildSpans(Dictionary<string, Activity> handlerSpans)
-        {
-            if (!handlerSpans.Any()) return;
-            
-            foreach (var handlerSpan in handlerSpans)
-            {
-                EndSpan(handlerSpan.Value);
-            }
-        }
-  
-        private void EndSpan(Activity span)
-        {
-            if (span?.Status == ActivityStatusCode.Unset)
-                span.SetStatus(ActivityStatusCode.Ok);
-            span?.Dispose();
-        }
-
         private Activity CreateSpan(string activityName)
         {
             bool hasParent = Activity.Current != null;
@@ -1100,14 +1081,14 @@ namespace Paramore.Brighter
              {
                 if (hs.Key != handlerName)
                 {
-                    //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released
+                    //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released  
                     //handlerspan.AddLink(new ActivityLink(handlerspan.Value.Context));
                 }
              }
           }
         }
         
-        private bool Retry(Action action)
+        private void Retry(Action action)
         {
             var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
             var result = policy.ExecuteAndCapture(action);
@@ -1117,13 +1098,8 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
                 }
-
-                return false;
             }
-
-            return true;
         }
-
         
         private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)
         {

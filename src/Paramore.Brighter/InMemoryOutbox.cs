@@ -102,22 +102,28 @@ namespace Paramore.Brighter
         public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
         {
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.brighter, InMemoryAttributes.DbName, OutboxDbOperation.Add, "requests"),  
+                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.Add, InMemoryAttributes.DbTable),  
                 requestContext?.Span, 
                 options: instrumentationOptions
                 );
-            
-            var context = InitRequestContext(span, requestContext);
-            
-            ClearExpiredMessages();
-            EnforceCapacityLimit();
 
-            if (!Requests.ContainsKey(message.Id))
+            try
             {
-                if (!Requests.TryAdd(message.Id, new OutboxEntry {Message = message, WriteTime = timeProvider.GetUtcNow().DateTime}))
+                ClearExpiredMessages();
+                EnforceCapacityLimit();
+
+                if (!Requests.ContainsKey(message.Id))
                 {
-                    throw new Exception($"Could not add message with Id: {message.Id} to outbox");
+                    if (!Requests.TryAdd(message.Id,
+                            new OutboxEntry { Message = message, WriteTime = timeProvider.GetUtcNow().DateTime }))
+                    {
+                        throw new Exception($"Could not add message with Id: {message.Id} to outbox");
+                    }
                 }
+            }
+            finally
+            {
+                EndSpan(span);
             }
         }
 
@@ -446,6 +452,13 @@ namespace Paramore.Brighter
             tcs.SetResult(OutstandingMessages(millSecondsSinceSent, requestContext, pageSize, pageNumber, args));
 
             return tcs.Task;
+        }
+        
+        private void EndSpan(Activity span)
+        {
+            if (span?.Status == ActivityStatusCode.Unset)
+                span.SetStatus(ActivityStatusCode.Ok);
+            span?.Dispose();
         }
         
         private RequestContext InitRequestContext(Activity span, RequestContext requestContext)

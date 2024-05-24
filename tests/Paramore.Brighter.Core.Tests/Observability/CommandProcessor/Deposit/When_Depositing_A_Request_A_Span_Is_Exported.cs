@@ -128,22 +128,22 @@ public class CommandProcessorDepositObservabilityTests
         //depositing a message should be an event
         var message = _outbox.OutstandingMessages(0, context).Single();
         var depositEvent = events.Single(e => e.Name == BrighterSemanticConventions.AddToOutbox);
-        depositEvent.Tags.Any(a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value).Should().BeTrue();
-        depositActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.OutboxType, Value: "sync" }).Should().BeTrue();
-        depositActivity.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && a.Value == message.Id ).Should().BeTrue();
-        depositActivity.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && a.Value == message.Header.Topic).Should().BeTrue();
-        depositActivity.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBodySize && a.Value == Convert.ToString(message.Body.Bytes.Length)).Should().BeTrue();
-        depositActivity.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBody && a.Value == message.Body.Value).Should().BeTrue();
-        depositActivity.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && a.Value == message.Header.PartitionKey).Should().BeTrue();
-        depositActivity.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageHeaders && a.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "sync" ).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id ).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBodySize && (string)a.Value == Convert.ToString(message.Body.Bytes.Length)).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value.ToString()).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString()).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)a.Value == message.Header.PartitionKey).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageHeaders && (string)a.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();
 
         //-- there should be a span for the outbox itself to use for its call; even in-memory here; should use <db.operation> <db.name> for the span name
-        var dbOperation = "Add";
-        var dbName = "outbox";
-        var outBoxActivity = _exportedActivities.Single(a => a.DisplayName == $"{dbOperation} {dbName}");
-        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == "in_memory").Should().BeTrue();
-        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == dbName).Should().BeTrue();
-        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == dbOperation).Should().BeTrue();
+        var outBoxActivity = _exportedActivities.Single(a => a.DisplayName == $"{OutboxDbOperation.Add.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
+        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.Add.ToSpanName()).Should().BeTrue();
+        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable).Should().BeTrue();
+        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()).Should().BeTrue();
+        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName).Should().BeTrue();
 
     }
 }

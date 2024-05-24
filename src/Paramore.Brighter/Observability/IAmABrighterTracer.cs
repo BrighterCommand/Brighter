@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Paramore.Brighter.Observability;
@@ -60,4 +61,16 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="options">How deep should the instrumentation go?</param>
     /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
     Activity CreateDbSpan(OutboxSpanInfo info, Activity parentActivity, InstrumentationOptions options);
+
+    /// <summary>
+    /// Ends a span by correctly setting its status and then disposing of it
+    /// </summary>
+    /// <param name="span">The span to end</param>
+    void EndSpan(Activity span);
+    
+    /// <summary>
+    /// Ends a collection of named spans
+    /// </summary>
+    /// <param name="handlerSpans"></param>
+    void EndSpans(Dictionary<string, Activity> handlerSpans);
 }
