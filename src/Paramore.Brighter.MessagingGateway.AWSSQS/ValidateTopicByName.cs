@@ -34,17 +34,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
         {
-            var config = new AmazonSimpleNotificationServiceConfig
-            {
-                RegionEndpoint = region
-            };
-
-            if (clientConfigAction != null)
-            {
-                clientConfigAction(config);
-            }
-
-            _snsClient = new AmazonSimpleNotificationServiceClient(credentials, config);
+            var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
+            _snsClient = clientFactory.CreateSnsClient();
         }
         
         public ValidateTopicByName(AmazonSimpleNotificationServiceClient snsClient)
