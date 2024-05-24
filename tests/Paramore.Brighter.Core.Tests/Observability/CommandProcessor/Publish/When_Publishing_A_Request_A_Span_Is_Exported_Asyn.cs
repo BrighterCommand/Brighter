@@ -16,6 +16,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Publish;
 
+[Collection("CommandProcessor")]
 public class AsyncCommandProcessorPublishObservabilityTests 
 {
     private readonly List<Activity> _exportedActivities;

@@ -27,18 +27,11 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyEventHandler : RequestHandler<MyEvent>
+    internal class MyEventHandler(IDictionary<string, string> receivedMessages) : RequestHandler<MyEvent>
     {
-        private readonly IDictionary<string, string> _receivedMessages;
-
-        public MyEventHandler(IDictionary<string, string> receivedMessages)
-        {
-            _receivedMessages = receivedMessages;
-        }
-
         public override MyEvent Handle(MyEvent @event)
         {
-            _receivedMessages.Add(nameof(MyEventHandler), @event.Id);
+            receivedMessages.Add(nameof(MyEventHandler), @event.Id);
             return base.Handle(@event);
         }
     }

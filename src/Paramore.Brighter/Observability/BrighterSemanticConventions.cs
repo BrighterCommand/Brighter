@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Observability;
 public static class BrighterSemanticConventions
 {
     public const string AddToOutbox = "paramore.brighter.add_to_outbox";
-    public const string SourceName = "paramore.brighter";
+    public const string SourceName = "Paramore.Brighter";
     public const string DbInstanceId = "db.instance.id";
     public const string DbName = "db.name";
     public const string DbOperation = "db.operation";

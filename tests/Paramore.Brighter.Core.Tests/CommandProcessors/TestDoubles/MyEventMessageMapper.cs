@@ -10,13 +10,14 @@ internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
     public Message MapToMessage(MyEvent request, Publication publication)
     {
         var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
-        var body = new MessageBody(JsonSerializer.Serialize(request));
+        var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);
         return message;
     }
 
     public MyEvent MapToRequest(Message message)
     {
-        return JsonSerializer.Deserialize<MyEvent>(message.Body.Value);
+        return JsonSerializer.Deserialize<MyEvent>(message.Body.Value, JsonSerialisationOptions.Options);
     }
 }
+

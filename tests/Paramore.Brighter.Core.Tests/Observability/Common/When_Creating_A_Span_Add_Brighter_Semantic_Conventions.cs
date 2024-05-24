@@ -41,8 +41,12 @@ public class BrighterTracerSpanTests : IDisposable
         var command = new MyCommand { Value = "My Test String" };
 
         //act
-        var childActivity = _tracer.CreateSpan(CommandProcessorSpanOperation.Send, command, _parentActivity,
-            options: InstrumentationOptions.All);
+        var childActivity = _tracer.CreateSpan(
+            CommandProcessorSpanOperation.Send, 
+            command, 
+            _parentActivity,
+            options: InstrumentationOptions.All
+        );
         
         childActivity.Stop();
         _parentActivity.Stop();

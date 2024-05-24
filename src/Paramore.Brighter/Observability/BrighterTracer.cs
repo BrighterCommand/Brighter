@@ -127,11 +127,12 @@ public class BrighterTracer : IAmABrighterTracer
         tags.Add(BrighterSemanticConventions.DbTable, info.dbTable);
         if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
         tags.Add(BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName());
-        if (! string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
+        if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
         if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
-        if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
         if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
-        if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
+        //NOTE: We convert these to strings because the ActivityTagsCollection seems to only accepts strings?! 
+        if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort.ToString());
+        if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort.ToString());
         
         if (info.dbAttributes != null)
            foreach (var pair in info.dbAttributes)
@@ -160,6 +161,8 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="isSink">Is this the last handler in the chain?</param>
     public static void CreateHandlerEvent(Activity span, string handlerName, bool isAsync, bool isSink = false)
     {
+        if (span == null) return;
+        
         var tags = new ActivityTagsCollection();
         tags.Add(BrighterSemanticConventions.HandlerName, handlerName);
         tags.Add(BrighterSemanticConventions.HandlerType, isAsync ? "async" : "sync");
@@ -186,6 +189,8 @@ public class BrighterTracer : IAmABrighterTracer
         bool isAsync,
         bool isSink = false)
     {
+        if (span == null) return;
+        
         var tags = new ActivityTagsCollection();
         tags.Add(BrighterSemanticConventions.MapperName, mapperName);
         tags.Add(BrighterSemanticConventions.MapperType, isAsync ? "async" : "sync");

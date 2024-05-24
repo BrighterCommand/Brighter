@@ -14,7 +14,6 @@ public class BrighterSemanticConventionsEventTests
 {
     private readonly ICollection<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
-    private readonly BrighterTracer _tracer;
     private readonly Activity _parentActivity;
 
     public BrighterSemanticConventionsEventTests()
@@ -28,8 +27,8 @@ public class BrighterSemanticConventionsEventTests
             .AddInMemoryExporter(_exportedActivities)
             .Build();
         
-        _tracer = new BrighterTracer();
-        _parentActivity = _tracer.ActivitySource.StartActivity("BrighterSemanticConventionsEventTests"); 
+        BrighterTracer tracer = new();
+        _parentActivity = tracer.ActivitySource.StartActivity("BrighterSemanticConventionsEventTests"); 
     }
     [Fact]
     public void When_Creating_A_Handler_Event_Add_Brighter_SemanticConventions()
