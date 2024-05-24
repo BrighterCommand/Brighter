@@ -37,9 +37,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         protected AWSMessagingGatewayConnection _awsConnection;
         protected string ChannelTopicArn;
 
+        private AWSClientFactory _awsClientFactory;
+
         public AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         {
             _awsConnection = awsConnection;
+            _awsClientFactory = new AWSClientFactory(awsConnection);
         }
 
         protected string EnsureTopic(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
@@ -53,17 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
         {
-            var snsConfig = new AmazonSimpleNotificationServiceConfig
-            {
-                RegionEndpoint = _awsConnection.Region,
-            };
-
-            if (_awsConnection.ClientConfigAction != null)
-            {
-                _awsConnection.ClientConfigAction(snsConfig);
-            }
-
-            using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, snsConfig);
+            using var snsClient = _awsClientFactory.CreateSnsClient();
             var attributes = new Dictionary<string, string>();
             if (snsAttributes != null)
             {
