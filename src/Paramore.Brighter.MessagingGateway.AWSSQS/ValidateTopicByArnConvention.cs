@@ -40,17 +40,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             _region = region;
 
-            var config = new AmazonSecurityTokenServiceConfig
-            {
-                RegionEndpoint = _region,
-            };
-
-            if (clientConfigAction != null)
-            {
-                clientConfigAction(config);
-            }
-
-            _stsClient = new AmazonSecurityTokenServiceClient(credentials, config);
+            var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
+            _stsClient = clientFactory.CreateStsClient();
         }
 
         public override (bool, string TopicArn) Validate(string topic)

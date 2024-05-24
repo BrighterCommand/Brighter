@@ -22,8 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using Amazon.SimpleNotificationService;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -35,6 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private readonly AWSMessagingGatewayConnection _connection;
         private readonly SnsPublication _publication;
+        private readonly AWSClientFactory _clientFactory;
         
         public Publication Publication { get { return _publication; } }
 
@@ -48,6 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             _connection = connection;
             _publication = publication;
+            _clientFactory = new AWSClientFactory(connection);
 
             if (publication.TopicArn != null)
                 ChannelTopicArn = publication.TopicArn;
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             ConfirmTopicExists(message.Header.Topic);
 
-            using var client = CreateSnsClient();
+            using var client = _clientFactory.CreateSnsClient();
             var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
             var messageId = publisher.Publish(message);
             if (messageId != null)
@@ -113,21 +113,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public void Dispose()
         {
             
-        }
-
-        private AmazonSimpleNotificationServiceClient CreateSnsClient()
-        {
-            var config = new AmazonSimpleNotificationServiceConfig
-            {
-                RegionEndpoint = _connection.Region
-            };
-
-            if (_connection.ClientConfigAction != null)
-            {
-                _connection.ClientConfigAction(config);
-            }
-
-            return new AmazonSimpleNotificationServiceClient(_connection.Credentials, config);
         }
     }
 }
