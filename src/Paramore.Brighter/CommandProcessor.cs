@@ -685,8 +685,8 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
             
-            var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
-            var context = InitRequestContext(span, requestContext);
+             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
+             var context = InitRequestContext(span, requestContext);
 
             try
             {

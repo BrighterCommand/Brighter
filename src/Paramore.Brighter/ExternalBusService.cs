@@ -92,7 +92,9 @@ namespace Paramore.Brighter
             _producerRegistry = producerRegistry ?? throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _policyRegistry = policyRegistry?? throw new ConfigurationException("Missing Policy Registry for External Bus Services");
             _archiveProvider = archiveProvider;
-            requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
+            
+            requestContextFactory ??= new InMemoryRequestContextFactory();
+            
             if (mapperRegistry is null) 
                 throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
             if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
@@ -160,6 +162,13 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default) 
         {
             CheckOutboxOutstandingLimit();
+            
+            requestContext.Span?.AddEvent(
+                new ActivityEvent(
+                    BrighterSemanticConventions.AddToOutbox, 
+                    tags: CreateOutboxEventActivityTags(message, overridingTransactionProvider != null, true)
+                )
+            );
 
             var written = await RetryAsync(
                 async ct =>
@@ -174,12 +183,6 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {message.Id} to the outbox");
-            
-            requestContext.Span?.AddEvent(
-                new ActivityEvent(
-                    ADDMESSAGETOOUTBOX, 
-                    tags: new ActivityTagsCollection { { "MessageId", message.Id } })
-                );
         }
 
         /// <summary>
@@ -240,21 +243,13 @@ namespace Paramore.Brighter
         )
         {
             CheckOutboxOutstandingLimit();
-            
-            var tags = new ActivityTagsCollection
-            {
-                { BrighterSemanticConventions.OutboxSharedTransaction, overridingTransactionProvider != null },
-                { BrighterSemanticConventions.OutboxType, "sync" },
-                { BrighterSemanticConventions.MessageId, message.Id },
-                { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
-                { BrighterSemanticConventions.MessageBodySize, Convert.ToString(message.Body.Bytes.Length) },
-                { BrighterSemanticConventions.MessageBody, message.Body.Value },
-                { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-                { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-                { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
-            };
 
-            requestContext.Span?.AddEvent(new ActivityEvent(BrighterSemanticConventions.AddToOutbox, tags: tags));
+            requestContext.Span?.AddEvent(
+                new ActivityEvent(
+                    BrighterSemanticConventions.AddToOutbox, 
+                    tags: CreateOutboxEventActivityTags(message, overridingTransactionProvider != null, false)
+                )
+            );
  
             var written = Retry(() => 
                 { _outBox.Add(message, requestContext, _outboxTimeout, overridingTransactionProvider); }, 
@@ -265,6 +260,7 @@ namespace Paramore.Brighter
                 throw new ChannelFailureException($"Could not write message {message.Id} to the outbox");
 
         }
+
 
         /// <summary>
         /// Adds messages to the Outbox
@@ -851,6 +847,27 @@ namespace Paramore.Brighter
             }
 
             return false;
+        }
+        
+        private static ActivityTagsCollection CreateOutboxEventActivityTags(
+            TMessage message,
+            bool sharedTransaction,
+            bool isAsync
+        )
+        {
+            var tags = new ActivityTagsCollection
+            {
+                { BrighterSemanticConventions.OutboxSharedTransaction, sharedTransaction },
+                { BrighterSemanticConventions.OutboxType, isAsync ? "async" : "sync" },
+                { BrighterSemanticConventions.MessageId, message.Id },
+                { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
+                { BrighterSemanticConventions.MessageBodySize, Convert.ToString(message.Body.Bytes.Length) },
+                { BrighterSemanticConventions.MessageBody, message.Body.Value },
+                { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
+                { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
+                { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
+            };
+            return tags;
         }
         
         private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object> args = null)
