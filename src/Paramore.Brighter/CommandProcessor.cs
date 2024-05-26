@@ -620,6 +620,8 @@ namespace Paramore.Brighter
             }
             
             //Without this we won't bind to the concrete type of the request in the collection
+            //NOTE: It might be possible to make this more efficient by doing the reflection once per request type
+            //and then caching the method info, then looking up the method info in the dictionary
             string CallDepositPost(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> amABoxTransactionProvider, 
                 RequestContext requestContext1, Dictionary<string, object> dictionary)
             {
@@ -793,6 +795,8 @@ namespace Paramore.Brighter
             }
             
             //Without this we won't bind to the concrete type of the request in the collection
+            //NOTE: It might be possible to make this more efficient by doing the reflection once per request type
+            //and then caching the method info, then looking up the method info in the dictionary
             Task<string> CallDepositPostAsync(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> tp, 
                 RequestContext rc, Dictionary<string, object> bag)
             {
