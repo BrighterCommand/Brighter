@@ -103,6 +103,46 @@ public class BrighterTracer : IAmABrighterTracer
 
         return activity;
     }
+    
+    /// <summary>
+    /// Create a span for a request in CommandProcessor
+    /// </summary>
+    /// <param name="operation">What type of span are we creating</param>
+    /// <param name="request">What is the request that we are tracking with this span</param>
+    /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
+    /// <param name="links">Are there links to other spans that we should add to this span</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
+    public Activity CreateBatchSpan<TRequest>(
+        Activity parentActivity = null,
+        ActivityLink[] links = null, 
+        InstrumentationOptions options = InstrumentationOptions.All
+    ) where TRequest : class, IRequest
+    {
+        var requestType = typeof(TRequest);
+        var operation = CommandProcessorSpanOperation.Create;
+        
+        var spanName = $"{requestType.Name} {operation.ToSpanName()}";
+        var kind = ActivityKind.Internal;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection();
+        tags.Add(BrighterSemanticConventions.RequestType, requestType.Name);
+        tags.Add(BrighterSemanticConventions.Operation, operation.ToSpanName());
+
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            links: links,
+            startTime: now);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
 
     /// <summary>
     /// Create a span for an outbox operation

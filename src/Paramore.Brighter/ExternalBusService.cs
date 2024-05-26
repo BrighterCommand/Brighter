@@ -541,44 +541,6 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Given a set of messages, map them to requests
-        /// </summary>
-        /// <param name="requestType">The type of the request</param>
-        /// <param name="requests">The list of requests</param>
-        /// <param name="requestContext">The context of the request pipeline</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public Task<List<Message>> CreateMessagesFromRequests(
-            Type requestType,
-            IEnumerable<IRequest> requests,
-            RequestContext requestContext,
-            CancellationToken cancellationToken)
-        {
-            var parameters = new object[] { requests, requestContext, cancellationToken };
-
-            var hasAsyncPipeline = (bool)typeof(TransformPipelineBuilderAsync)
-                .GetMethod(nameof(TransformPipelineBuilderAsync.HasPipeline),
-                    BindingFlags.Instance | BindingFlags.Public)
-                .MakeGenericMethod(requestType)
-                .Invoke(this._transformPipelineBuilderAsync, null);
-
-            if (hasAsyncPipeline)
-            {
-                return (Task<List<Message>>)GetType()
-                    .GetMethod(nameof(BulkMapMessagesAsync), BindingFlags.Instance | BindingFlags.NonPublic)
-                    .MakeGenericMethod(requestType)
-                    .Invoke(this, parameters);
-            }
-
-            var tcs = new TaskCompletionSource<List<Message>>();
-            tcs.SetResult((List<Message>)GetType()
-                .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
-                .MakeGenericMethod(requestType)                                                             
-                .Invoke(this, new object[] { requests, requestContext }));
-            return tcs.Task;
-        }
-
-        /// <summary>
         /// Intended for usage with the CommandProcessor's Call method, this method will create a request from a message
         /// </summary>
         /// <param name="message">The message that forms a reply to a call</param>
@@ -968,34 +930,6 @@ namespace Paramore.Brighter
             }
         }
         
-        private List<Message> BulkMapMessages<T>(IEnumerable<IRequest> requests, RequestContext requestContext) where T : class, IRequest
-        {
-            return requests.Select(r =>
-            {
-                var publication = _producerRegistry.LookupPublication<T>();
-                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
-                var message = wrapPipeline.Wrap((T)r, requestContext, publication);
-                return message;
-            }).ToList();
-        }
-
-        private async Task<List<Message>> BulkMapMessagesAsync<T>(
-            IEnumerable<IRequest> requests,
-            RequestContext requestContext,
-            CancellationToken cancellationToken = default) where T : class, IRequest
-        {
-            var messages = new List<Message>();
-            foreach (var request in requests)
-            {
-                var publication = _producerRegistry.LookupPublication<T>();
-                var wrapPipeline = _transformPipelineBuilderAsync.BuildWrapPipeline<T>();
-                var message = await wrapPipeline.WrapAsync((T)request, requestContext, publication, cancellationToken);
-                messages.Add(message);
-            }
-
-            return messages;
-        }
-
         private async Task DispatchAsync(
             IEnumerable<Message> posts,
             RequestContext requestContext,

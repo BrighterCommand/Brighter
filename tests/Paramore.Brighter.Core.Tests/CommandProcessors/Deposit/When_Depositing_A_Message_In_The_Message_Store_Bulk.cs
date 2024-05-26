@@ -66,8 +66,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             {
                 if (type == typeof(MyCommandMessageMapper))
                     return new MyCommandMessageMapper();
-                else
+                else if (type == typeof(MyEventMessageMapper))
                     return new MyEventMessageMapper();
+                
+                throw new ConfigurationException($"No command or event mappers registered for {type.Name}");
             }), null);
             
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();

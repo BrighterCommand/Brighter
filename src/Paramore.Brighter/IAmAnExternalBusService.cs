@@ -108,20 +108,6 @@ namespace Paramore.Brighter
         ) where TRequest : class, IRequest;
 
         /// <summary>
-        /// Given a set of messages, map them to requests
-        /// </summary>
-        /// <param name="requestType">The type of the request</param>
-        /// <param name="requests">The list of requests</param>
-        /// <param name="requestContext">The context of the request pipeline</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        Task<List<Message>> CreateMessagesFromRequests(
-            Type requestType,
-            IEnumerable<IRequest> requests,
-            RequestContext requestContext,
-            CancellationToken cancellationToken);
-
-        /// <summary>
         /// Intended for usage with the CommandProcessor's Call method, this method will create a request from a message
         /// </summary>
         /// <param name="message">The message that forms a reply to a call</param>

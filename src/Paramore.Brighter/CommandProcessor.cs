@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -596,27 +597,19 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save bulk requests request: {RequestType}", typeof(TRequest));
             
-            var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
+            var span = _tracer?.CreateBatchSpan<TRequest>(requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
             {
                 var successfullySentMessage = new List<string>();
 
-                foreach (var batch in SplitRequestBatchIntoTypes(requests))
+                foreach (var request in requests)
                 {
-                    var messages = s_bus.CreateMessagesFromRequests(
-                        batch.Key, batch, context, new CancellationToken()
-                    ).GetAwaiter().GetResult();
-
-                    s_logger.LogInformation(
-                        "Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count()
-                    );
-
-                    var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
-                    bus.AddToOutbox(messages, context, transactionProvider);
-
-                    successfullySentMessage.AddRange(messages.Select(m => m.Id));
+                    var createSpan = context.Span;
+                    var messageId = CallDepositPost(request, transactionProvider, requestContext, args);
+                    successfullySentMessage.Add(messageId);
+                    context.Span = createSpan;
                 }
 
                 return successfullySentMessage.ToArray();
@@ -624,6 +617,20 @@ namespace Paramore.Brighter
             finally
             {
                 _tracer?.EndSpan(span);
+            }
+            
+            //Without this we won't bind to the concrete type of the request in the collection
+            string CallDepositPost(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> amABoxTransactionProvider, 
+                RequestContext requestContext1, Dictionary<string, object> dictionary)
+            {
+                var depositMethod = typeof(CommandProcessor)
+                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                     .Where(m => m.Name == nameof(DepositPost))
+                     .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 4);
+                
+                var deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction));
+                
+                return deposit?.Invoke(this, new object[] { actualRequest, amABoxTransactionProvider, requestContext1, dictionary }) as string;
             }
         }
 
@@ -762,30 +769,20 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             
-            var span = CreateSpan(string.Format(CREATEEVENT, typeof(TRequest).Name));
+            var span = _tracer?.CreateBatchSpan<TRequest>(requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
             {
                 var successfullySentMessage = new List<string>();
 
-                foreach (var batch in SplitRequestBatchIntoTypes(requests))
+                foreach (var request in requests)
                 {
-                    var messages = await s_bus.CreateMessagesFromRequests(
-                        batch.Key, batch.ToArray(), context, cancellationToken
-                    );
+                    var createSpan = context.Span;
+                    var messageId = await CallDepositPostAsync(request, transactionProvider, requestContext, args);
 
-                    s_logger.LogInformation(
-                        "Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count()
-                    );
-                    
-                    var bus = ((IAmAnExternalBusService<Message, TTransaction>)s_bus);
-
-                    await bus.AddToOutboxAsync(
-                        messages, context, transactionProvider, continueOnCapturedContext, cancellationToken
-                    );
-
-                    successfullySentMessage.AddRange(messages.Select(m => m.Id));
+                    successfullySentMessage.Add(messageId); 
+                    context.Span = createSpan;
                 }
 
                 return successfullySentMessage.ToArray();
@@ -793,6 +790,22 @@ namespace Paramore.Brighter
             finally
             {
                 _tracer?.EndSpan(span);
+            }
+            
+            //Without this we won't bind to the concrete type of the request in the collection
+            Task<string> CallDepositPostAsync(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> tp, 
+                RequestContext rc, Dictionary<string, object> bag)
+            {
+                var depositMethod = typeof(CommandProcessor)
+                    .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m => m.Name == nameof(DepositPostAsync))
+                    .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 6);
+                
+                var deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction));
+                
+                return (Task<string>)deposit?
+                    .Invoke(this, new object[] { actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken }
+                );
             }
         }
 
