@@ -32,6 +32,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -525,6 +526,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of Db transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
+        [DepositCallSite] //NOTE: if you adjust the signature, adjust the bulk caller
         public string DepositPost<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
@@ -627,7 +629,10 @@ namespace Paramore.Brighter
             {
                 var depositMethod = typeof(CommandProcessor)
                      .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                     .Where(m => m.Name == nameof(DepositPost))
+                     .Where(m => 
+                         m.Name == nameof(DepositPost) 
+                         && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAttribute))
+                        )   
                      .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 4);
                 
                 var deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction));
@@ -684,6 +689,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of the transaction used by the Outbox</typeparam>
         /// <returns></returns>
+        [DepositCallSiteAsync] //NOTE: if you adjust the signature, adjust the bulk caller
         public async Task<string> DepositPostAsync<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
@@ -802,7 +808,10 @@ namespace Paramore.Brighter
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                    .Where(m => m.Name == nameof(DepositPostAsync))
+                    .Where(m => 
+                        m.Name == nameof(DepositPostAsync)
+                        && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAsyncAttribute))
+                        )
                     .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 6);
                 
                 var deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction));
