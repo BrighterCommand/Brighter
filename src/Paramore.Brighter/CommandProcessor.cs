@@ -625,9 +625,11 @@ namespace Paramore.Brighter
                 _tracer?.EndSpan(span);
             }
             
-            //Without this we won't bind to the concrete type of the request in the collection
-            //NOTE: It might be possible to make this more efficient by doing the reflection once per request type
-            //and then caching the method info, then looking up the method info in the dictionary
+            // Call the deposit post method for a single request
+            // We need to bind DepositPost to the type of the request; an IEnumerable<IRequest> loses type information
+            // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
+            // generic methods, like DepositPost, assume they have the derived type. This binds DepositPost to the right
+            // type before we call it.
             string CallDepositPost(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> amABoxTransactionProvider, 
                 RequestContext requestContext1, Dictionary<string, object> dictionary)
             {
@@ -816,9 +818,11 @@ namespace Paramore.Brighter
                 _tracer?.EndSpan(span);
             }
             
-            //Without this we won't bind to the concrete type of the request in the collection
-            //NOTE: It might be possible to make this more efficient by doing the reflection once per request type
-            //and then caching the method info, then looking up the method info in the dictionary
+            // Call the deposit post method for a single request
+            // We need to bind DepositPostAsync to the type of the request; an IEnumerable<IRequest> loses type information
+            // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
+            // generic methods, like DepositPost, assume they have the derived type. This binds DepositPostAsync to the right
+            // type before we call it.
             Task<string> CallDepositPostAsync(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> tp, 
                 RequestContext rc, Dictionary<string, object> bag)
             {
