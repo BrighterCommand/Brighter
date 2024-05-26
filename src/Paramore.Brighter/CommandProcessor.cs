@@ -68,7 +68,6 @@ namespace Paramore.Brighter
         private readonly IAmAChannelFactory _responseChannelFactory;
         private readonly InstrumentationOptions _instrumentationOptions;
 
-        private const string CREATEEVENT = "Cloud Events Create: {0}";
         private const string CLEAROUTBOX = "Clear Outbox";
 
         /// <summary>
@@ -605,7 +604,7 @@ namespace Paramore.Brighter
             
             var span = _tracer?.CreateBatchSpan<TRequest>(requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
-
+            
             try
             {
                 var successfullySentMessage = new List<string>();
@@ -617,7 +616,7 @@ namespace Paramore.Brighter
                     successfullySentMessage.Add(messageId);
                     context.Span = createSpan;
                 }
-
+                
                 return successfullySentMessage.ToArray();
             }
             finally
@@ -1157,11 +1156,6 @@ namespace Paramore.Brighter
                     s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
                 }
             }
-        }
-        
-        private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)
-        {
-            return requests.GroupBy(r => r.GetType());
         }
     }
 }
