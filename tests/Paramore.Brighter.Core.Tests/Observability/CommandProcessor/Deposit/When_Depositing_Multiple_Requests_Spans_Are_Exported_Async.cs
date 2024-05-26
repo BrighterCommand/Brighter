@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -19,14 +20,14 @@ using MyEvent = Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyEve
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Deposit;
 
 [Collection("Observability")]
-public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
+public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposable
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
     private readonly InMemoryOutbox _outbox;
 
-    public CommandProcessorMultipleDepositObservabilityTests()
+    public AsyncCommandProcessorMultipleDepositObservabilityTests()
     {
         const string topic = "MyEvent";
         
@@ -42,24 +43,28 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
         Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
-        registry.Register<MyCommand, MyCommandHandler>();
+        registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
         
-        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler());
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ =>
+        {
+            var receivedMessages = new Dictionary<string, string>();
+            return new MyCommandHandlerAsync(receivedMessages);
+        });
         
         var retryPolicy = Policy
             .Handle<Exception>()
-            .Retry();
+            .RetryAsync();
         
-        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
         
         var timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            null,
+            new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
@@ -91,7 +96,7 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
     }
 
     [Fact]
-    public void When_Depositing_A_Request_A_Span_Is_Exported()
+    public async Task When_Depositing_A_Request_A_Span_Is_Exported()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
@@ -104,7 +109,7 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        _commandProcessor.DepositPost(events, context);
+        await _commandProcessor.DepositPostAsync(events, context);
         parentActivity?.Stop();
         
         _traceProvider.ForceFlush();
