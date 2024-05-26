@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -99,10 +100,13 @@ namespace Paramore.Brighter
         public const string RETRYPOLICYASYNC = "Paramore.Brighter.CommandProcessor.RetryPolicy.Async";
 
         /// <summary>
-        /// We want to use double lock to let us pass parameters to the constructor from the first instance
+        /// STATIC FIELDS: Use ClearServiceBus() to reset for tests!
+        /// Bus: We want to hold a reference to the bus; use double lock to let us pass parameters to the constructor from the first instance
+        /// MethodCache: Used to reduce the cost of reflection for bulk calls
         /// </summary>
         private static IAmAnExternalBusService s_bus;
         private static readonly object s_padlock = new();
+        private static ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new(); 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class
@@ -627,16 +631,28 @@ namespace Paramore.Brighter
             string CallDepositPost(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> amABoxTransactionProvider, 
                 RequestContext requestContext1, Dictionary<string, object> dictionary)
             {
-                var depositMethod = typeof(CommandProcessor)
-                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                     .Where(m => 
-                         m.Name == nameof(DepositPost) 
-                         && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAttribute))
-                        )   
-                     .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 4);
-                
-                var deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction));
-                
+                MethodInfo deposit;
+                var actualRequestType = actualRequest.GetType();
+
+                if (s_boundDepositCalls.ContainsKey(actualRequestType.Name))
+                {
+                    deposit = s_boundDepositCalls[actualRequestType.Name];
+                }
+                else
+                {
+                    var depositMethod = typeof(CommandProcessor)
+                        .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                        .Where(m =>
+                            m.Name == nameof(DepositPost)
+                            && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAttribute))
+                        )
+                        .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 4);
+
+                    deposit = depositMethod?.MakeGenericMethod(actualRequestType, typeof(TTransaction));
+                    
+                    s_boundDepositCalls[actualRequestType.Name] = deposit;
+                }
+
                 return deposit?.Invoke(this, new object[] { actualRequest, amABoxTransactionProvider, requestContext1, dictionary }) as string;
             }
         }
@@ -806,16 +822,27 @@ namespace Paramore.Brighter
             Task<string> CallDepositPostAsync(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> tp, 
                 RequestContext rc, Dictionary<string, object> bag)
             {
-                var depositMethod = typeof(CommandProcessor)
-                    .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                    .Where(m => 
-                        m.Name == nameof(DepositPostAsync)
-                        && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAsyncAttribute))
+                MethodInfo deposit;
+                var actualRequestType = actualRequest.GetType();
+
+                if (s_boundDepositCalls.ContainsKey(actualRequestType.Name))
+                {
+                    deposit = s_boundDepositCalls[actualRequestType.Name];
+                }
+                else
+                {
+                    var depositMethod = typeof(CommandProcessor)
+                        .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                        .Where(m =>
+                            m.Name == nameof(DepositPostAsync)
+                            && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAsyncAttribute))
                         )
-                    .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 6);
-                
-                var deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction));
-                
+                        .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 6);
+
+                    deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction));
+                    s_boundDepositCalls[actualRequestType.Name] = deposit;
+                }
+
                 return (Task<string>)deposit?
                     .Invoke(this, new object[] { actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken }
                 );
@@ -1030,6 +1057,7 @@ namespace Paramore.Brighter
                     }
                 }
             }
+            s_boundDepositCalls.Clear();
         }
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
