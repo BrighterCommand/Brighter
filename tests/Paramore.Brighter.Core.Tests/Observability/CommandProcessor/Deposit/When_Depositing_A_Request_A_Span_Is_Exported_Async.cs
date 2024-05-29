@@ -92,8 +92,6 @@ public class AsyncCommandProcessorDepositObservabilityTests
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );
-        
-        
     }
 
     [Fact]

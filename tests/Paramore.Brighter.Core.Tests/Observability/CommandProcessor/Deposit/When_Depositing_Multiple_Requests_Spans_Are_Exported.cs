@@ -86,8 +86,6 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );
-        
-        
     }
 
     [Fact]
@@ -131,7 +129,8 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
             depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(events[i])).Should().BeTrue();
         }
         
-        //NOTE: We don't check on the mapper and outbox events, nor the db events as they are covered by the single deposit tests 
+        //TODO: When we deposit multiple we do a bulk write to the Outbox, so we should expect to see a bulk operation at the Db level
+        // and not an individual operation
 
     }
 

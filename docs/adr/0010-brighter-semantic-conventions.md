@@ -112,9 +112,23 @@ In some cases semantic conventions will exist for these external calls. *For exa
 
 #### Clear Operation Spans, Publish and Create Spans
 
+During a Clear we retrieve a message from the Db, and then produce a message. There are existing conventions around producing and clearing.
+
+Because the CommandProcessor performs both these operations, and both involve a span that has it's own semantics, they need to be the child of a CommandProcessor span which spawns them. This span is named
+
+* `clear`
+
+We don't know the `channel` so we cannot provide more detail in the name
+
+When we Clear we always use a batch, so we may well be looping over a number of clear operations, each of which forms part of a batch, so this implies that each `clear` span is the child of another span
+
+* `create`
+
+Both the `create` span and the `clear` span our internal.
+
 During a Clear the Command Processor acts as a Producer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) semantic conventions for a Producer.
 
-We should create a span for producing a message, that is a child of the Command Processor span. The span is named:
+We should create a span for producing a message, that is a child of the Command Processor `clear` span. The span is named:
 
 * `<destination name>` `<operation name>`
 
@@ -124,6 +138,7 @@ where the destination name is the name of the channel and the operation name is 
 * Publish Message => span name: `<channel> publish` span kind: producer
 
 Producing a message is a Publish operation, unless the operation is within a Batch in which case the batch is a Publish with each message in the batch a Create span.
+
 
 [Cloud Events](https://opentelemetry.io/docs/specs/semconv/cloudevents/cloudevents-spans/#attributes) offers alternative names the producer and consumer spans:
 

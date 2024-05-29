@@ -40,6 +40,7 @@ public static class BrighterSpanExtensions
        CommandProcessorSpanOperation.Deposit => "deposit",
        CommandProcessorSpanOperation.Publish => "publish",
        CommandProcessorSpanOperation.Send => "send",
+       CommandProcessorSpanOperation.Clear => "clear",
        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
    };
 
@@ -49,6 +50,7 @@ public static class BrighterSpanExtensions
    public static string ToSpanName(this OutboxDbOperation span) => span switch
    {
        OutboxDbOperation.Add => "add",
+       OutboxDbOperation.Get => "get",
        _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
    };
 }

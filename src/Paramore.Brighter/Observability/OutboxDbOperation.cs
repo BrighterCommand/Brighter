@@ -30,6 +30,7 @@ namespace Paramore.Brighter.Observability;
 public enum OutboxDbOperation
 {
     Add = 0,       //Add a message to the outbox
+    Get
 }
 
 //The Db system being used by an Outbox or Inbox
