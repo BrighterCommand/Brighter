@@ -47,7 +47,11 @@ namespace Paramore.Brighter.PostgresSQL.Tests
             CreateInboxTable();
         }
 
-
+        public void SetupDatabase()
+        {
+            CreateDatabase();
+        }
+        
         private void CreateDatabase()
         {
             lock (syncObject)
