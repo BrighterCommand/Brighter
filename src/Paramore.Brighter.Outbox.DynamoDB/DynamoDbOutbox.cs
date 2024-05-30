@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -44,6 +45,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly DynamoDBContext _context;
         private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
         private readonly Random _random = new Random();
+
+        // Stores context of the current progress of any paged queries for dispatched messages to particular topics
+        private readonly ConcurrentDictionary<string, TopicQueryContext> _topicQueryContexts;
+
+        // Stores the names of topics to which this outbox publishes messages. ConcurrentDictionary is used to provide thread safety but
+        // guarantee uniqueness of topic names
+        private readonly ConcurrentDictionary<string, byte> _topicNames;
+
+        // Stores context of the current progress of paged queries to get dispatched messages for all topics
+        private AllTopicsQueryContext _allTopicsQueryContext;
 
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -66,6 +77,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
             }
+
+            _topicQueryContexts = new ConcurrentDictionary<string, TopicQueryContext>();
+            _topicNames = new ConcurrentDictionary<string, byte>();
         }
 
         /// <summary>
@@ -134,6 +148,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var shard = GetShardNumber();
             var expiresAt = GetExpirationTime();
             var messageToStore = new MessageItem(message, shard, expiresAt);
+
+            _topicNames.TryAdd(message.Header.Topic, 0);
 
             if (transactionProvider != null)
             {
@@ -204,27 +220,76 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
-            if (args == null)
-            {
-                throw new ArgumentException("Missing required argument", nameof(args));
-            }
-            
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
-            var topic = (string)args["Topic"];
+            return DispatchedMessagesAsync(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout, args, CancellationToken.None)
+                .GetAwaiter().GetResult();
+        }
 
-            //in theory this is all values on that index that have a Delivered data (sparse index)
-            //we just need to filter for ones in the right date range
-            //As it is a GSI it can't use a consistent read
-            var queryConfig = new QueryOperationConfig
+        private async Task<IEnumerable<Message>> DispatchedMessagesForTopicAsync(
+            double millisecondsDispatchedSince,
+            int pageSize,
+            int pageNumber,
+            string topicName,
+            CancellationToken cancellationToken)
+        {
+            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            // Validate that this is a query for a page we can actually retrieve
+            if (pageNumber != 1)
             {
-                IndexName = _configuration.DeliveredIndexName,
-                KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime),
-                ConsistentRead = false
-            };
-           
-            //block async to make this sync
-            var messages = PageAllMessagesAsync(queryConfig).Result.ToList();
-            return messages.Select(msg => msg.ConvertToMessage());
+                if (!_topicQueryContexts.ContainsKey(topicName))
+                {
+                    var errorMessage = $"Unable to query page {pageNumber} for topic {topicName} - next available page is page 1";
+                    throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
+                }
+
+                if (_topicQueryContexts[topicName]?.NextPage != pageNumber)
+                {
+                    var nextPageNumber = _topicQueryContexts[topicName]?.NextPage ?? 1;
+                    var errorMessage = $"Unable to query page {pageNumber} for topic {topicName} - next available page is page {nextPageNumber}";
+                    throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
+                }
+            }
+
+            // Query as much as possible up to the max page (batch) size
+            var results = new List<MessageItem>();
+            var paginationToken = pageNumber == 1 ? null : _topicQueryContexts[topicName].LastEvaluatedKey;
+            do
+            {
+                var queryConfig = new QueryOperationConfig
+                {
+                    IndexName = _configuration.DeliveredIndexName,
+                    KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topicName, sinceTime),
+                    Limit = pageSize - results.Count,
+                    PaginationToken = paginationToken
+                };
+                var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
+
+                results.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken));
+                paginationToken = asyncSearch.PaginationToken;
+            } while (results.Count < pageSize && paginationToken != null);
+            
+            // Store the progress for this topic if there are further pages
+            if (paginationToken != null)
+            {
+                _topicQueryContexts.AddOrUpdate(topicName,
+                    new TopicQueryContext(pageNumber + 1, paginationToken),
+                    (_, _) => new TopicQueryContext(pageNumber + 1, paginationToken));
+            }
+            else
+            {
+                _topicQueryContexts.TryRemove(topicName, out _);
+            }
+
+            return results.Select(msg => msg.ConvertToMessage());
+        }
+
+        private Task<IEnumerable<Message>> DispatchedMessagesForAllTopicsAsync(
+            double millisecondsDispatchedSince,
+            int pageSize,
+            int pageNumber,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult((IEnumerable<Message>)new List<Message>());
         }
 
         /// <summary>
@@ -247,27 +312,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CancellationToken cancellationToken = default
             )
         {
-            if (args == null)
+            if (args == null || !args.ContainsKey("Topic"))
             {
-                throw new ArgumentException("Missing required argument", nameof(args));
+                return await DispatchedMessagesForAllTopicsAsync(millisecondsDispatchedSince, pageSize, pageNumber, cancellationToken);
             }
-            
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
-            var topic = (string)args["Topic"];
 
-            //in theory this is all values on that index that have a Delivered data (sparse index)
-            //we just need to filter for ones in the right date range
-            //As it is a GSI it can't use a consistent read
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.DeliveredIndexName,
-                KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime),
-                ConsistentRead = false
-            };
-           
-            //block async to make this sync
-            var messages = await PageAllMessagesAsync(queryConfig, cancellationToken);
-            return messages.Select(msg => msg.ConvertToMessage());
+            var topic = (string)args["Topic"];
+            return await DispatchedMessagesForTopicAsync(millisecondsDispatchedSince, pageSize, pageNumber, topic, cancellationToken);
         }
         
         /// <summary>
