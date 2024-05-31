@@ -22,14 +22,25 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter;
 
+/// <summary>
+/// Mainly intended for tests provides an in-memory implementation of a message bus
+/// It can be passed to InMemoryProducer and InMemoryConsumer to provide an in-memory message bus
+/// </summary>
 public class InternalBus : IAmABus
 {
     private ConcurrentDictionary<RoutingKey, BlockingCollection<Message>> _messages = new();
+    
+    /// <summary>
+    /// Enqueue a message to tbe bus
+    /// </summary>
+    /// <param name="message">The message to enqueue</param>
     public void Enqueue(Message message)
     {
         var topic = new RoutingKey(message.Header.Topic);
@@ -41,15 +52,30 @@ public class InternalBus : IAmABus
         _messages[topic].Add(message);
     }
 
+    /// <summary>
+    /// Dequeue a message from the bus
+    /// </summary>
+    /// <param name="topic">The topic to pull the message from</param>
+    /// <returns></returns>
     public Message Dequeue(RoutingKey topic)
     {
-        _messages.TryGetValue(topic, out var messages);
+        var found = _messages.TryGetValue(topic, out var messages);
+        
+        if (!found || !messages.Any())
+            return MessageFactory.CreateEmptyMessage();
+            
         return messages?.Take();
     }
 
+    /// <summary>
+    /// For a given topic, list all the messages
+    /// </summary>
+    /// <param name="topic">The topic we want messages for</param>
+    /// <returns></returns>
     public IEnumerable<Message> Stream(RoutingKey topic)
     {
         _messages.TryGetValue(topic, out var messages);
-        return messages?.ToArray();
+        
+        return messages != null ? messages.ToArray() : Array.Empty<Message>();
     }   
 }

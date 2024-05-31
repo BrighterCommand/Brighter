@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Bus;
 
-public class InternalBusTests 
+public class InternalBusEnqueueTests 
 {
     [Fact]
     public void When_enqueueing_messages_on_an_internal_bus()
