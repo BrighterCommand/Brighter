@@ -29,7 +29,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter
 {
     public class InMemoryProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
