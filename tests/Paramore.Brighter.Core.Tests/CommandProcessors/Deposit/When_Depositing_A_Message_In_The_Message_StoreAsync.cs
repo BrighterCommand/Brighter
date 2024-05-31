@@ -22,14 +22,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly InMemoryProducer _producer;
 
         public CommandProcessorDepositPostTestsAsync()
         {
             var topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _producer = new FakeMessageProducerWithPublishConfirmation
+            _producer = new InMemoryProducer()
             {
                 Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyCommand) }
             };

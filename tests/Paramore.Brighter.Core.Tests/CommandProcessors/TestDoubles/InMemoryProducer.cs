@@ -31,11 +31,12 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
+    public class InMemoryProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         public Publication Publication { get; set; } = new();
         public readonly List<Message> SentMessages = new();
         public bool MessageWasSent { get; set; }
+        public event Action<bool, string> OnMessagePublished;
 
         public void Dispose() { }
 
@@ -53,6 +54,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             var msgs = messages as Message[] ?? messages.ToArray();
             foreach (var msg in msgs)
             {
+                OnMessagePublished?.Invoke(true, msg.Id); 
                 yield return new[] { msg.Id };
             }
             MessageWasSent = true;
@@ -63,6 +65,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             MessageWasSent = true;
             SentMessages.Add(message);
+            OnMessagePublished?.Invoke(true, message.Id);
         }
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)

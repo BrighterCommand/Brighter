@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly MyCommand _myCommand = new();
         private readonly Message _message;
         private readonly IAmAnOutboxSync<Message, CommittableTransaction> _outbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly InMemoryProducer _producer;
 
         public ControlBusSenderPostMessageAsyncTests()
         {
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new InMemoryProducer();
 
             const string topic = "MyCommand";
             _message = new Message(
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -104,7 +104,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             await _controlBusSender.PostAsync(_myCommand);
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
+            _producer.MessageWasSent.Should().BeTrue();
             
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _outbox

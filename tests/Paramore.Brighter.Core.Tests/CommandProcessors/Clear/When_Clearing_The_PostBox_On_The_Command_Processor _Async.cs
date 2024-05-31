@@ -44,14 +44,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly InMemoryProducer _producer;
 
         public CommandProcessorPostBoxClearAsyncTests()
         {
             const string topic = "MyCommand";
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            _producer = new InMemoryProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
             _message = new Message(
                 new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),

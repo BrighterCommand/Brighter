@@ -44,8 +44,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         private readonly Message _message;
         private readonly Message _message2;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
-        private readonly FakeMessageProducerWithPublishConfirmation _producerTwo;
+        private readonly InMemoryProducer _producer;
+        private readonly InMemoryProducer _producerTwo;
 
         public CommandProcessorPostBoxBulkClearAsyncTests()
         {
@@ -55,8 +55,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var myCommand = new MyCommand{ Value = "Hello World"};
             var myCommand2 = new MyCommand { Value = "Hello World 2" };
 
-            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
-            _producerTwo = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic2), RequestType = typeof(MyCommand)}};
+            _producer = new InMemoryProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            _producerTwo = new InMemoryProducer{Publication = {Topic = new RoutingKey(topic2), RequestType = typeof(MyCommand)}};
 
             _message = new Message(
                 new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),

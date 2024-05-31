@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
         private readonly Message _message;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly InMemoryProducer _producer;
 
 
         public CommandProcessorCallTests()
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             const string topic = "MyRequest";
             _myRequest.RequestValue = "Hello World";
 
-            _producer = new FakeMessageProducerWithPublishConfirmation();
+            _producer = new InMemoryProducer();
             _producer.Publication = new Publication{Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)};
 
             var header = new MessageHeader(

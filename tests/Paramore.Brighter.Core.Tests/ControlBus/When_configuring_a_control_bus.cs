@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             var messageProducerFactory = A.Fake<IAmAProducerRegistryFactory>();
 
             A.CallTo(() => messageProducerFactory.Create())
-                .Returns(new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", new FakeMessageProducerWithPublishConfirmation()},}));
+                .Returns(new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", new InMemoryProducer()},}));
 
             _busReceiverBuilder = ControlBusReceiverBuilder
                 .With()

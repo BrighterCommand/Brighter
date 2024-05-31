@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            FakeMessageProducer producer = new() {Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            InMemoryProducer producer = new() {Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),

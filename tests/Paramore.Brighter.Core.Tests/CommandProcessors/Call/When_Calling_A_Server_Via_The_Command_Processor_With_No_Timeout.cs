@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             const string topic = "MyRequest";
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}} }
+                { topic, new InMemoryProducer(){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}} }
             });
 
             var timeProvider = new FakeTimeProvider();

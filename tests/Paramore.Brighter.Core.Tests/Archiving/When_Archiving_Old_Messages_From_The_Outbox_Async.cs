@@ -23,7 +23,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     {
         const string topic = "MyTopic";
 
-        var producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+        var producer = new InMemoryProducer(){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
         var messageMapperRegistry = new MessageMapperRegistry(
             null,

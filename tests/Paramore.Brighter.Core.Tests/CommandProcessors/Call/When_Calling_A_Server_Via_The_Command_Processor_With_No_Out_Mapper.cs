@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyRequest", new FakeMessageProducerWithPublishConfirmation() },
+                { "MyRequest", new InMemoryProducer() },
             });
 
             var timeProvider = new FakeTimeProvider();

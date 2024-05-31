@@ -27,8 +27,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly Message _message2;
         private readonly Message _message3;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _commandProducer;
-        private readonly FakeMessageProducerWithPublishConfirmation _eventProducer;
+        private readonly InMemoryProducer _commandProducer;
+        private readonly InMemoryProducer _eventProducer;
 
         public CommandProcessorBulkDepositPostTestsAsync()
         {
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _myCommand.Value = "Hello World";
             _myCommand2.Value = "Update World";
 
-            _commandProducer = new FakeMessageProducerWithPublishConfirmation();
+            _commandProducer = new InMemoryProducer();
             _commandProducer.Publication = new Publication
             {
                 Topic =  new RoutingKey(commandTopic),
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             };
 
             const string eventTopic = "MyEvent";
-            _eventProducer = new FakeMessageProducerWithPublishConfirmation();
+            _eventProducer = new InMemoryProducer();
             _eventProducer.Publication = new Publication
             {
                 Topic =  new RoutingKey(eventTopic),

@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly InMemoryProducer _producer;
 
         public PostCommandTests()
         {
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var tracer = new BrighterTracer(new FakeTimeProvider());
             _fakeOutbox = new FakeOutbox();
-            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            _producer = new InMemoryProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),

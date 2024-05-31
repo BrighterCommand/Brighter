@@ -24,10 +24,11 @@ public class CommandProcessorClearObservabilityTests
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
     private readonly InMemoryOutbox _outbox;
+    private readonly string _topic;
 
     public CommandProcessorClearObservabilityTests()
     {
-                const string topic = "MyEvent";
+        _topic = "MyEvent";
         
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -62,7 +63,7 @@ public class CommandProcessorClearObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {topic, new FakeMessageProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
+            {_topic, new InMemoryProducer{Publication = { Topic = new RoutingKey(_topic), RequestType = typeof(MyEvent)}}}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -145,6 +146,9 @@ public class CommandProcessorClearObservabilityTests
         outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName).Should().BeTrue();
 
         //there should be a span for publishing the message via the producer
+        var producerActivity = _exportedActivities.Single(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
+        producerActivity.ParentId.Should().Be(clearActivity.Id);
+        producerActivity.Kind.Should().Be(ActivityKind.Producer);
 
         //there should be a span in the producer for producing the message
 

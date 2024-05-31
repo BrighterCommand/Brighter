@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             _producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                {"MyTopic", new FakeMessageProducerWithPublishConfirmation{ 
+                {"MyTopic", new InMemoryProducer(){ 
                     Publication =
                     {
                         Topic = new RoutingKey("MyTopic"), RequestType = typeof(MyCommand)

@@ -156,7 +156,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
@@ -203,7 +203,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
@@ -250,7 +250,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
@@ -301,7 +301,7 @@ public class RequestContextPresentTests : IDisposable
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },

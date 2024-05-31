@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly InMemoryProducer _producer;
         private Exception _exception;
 
         public CommandProcessorNoMessageMapperTests()
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            _producer = new InMemoryProducer(){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
