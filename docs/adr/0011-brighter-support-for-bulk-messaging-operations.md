@@ -58,6 +58,8 @@ The only bulk operations we have in the flow are the read and write from the `Ou
 
 * All reads from the `Outbox` are a bulk operation in V9, that iterate over the `Message` collection and pass it to the `Producer`
 
+It is possible for us to late bind the bulk `DepositPost` to a single `DepositPost` call using reflection to invoke the method. This would resolve the binding issue. We can tag the method with an attribute to indicate that it may be called via late binding for documentation and to simplify the reflection code.
+
 This leaves us with the main difference being the bulk write to the `Outbox`
 
 We have two alternatives here:
@@ -70,7 +72,7 @@ Whilst the first seems simpler, two complications arise. The first is the need t
 So in this case we intend to opt for the second option.
 
 * In a bulk `DepositPost`, where we have a batch, begin a new batch via `StartBatch` that returns a `BatchId`
-* Pass an optional `BatchId` to a late bound call to the single `IRequest` version of `DepositPost` 
+* Pass an optional `BatchId` to a late bound call to the single `IRequest` version of `DepositPost` (which provides late binding) 
 * Where we have an optional `BatchId` within the individual `DepositPost` call `AddToBatch` on the `Outbox` instead of `Add`
 * In the batch `DepositPost` call `EndBatch` to write the batch
 
