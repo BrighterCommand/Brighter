@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
@@ -44,8 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
-        private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
 
         public CommandProcessorPostCommandAsyncTests()
@@ -57,11 +55,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             {
                 Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
             };
-
-            _message = new Message(
-                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-                );
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -81,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{Topic, producer},});
            
             var tracer = new BrighterTracer(timeProvider); 
-            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -90,7 +83,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _fakeOutbox
+                _outbox
             );
 
             CommandProcessor.ClearServiceBus();
@@ -106,9 +99,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             await _commandProcessor.PostAsync(_myCommand);
 
-            _fakeOutbox
-                .Get()
-                .SingleOrDefault(msg => msg.Id == _message.Id)
+            _outbox
+                .Get(_myCommand.Id, new RequestContext())
                 .Should().NotBeNull();
             
             _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();

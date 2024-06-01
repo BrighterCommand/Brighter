@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -43,8 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     public class CommandProcessorPostMissingMessageTransformerTestsAsync : IDisposable
     {
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private Exception _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly ProducerRegistry _producerRegistry;
@@ -55,13 +53,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _myCommand.Value = "Hello World";
 
-            _tracer = new BrighterTracer();
-            _fakeOutbox = new FakeOutbox() {Tracer = _tracer};
-
-            _message = new Message(
-                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-                );
+            var timeProvider = new FakeTimeProvider();
+            _tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = _tracer};
 
             _messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -99,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 null,
                 _tracer,
-                _fakeOutbox)
+                _outbox)
             );               
 
             _exception.Should().BeOfType<ConfigurationException>();

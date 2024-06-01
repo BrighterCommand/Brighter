@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly Message _message;
         private readonly Message _messageTwo;
         private readonly Message _messageThree;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _bus = new();
 
         public CommandProcessorBulkDepositPostTests()
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             };
 
             var tracer = new BrighterTracer();
-            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _fakeOutbox
+                _outbox
             );
 
             CommandProcessor.ClearServiceBus();
@@ -134,19 +134,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _bus.Stream(new RoutingKey(EventTopic)).Any().Should().BeFalse();
             
             //message should correspond to the command
-            var depositedPost = _fakeOutbox.Get(_message.Id, context);
+            var depositedPost = _outbox.Get(_message.Id, context);
             depositedPost.Id.Should().Be(_message.Id);
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
-            var depositedPost2 = _fakeOutbox.Get(_messageTwo.Id, context);
+            var depositedPost2 = _outbox.Get(_messageTwo.Id, context);
             depositedPost2.Id.Should().Be(_messageTwo.Id);
             depositedPost2.Body.Value.Should().Be(_messageTwo.Body.Value);
             depositedPost2.Header.Topic.Should().Be(_messageTwo.Header.Topic);
             depositedPost2.Header.MessageType.Should().Be(_messageTwo.Header.MessageType);
             
-            var depositedPost3 = _fakeOutbox
+            var depositedPost3 = _outbox
                 .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _messageThree.Id);
             //message should correspond to the command
@@ -156,7 +156,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost3.Header.MessageType.Should().Be(_messageThree.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = _fakeOutbox.OutstandingMessages(0, context);
+            var outstandingMessages = _outbox.OutstandingMessages(0, context);
             outstandingMessages.Count().Should().Be(3);
         }
         

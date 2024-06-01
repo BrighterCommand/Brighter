@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
-using FakeItEasy;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -138,7 +137,7 @@ public class RequestContextFromFactoryTests : IDisposable
             });
 
         var tracer = new BrighterTracer();
-        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -182,7 +181,7 @@ public class RequestContextFromFactoryTests : IDisposable
             });
             
         var tracer = new BrighterTracer();
-        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -227,7 +226,7 @@ public class RequestContextFromFactoryTests : IDisposable
             });
             
         var tracer = new BrighterTracer();
-        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -276,7 +275,7 @@ public class RequestContextFromFactoryTests : IDisposable
             });
             
         var tracer = new BrighterTracer();
-        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 

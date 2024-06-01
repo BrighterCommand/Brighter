@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
 
         public CommandProcessorDepositPostTestsAsync()
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             });
 
             var tracer = new BrighterTracer();
-            _fakeOutbox = new FakeOutbox() { Tracer = tracer };
+            _outbox = new InMemoryOutbox(timeProvider) { Tracer = tracer };
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _fakeOutbox
+                _outbox
             );
         
             CommandProcessor.ClearServiceBus();
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
             
             //message should be in the store
-            var depositedPost = _fakeOutbox
+            var depositedPost = _outbox
                 .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 
@@ -112,7 +112,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = await _fakeOutbox.OutstandingMessagesAsync(0, context);
+            var outstandingMessages = await _outbox.OutstandingMessagesAsync(0, context);
             var outstandingMessage = outstandingMessages.Single();
             outstandingMessage.Id.Should().Be(_message.Id);
         }

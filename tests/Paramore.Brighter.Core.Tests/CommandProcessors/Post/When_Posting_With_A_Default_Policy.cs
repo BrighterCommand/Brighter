@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
 
         public PostCommandTests()
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
-            _fakeOutbox = new FakeOutbox();
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             InMemoryProducer producer = new(_internalBus, timeProvider)
             {
                 Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
                 tracer: tracer,
-                outbox: _fakeOutbox
+                outbox: _outbox
             );  
             
             _commandProcessor = CommandProcessorBuilder.With()
@@ -94,16 +94,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _commandProcessor.Post(_myCommand);
 
-            //should store the message in the sent outbox
-            _fakeOutbox
-                .Get()
-                .SingleOrDefault(msg => msg.Id == _message.Id)
-                .Should().NotBeNull();
-            //should send a message via the messaging gateway
             _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
             
-            // should convert the command into a message
-            _fakeOutbox.Get().First().Should().Be(_message);
+            var message = _outbox.Get(_myCommand.Id, new RequestContext());
+            message.Should().NotBeNull();
+            message.Should().Be(_message);
         }
 
         public void Dispose()

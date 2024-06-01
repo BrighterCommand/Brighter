@@ -52,3 +52,5 @@ In some cases it may be appropriate to use the in-memory or simple versions as a
 In tests always prefer the usage of these in-memory or simple classes over new Test Doubles. Only use a Test Double where you want to simulate error conditions, or would have to adjust the normal behavior of the in-memory or simple version to test a specific case. The purpose of the in-memory or simple versions is to provide a standard, simple, implementation so it would subvert that to force it to behave differently just to accomodate tests.
 
 This means we have removed some common test doubles such as FakeProducer and FakeOutbox for their in-memory or simple versions.
+
+We occassionally have large PRs because a change has to flow through all the transports or outbox/inboxes. With this strategy we can use the in-memory or simple versions in the core tests to 'prove' the approach, with only signature changes needed for others (which may be fake). We can then merge that and proceed to the concrete implementations, one-by-one.

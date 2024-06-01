@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
 
         public CommandProcessorPostCommandTests()
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{Topic, producer},});
 
             var tracer = new BrighterTracer(timeProvider);
-            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _fakeOutbox
+                _outbox
             );
 
             CommandProcessor.ClearServiceBus();
@@ -101,14 +101,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _commandProcessor.Post(_myCommand);
 
-            _fakeOutbox
-                .Get()
-                .SingleOrDefault(msg => msg.Id == _message.Id)
-                .Should().NotBeNull();
-            
             _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
             
-            _fakeOutbox.Get().First().Should().Be(_message);
+            var message = _outbox.Get(_myCommand.Id, new RequestContext());
+            message.Should().NotBeNull();
+            
+            message.Should().Be(_message);
         }
 
         public void Dispose()

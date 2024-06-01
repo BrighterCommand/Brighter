@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _messageOne;
         private readonly Message _messageTwo;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
 
         public CommandProcessorPostBoxBulkClearAsyncTests()
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             });
             
             var tracer = new BrighterTracer();
-            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _fakeOutbox
+                _outbox
             );
         
             CommandProcessor.ClearServiceBus();
@@ -124,8 +124,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
             var context = new RequestContext();
-            await _fakeOutbox.AddAsync(_messageOne, context);
-            await _fakeOutbox.AddAsync(_messageTwo, context);
+            await _outbox.AddAsync(_messageOne, context);
+            await _outbox.AddAsync(_messageTwo, context);
 
             _commandProcessor.ClearAsyncOutbox(2, 1, true);
 

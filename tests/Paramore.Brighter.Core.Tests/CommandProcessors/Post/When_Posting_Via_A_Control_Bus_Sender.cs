@@ -43,14 +43,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly ControlBusSender _controlBusSender;
         private readonly MyCommand _myCommand = new();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
 
         public ControlBusSenderPostMessageTests()
         {
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            InMemoryProducer producer = new(new InternalBus(), new FakeTimeProvider())
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(new InternalBus(), timeProvider)
             {
                 Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
             };
@@ -76,8 +77,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, producer},});
 
-            var tracer = new BrighterTracer();
-            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
+            var tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -86,7 +87,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _fakeOutbox
+                _outbox
             );
 
             CommandProcessor.ClearServiceBus();
@@ -105,7 +106,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _controlBusSender.Post(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            var message = _fakeOutbox
+            var message = _outbox
               .DispatchedMessages(120000, new RequestContext(), 1)
               .SingleOrDefault();
               

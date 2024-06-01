@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly Message _message;
         private readonly Message _message2;
         private readonly Message _message3;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
 
         public CommandProcessorBulkDepositPostTestsAsync()
@@ -101,7 +101,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 }); 
             
             var tracer = new BrighterTracer(new FakeTimeProvider());
-            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _fakeOutbox
+                _outbox
             );
         
             CommandProcessor.ClearServiceBus();
@@ -137,17 +137,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _internalBus.Stream(new RoutingKey(EventTopic)).Any().Should().BeFalse();
             
             //message should be in the store
-            var depositedPost = _fakeOutbox
+            var depositedPost = _outbox
                 .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
             
             //message should be in the store
-            var depositedPost2 = _fakeOutbox
+            var depositedPost2 = _outbox
                 .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message2.Id);
             
             //message should be in the store
-            var depositedPost3 = _fakeOutbox
+            var depositedPost3 = _outbox
                 .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message3.Id);
 

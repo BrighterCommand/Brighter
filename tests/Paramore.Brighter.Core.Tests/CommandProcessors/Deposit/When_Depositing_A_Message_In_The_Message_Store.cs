@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _fakeOutbox;
         private readonly InternalBus _internalBus = new();
 
         public CommandProcessorDepositPostTests()
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             };
 
             var tracer = new BrighterTracer();
-            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
+            _fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 

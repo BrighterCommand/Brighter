@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     {
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private Exception _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly ProducerRegistry _producerRegistry;
@@ -55,8 +55,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _myCommand.Value = "Hello World";
 
-            _tracer = new BrighterTracer();
-            _fakeOutbox = new FakeOutbox();
+            var timeProvider = new FakeTimeProvider();
+            _tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = _tracer};
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
@@ -97,7 +98,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                  null,
                 new EmptyMessageTransformerFactoryAsync(),
                 _tracer,
-                _fakeOutbox)
+                _outbox)
             );               
 
             _exception.Should().BeOfType<ConfigurationException>();

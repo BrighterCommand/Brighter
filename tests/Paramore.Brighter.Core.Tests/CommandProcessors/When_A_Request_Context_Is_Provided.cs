@@ -164,8 +164,9 @@ public class RequestContextPresentTests : IDisposable
                 } },
             });
 
-        var tracer = new BrighterTracer();
-        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
+        var timeProvider = new FakeTimeProvider();
+        var tracer = new BrighterTracer(timeProvider);
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -211,9 +212,9 @@ public class RequestContextPresentTests : IDisposable
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
-            
-        var tracer = new BrighterTracer();
-        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
+
+        var tracer = new BrighterTracer(timeProvider);
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -260,8 +261,8 @@ public class RequestContextPresentTests : IDisposable
                 } },
             });
             
-        var tracer = new BrighterTracer();
-        var fakeOutbox = new FakeOutbox() {Tracer = tracer};
+        var tracer = new BrighterTracer(timeProvider);
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -312,8 +313,8 @@ public class RequestContextPresentTests : IDisposable
                 } },
             });
             
-        var tracer = new BrighterTracer();
-        var fakeOutbox = new FakeOutbox();
+        var tracer = new BrighterTracer(timeProvider);
+        var fakeOutbox = new InMemoryOutbox(timeProvider);
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 

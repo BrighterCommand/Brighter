@@ -48,7 +48,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            InMemoryProducer producer = new(new InternalBus(), new FakeTimeProvider())
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(new InternalBus(), timeProvider)
             {
                 Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
             };
@@ -76,8 +77,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 
-            var tracer = new BrighterTracer();
-            FakeOutbox fakeOutbox = new() {Tracer = tracer};
+            var tracer = new BrighterTracer(timeProvider);
+            var outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -86,7 +87,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                fakeOutbox
+                outbox
             );
         
             CommandProcessor.ClearServiceBus();
