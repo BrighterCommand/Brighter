@@ -17,6 +17,7 @@ Within these two steps we perform a number of activities.
 
 For `DepositPost` we:
 
+* Lookup the `IAmAProducer` associated with a `Request`
 * Translate an `IRequest` into the `Message`, executing the `IAmAMessageTransform` and `IAmAMessageMapper` pipeline
 * Store the resulting `Message` in an `Outbox`
 
