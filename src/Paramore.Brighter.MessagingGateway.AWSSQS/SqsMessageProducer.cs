@@ -25,6 +25,7 @@ using System;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -36,8 +37,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly AWSMessagingGatewayConnection _connection;
         private readonly SnsPublication _publication;
         
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
         public Publication Publication { get { return _publication; } }
 
+        /// <summary>
+        /// The OTel tracer for this producer; we use this to add spans to the outgoing message
+        /// We inject the tracer because the Producer is called as part of an operation that already has a tracer
+        /// </summary>
+        public BrighterTracer Tracer { get; set; }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>

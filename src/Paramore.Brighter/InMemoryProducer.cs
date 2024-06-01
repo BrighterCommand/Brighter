@@ -28,17 +28,45 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
+    /// <summary>
+    /// The in-memory producer is mainly intended for usage with tests. It allows you to send messages to a bus and
+    /// then inspect the messages that have been sent.
+    /// </summary>
+    /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
+    /// <param name="timeProvider"></param>
     public class InMemoryProducer(IAmABus bus, TimeProvider timeProvider) : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
+        /// <summary>
+        /// The publication that describes what the Producer is for
+        /// </summary>
         public Publication Publication { get; set; } = new();
+        
+        /// <summary>
+        /// Used for OTel tracing. We use property injection to set this, so that we can use the same tracer across all
+        /// The producer is being used within the context of a CommandProcessor pipeline which will have initiated the trace
+        /// or be using one from a containing framework like ASP.NET Core
+        /// </summary>
+        public BrighterTracer Tracer { get; set; }
 
+        /// <summary>
+        /// What action should we take on confirmation that a message has been published to a broker
+        /// </summary>
         public event Action<bool, string> OnMessagePublished;
 
+        /// <summary>
+        /// Dispsose of the producer; a no-op for the in-memory producer
+        /// </summary>
         public void Dispose() { }
 
+        /// <summary>
+        /// Send a message to a broker; in this case an <see cref="InternalBus"/>
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <returns></returns>
         public Task SendAsync(Message message)
         {
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -46,6 +74,12 @@ namespace Paramore.Brighter
             tcs.SetResult(message);
             return tcs.Task;
         }
+        /// <summary>
+        /// Send messages to a broker; in this case an <see cref="InternalBus"/> 
+        /// </summary>
+        /// <param name="messages">The list of messages to send</param>
+        /// <param name="cancellationToken">A cancellation token to end the operation</param>
+        /// <returns></returns>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
@@ -59,12 +93,22 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <summary>
+        /// Send a message to a broker; in this case an <see cref="InternalBus"/>
+        /// </summary>
+        /// <param name="message">The message to send</param>
         public void Send(Message message)
         {
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
         }
-
+        
+        /// <summary>
+        /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay
+        /// The delay is simulated by the <see cref="TimeProvider"/>
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="delayMilliseconds">The delay in milliseconds</param>
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             timeProvider.Delay(TimeSpan.FromMilliseconds(delayMilliseconds));

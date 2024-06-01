@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -32,6 +33,11 @@ namespace Paramore.Brighter
         /// The <see cref="Publication "/>that this Producer is for.
         /// </summary>
         Publication Publication { get; }
+        
+        /// <summary>
+        /// Allows us to set a <see cref="BrighterTracer"/> to let a Producer participate in our telemetry
+        /// </summary>
+        BrighterTracer Tracer { get; }
 
     }
 }

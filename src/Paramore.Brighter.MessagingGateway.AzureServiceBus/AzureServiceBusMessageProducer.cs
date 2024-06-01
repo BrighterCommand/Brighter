@@ -35,6 +35,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 using Polly.Retry;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -54,7 +55,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private readonly OnMissingChannel _makeChannel;
         private readonly int _bulkSendBatchSize;
 
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
         public Publication Publication { get { return _publication; } }
+        
+        /// <summary>
+        /// The OTel tracer for this producer; we use this to add spans to the outgoing message
+        /// We inject the tracer because the Producer is called as part of an operation that already has a tracer
+        /// </summary>
+        public BrighterTracer Tracer { get; set; }
 
         /// <summary>
         /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>

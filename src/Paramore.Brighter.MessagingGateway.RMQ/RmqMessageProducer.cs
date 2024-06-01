@@ -30,6 +30,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
@@ -40,9 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// It handles subscription establishment, request sending and error handling
     /// </summary>
     public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
-    {
-        public event Action<bool, string> OnMessagePublished;
-
+    { 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
         static readonly object _lock = new object();
@@ -51,7 +50,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private bool _confirmsSelected = false;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
 
+        /// <summary>
+        /// Action taken when a message is published, following receipt of a confirmation from the broker
+        /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
+        /// </summary>
+        public event Action<bool, string> OnMessagePublished;
+
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
         public Publication Publication { get { return _publication; } }
+       
+        /// <summary>
+        /// The OTel tracer for this producer; we use this to add spans to the outgoing message
+        /// We inject the tracer because the Producer is called as part of an operation that already has a tracer
+        /// </summary>
+        public BrighterTracer Tracer { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.

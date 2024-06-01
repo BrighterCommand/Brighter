@@ -152,6 +152,8 @@ public class CommandProcessorClearObservabilityTests
         var producerActivity = _exportedActivities.Single(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
         producerActivity.ParentId.Should().Be(clearActivity.Id);
         producerActivity.Kind.Should().Be(ActivityKind.Producer);
+        
+        
 
         //there should be a span in the producer for producing the message
 

@@ -28,14 +28,28 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
+        /// <summary>
+        /// Action taken when a message is published, following receipt of a confirmation from the broker
+        /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
+        /// </summary>
         public event Action<bool, string> OnMessagePublished;
       
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
         public Publication Publication { get; set; }
+        
+        /// <summary>
+        /// The OTel tracer for this producer; we use this to add spans to the outgoing message
+        /// We inject the tracer because the Producer is called as part of an operation that already has a tracer
+        /// </summary>
+        public BrighterTracer Tracer { get; set; }
 
         private IProducer<string, byte[]> _producer;
         private readonly IKafkaMessageHeaderBuilder _headerBuilder;

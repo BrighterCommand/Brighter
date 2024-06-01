@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
@@ -57,7 +58,16 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
         public Publication Publication { get { return _publication; } }
+        
+        /// <summary>
+        /// The OTel tracer for this producer; we use this to add spans to the outgoing message
+        /// We inject the tracer because the Producer is called as part of an operation that already has a tracer
+        /// </summary>
+        public BrighterTracer Tracer { get; set; }
 
         public RedisMessageProducer(
              RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
