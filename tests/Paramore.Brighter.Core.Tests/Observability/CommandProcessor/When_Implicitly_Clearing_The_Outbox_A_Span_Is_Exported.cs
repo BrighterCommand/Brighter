@@ -9,7 +9,6 @@ using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -62,7 +61,10 @@ public class ImplicitClearingObservabilityTests : IDisposable
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {topic, new InMemoryProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
+            {topic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+            {
+                Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}
+            }}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -90,7 +92,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
     [Fact]
     public async Task When_Clearing_Implicitly()
     {
-        using (var activity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("RunTest"))
+        using (new ActivitySource("Paramore.Brighter.Tests").StartActivity("RunTest"))
         {
             _commandProcessor.DepositPost(_event);
             _commandProcessor.ClearOutbox(10, 0);

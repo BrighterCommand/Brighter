@@ -56,12 +56,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 
+            var timeProvider = new FakeTimeProvider();
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyRequest", new InMemoryProducer() },
+                { "MyRequest", new InMemoryProducer(new InternalBus(), timeProvider) },
             });
 
-            var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 

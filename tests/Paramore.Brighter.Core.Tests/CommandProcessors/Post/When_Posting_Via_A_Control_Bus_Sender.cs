@@ -28,6 +28,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -49,7 +50,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            InMemoryProducer producer = new() {Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            InMemoryProducer producer = new(new InternalBus(), new FakeTimeProvider())
+            {
+                Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+            };
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -15,22 +16,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
     [Collection("CommandProcessor")]
     public class CommandProcessorDepositPostTests : IDisposable
     {
-        
+        private const string Topic = "MyCommand";
+
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly InMemoryProducer _producer;
+        private readonly InternalBus _internalBus = new();
 
         public CommandProcessorDepositPostTests()
         {
-            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _producer = new InMemoryProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(_internalBus, timeProvider)
+            {
+                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+            };
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -50,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _producer },
+                    { Topic, producer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -91,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //assert
             
             //message should not be posted
-            _producer.MessageWasSent.Should().BeFalse();
+            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
             
             //message should correspond to the command
             var depositedPost = _fakeOutbox.Get(postedMessageId, context);

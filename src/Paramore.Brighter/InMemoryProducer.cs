@@ -31,11 +31,10 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
-    public class InMemoryProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
+    public class InMemoryProducer(IAmABus bus, TimeProvider timeProvider) : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         public Publication Publication { get; set; } = new();
-        public readonly List<Message> SentMessages = new();
-        public bool MessageWasSent { get; set; }
+
         public event Action<bool, string> OnMessagePublished;
 
         public void Dispose() { }
@@ -54,22 +53,21 @@ namespace Paramore.Brighter
             var msgs = messages as Message[] ?? messages.ToArray();
             foreach (var msg in msgs)
             {
+                bus.Enqueue(msg);
                 OnMessagePublished?.Invoke(true, msg.Id); 
                 yield return new[] { msg.Id };
             }
-            MessageWasSent = true;
-            SentMessages.AddRange(msgs);
         }
 
         public void Send(Message message)
         {
-            MessageWasSent = true;
-            SentMessages.Add(message);
+            bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
         }
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
+            timeProvider.Delay(TimeSpan.FromMilliseconds(delayMilliseconds));
             Send(message);
         }
     }

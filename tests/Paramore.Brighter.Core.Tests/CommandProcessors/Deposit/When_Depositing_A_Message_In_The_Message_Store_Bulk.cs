@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -15,7 +16,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
     [Collection("CommandProcessor")]
     public class CommandProcessorBulkDepositPostTests : IDisposable
     {
-        
+        private const string CommandTopic = "MyCommand";
+        private const string EventTopic = "MyEvent";
+
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
         private readonly MyCommand _myCommandTwo = new();
@@ -24,41 +27,39 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         private readonly Message _messageTwo;
         private readonly Message _messageThree;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly InMemoryProducer _commandProducer;
-        private readonly InMemoryProducer _eventProducer;
+        private readonly InternalBus _bus = new();
 
         public CommandProcessorBulkDepositPostTests()
         {
-            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
-            
-            _commandProducer = new InMemoryProducer();
-            _commandProducer.Publication = new Publication 
+
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer commandProducer = new(_bus, timeProvider);
+            commandProducer.Publication = new Publication 
             { 
-                Topic = new RoutingKey(topic), 
+                Topic = new RoutingKey(CommandTopic), 
                 RequestType = typeof(MyCommand) 
             };
-            
-            const string eventTopic = "MyEvent";
-            _eventProducer = new InMemoryProducer();
-            _eventProducer.Publication = new Publication 
+
+            InMemoryProducer eventProducer = new(_bus, timeProvider);
+            eventProducer.Publication = new Publication 
             { 
-                Topic = new RoutingKey(eventTopic), 
+                Topic = new RoutingKey(EventTopic), 
                 RequestType = typeof(MyEvent) 
             };
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, CommandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
             
             _messageTwo = new Message(
-                new MessageHeader(_myCommandTwo.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommandTwo.Id, CommandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommandTwo, JsonSerialisationOptions.Options))
             );
             
             _messageThree = new Message(
-                new MessageHeader(_myEvent.Id, eventTopic, MessageType.MT_EVENT),
+                new MessageHeader(_myEvent.Id, EventTopic, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
 
@@ -85,8 +86,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _commandProducer },
-                { eventTopic, _eventProducer}
+                { CommandTopic, commandProducer },
+                { EventTopic, eventProducer}
             });
 
             var policyRegistry = new PolicyRegistry
@@ -128,8 +129,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //assert
             
             //message should not be posted
-            _commandProducer.MessageWasSent.Should().BeFalse();
-            _eventProducer.MessageWasSent.Should().BeFalse();
+            
+            _bus.Stream(new RoutingKey(CommandTopic)).Any().Should().BeFalse();
+            _bus.Stream(new RoutingKey(EventTopic)).Any().Should().BeFalse();
             
             //message should correspond to the command
             var depositedPost = _fakeOutbox.Get(_message.Id, context);

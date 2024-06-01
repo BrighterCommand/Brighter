@@ -63,7 +63,10 @@ public class CommandProcessorClearObservabilityTests
 
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {_topic, new InMemoryProducer{Publication = { Topic = new RoutingKey(_topic), RequestType = typeof(MyEvent)}}}
+            {_topic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+            {
+                Publication = { Topic = new RoutingKey(_topic), RequestType = typeof(MyEvent)}
+            }}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(

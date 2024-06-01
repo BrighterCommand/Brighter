@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -153,10 +154,11 @@ public class RequestContextPresentTests : IDisposable
             null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
+        var fakeTimeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), fakeTimeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
@@ -200,10 +202,11 @@ public class RequestContextPresentTests : IDisposable
             new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
@@ -247,10 +250,11 @@ public class RequestContextPresentTests : IDisposable
             null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
@@ -297,11 +301,12 @@ public class RequestContextPresentTests : IDisposable
             null,
             new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-        
+
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },

@@ -41,20 +41,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
     [Collection("CommandProcessor")]
     public class CommandProcessorPostBoxClearAsyncTests : IDisposable
     {
+        private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly InMemoryProducer _producer;
+        private readonly InternalBus _internalBus = new();
 
         public CommandProcessorPostBoxClearAsyncTests()
         {
-            const string topic = "MyCommand";
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _producer = new InMemoryProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(_internalBus, timeProvider){Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}};
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -74,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _producer },
+                    { Topic, producer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -83,7 +84,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
             };
 
-            var tracer = new BrighterTracer(new FakeTimeProvider());
+            var tracer = new BrighterTracer(timeProvider);
             _fakeOutbox = new FakeOutbox() {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -115,9 +116,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             await _commandProcessor.ClearOutboxAsync(new []{_message.Id});
 
             //_should_send_a_message_via_the_messaging_gateway
-            _producer.MessageWasSent.Should().BeTrue();
+            var topic = new RoutingKey(Topic);
+            
+            _internalBus.Stream(topic).Any().Should().BeTrue();
 
-            var sentMessage = _producer.SentMessages.FirstOrDefault();
+            var sentMessage = _internalBus.Dequeue(topic);
             sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);

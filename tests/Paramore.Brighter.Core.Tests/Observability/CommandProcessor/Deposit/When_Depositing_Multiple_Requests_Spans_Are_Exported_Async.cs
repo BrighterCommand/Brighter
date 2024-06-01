@@ -25,7 +25,6 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
-    private readonly InMemoryOutbox _outbox;
 
     public AsyncCommandProcessorMultipleDepositObservabilityTests()
     {
@@ -59,7 +58,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         
         var timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
-        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
+        InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
@@ -68,7 +67,10 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
 
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {topic, new InMemoryProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
+            {topic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+            {
+                Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}
+            }}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -78,7 +80,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
-            _outbox,
+            outbox,
             maxOutStandingMessages: -1
         );
         
@@ -102,7 +104,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         var eventOne = new MyEvent();
         var eventTwo = new MyEvent();
         var eventThree = new MyEvent();
-        var events = new MyEvent[] {eventOne, eventTwo, eventThree};
+        var events = new[] {eventOne, eventTwo, eventThree};
         
         var context = new RequestContext { Span = parentActivity };
 
@@ -122,7 +124,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         createActivity.ParentId.Should().Be(parentActivity?.Id);
         
         //Then we should see three activities for each of the deposits
-        var depositActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Deposit.ToSpanName()}");
+        var depositActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Deposit.ToSpanName()}").ToList();
         depositActivities.Count().Should().Be(3);
         
         for(int i = 0; i < 3; i++)

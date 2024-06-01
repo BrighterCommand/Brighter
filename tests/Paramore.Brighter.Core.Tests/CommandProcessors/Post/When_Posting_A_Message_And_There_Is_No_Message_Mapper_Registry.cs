@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
@@ -40,8 +41,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private readonly FakeOutbox _fakeOutbox;
-        private readonly InMemoryProducer _producer;
         private Exception _exception;
 
         public CommandProcessorNoMessageMapperTests()
@@ -49,7 +48,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _producer = new InMemoryProducer(){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            InMemoryProducer producer = new(new InternalBus(), new FakeTimeProvider())
+            {
+                Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+            };
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -65,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _producer },
+                { topic, producer },
             });
 
             var policyRegistry = new PolicyRegistry
@@ -75,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             };
 
             var tracer = new BrighterTracer();
-            _fakeOutbox = new FakeOutbox() {Tracer = tracer};
+            FakeOutbox fakeOutbox = new() {Tracer = tracer};
 
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -84,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _fakeOutbox
+                fakeOutbox
             );
         
             CommandProcessor.ClearServiceBus();
@@ -100,7 +102,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
-            //_should_throw_an_exception
             _exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
 

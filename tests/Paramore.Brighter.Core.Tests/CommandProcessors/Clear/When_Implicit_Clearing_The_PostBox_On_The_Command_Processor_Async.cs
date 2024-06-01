@@ -41,26 +41,31 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
     [Collection("CommandProcessor")]
     public class CommandProcessorPostBoxImplicitClearAsyncTests : IDisposable
     {
+        private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly Message _message2;
         private readonly FakeOutbox _fakeOutbox;
         private readonly InMemoryProducer _producer;
+        private readonly InternalBus _bus = new();
 
         public CommandProcessorPostBoxImplicitClearAsyncTests()
         {
-            const string topic = "MyCommand";
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _producer = new InMemoryProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            var timeProvider = new FakeTimeProvider();
+            _producer = new InMemoryProducer(_bus, timeProvider)
+            {
+                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+            };
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
             _message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND),
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -79,7 +84,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _producer },
+                { Topic, _producer },
             });
 
             var policyRegistry = new PolicyRegistry
@@ -96,7 +101,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                new BrighterTracer(new FakeTimeProvider()),
+                new BrighterTracer(timeProvider),
                 _fakeOutbox
             );
 
@@ -119,7 +124,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             for (var i = 1; i <= 10; i++)
             {
-                if (_producer.SentMessages.Count == 1) break;
+                if (_bus.Stream(new RoutingKey(Topic)).Count() == 1) break;
                 await Task.Delay(i * 100);
             }
 
@@ -128,22 +133,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             //Try again and kick off another background thread
             for (var i = 1; i <= 10; i++)
             {
-                if (_producer.SentMessages.Count == 2)
+                if (_bus.Stream(new RoutingKey(Topic)).Count() == 2)
                     break;
                 await Task.Delay(i * 100);
                 _commandProcessor.ClearAsyncOutbox(1, 1);
             }
 
             //_should_send_a_message_via_the_messaging_gateway
-            _producer.MessageWasSent.Should().BeTrue();
+            var messages = _bus.Stream(new RoutingKey(Topic)).ToArray();
+            messages.Any().Should().BeTrue();
 
-            var sentMessage = _producer.SentMessages.FirstOrDefault(m => m.Id == _message.Id);
+            var sentMessage = messages.FirstOrDefault(m => m.Id == _message.Id);
             sentMessage.Should().NotBeNull();
             sentMessage?.Id.Should().Be(_message.Id);
             sentMessage?.Header.Topic.Should().Be(_message.Header.Topic);
             sentMessage?.Body.Value.Should().Be(_message.Body.Value);
 
-            var sentMessage2 = _producer.SentMessages.FirstOrDefault(m => m.Id == _message2.Id);
+            var sentMessage2 = messages.FirstOrDefault(m => m.Id == _message2.Id);
             sentMessage2.Should().NotBeNull();
             sentMessage2?.Id.Should().Be(_message2.Id);
             sentMessage2?.Header.Topic.Should().Be(_message2.Header.Topic);

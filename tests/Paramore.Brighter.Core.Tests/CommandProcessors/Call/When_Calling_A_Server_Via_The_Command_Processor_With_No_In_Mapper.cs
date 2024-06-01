@@ -48,9 +48,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var replySubscriptions = new List<Subscription>();
 
             const string topic = "MyRequest";
+            var timeProvider = new FakeTimeProvider();
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, new InMemoryProducer(){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}} },
+                { topic, new InMemoryProducer(new InternalBus(), timeProvider)
+                {
+                    Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}
+                } },
             });
 
             var policyRegistry = new PolicyRegistry
@@ -68,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                new InMemoryOutbox( new FakeTimeProvider()) {Tracer = tracer}
+                new InMemoryOutbox( timeProvider) {Tracer = tracer}
                 );
         
             CommandProcessor.ClearServiceBus();

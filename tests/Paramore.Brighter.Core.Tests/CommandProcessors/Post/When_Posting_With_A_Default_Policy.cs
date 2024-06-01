@@ -38,23 +38,27 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class PostCommandTests : IDisposable
     {
+        private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
-        private readonly MyCommand _myCommand = new MyCommand();
+        private readonly MyCommand _myCommand = new();
         private readonly Message _message;
         private readonly FakeOutbox _fakeOutbox;
-        private readonly InMemoryProducer _producer;
+        private readonly InternalBus _internalBus = new();
 
         public PostCommandTests()
         {
-            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            var tracer = new BrighterTracer(new FakeTimeProvider());
+            var timeProvider = new FakeTimeProvider();
+            var tracer = new BrighterTracer(timeProvider);
             _fakeOutbox = new FakeOutbox();
-            _producer = new InMemoryProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            InMemoryProducer producer = new(_internalBus, timeProvider)
+            {
+                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+            };
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -65,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { topic, _producer }, });
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { Topic, producer }, });
 
             var externalBus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
@@ -96,7 +100,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .SingleOrDefault(msg => msg.Id == _message.Id)
                 .Should().NotBeNull();
             //should send a message via the messaging gateway
-            _producer.MessageWasSent.Should().BeTrue();
+            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+            
             // should convert the command into a message
             _fakeOutbox.Get().First().Should().Be(_message);
         }

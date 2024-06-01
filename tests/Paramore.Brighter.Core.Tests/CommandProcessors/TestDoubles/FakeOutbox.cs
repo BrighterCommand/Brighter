@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     public class FakeOutbox : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
     {
-        private readonly List<OutboxEntry> _posts = new List<OutboxEntry>();
+        private readonly List<OutboxEntry> _posts = new();
 
         public bool ContinueOnCapturedContext { get; set; }
         

@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
@@ -77,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             
             _producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                {"MyTopic", new InMemoryProducer()
+                {"MyTopic", new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
                 {
                     Publication = {Topic = new RoutingKey("MyTopic"), RequestType = typeof(MyCommand) }
                 }},

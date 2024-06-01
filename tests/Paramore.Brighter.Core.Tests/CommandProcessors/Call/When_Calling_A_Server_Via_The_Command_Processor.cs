@@ -16,23 +16,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
     [Collection("CommandProcessor")]
     public class CommandProcessorCallTests : IDisposable
     {
+        private const string _topic = "MyRequest";
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
         private readonly Message _message;
-        private readonly InMemoryProducer _producer;
+        private readonly InternalBus _bus = new() ;
 
 
         public CommandProcessorCallTests()
         {
-            const string topic = "MyRequest";
             _myRequest.RequestValue = "Hello World";
 
-            _producer = new InMemoryProducer();
-            _producer.Publication = new Publication{Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)};
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(_bus, timeProvider);
+            producer.Publication = new Publication{Topic = new RoutingKey(_topic), RequestType = typeof(MyRequest)};
 
             var header = new MessageHeader(
                 messageId: _myRequest.Id, 
-                topic: topic, 
+                topic: _topic, 
                 messageType:MessageType.MT_COMMAND,
                 correlationId: _myRequest.ReplyAddress.CorrelationId,
                 replyTo: _myRequest.ReplyAddress.Topic);
@@ -81,7 +82,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _producer },
+                    { _topic, producer },
                 });
 
             var tracer = new BrighterTracer();
@@ -92,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                new InMemoryOutbox(new FakeTimeProvider()){Tracer = tracer});
+                new InMemoryOutbox(timeProvider){Tracer = tracer});
         
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
@@ -109,17 +110,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
   
         }
 
-
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor()
         {
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOutInMilliseconds: 500);
             
             //should send a message via the messaging gateway
-            _producer.MessageWasSent.Should().BeTrue();
+            var message = _bus.Dequeue(new RoutingKey(_topic));
 
             //should convert the command into a message
-            _producer.SentMessages[0].Should().Be(_message);
+            message.Should().Be(_message);
             
             //should forward response to a handler
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});

@@ -21,7 +21,8 @@ public class ServiceBusMessageStoreArchiverTests
     {
         const string topic = "MyTopic";
 
-        var producer = new InMemoryProducer(){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+        var timeProvider = new FakeTimeProvider();
+        var producer = new InMemoryProducer(new InternalBus(), timeProvider){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -46,7 +47,6 @@ public class ServiceBusMessageStoreArchiverTests
             { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
         }; 
         
-        var timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer();
         _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
         _archiveProvider = new InMemoryArchiveProvider();

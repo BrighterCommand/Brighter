@@ -9,7 +9,6 @@ using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -24,15 +23,14 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
     private readonly MyEvent _event;
     private readonly TracerProvider _traceProvider;
     private readonly List<Activity> _exportedActivities;
-    private FakeTimeProvider _timeProvider;
 
     public ImplicitClearingAsyncObservabilityTests()
     {
         const string topic = "MyEvent";
 
-        _timeProvider = new FakeTimeProvider();
-        var tracer = new BrighterTracer(_timeProvider);
-        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox(_timeProvider) {Tracer = tracer};
+        FakeTimeProvider timeProvider = new();
+        var tracer = new BrighterTracer(timeProvider);
+        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         _event = new MyEvent();
 
         var registry = new SubscriberRegistry();
@@ -68,7 +66,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {Brighter.CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {topic, new InMemoryProducer{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
+            {topic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider()){Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}}}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -95,7 +93,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
     [Fact]
     public async Task When_Clearing_Implicitly_async()
     {
-        using (var activity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("RunTest"))
+        using (new ActivitySource("Paramore.Brighter.Tests").StartActivity("RunTest"))
         {
             await _commandProcessor.DepositPostAsync(_event);
             _commandProcessor.ClearAsyncOutbox(10, 0);
