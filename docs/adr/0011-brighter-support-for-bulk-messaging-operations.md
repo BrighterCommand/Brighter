@@ -13,26 +13,26 @@ To support Transactional Messaging the Command Processor uses an Outbox when pro
 * A `DepositPost` call to translate the `IRequest` into a `Message` and store it in an `Outbox`
 * A `ClearOutbox` call to retrieve the `Message` from the `Outbox` and dispatch it via a `Producer`
 
-Within these two steps we peform a number of activities.
+Within these two steps we perform a number of activities.
 
 For `DepositPost` we:
 
-* Lookup the `IAmAProducer` associated with a `Request
-* Translate an `IRequest` into the `Message`, excuting the `IAmAMessageTransform` and `IAmAMessagemapper` pipeline
+* Translate an `IRequest` into the `Message`, executing the `IAmAMessageTransform` and `IAmAMessageMapper` pipeline
 * Store the resulting `Message` in an `Outbox`
 
 For `ClearOutbox` we:
 
 * Retrieve the `Message` from the `Outbox`
+* Lookup the `IAmAProducer` associated with a `Request`
 * We then produce the `Message` via the `Producer`
 
 For the sake of efficiency we chose to support passing an array of `IRequest` to `DepositPost`. We want to bulk write this set of messages to the Outbox, over writing each one individually. For this reason we would like to be able to batch up our writes to the `Outbox` in `DepositPost`
 
-We always pass an array of `Message` identifiers to `ClearOutbox`. For efficiency we obtain the set of matching ids from the `Outbox`
+We always pass an array of `Message` identifiers to `ClearOutbox`. For efficiency we obtain the set of matching messages by id from the `Outbox`
 
 A question arises from the relationship between the single `DepositPost` and the bulk `DepositPost`.
 
-The bulk version of `DepositPost` requires two modfications to the deposit behavior:
+The bulk version of `DepositPost` requires two modifications to the deposit behavior:
 
 * As it is an `IEnumerable<IRequest>` the collection passed to the bulk `DepositPost` does not bind a generic parameter of the derived type of `IRequest` that we can use to lookup the associated mapper/transform pipeline and producer.
 * As it is a batch, we want to accumulate all the writes to the `Outbox` over making each one individually.
@@ -78,7 +78,7 @@ So in this case we intend to opt for the second option.
 
 Both `StartBatch` and `EndBatch` are `Outbox` code. As they will be shared by all `Outbox` types they need to be implemented in an abstract base class.
 
-`EndBatch` may need to group the writes by `RoutingKey` as a batch endpoing might be called for multiple topics.
+`EndBatch` may need to group the writes by `RoutingKey` as a batch endpoint might be called for multiple topics.
 
 ## Consequences
       
