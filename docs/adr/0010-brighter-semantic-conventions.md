@@ -137,8 +137,9 @@ where the destination name is the name of the channel and the operation name is 
 * Create Message => span name: `<channel> create` span kind: producer
 * Publish Message => span name: `<channel> publish` span kind: producer
 
-Producing a message is a Publish operation, unless the operation is within a Batch in which case the batch is a Publish with each message in the batch a Create span.
+Producing a message is a `publish` operation, unless the operation is within a Batch in which case the batch is a `publish` with each message in the batch a `create` span.
 
+Kind of the span is `producer` for the creator of the message. So a `publish` span is a `producer` span for a single message but a `client` for a batch, with the `create` being the `producer` in that case. 
 
 [Cloud Events](https://opentelemetry.io/docs/specs/semconv/cloudevents/cloudevents-spans/#attributes) offers alternative names the producer and consumer spans:
 

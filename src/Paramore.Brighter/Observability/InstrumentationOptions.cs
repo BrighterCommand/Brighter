@@ -26,6 +26,9 @@ using System;
 
 namespace Paramore.Brighter.Observability;
 
+/// <summary>
+/// How verbose should our instrumentation be?
+/// </summary>
 [Flags]
 public enum InstrumentationOptions
 {

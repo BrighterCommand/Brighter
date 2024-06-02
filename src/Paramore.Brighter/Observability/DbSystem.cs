@@ -24,6 +24,10 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Observability;
 
+/// <summary>
+/// What is the identifier for the database system in use
+/// Conforms to: https://opentelemetry.io/docs/specs/semconv/database/database-spans/
+/// </summary>
 public enum DbSystem
 {
     AdaBas,

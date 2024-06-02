@@ -30,7 +30,10 @@ namespace Paramore.Brighter.Observability;
 public static class BrighterSemanticConventions
 {
     public const string AddToOutbox = "paramore.brighter.outbox.add";
+    public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";
+    public const string CeVersion = "cloudevents.event_spec_version";
+    public const string ConversationId = "messaging.message.conversation_id";
     public const string DbInstanceId = "db.instance.id";
     public const string DbName = "db.name";
     public const string DbOperation = "db.operation";
@@ -39,6 +42,7 @@ public static class BrighterSemanticConventions
     public const string DbTable = "db.table";
     public const string DbUser = "db.user";
     public const string GetFromOutbox = "paramore.brighter.outbox.get";
+    public const string ErrorType = "error.type";
     public const string HandlerName = "paramore.brighter.handler.name";
     public const string HandlerType = "paramore.brighter.handler.type";
     public const string IsSink = "paramore.brighter.is_sink";
@@ -49,7 +53,10 @@ public static class BrighterSemanticConventions
     public const string MessageId = "messaging.message.id";
     public const string MessageType = "messaging.message.type";
     public const string MessagingDestination = "messaging.destination";
+    public const string MessagingDestinationAnonymous = "messaging.destination.anonymous";
     public const string MessagingDestinationPartitionId = "messaging.destination.partition.id";
+    public const string MessagingOperationType = "messaging.operation.type";
+    public const string MessagingSystem = "messaging.system";
     public const string MessageBodySize = "messaging.message.body.size";
     public const string NetworkPeerAddress = "network.peer.address";
     public const string NetworkPeerPort = "network.peer.port";
@@ -61,5 +68,7 @@ public static class BrighterSemanticConventions
     public const string RequestBody = "paramore.brighter.request.body";
     public const string ServerAddress = "server.address";
     public const string ServerPort ="server.port";
-    public const string SourceName = "Paramore.Brighter";         
+    public const string SourceName = "Paramore.Brighter";
+    public const string CeSubject = "cloudevents.event_subject";
+    public const string CeType = "cloudevents.event_type";
 }

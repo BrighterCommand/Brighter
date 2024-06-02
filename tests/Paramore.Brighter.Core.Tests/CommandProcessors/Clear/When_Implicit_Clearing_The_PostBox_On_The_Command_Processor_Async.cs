@@ -119,7 +119,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             await _outbox.AddAsync(_message, context);
             await _outbox.AddAsync(_message2, context);
 
-            _commandProcessor.ClearAsyncOutbox(1,1);
+            _commandProcessor.ClearAsyncOutbox(1,0);
 
             for (var i = 1; i <= 10; i++)
             {
@@ -127,7 +127,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 await Task.Delay(i * 100);
             }
 
-            _commandProcessor.ClearAsyncOutbox(1, 1);
+            _commandProcessor.ClearAsyncOutbox(1, 0);
 
             //Try again and kick off another background thread
             for (var i = 1; i <= 10; i++)
