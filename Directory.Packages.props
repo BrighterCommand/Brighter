@@ -31,7 +31,7 @@
     <PackageVersion Include="FluentMigrator.Runner" Version="5.2.0" />
     <PackageVersion Include="MessagePack" Version="2.5.140" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.0" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.1" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.5" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="8.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
