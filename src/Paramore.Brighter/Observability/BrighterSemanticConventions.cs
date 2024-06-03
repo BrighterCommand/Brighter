@@ -29,7 +29,6 @@ namespace Paramore.Brighter.Observability;
 /// </summary>
 public static class BrighterSemanticConventions
 {
-    public const string AddToOutbox = "paramore.brighter.outbox.add";
     public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";
     public const string CeVersion = "cloudevents.event_spec_version";
@@ -41,7 +40,6 @@ public static class BrighterSemanticConventions
     public const string DbSystem = "db.system";
     public const string DbTable = "db.table";
     public const string DbUser = "db.user";
-    public const string GetFromOutbox = "paramore.brighter.outbox.get";
     public const string ErrorType = "error.type";
     public const string HandlerName = "paramore.brighter.handler.name";
     public const string HandlerType = "paramore.brighter.handler.type";

@@ -232,6 +232,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return brighterBuilder;
         }
         
+        
         private static INeedARequestContext AddEventBus(
             IServiceProvider provider,
             INeedMessaging messagingBuilder,
@@ -303,7 +304,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (featureSwitchRegistry != null)
                 needHandlers = needHandlers.ConfigureFeatureSwitches(featureSwitchRegistry);
-
+            
             var policyBuilder = needHandlers.Handlers(handlerConfiguration);
 
             var messagingBuilder = options.PolicyRegistry == null
@@ -346,7 +347,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 busConfiguration.MaxOutStandingMessages,
                 busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
                 busConfiguration.OutBoxBag,
-                busConfiguration.ArchiveBatchSize);
+                busConfiguration.ArchiveBatchSize,
+                busConfiguration.InstrumentationOptions);
         }
 
         /// <summary>

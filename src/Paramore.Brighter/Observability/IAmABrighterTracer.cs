@@ -52,6 +52,31 @@ public interface IAmABrighterTracer : IDisposable
         ActivityLink[] links = null, 
         InstrumentationOptions options = InstrumentationOptions.All
     ) where TRequest : class, IRequest;
+    
+    /// <summary>
+    /// Create a span for a request in CommandProcessor
+    /// </summary>
+    /// <param name="operation">What type of span are we creating</param>
+    /// <param name="request">What is the request that we are tracking with this span</param>
+    /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
+    /// <param name="links">Are there links to other spans that we should add to this span</param>
+    /// <param name="options">How deep should the instrumentation go?</param>
+    /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
+    Activity CreateBatchSpan<TRequest>(
+        Activity parentActivity = null,
+        ActivityLink[] links = null, 
+        InstrumentationOptions options = InstrumentationOptions.All
+    ) where TRequest : class, IRequest;
+
+    /// <summary>
+    /// Create a span for a batch of messages to be cleared  
+    /// </summary>
+    /// <param name="operation">The operation being performed as part of the Clear Span</param>
+    /// <param name="parentActivity"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    Activity CreateClearSpan(CommandProcessorSpanOperation operation, Activity parentActivity, InstrumentationOptions options);
 
     /// <summary>
     /// Create a span for an outbox operation

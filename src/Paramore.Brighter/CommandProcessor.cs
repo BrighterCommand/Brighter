@@ -68,8 +68,6 @@ namespace Paramore.Brighter
         private readonly IAmAChannelFactory _responseChannelFactory;
         private readonly InstrumentationOptions _instrumentationOptions;
 
-        private const string CLEAROUTBOX = "Clear Outbox";
-
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
         /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
@@ -861,7 +859,7 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         public void ClearOutbox(string[] ids, RequestContext requestContext = null, Dictionary<string, object> args = null)
         {
-            var span = CreateSpan(CLEAROUTBOX);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
             
             try
@@ -890,7 +888,7 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null
             )
         {
-            var span = CreateSpan(CLEAROUTBOX);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
@@ -919,7 +917,7 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {
-            var span = CreateSpan(CLEAROUTBOX);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
             
             try
@@ -950,7 +948,7 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null
         )
         {
-            var span = CreateSpan(CLEAROUTBOX);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
@@ -1005,7 +1003,7 @@ namespace Paramore.Brighter
             //the channel to create the subscription, but this does not do much on a new queue
             Retry(() => responseChannel.Purge());
 
-            var span = CreateSpan(CLEAROUTBOX);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try

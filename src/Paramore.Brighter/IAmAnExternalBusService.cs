@@ -145,23 +145,6 @@ namespace Paramore.Brighter
         /// <summary>
         /// Adds a message to the outbox
         /// </summary>
-        /// <param name="messages">The messages to store in the outbox</param>
-        /// <param name="requestContext">The context of the request pipeline</param>
-        /// <param name="overridingTransactionProvider"></param>
-        /// <param name="continueOnCapturedContext">Use the same thread for a callback</param>
-        /// <param name="cancellationToken">Allow cancellation of the message</param>
-        /// <param name="overridingTransactionProvider ">The provider of the transaction for the outbox</param>
-        /// <exception cref="ChannelFailureException">Thrown if we cannot write to the outbox</exception>
-        Task AddToOutboxAsync(
-            IEnumerable<TMessage> messages,
-            RequestContext requestContext,
-            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
-            bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Adds a message to the outbox
-        /// </summary>
         /// <param name="request">The request the message is composed from (used for diagnostics)</param>
         /// <param name="message">The message we intend to send</param>
         /// <param name="overridingTransactionProvider">A transaction provider that gives us the transaction to use with the Outbox</param>
@@ -170,19 +153,6 @@ namespace Paramore.Brighter
         /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
         void AddToOutbox(
             TMessage message,
-            RequestContext requestContext,
-            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
-        );
-
-        /// <summary>
-        /// Adds messages to the Outbox
-        /// </summary>
-        /// <param name="messages">The set of messages to add</param>
-        /// <param name="requestContext">The request context for the pipeline</param>
-        /// <param name="overridingTransactionProvider">If the write is part of a transaction where do we get it from</param>
-        /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
-        void AddToOutbox(
-            IEnumerable<TMessage> messages,
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
         );

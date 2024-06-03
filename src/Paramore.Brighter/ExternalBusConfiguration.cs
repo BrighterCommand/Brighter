@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -156,11 +157,15 @@ namespace Paramore.Brighter
         public IDistributedLock DistributedLock { get; set; }
         
         /// <summary>
-        /// The registry is a collection of producers 
+        /// How verbose should our instrumentation be?
+        /// InstrumentationOptions.None - no instrumentation
+        /// InstrumentationOptions.RequestInformation - just the request id, request type and operation
+        /// InstrumentationOptions.RequestBody - the request body
+        /// InstrumentationOptions.RequestContext - the request context
+        /// InstrumentationOptions.All - all of the above
         /// </summary>
-        /// <value>The registry of producers</value>
-        public IAmAProducerRegistry ProducerRegistry { get; set; }
-
+        public InstrumentationOptions InstrumentationOptions { get; set; }
+        
         /// <summary>
         /// Gets the message mapper registry.
         /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
@@ -168,18 +173,6 @@ namespace Paramore.Brighter
         /// <value>The message mapper registry.</value>
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; set; }
 
-        /// <summary>
-        /// The Outbox we wish to use for messaging
-        /// </summary>
-        public IAmAnOutbox Outbox { get; set; }
-        
-   
-        /// <summary>
-        /// The maximum amount of messages to deposit into the outbox in one transmissions.
-        /// This is to stop insert statements getting too big
-        /// </summary>
-        public int OutboxBulkChunkSize { get; set; }
-        
         /// <summary>
         /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
         /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
@@ -196,6 +189,17 @@ namespace Paramore.Brighter
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
         
         /// <summary>
+        /// The Outbox we wish to use for messaging
+        /// </summary>
+        public IAmAnOutbox Outbox { get; set; }
+   
+        /// <summary>
+        /// The maximum amount of messages to deposit into the outbox in one transmissions.
+        /// This is to stop insert statements getting too big
+        /// </summary>
+        public int OutboxBulkChunkSize { get; set; }
+        
+        /// <summary>
         /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
         /// This bag provides the args required
         /// </summary>
@@ -205,6 +209,12 @@ namespace Paramore.Brighter
         /// When do we timeout writing to the outbox
         /// </summary>
         public int OutboxTimeout { get; set; }
+        
+        /// <summary>
+        /// The registry is a collection of producers 
+        /// </summary>
+        /// <value>The registry of producers</value>
+        public IAmAProducerRegistry ProducerRegistry { get; set; }
         
         /// <summary>
         /// If we are using Rpc, what are the subscriptions for the reply queue?

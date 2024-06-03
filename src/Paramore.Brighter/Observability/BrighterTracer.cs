@@ -143,6 +143,37 @@ public class BrighterTracer : IAmABrighterTracer
 
         return activity;
     }
+    
+    /// <summary>
+    /// Create a span for a batch of messages to be cleared  
+    /// </summary>
+    /// <param name="operation">The operation being performed as part of the Clear Span</param>
+    /// <param name="parentActivity"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public Activity CreateClearSpan(CommandProcessorSpanOperation operation, Activity parentActivity, InstrumentationOptions options)
+    {
+        var spanName = $"{operation.ToSpanName()}";
+        var kind = ActivityKind.Producer;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow(); 
+        
+        var tags = new ActivityTagsCollection();
+        tags.Add(BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName());
+        
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+        
+        Activity.Current = activity;
+
+        return activity;
+        
+    } 
 
     /// <summary>
     /// Create a span for an outbox operation
@@ -245,6 +276,38 @@ public class BrighterTracer : IAmABrighterTracer
         span.AddEvent(new ActivityEvent(mapperName, DateTimeOffset.UtcNow, tags));
     }
 
+    /// <summary>
+    /// Create an event representing the external service bus calling the outbox
+    /// This is generic and not specific details from a particular outbox and is thus mostly message properties
+    /// </summary>
+    /// <param name="operation">What operation are we performing on the Outbox</param>
+    /// <param name="message">What is the message we want to write to the Outbox or have read from the Outbox</param>
+    /// <param name="span">What is the parent span for this event</param>
+    /// <param name="isSharedTransaction"></param>
+    /// <param name="isAsync"></param>
+    /// <param name="instrumentationOptions">How verbose should our instrumentation be</param>
+    public static void CreateOutboxEvent(OutboxDbOperation operation, Message message, Activity span,
+        bool isSharedTransaction, bool isAsync, InstrumentationOptions instrumentationOptions) 
+    {
+        if (span == null) return;
+        
+        var outBoxType = isAsync ? "async" : "sync";
+        
+        var tags = new ActivityTagsCollection();
+        tags.Add(BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction);
+        tags.Add(BrighterSemanticConventions.OutboxType, outBoxType);
+        tags.Add(BrighterSemanticConventions.MessageId, message.Id);
+        tags.Add(BrighterSemanticConventions.MessagingDestination, message.Header.Topic);
+        tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+        tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+        tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+        tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey);
+        tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header));
+        
+        span.AddEvent(new ActivityEvent(operation.ToSpanName(), DateTimeOffset.UtcNow, tags));
+ 
+    }
+ 
     /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it
     /// </summary>

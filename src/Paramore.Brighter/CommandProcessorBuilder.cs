@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using System.Transactions;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -76,11 +76,12 @@ namespace Paramore.Brighter
         private IAmAHandlerFactory _handlerFactory;
         private IPolicyRegistry<string> _policyRegistry;
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
-        private IAmAnExternalBusService _bus = null;
-        private bool _useRequestReplyQueues = false;
+        private IAmAnExternalBusService _bus;
+        private bool _useRequestReplyQueues;
         private IAmAChannelFactory _responseChannelFactory;
         private IEnumerable<Subscription> _replySubscriptions;
         private InboxConfiguration _inboxConfiguration;
+        private InstrumentationOptions _instrumetationOptions;
 
         private CommandProcessorBuilder()
         {
@@ -150,14 +151,12 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
+        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
         /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The service bus that we need to use to send messages externally</param>
-        /// <param name="messageMapperRegistry">The registry of mappers or messages to requests needed for outgoing messages</param>
-        /// <param name="transformerFactory">A factory for common transforms of messages</param>
         /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
         /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
@@ -202,6 +201,22 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Sets the InstrumentationOptions for the CommandProcessor
+        /// InstrumentationOptions.None - no telemetry
+        /// InstrumentationOptions.RequestInformation - id  and type of request
+        /// InstrumentationOptions.RequestBody -  body of the request
+        /// InstrumentationOptions.RequestContext - what is the context of the request
+        /// InstrumentationOptions.All - all of the above
+        /// </summary>
+        /// <param name="instrumentationOptions"></param>
+        /// <returns></returns>
+        public INeedARequestContext InstrumentationOptions(InstrumentationOptions instrumentationOptions)
+        {
+           _instrumetationOptions = instrumentationOptions;
+           return this;
+        }
+
+        /// <summary>
         /// The factory for <see cref="IRequestContext"/> used within the pipeline to pass information between <see cref="IHandleRequests{T}"/> steps. If you do not need to override
         /// provide <see cref="InMemoryRequestContextFactory"/>.
         /// </summary>
@@ -223,7 +238,7 @@ namespace Paramore.Brighter
             {
                 return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory, 
                     requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    featureSwitchRegistry: _featureSwitchRegistry);
+                    featureSwitchRegistry: _featureSwitchRegistry, instrumentationOptions: _instrumetationOptions);
             }
 
             if (!_useRequestReplyQueues)
@@ -234,7 +249,8 @@ namespace Paramore.Brighter
                     policyRegistry: _policyRegistry,
                     bus: _bus,
                     featureSwitchRegistry: _featureSwitchRegistry, 
-                    inboxConfiguration: _inboxConfiguration
+                    inboxConfiguration: _inboxConfiguration,
+                    instrumentationOptions: _instrumetationOptions
                 );
             
             if (_useRequestReplyQueues)
@@ -247,7 +263,8 @@ namespace Paramore.Brighter
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     replySubscriptions: _replySubscriptions,
-                    responseChannelFactory: _responseChannelFactory
+                    responseChannelFactory: _responseChannelFactory,
+                    instrumentationOptions: _instrumetationOptions
                 );
 
             throw new ConfigurationException(
@@ -302,14 +319,12 @@ namespace Paramore.Brighter
     public interface INeedMessaging
     {
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
+        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
         /// are handled by adding appropriate <see cref="CommandProcessorBuilder.Policies"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
-        /// <param name="messageMapperRegistry">The register for message mappers that map outgoing requests to messages</param>
-        /// <param name="transformerFactory">A factory for transforms used for common transformations to outgoing messages</param>
         /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
         /// <param name="inboxConfiguration">What is the inbox configuration</param>
@@ -334,6 +349,19 @@ namespace Paramore.Brighter
     /// </summary>
     public interface INeedARequestContext
     {
+        
+        /// <summary>
+        /// Sets the InstrumentationOptions for the CommandProcessor
+        /// InstrumentationOptions.None - no telemetry
+        /// InstrumentationOptions.RequestInformation - id  and type of request
+        /// InstrumentationOptions.RequestBody -  body of the request
+        /// InstrumentationOptions.RequestContext - what is the context of the request
+        /// InstrumentationOptions.All - all of the above
+        /// </summary>
+        /// <param name="instrumentationOptions"></param>
+        /// <returns></returns>
+        INeedARequestContext InstrumentationOptions(InstrumentationOptions instrumentationOptions);
+        
         /// <summary>
         /// Requests the context factory.
         /// </summary>

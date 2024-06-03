@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -21,6 +22,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Configures the lifetime of the Handlers. Defaults to Scoped.
         /// </summary>
         public ServiceLifetime HandlerLifetime { get; set; } = ServiceLifetime.Transient;
+
+        /// <summary>
+        /// Configures how verbose our instrumentation is
+        /// InstrumentationOptions.None - no instrumentation
+        /// InstrumentationOptions.RequestInformation - just the request id, request type and operation
+        /// InstrumentationOptions.RequestBody - the request body
+        /// InstrumentationOptions.RequestContext - the request context
+        /// InstrumentationOptions.All - all of the above
+        /// </summary>
+        public InstrumentationOptions InstrumentationOptions { get; set; }
 
         /// <summary>
         /// Configures the lifetime of mappers. Defaults to Singleton
@@ -62,6 +73,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Configures the lifetime of the Handlers.
         /// </summary>
         ServiceLifetime HandlerLifetime { get; set; }
+         
+        /// <summary>
+        /// What depth of instrumentation do we need
+        /// InstrumentationOptions.None - no instrumentation
+        /// InstrumentationOptions.RequestInformation - just the request id, request type and operation
+        /// InstrumentationOptions.RequestBody - the request body
+        /// InstrumentationOptions.RequestContext - the request context
+        /// InstrumentationOptions.All - all of the above
+        /// </summary> 
+        InstrumentationOptions InstrumentationOptions { get; set; } 
 
         /// <summary>
         /// Configures the lifetime of mappers. 
