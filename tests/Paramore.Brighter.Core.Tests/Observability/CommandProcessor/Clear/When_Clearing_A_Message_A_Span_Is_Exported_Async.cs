@@ -102,6 +102,7 @@ public class AsyncCommandProcessorClearObservabilityTests
         );
     }
     
+    [Fact]
     public async Task When_Clearing_A_Message_A_Span_Is_Exported()
     {
         //arrange

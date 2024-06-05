@@ -11,7 +11,8 @@ internal class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
 
     public Task<Message> MapToMessageAsync(MyEvent request, Publication publication, CancellationToken ct = default)
     {
-        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
+        var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType(),
+            source: publication.Source, type: publication.Type, subject: publication.Subject);
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);
         return Task.FromResult(message);

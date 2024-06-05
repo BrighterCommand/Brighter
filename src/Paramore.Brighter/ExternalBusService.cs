@@ -375,21 +375,31 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("No async outbox defined.");
 
             await s_clearSemaphoreToken.WaitAsync(cancellationToken);
+            var parentSpan = requestContext.Span;
+            
+            var childSpans = new Dictionary<string, Activity>();
             try
             {
                 foreach (var messageId in posts)
                 {
-                    _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);                   
-
+                    var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);                   
+                    childSpans.Add(messageId, span);
+                    requestContext.Span = span;
+                    
                     var message = await _asyncOutbox.GetAsync(messageId, requestContext, _outboxTimeout, args, cancellationToken);
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
+                    
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, span, false, true, _instrumentationOptions);
 
                     await DispatchAsync(new[] { message }, requestContext, continueOnCapturedContext, cancellationToken);
+                    requestContext.Span = parentSpan;
                 }
             }
             finally
             {
+                _tracer.EndSpans(childSpans);
+                requestContext.Span = parentSpan;
                 s_clearSemaphoreToken.Release();
             }
 
@@ -837,61 +847,64 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext,
             CancellationToken cancellationToken)
         {
-            foreach (var message in posts)
+            var parentSpan = requestContext.Span;
+            var producerSpans = new Dictionary<string, Activity>();
+
+            try
             {
-                s_logger.LogInformation(
-                    "Decoupled invocation of message: Topic:{Topic} Id:{Id}",
-                    message.Header.Topic, message.Id
-                ); 
-                
-                requestContext.Span?.AddEvent(
-                    new ActivityEvent(
-                        DISPATCHMESSAGE,
-                        tags: new ActivityTagsCollection
-                        {
-                            { "Topic", message.Header.Topic }, { "MessageId", message.Id }
-                        }
-                    )
-                );
-
-                var producer = _producerRegistry.LookupBy(message.Header.Topic);
-
-                if (producer is IAmAMessageProducerAsync producerAsync)
+                foreach (var message in posts)
                 {
-                    if (producer is ISupportPublishConfirmation)
+                    s_logger.LogInformation(
+                        "Decoupled invocation of message: Topic:{Topic} Id:{Id}",
+                        message.Header.Topic, message.Id
+                    ); 
+                
+                    var producer = _producerRegistry.LookupBy(message.Header.Topic);
+                    var span = _tracer.CreateProducerSpan(producer.Publication, message, requestContext.Span, _instrumentationOptions);
+                    producer.Span = span;
+                    producerSpans.Add(message.Id, span);
+
+                    if (producer is IAmAMessageProducerAsync producerAsync)
                     {
-                        //mark dispatch handled by a callback - set in constructor
-                        await RetryAsync(
-                                async _ =>
-                                    await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
-                                requestContext,
-                                continueOnCapturedContext,
-                                cancellationToken)
-                            .ConfigureAwait(continueOnCapturedContext);
+                        if (producer is ISupportPublishConfirmation)
+                        {
+                            //mark dispatch handled by a callback - set in constructor
+                            await RetryAsync(
+                                    async _ =>
+                                        await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                                    requestContext,
+                                    continueOnCapturedContext,
+                                    cancellationToken)
+                                .ConfigureAwait(continueOnCapturedContext);
+                        }
+                        else
+                        {
+                            var sent = await RetryAsync(
+                                    async _ => await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                                    requestContext,
+                                    continueOnCapturedContext,
+                                    cancellationToken
+                                )
+                                .ConfigureAwait(continueOnCapturedContext
+                                );
+
+                            if (sent)
+                                await RetryAsync(
+                                    async _ => await _asyncOutbox.MarkDispatchedAsync(
+                                        message.Id, requestContext, DateTime.UtcNow, cancellationToken: cancellationToken
+                                    ),
+                                    requestContext,
+                                    cancellationToken: cancellationToken
+                                );
+                        }
                     }
                     else
-                    {
-                        var sent = await RetryAsync(
-                                async _ => await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
-                                requestContext,
-                                continueOnCapturedContext,
-                                cancellationToken
-                            )
-                            .ConfigureAwait(continueOnCapturedContext
-                        );
-
-                        if (sent)
-                            await RetryAsync(
-                                async _ => await _asyncOutbox.MarkDispatchedAsync(
-                                    message.Id, requestContext, DateTime.UtcNow, cancellationToken: cancellationToken
-                                ),
-                                requestContext,
-                                cancellationToken: cancellationToken
-                            );
-                    }
+                        throw new InvalidOperationException("No async message producer defined.");
                 }
-                else
-                    throw new InvalidOperationException("No async message producer defined.");
+            }
+            finally
+            {
+                _tracer.EndSpans(producerSpans); 
             }
         }
         
