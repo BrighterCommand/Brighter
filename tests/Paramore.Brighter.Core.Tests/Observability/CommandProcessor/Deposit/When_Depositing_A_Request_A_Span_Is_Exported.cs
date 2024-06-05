@@ -9,6 +9,7 @@ using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Paramore.Brighter.Core.Tests.CommandProcessors.Post;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
 using Polly;
@@ -42,9 +43,8 @@ public class CommandProcessorDepositObservabilityTests
         Brighter.CommandProcessor.ClearServiceBus();
         
         var registry = new SubscriberRegistry();
-        registry.Register<MyCommand, MyCommandHandler>();
-        
-        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler());
+
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
         
         var retryPolicy = Policy
             .Handle<Exception>()

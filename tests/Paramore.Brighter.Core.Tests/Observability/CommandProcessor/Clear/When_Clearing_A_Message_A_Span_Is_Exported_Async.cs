@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 
-public class CommandProcessorClearObservabilityTests 
+public class AsyncCommandProcessorClearObservabilityTests 
 {
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
@@ -28,10 +28,11 @@ public class CommandProcessorClearObservabilityTests
     private readonly string _topic;
     private readonly InMemoryProducer _producer;
     private InternalBus _internalBus = new InternalBus();
+    private Dictionary<string, string> _receivedMessages = new Dictionary<string, string>();
 
-    public CommandProcessorClearObservabilityTests()
+    public AsyncCommandProcessorClearObservabilityTests()
     {
-        _topic = "MyEvent";
+        _topic = "MyCommand";
         
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -50,18 +51,18 @@ public class CommandProcessorClearObservabilityTests
         
         var retryPolicy = Policy
             .Handle<Exception>()
-            .Retry();
+            .RetryAsync();
         
-        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy}};
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            null,
+            new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         _producer = new InMemoryProducer(_internalBus, timeProvider)
         {
@@ -101,8 +102,7 @@ public class CommandProcessorClearObservabilityTests
         );
     }
     
-    [Fact]
-    public void When_Clearing_A_Message_A_Span_Is_Exported()
+    public async Task When_Clearing_A_Message_A_Span_Is_Exported()
     {
         //arrange
         var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
@@ -111,12 +111,12 @@ public class CommandProcessorClearObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        var messageId = _commandProcessor.DepositPost(@event, context);
+        var messageId = await _commandProcessor.DepositPostAsync(@event, context);
         
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutbox([messageId], context);
+        await _commandProcessor.ClearOutboxAsync([messageId], context);
         
         parentActivity?.Stop();
         
@@ -145,7 +145,7 @@ public class CommandProcessorClearObservabilityTests
         var message = _internalBus.Stream(new RoutingKey(_topic)).Single();
         var depositEvent = events.Single(e => e.Name == OutboxDbOperation.Get.ToSpanName());
         depositEvent.Tags.Any(a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false).Should().BeTrue();
-        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "sync" ).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "async" ).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id ).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic).Should().BeTrue();
         depositEvent.Tags.Any(a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length).Should().BeTrue();
