@@ -19,7 +19,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
 
 using System;
@@ -29,28 +28,24 @@ namespace Paramore.Brighter.Observability;
 /// <summary>
 /// Provide a helper method to turn span attributes into strings (lowercase)
 /// </summary>
-public static class BrighterSpanExtensions
+public static class MessagingSystemExtensions
 {
-   ///<summary>
-   /// Provide a string representation of the command processor operation
-   /// </summary>
-   public static string ToSpanName(this CommandProcessorSpanOperation operation) => operation switch
-   {
-       CommandProcessorSpanOperation.Create => "create",
-       CommandProcessorSpanOperation.Deposit => "deposit",
-       CommandProcessorSpanOperation.Publish => "publish",
-       CommandProcessorSpanOperation.Send => "send",
-       CommandProcessorSpanOperation.Clear => "clear",
-       _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
-   };
-
-   ///<summary>
-   /// Provide a string representation of the outbox operation
-   /// </summary>   
-   public static string ToSpanName(this OutboxDbOperation span) => span switch
-   {
-       OutboxDbOperation.Add => "add",
-       OutboxDbOperation.Get => "get",
-       _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
-   };
+    ///<summary>
+    /// Provide a string representation of the messaging system
+    /// </summary>
+    public static string ToMessagingSystemName(this MessagingSystem messagingSystem) => messagingSystem switch
+    {
+        MessagingSystem.ActiveMQ => "activemq",
+        MessagingSystem.AWSSQS => "aws_sqs",
+        MessagingSystem.EventGrid => "eventgrid",
+        MessagingSystem.EventHubs => "eventhubs",
+        MessagingSystem.InternalBus => "internal_bus",
+        MessagingSystem.JMS => "jms",
+        MessagingSystem.Kafka => "kafka",
+        MessagingSystem.PubSub => "gcp_pubsub",
+        MessagingSystem.RabbitMQ => "rabbitmq",
+        MessagingSystem.RocketMQ => "rocketmq",
+        MessagingSystem.ServiceBus => "servicebus",
+        _ => throw new ArgumentOutOfRangeException(nameof(messagingSystem), messagingSystem, null)
+    };
 }

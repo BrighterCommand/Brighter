@@ -87,13 +87,13 @@ namespace Paramore.Brighter
 
             MessageMapper.Context = requestContext;
             var message = MessageMapper.MapToMessage(request, publication);
-            BrighterTracer.CreateMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, true);
+            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, true);
             
             Transforms.Each(transform =>
             {
                 transform.Context = requestContext;
                 message = transform.Wrap(message, publication);
-                BrighterTracer.CreateMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false);
+                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false);
             });
             return message;
         }

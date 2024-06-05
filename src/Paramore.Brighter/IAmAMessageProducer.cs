@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
@@ -37,7 +38,6 @@ namespace Paramore.Brighter
         /// <summary>
         /// Allows us to set a <see cref="BrighterTracer"/> to let a Producer participate in our telemetry
         /// </summary>
-        BrighterTracer Tracer { get; }
-
+        Activity Span { get; set; }
     }
 }

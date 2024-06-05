@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -50,7 +51,7 @@ namespace Paramore.Brighter
         /// The producer is being used within the context of a CommandProcessor pipeline which will have initiated the trace
         /// or be using one from a containing framework like ASP.NET Core
         /// </summary>
-        public BrighterTracer Tracer { get; set; }
+        public Activity Span { get; set; }
 
         /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
@@ -69,11 +70,15 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task SendAsync(Message message)
         {
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, true);
+            
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
-            Send(message);
+            bus.Enqueue(message);
+            OnMessagePublished?.Invoke(true, message.Id);
             tcs.SetResult(message);
             return tcs.Task;
         }
+        
         /// <summary>
         /// Send messages to a broker; in this case an <see cref="InternalBus"/> 
         /// </summary>
@@ -99,6 +104,7 @@ namespace Paramore.Brighter
         /// <param name="message">The message to send</param>
         public void Send(Message message)
         {
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, true);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
         }

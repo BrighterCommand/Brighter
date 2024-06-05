@@ -32,6 +32,7 @@ public static class BrighterSemanticConventions
     public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";
     public const string CeVersion = "cloudevents.event_spec_version";
+    public const string ClearMessages = "paramore.brighter.clear_messages";
     public const string ConversationId = "messaging.message.conversation_id";
     public const string DbInstanceId = "db.instance.id";
     public const string DbName = "db.name";

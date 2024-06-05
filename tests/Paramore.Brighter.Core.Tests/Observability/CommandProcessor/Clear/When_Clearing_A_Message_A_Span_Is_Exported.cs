@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -25,6 +26,7 @@ public class CommandProcessorClearObservabilityTests
     private readonly InMemoryOutbox _outbox;
     private readonly string _topic;
     private readonly InMemoryProducer _producer;
+    private InternalBus _internalBus = new InternalBus();
 
     public CommandProcessorClearObservabilityTests()
     {
@@ -51,8 +53,8 @@ public class CommandProcessorClearObservabilityTests
             .Retry();
         
         var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
-        
-        var timeProvider = new FakeTimeProvider();
+
+        var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
         _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
         
@@ -61,7 +63,7 @@ public class CommandProcessorClearObservabilityTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        _producer = new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+        _producer = new InMemoryProducer(_internalBus, timeProvider)
         {
             Publication =
             {
@@ -110,6 +112,10 @@ public class CommandProcessorClearObservabilityTests
 
         //act
         var messageId = _commandProcessor.DepositPost(@event, context);
+        
+        //reset the parent span as deposit and clear are siblings
+        
+        context.Span = parentActivity;
         _commandProcessor.ClearOutbox([messageId], context);
         
         parentActivity?.Stop();
@@ -117,18 +123,18 @@ public class CommandProcessorClearObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert 
-        _exportedActivities.Count.Should().Be(3);
+        _exportedActivities.Count.Should().Be(7);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
         
         //there should be a create span for the batch
-        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
+        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
         createActivity.Should().NotBeNull();
         createActivity.ParentId.Should().Be(parentActivity?.Id);
         createActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" }).Should().BeTrue();
 
         
         //there should be a clear span for each message id
-        var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
+        var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
         clearActivity.Should().NotBeNull();
         clearActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "clear" }).Should().BeTrue();
         clearActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == messageId).Should().BeTrue();
@@ -136,20 +142,17 @@ public class CommandProcessorClearObservabilityTests
         var events = clearActivity.Events.ToList();
         
         //retrieving the message should be an event
-        var message = _outbox.OutstandingMessages(0, context).Single();
+        var message = _internalBus.Stream(new RoutingKey(_topic)).Single();
         var depositEvent = events.Single(e => e.Name == OutboxDbOperation.Get.ToSpanName());
         depositEvent.Tags.Any(a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "sync" ).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id ).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic).Should().BeTrue();
-        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBodySize && (string)a.Value == Convert.ToString(message.Body.Bytes.Length)).Should().BeTrue();
+        depositEvent.Tags.Any(a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value.ToString()).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString()).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)a.Value == message.Header.PartitionKey).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageHeaders && (string)a.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();
-        
-        //we also support the cloud events identifiers here
-        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.CeMessageId && (string)a.Value == message.Id ).Should().BeTrue();        
         
         //there should be a span in the Db for retrieving the message
         var outBoxActivity = _exportedActivities.Single(a => a.DisplayName == $"{OutboxDbOperation.Get.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
@@ -164,13 +167,10 @@ public class CommandProcessorClearObservabilityTests
         producerActivity.Kind.Should().Be(ActivityKind.Producer);
         
         producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessagingOperationType && (string)t.Value == CommandProcessorSpanOperation.Publish.ToSpanName()).Should().BeTrue();
-        producerActivity.TagObjects.Any(t => t is { Key: BrighterSemanticConventions.MessagingSystem, Value: InMemoryAttributes.InternalBus }).Should().BeTrue();
-        producerActivity.TagObjects.Any(t => t is { Value: not null, Key: BrighterSemanticConventions.MessagingDestinationAnonymous } && (bool)t.Value == false).Should().BeTrue();
-        producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && (string)t.Value == _topic).Should().BeTrue(); 
-        producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && (string)t.Value == _topic).Should().BeTrue(); 
-        producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == message.Header.PartitionKey).Should().BeTrue();
         producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id).Should().BeTrue();
         producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessageType && (string)t.Value == message.Header.MessageType.ToString()).Should().BeTrue();
+        producerActivity.TagObjects.Any(t => t is { Value: not null, Key: BrighterSemanticConventions.MessagingDestination } && t.Value.ToString() == _topic).Should().BeTrue(); 
+        producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == message.Header.PartitionKey).Should().BeTrue();
         producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && (string)t.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();
         producerActivity.TagObjects.Any(t => t is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)t.Value == message.Body.Bytes.Length).Should().BeTrue();
         producerActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessageBody && (string)t.Value == message.Body.Value).Should().BeTrue();
@@ -185,6 +185,7 @@ public class CommandProcessorClearObservabilityTests
         //there should be an event in the producer for producing the message
         var produceEvent = producerActivity.Events.Single(e => e.Name ==$"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
         produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingOperationType && (string)t.Value == CommandProcessorSpanOperation.Publish.ToSpanName()).Should().BeTrue();
+        produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingSystem && (string)t.Value == MessagingSystem.InternalBus.ToMessagingSystemName()).Should().BeTrue();          
         produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && (string)t.Value == _topic).Should().BeTrue();
         produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == message.Header.PartitionKey).Should().BeTrue();
         produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id).Should().BeTrue();

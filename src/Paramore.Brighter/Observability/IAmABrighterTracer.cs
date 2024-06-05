@@ -71,12 +71,17 @@ public interface IAmABrighterTracer : IDisposable
     /// <summary>
     /// Create a span for a batch of messages to be cleared  
     /// </summary>
-    /// <param name="operation">The operation being performed as part of the Clear Span</param>
-    /// <param name="parentActivity"></param>
-    /// <param name="options"></param>
+    /// <param name="operation">The operation being performed as part of the Clear Span; can be "create" to start a batch
+    /// or "clear" for an individual item in a batch</param>
+    /// <param name="parentActivity">The span that forms a parent to this span</param>
+    /// <param name="messageId">The identifier of the message that we want to clear</param>
+    /// <param name="options">How verbose do we want the trace to be?</param>
     /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    Activity CreateClearSpan(CommandProcessorSpanOperation operation, Activity parentActivity, InstrumentationOptions options);
+    Activity CreateClearSpan(
+        CommandProcessorSpanOperation operation, 
+        Activity parentActivity,
+        string messageId,
+        InstrumentationOptions options);
 
     /// <summary>
     /// Create a span for an outbox operation
@@ -86,6 +91,17 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="options">How deep should the instrumentation go?</param>
     /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
     Activity CreateDbSpan(OutboxSpanInfo info, Activity parentActivity, InstrumentationOptions options);
+    
+    
+    /// <summary>
+    /// Create a span that represents Brighter producing a message to a channel
+    /// </summary>
+    /// <param name="publication">The publication which represents where we are sending the message</param>
+    /// <param name="message">The message that we are sending</param>
+    /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
+    /// <param name="instrumentationOptions">How deep should the instrumentation go?</param>
+    /// <returns>A new span named channel publish</returns>
+    Activity CreateProducerSpan(Publication publication, Message message, Activity parentActivity, InstrumentationOptions instrumentationOptions);
 
     /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it
@@ -98,4 +114,12 @@ public interface IAmABrighterTracer : IDisposable
     /// </summary>
     /// <param name="handlerSpans"></param>
     void EndSpans(Dictionary<string, Activity> handlerSpans);
+
+    /// <summary>
+    /// Links together a collection of spans
+    /// Mainly used with a batch to link siblings to each other
+    /// </summary>
+    /// <param name="handlerSpans"></param>
+    void LinkSpans(Dictionary<string, Activity> handlerSpans);
+
 }

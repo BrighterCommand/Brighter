@@ -105,7 +105,7 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.CreateHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, isSink:_successor == null);
             }   
             
             if (_successor != null)
@@ -140,7 +140,7 @@ namespace Paramore.Brighter
         {
             if (Context?.Span != null)
             {
-                BrighterTracer.CreateHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, isSink:_successor == null);
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, isSink:_successor == null);
             }   
             
             if (_successor != null)

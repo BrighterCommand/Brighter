@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -42,10 +43,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public Publication Publication { get; }
 
         /// <summary>
-        /// The OTel tracer for this producer; we use this to add spans to the outgoing message
-        /// We inject the tracer because the Producer is called as part of an operation that already has a tracer
+        /// The OTel Span we are writing Producer events too
         /// </summary>
-        public BrighterTracer Tracer { get; set; }
+        public Activity Span { get; set; }
 
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,

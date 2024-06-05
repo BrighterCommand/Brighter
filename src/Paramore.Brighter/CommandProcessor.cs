@@ -348,7 +348,7 @@ namespace Paramore.Brighter
                     }
                 }
                 
-                LinkSpans(handlerSpans);
+                _tracer.LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
                 {
@@ -421,7 +421,7 @@ namespace Paramore.Brighter
                     }
                 }
                 
-                LinkSpans(handlerSpans);
+                _tracer.LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
                     span?.SetStatus(ActivityStatusCode.Error);
@@ -859,7 +859,7 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         public void ClearOutbox(string[] ids, RequestContext requestContext = null, Dictionary<string, object> args = null)
         {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
             
             try
@@ -888,7 +888,7 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null
             )
         {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
@@ -917,7 +917,7 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
             
             try
@@ -948,7 +948,7 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null
         )
         {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
@@ -1003,7 +1003,7 @@ namespace Paramore.Brighter
             //the channel to create the subscription, but this does not do much on a new queue
             Retry(() => responseChannel.Purge());
 
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
@@ -1074,16 +1074,6 @@ namespace Paramore.Brighter
                     $"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
         
-        private Activity CreateSpan(string activityName)
-        {
-            bool hasParent = Activity.Current != null;
-
-            if (hasParent)
-                return ApplicationTelemetry.ActivitySource.StartActivity(activityName, ActivityKind.Server, Activity.Current.Context);
-            else
-                return ApplicationTelemetry.ActivitySource.StartActivity(activityName, ActivityKind.Server);
-        }
-        
         private bool HandlerFactoryIsNotEitherIAmAHandlerFactorySyncOrAsync(IAmAHandlerFactory handlerFactory)
         {
             // If we do not have a subscriber registry and we do not have a handler factory 
@@ -1124,25 +1114,7 @@ namespace Paramore.Brighter
             return context;
         }
         
-        private void LinkSpans(Dictionary<string, Activity> handlerSpans)
-        {
-          if (!handlerSpans.Any()) return;
-          
-          var handlerNames = handlerSpans.Keys.ToList();
-          foreach (var handlerName in handlerNames)
-          {
-             var handlerSpan = handlerSpans[handlerName];
-             foreach (var hs in handlerSpans)
-             {
-                if (hs.Key != handlerName)
-                {
-                    //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released  
-                    //handlerspan.AddLink(new ActivityLink(handlerspan.Value.Context));
-                }
-             }
-          }
-        }
-        
+ 
         private void Retry(Action action)
         {
             var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);

@@ -90,13 +90,13 @@ namespace Paramore.Brighter
             
             MessageMapper.Context = requestContext; 
             var message = await MessageMapper.MapToMessageAsync(request, publication, cancellationToken); 
-            BrighterTracer.CreateMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, true, true);
+            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, true, true);
             
             await Transforms.EachAsync(async transform =>
             {
                 transform.Context = requestContext;
                 message = await transform.WrapAsync(message, publication, cancellationToken);
-                BrighterTracer.CreateMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, true);
+                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, true);
             }); 
             return message;
         }

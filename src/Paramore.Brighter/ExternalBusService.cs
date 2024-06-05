@@ -163,7 +163,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
             
-            BrighterTracer.CreateOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span, 
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span, 
                 overridingTransactionProvider != null, true, _instrumentationOptions); 
 
             var written = await RetryAsync(
@@ -196,7 +196,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.CreateOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span, 
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span, 
                 overridingTransactionProvider != null, false, _instrumentationOptions); 
  
             var written = Retry(() => 
@@ -321,20 +321,31 @@ namespace Paramore.Brighter
 
             // Only allow a single Clear to happen at a time
             s_clearSemaphoreToken.Wait();
+            var parentSpan = requestContext.Span;
+            
+            var childSpans = new Dictionary<string, Activity>();
             try
             {
                 foreach (var messageId in posts)
                 {
-                    _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, _instrumentationOptions);
+                    var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);
+                    childSpans.Add(messageId, span);
+                    requestContext.Span = span;
+
                     var message = _outBox.Get(messageId, requestContext);
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
+                    
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, span, false, false, _instrumentationOptions);
 
                     Dispatch(new[] { message }, requestContext, args);
+                    requestContext.Span = parentSpan;
                 }
             }
             finally
             {
+                _tracer.EndSpans(childSpans);
+                requestContext.Span = parentSpan;
                 s_clearSemaphoreToken.Release();
             }
 
@@ -367,6 +378,8 @@ namespace Paramore.Brighter
             {
                 foreach (var messageId in posts)
                 {
+                    _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);                   
+
                     var message = await _asyncOutbox.GetAsync(messageId, requestContext, _outboxTimeout, args, cancellationToken);
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
@@ -400,12 +413,6 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null
         )
         {
-            var span = Activity.Current;
-            span?.AddTag("amountToClear", amountToClear);
-            span?.AddTag("millisecondsSinceSent", minimumAge);
-            span?.AddTag("async", useAsync);
-            span?.AddTag("bulk", useBulk);
-
             if (useAsync)
             {
                 if (!HasAsyncOutbox())
@@ -722,49 +729,54 @@ namespace Paramore.Brighter
         
         private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object> args = null)
         {
-            foreach (var message in posts)
+            var parentSpan = requestContext.Span;
+            var producerSpans = new Dictionary<string, Activity>();
+            try
             {
-                requestContext.Span?.AddEvent(
-                    new ActivityEvent(
-                        DISPATCHMESSAGE,
-                        tags: new ActivityTagsCollection
-                        {
-                            { "Topic", message.Header.Topic }, { "MessageId", message.Id }
-                        }
-                    )
-                );
-                
-                s_logger.LogInformation(
-                    "Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic,
-                    message.Id
-                );
-
-                var producer = _producerRegistry.LookupBy(message.Header.Topic);
-
-                if (producer is IAmAMessageProducerSync producerSync)
+                foreach (var message in posts)
                 {
-                    if (producer is ISupportPublishConfirmation)
+                    s_logger.LogInformation(
+                        "Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic,
+                        message.Id
+                    );
+
+                    var producer = _producerRegistry.LookupBy(message.Header.Topic);
+                    var span = _tracer.CreateProducerSpan(producer.Publication, message, requestContext.Span, _instrumentationOptions);
+                    producer.Span = span;
+                    producerSpans.Add(message.Id, span);
+
+                    if (producer is IAmAMessageProducerSync producerSync)
                     {
-                        //mark dispatch handled by a callback - set in constructor
-                        Retry(
-                            () => { producerSync.Send(message); },
-                            requestContext);
+                        if (producer is ISupportPublishConfirmation)
+                        {
+                            //mark dispatch handled by a callback - set in constructor
+                            Retry(
+                                () => { producerSync.Send(message); },
+                                requestContext);
+                        }
+                        else
+                        {
+                            var sent = Retry(
+                                () => { producerSync.Send(message); },
+                                requestContext
+                            );
+                            if (sent)
+                                Retry(
+                                    () => _outBox.MarkDispatched(message.Id, requestContext, DateTime.UtcNow, args),
+                                    requestContext
+                                );
+                        }
                     }
                     else
-                    {
-                        var sent = Retry(
-                            () => { producerSync.Send(message); },
-                            requestContext
-                            );
-                        if (sent)
-                            Retry(
-                                () => _outBox.MarkDispatched(message.Id, requestContext, DateTime.UtcNow, args),
-                                requestContext
-                                );
-                    }
+                        throw new InvalidOperationException("No sync message producer defined.");
+                    
+                    Activity.Current = parentSpan;
+                    producer.Span = null;
                 }
-                else
-                    throw new InvalidOperationException("No sync message producer defined.");
+            }
+            finally
+            {
+                _tracer.EndSpans(producerSpans);
             }
         }
         

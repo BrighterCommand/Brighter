@@ -34,7 +34,7 @@ public class BrighterSemanticConventionsEventTests
     public void When_Creating_A_Handler_Event_Add_Brighter_SemanticConventions()
     {
         //act
-        BrighterTracer.CreateHandlerEvent(_parentActivity, "MyCommandHandler", false, true);
+        BrighterTracer.WriteHandlerEvent(_parentActivity, "MyCommandHandler", false, true);
         
         _parentActivity.Stop();
         var flushed = _traceProvider.ForceFlush();

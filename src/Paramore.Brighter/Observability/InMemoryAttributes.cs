@@ -32,5 +32,4 @@ public class InMemoryAttributes
 {
     public const string DbName = "outbox";
     public const string DbTable = "requests";
-    public const string InternalBus = "internal-bus";
 }

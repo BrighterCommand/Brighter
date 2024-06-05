@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -62,10 +63,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public Publication Publication { get { return _publication; } }
        
         /// <summary>
-        /// The OTel tracer for this producer; we use this to add spans to the outgoing message
-        /// We inject the tracer because the Producer is called as part of an operation that already has a tracer
+        /// The OTel Span we are writing Producer events too
         /// </summary>
-        public BrighterTracer Tracer { get; set; }
+        public Activity Span { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.

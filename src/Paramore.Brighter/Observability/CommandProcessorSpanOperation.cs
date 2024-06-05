@@ -24,6 +24,9 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Observability;
 
+/// <summary>
+/// What is the Command Processor Operation that we are carrying out
+/// </summary>
 public enum CommandProcessorSpanOperation
 {
     Send = 0,       // Send a command

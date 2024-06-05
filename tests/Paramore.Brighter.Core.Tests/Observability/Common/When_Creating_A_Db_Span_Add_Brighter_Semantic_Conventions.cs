@@ -82,9 +82,9 @@ public class BrighterSemanticConventionsDbSpanTests
         childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);
         childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbUser && t.Value == "sa");
         childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerAddress && t.Value == "10.1.2.80");
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerPort && t.Value == "3306");
         childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerAddress && t.Value == "http://localhost:3306");
-        childActivity.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerPort && t.Value == "3306");
+        childActivity.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerPort && (int)t.Value == 3306);
+        childActivity.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerPort && (int)t.Value == 3306);
         
         //check via the exporter as well
         _exportedActivities.Count.Should().Be(2);
@@ -98,9 +98,9 @@ public class BrighterSemanticConventionsDbSpanTests
         childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbStatement && t.Value == DbStatement);
         childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.DbUser && t.Value == "sa");
         childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerAddress && t.Value == "10.1.2.80");
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerPort && t.Value == "3306");
         childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerAddress && t.Value == "http://localhost:3306");
-        childSpan.Tags.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerPort && t.Value == "3306");
+        childSpan.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.ServerPort && (int)t.Value == 3306);
+        childSpan.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.NetworkPeerPort && (int)t.Value == 3306);
         
     }
 }
