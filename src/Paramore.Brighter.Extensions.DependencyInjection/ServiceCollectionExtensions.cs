@@ -332,7 +332,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //again to prevent someone configuring Brighter from having to pass generic types
             var busType = typeof(ExternalBusService<,>).MakeGenericType(typeof(Message), transactionType);
 
-            return (IAmAnExternalBusService)Activator.CreateInstance(busType,
+            return (IAmAnExternalBusService)Activator.CreateInstance(
+                busType,
                 busConfiguration.ProducerRegistry,
                 policyRegistry,
                 MessageMapperRegistry(serviceProvider),
@@ -342,7 +343,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 outbox,
                 busConfiguration.ArchiveProvider,
                 RequestContextFactory(serviceProvider),
-                busConfiguration.OutboxBulkChunkSize,
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
                 busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
@@ -452,12 +452,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return provider.GetService<IAmARequestContextFactory>();
         }
         
-        private static object Tracer(IServiceProvider serviceProvider)
+        private static IAmABrighterTracer Tracer(IServiceProvider serviceProvider)
         {
             return serviceProvider.GetService<BrighterTracer>();
         }
 
-        /// <summary>
+        /// <summary>                                                            x
         /// Creates transforms. Normally you don't need to call this, it is called by the builder for Brighter or
         /// the Service Activator
         /// Visibility is required for use from both

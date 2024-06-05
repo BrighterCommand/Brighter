@@ -72,7 +72,8 @@ namespace Paramore.Brighter
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="archiveBatchSize">What batch size to use when archiving from the Outbox</param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
-        public ExternalBusService(IAmAProducerRegistry producerRegistry,
+        public ExternalBusService(
+            IAmAProducerRegistry producerRegistry,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,

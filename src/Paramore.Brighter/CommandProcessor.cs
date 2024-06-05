@@ -348,7 +348,7 @@ namespace Paramore.Brighter
                     }
                 }
                 
-                _tracer.LinkSpans(handlerSpans);
+                _tracer?.LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
                 {
@@ -421,7 +421,7 @@ namespace Paramore.Brighter
                     }
                 }
                 
-                _tracer.LinkSpans(handlerSpans);
+                _tracer?.LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
                     span?.SetStatus(ActivityStatusCode.Error);
