@@ -142,7 +142,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                EndSpan(span);
+                Tracer?.EndSpan(span);
             }
         }
 
@@ -340,7 +340,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-               EndSpan(span); 
+               Tracer?.EndSpan(span); 
             }
 
         }
@@ -463,13 +463,26 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
 
-            var now = _timeProvider.GetUtcNow();
-            var sentBefore = now.AddMilliseconds(-1 * millSecondsSinceSent);
-            var outstandingMessages = Requests.Values
-                .Where(oe => (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
-                .Take(pageSize)
-                .Select(oe => oe.Message).ToArray();
-            return outstandingMessages;
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.OutStandingMessages,
+                    InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions);
+
+            try
+            {
+                var now = _timeProvider.GetUtcNow();
+                var sentBefore = now.AddMilliseconds(-1 * millSecondsSinceSent);
+                var outstandingMessages = Requests.Values
+                    .Where(oe => (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
+                    .Take(pageSize)
+                    .Select(oe => oe.Message).ToArray();
+                return outstandingMessages;
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }
         }
 
         /// <summary>
@@ -497,13 +510,5 @@ namespace Paramore.Brighter
 
             return tcs.Task;
         }
-
-        private void EndSpan(Activity span)
-        {
-            if (span?.Status == ActivityStatusCode.Unset)
-                span.SetStatus(ActivityStatusCode.Ok);
-            span?.Dispose();
-        }
-
     }
 }

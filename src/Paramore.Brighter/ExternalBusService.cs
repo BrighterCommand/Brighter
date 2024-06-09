@@ -41,7 +41,6 @@ namespace Paramore.Brighter
         private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
 
         private const string BULKDISPATCHMESSAGE = "Bulk dispatching messages";
-        private const string DISPATCHMESSAGE = "Dispatching message";
         private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the Outbox";
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
@@ -532,24 +531,27 @@ namespace Paramore.Brighter
             if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
+                
+                var parentSpan = requestContext.Span;
+                var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
+
                 try
                 {
-                    var messages = _outBox.OutstandingMessages(
-                        millisecondsSinceSent, requestContext, amountToClear, args: args
-                    ).ToArray();
+                    requestContext.Span = span;
                     
-                    requestContext.Span?.AddEvent(
-                        new ActivityEvent(
-                            GETMESSAGESFROMOUTBOX,
-                            tags: new ActivityTagsCollection { { "Outstanding Messages", messages.Count() } })
-                    );
+                    var messages = _outBox.OutstandingMessages(millisecondsSinceSent, 
+                        requestContext, amountToClear, args: args
+                    ).ToArray();
+
+                    requestContext.Span = parentSpan;
                     
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
                     
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, false, _instrumentationOptions);
+                    
                     Dispatch(messages, requestContext, args);
                     
-                    requestContext.Span?.SetStatus(ActivityStatusCode.Ok);
                     s_logger.LogInformation("Messages have been cleared");
                 }
                 catch (Exception e)
@@ -559,6 +561,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
+                    _tracer.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -585,6 +588,9 @@ namespace Paramore.Brighter
                 await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
+                    var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
+                    requestContext.Span = span;
+                    
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(milliSecondsSinceSent, requestContext, 
                             pageSize: amountToClear, args: args)).ToArray();

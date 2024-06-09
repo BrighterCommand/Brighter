@@ -49,8 +49,12 @@ public static class BrighterSpanExtensions
    /// </summary>   
    public static string ToSpanName(this OutboxDbOperation span) => span switch
    {
-       OutboxDbOperation.Add => "add",
-       OutboxDbOperation.Get => "get",
+       OutboxDbOperation.Add => "add.message",
+       OutboxDbOperation.Delete => "delete.message",
+       OutboxDbOperation.DispatchedMessages => "retrieve.dispatched_messages",
+       OutboxDbOperation.Get => "retrieve.message",
+       OutboxDbOperation.MarkDispatched => "mark_as_dispatched.outstanding_messages",
+       OutboxDbOperation.OutStandingMessages => "retrieve.outstanding_messages",
        _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
    };
 }

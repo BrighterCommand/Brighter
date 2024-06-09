@@ -390,6 +390,32 @@ public class BrighterTracer : IAmABrighterTracer
         span.AddEvent(new ActivityEvent(operation.ToSpanName(), DateTimeOffset.UtcNow, tags));
  
     }
+    
+    /// <summary>
+    /// Create an event representing the external service bus calling the outbox
+    /// This is generic and not specific details from a particular outbox and is thus mostly message properties
+    /// This is a batch version of <see cref="WriteOutbox"/>
+    /// NOTE: Events are static, as we only need the instance state to create an activity
+    /// </summary>
+    /// <param name="operation">What <see cref="OutboxDbOperation"/> are we performing on the group of messages</param>
+    /// <param name="messages">The set of <see cref="Message"/>s we want to record the event for</param>
+    /// <param name="span">The <see cref="Activity"/> we are adding the <see cref="ActivityEvent"/> to</param>
+    /// <param name="isSharedTransaction">Are we using a shared transaction with the application to write to the Outbox</param>
+    /// <param name="isAsync">Is this an async operation</param>
+    /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
+    public static void WriteOutboxEvent(
+        OutboxDbOperation operation, 
+        IEnumerable<Message> messages, 
+        Activity span, 
+        bool isSharedTransaction, 
+        bool isAsync, 
+        InstrumentationOptions instrumentationOptions)
+    {
+        if (span == null) return;
+        
+        foreach (var message in messages)
+            WriteOutboxEvent(operation, message, span, isSharedTransaction, isAsync, instrumentationOptions); 
+    }
 
     /// <summary>
     /// Writes a producer event to the current span
@@ -475,4 +501,6 @@ public class BrighterTracer : IAmABrighterTracer
             }
         }
     }
+
+
 }

@@ -25,12 +25,14 @@ THE SOFTWARE. */
 namespace Paramore.Brighter.Observability;
 
 /// <summary>
-/// The operation being peformed on the outbox
+/// The operation being performed on the outbox
 /// </summary>
 public enum OutboxDbOperation
 {
-    Add = 0,       //Add a message to the outbox
-    Get
+    Add = 0,                //Add a message to the outbox
+    Delete,                 //Delete a message from the outbox
+    DispatchedMessages,     //Retrieve a set of messages marked as dispatched 
+    Get,                    //Get a message from the outbox by id
+    MarkDispatched,         //Mark one or more messages as dispatched
+    OutStandingMessages     //Retrieve a set of messages that are still outstanding 
 }
-
-//The Db system being used by an Outbox or Inbox

@@ -1,0 +1,178 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using System.Transactions;
+using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
+using OpenTelemetry;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Paramore.Brighter.Core.Tests.CommandProcessors.Post;
+using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
+using Polly;
+using Polly.Registry;
+using Xunit;
+
+namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
+
+public class CommandProcessorBulkClearObservabilityTests 
+{
+    private readonly List<Activity> _exportedActivities;
+    private readonly TracerProvider _traceProvider;
+    private readonly Brighter.CommandProcessor _commandProcessor;
+    private readonly InMemoryOutbox _outbox;
+    private readonly string _topic;
+    private readonly InMemoryProducer _producer;
+    private InternalBus _internalBus = new InternalBus();
+
+    public CommandProcessorBulkClearObservabilityTests()
+    {
+        _topic = "MyEvent";
+        
+        var builder = Sdk.CreateTracerProviderBuilder();
+        _exportedActivities = new List<Activity>();
+
+        _traceProvider = builder
+            .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
+            .ConfigureResource(r => r.AddService("in-memory-tracer"))
+            .AddInMemoryExporter(_exportedActivities)
+            .Build();
+        
+        Brighter.CommandProcessor.ClearServiceBus();
+        
+        var registry = new SubscriberRegistry();
+
+        var handlerFactory = new PostCommandTests.EmptyHandlerFactorySync(); 
+        
+        var retryPolicy = Policy
+            .Handle<Exception>()
+            .Retry();
+        
+        var policyRegistry = new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}};
+
+        var timeProvider  = new FakeTimeProvider();
+        var tracer = new BrighterTracer(timeProvider);
+        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
+        
+        var messageMapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+            null);
+        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+
+        _producer = new InMemoryProducer(_internalBus, timeProvider)
+        {
+            Publication =
+            {
+                Source = new Uri("http://localhost"),
+                RequestType = typeof(MyEvent),
+                Topic = new RoutingKey(_topic),
+                Type = nameof(MyCommand),
+            }
+        };
+
+        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+        {
+            {_topic, _producer}
+        });
+        
+        IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+            producerRegistry, 
+            policyRegistry, 
+            messageMapperRegistry, 
+            new EmptyMessageTransformerFactory(), 
+            new EmptyMessageTransformerFactoryAsync(),
+            tracer,
+            _outbox,
+            maxOutStandingMessages: -1
+        );
+        
+        _commandProcessor = new Brighter.CommandProcessor(
+            registry, 
+            handlerFactory, 
+            new InMemoryRequestContextFactory(),
+            policyRegistry, 
+            bus,
+            tracer: tracer, 
+            instrumentationOptions: InstrumentationOptions.All
+        );
+    }
+    
+    [Fact]
+    public async Task When_Clearing_A_Message_A_Span_Is_Exported()
+    {
+        //arrange
+        var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
+        
+        var eventOne = new MyEvent();
+        var eventTwo = new MyEvent();
+        var eventThree = new MyEvent();
+
+        var context = new RequestContext { Span = parentActivity };
+
+        //act
+        var messageIds = _commandProcessor.DepositPost(new[]{eventOne, eventTwo, eventThree}, context);
+        
+        //reset the parent span as deposit and clear are siblings
+        
+        context.Span = parentActivity;
+        _commandProcessor.ClearOutbox(3, 0, context);
+
+        await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
+        
+        parentActivity?.Stop();
+        
+        _traceProvider.ForceFlush();
+        
+        //assert 
+        //_exportedActivities.Count.Should().Be(18);
+        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        
+        //there should be a create span for the batch
+        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
+        createActivity.Should().NotBeNull();
+        
+        //there should be a clear span for the batch of messages
+        var clearActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
+        
+        //retrieving the messages should be an event
+        var events = clearActivity.Events.ToList();
+        var messages = _internalBus.Stream(new RoutingKey(_topic)).ToArray();
+        
+        var depositEvents = events.Where(e => e.Name == OutboxDbOperation.OutStandingMessages.ToSpanName()).ToArray();
+        depositEvents.Length.Should().Be(messages.Length);
+        
+        foreach (var message in messages)
+        {
+            var depositEvent = depositEvents.Single(e => e.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id));
+            depositEvent.Tags.Any(a => a.Value != null && a.Key == BrighterSemanticConventions.OutboxSharedTransaction && (bool)a.Value == false).Should().BeTrue();
+            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "sync" ).Should().BeTrue();
+            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id ).Should().BeTrue();
+            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic).Should().BeTrue();
+            depositEvent.Tags.Any(a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length).Should().BeTrue();
+            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value.ToString()).Should().BeTrue();
+            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString()).Should().BeTrue();
+            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)a.Value == message.Header.PartitionKey).Should().BeTrue();
+            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageHeaders && (string)a.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();
+        }
+
+        //there should be a span in the Db for retrieving the message
+        var outBoxActivity = _exportedActivities
+            .Single(a =>
+                a.DisplayName == $"{OutboxDbOperation.OutStandingMessages.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}"
+            );
+        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.OutStandingMessages.ToSpanName()).Should().BeTrue();
+        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable).Should().BeTrue();
+        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()).Should().BeTrue();
+        outBoxActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName).Should().BeTrue();
+
+        //there should be a span for publishing the message via the producer
+        var producerActivity = _exportedActivities
+            .Where(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}")
+            .ToArray();
+        producerActivity.Length.Should().Be(3);     //just check number, other tests check attributes
+    }
+}
