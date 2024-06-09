@@ -47,11 +47,7 @@ namespace Paramore.Brighter.Core.Tests.Logging
 
             commandProcessor.Send(myCommand);
 
-            //_should_log_the_request_handler_call
-            //_should_log_the_type_of_handler_in_the_call
-
-            //TestCorrelator.GetLogEventsFromCurrentContext().Should().HaveCount(3);
-            TestCorrelator.GetLogEventsFromContextGuid(context.Guid)
+            TestCorrelator.GetLogEventsFromContextId(context.Id)
                 .Should().Contain(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"))
                 .Which.Properties["1"].ToString().Should().Be($"\"{typeof(MyCommand)}\"");
         }
