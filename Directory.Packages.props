@@ -75,7 +75,7 @@
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="5.0.1" />
-    <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="3.2.0" />
+    <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.2.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
