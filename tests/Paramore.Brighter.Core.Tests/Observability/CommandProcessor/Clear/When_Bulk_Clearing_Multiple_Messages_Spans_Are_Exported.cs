@@ -24,10 +24,8 @@ public class CommandProcessorBulkClearObservabilityTests
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
-    private readonly InMemoryOutbox _outbox;
     private readonly string _topic;
-    private readonly InMemoryProducer _producer;
-    private InternalBus _internalBus = new InternalBus();
+    private readonly InternalBus _internalBus = new();
 
     public CommandProcessorBulkClearObservabilityTests()
     {
@@ -56,27 +54,27 @@ public class CommandProcessorBulkClearObservabilityTests
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
-        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
+        InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        _producer = new InMemoryProducer(_internalBus, timeProvider)
+        InMemoryProducer producer = new(_internalBus, timeProvider)
         {
             Publication =
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = new RoutingKey(_topic),
-                Type = nameof(MyCommand),
+                Type = nameof(MyEvent),
             }
         };
 
         var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
-            {_topic, _producer}
+            {_topic, producer}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -86,7 +84,7 @@ public class CommandProcessorBulkClearObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
-            _outbox,
+            outbox,
             maxOutStandingMessages: -1
         );
         
@@ -119,7 +117,7 @@ public class CommandProcessorBulkClearObservabilityTests
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutbox(3, 0, context);
+        _commandProcessor.ClearOutboxRange(3, 0, false, context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         

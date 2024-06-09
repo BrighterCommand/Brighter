@@ -70,18 +70,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="amountToClear">Maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
-        /// <param name="useAsync">Use the Async outbox and Producer</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        void ClearOutbox(
-            int amountToClear,
+        void ClearOutboxRange(int amountToClear,
             int minimumAge,
-            bool useAsync,
             bool useBulk,
             RequestContext requestContext,
-            Dictionary<string, object> args = null
-        );
+            Dictionary<string, object> args = null);
 
         /// <summary>
         /// Given a request, run the transformation pipeline to create a message

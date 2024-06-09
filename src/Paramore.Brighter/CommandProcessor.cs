@@ -448,7 +448,7 @@ namespace Paramore.Brighter
         /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}"/> or a
         /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}"/>
         /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use Deposit,
-        /// and then after you have committed your transaction use ClearOutbox
+        /// and then after you have committed your transaction use ClearOutboxRange
         /// </summary>
         /// <param name="request">The request.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
@@ -873,35 +873,6 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Flushes any outstanding message box message to the broker.
-        /// This will be run on a background task.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPost{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/>
-        /// </summary>
-        /// <param name="amountToClear">The maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
-         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>       
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearOutbox(
-            int amountToClear = 100, 
-            int minimumAge = 5000, 
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null
-            )
-        {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
-            var context = InitRequestContext(span, requestContext);
-
-            try
-            {
-                s_bus.ClearOutbox(amountToClear, minimumAge, false, false, context, args);
-            }
-            finally
-            {
-                _tracer?.EndSpan(span);
-            }
-        }
-
-        /// <summary>
         /// Flushes the message box message given by <param name="posts"/> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostAsync{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object},bool,System.Threading.CancellationToken)"/>
         /// </summary>
@@ -940,7 +911,7 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearAsyncOutbox(
+        public void ClearOutboxRange(
             int amountToClear = 100,
             int minimumAge = 5000,
             bool useBulk = false,
@@ -953,7 +924,7 @@ namespace Paramore.Brighter
 
             try
             {
-                s_bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, context, args);
+                s_bus.ClearOutboxRange(amountToClear, minimumAge, useBulk, context, args);
             }
             finally
             {

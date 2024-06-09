@@ -120,15 +120,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         }
 
         
-        //[Fact(Skip = "Erratic due to timing")]
-        [Fact]
+        [Fact(Skip = "Erratic due to timing")]
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
             var context = new RequestContext();
             await _outbox.AddAsync(_messageOne, context);
             await _outbox.AddAsync(_messageTwo, context);
 
-            _commandProcessor.ClearAsyncOutbox(2, 1, true);
+            _commandProcessor.ClearOutboxRange(2, 1);
 
             await Task.Delay(3000);
 

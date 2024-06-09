@@ -257,25 +257,30 @@ public class BrighterTracer : IAmABrighterTracer
         var tags = new ActivityTagsCollection
         {
             //OTel specification attributes
-            {
-                BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName()
-            },
-            { BrighterSemanticConventions.MessageId, message.Id },
-            { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
-            { BrighterSemanticConventions.MessagingDestination, publication.Topic },
-            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
-            { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) },
-            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
+            { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
             
             //cloud events attributes
-            { BrighterSemanticConventions.CeMessageId, message.Id },
             { BrighterSemanticConventions.CeSource, publication.Source },
             { BrighterSemanticConventions.CeVersion, "1.0" },
             { BrighterSemanticConventions.CeSubject, publication.Subject },
             { BrighterSemanticConventions.CeType, publication.Type }
         };
+
+        if (message != null)
+        {
+            //OTel specification attributes
+            tags.Add(BrighterSemanticConventions.MessageId, message.Id);
+            tags.Add(BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString());
+            tags.Add(BrighterSemanticConventions.MessagingDestination, publication.Topic);
+            tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey);
+            tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
+            tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
+            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header));
+            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId); 
+            
+            //cloud events attributes
+            tags.Add(BrighterSemanticConventions.CeMessageId, message.Id);
+        }
 
         var activity = ActivitySource.StartActivity(
             name: spanName,

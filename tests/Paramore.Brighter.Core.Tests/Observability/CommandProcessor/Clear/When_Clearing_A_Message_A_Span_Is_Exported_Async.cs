@@ -71,7 +71,7 @@ public class AsyncCommandProcessorClearObservabilityTests
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = new RoutingKey(_topic),
-                Type = nameof(MyCommand),
+                Type = nameof(MyEvent),
             }
         };
 

@@ -41,7 +41,6 @@ namespace Paramore.Brighter
         private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
 
         private const string BULKDISPATCHMESSAGE = "Bulk dispatching messages";
-        private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the Outbox";
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
 
@@ -410,33 +409,31 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="amountToClear">Maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
-        /// <param name="useAsync">Use the Async outbox and Producer</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
-        /// <param name="requestContext">The request context for the pipeline</param>  
+        /// <param name="requestContext">The request context for the pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearOutbox(
-            int amountToClear,
+        public void ClearOutboxRange(int amountToClear,
             int minimumAge,
-            bool useAsync,
             bool useBulk,
             RequestContext requestContext,
-            Dictionary<string, object> args = null
-        )
+            Dictionary<string, object> args = null)
         {
-            if (useAsync)
+            if (HasAsyncOutbox())
             {
-                if (!HasAsyncOutbox())
-                    throw new InvalidOperationException("No async outbox defined.");
-
-                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
-                    CancellationToken.None);
+                Task.Run(() => 
+                        BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
+                        CancellationToken.None
+                );
+            }
+            else if (HasOutbox())
+            {
+                Task.Run(() => 
+                    BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args)
+                );
             }
             else
             {
-                if (!HasOutbox())
-                    throw new InvalidOperationException("No outbox defined.");
-
-                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args));
+                throw new InvalidOperationException("No outbox defined."); 
             }
         }
 
@@ -586,16 +583,20 @@ namespace Paramore.Brighter
             if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
-                try
+                
+                var parentSpan = requestContext.Span;
+                var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
+                 try
                 {
-                    var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
-                    requestContext.Span = span;
+                   requestContext.Span = span;
                     
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(milliSecondsSinceSent, requestContext, 
                             pageSize: amountToClear, args: args)).ToArray();
                     
-                    requestContext.Span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, true, _instrumentationOptions);
+                    
+                    requestContext.Span = parentSpan;
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
@@ -609,7 +610,6 @@ namespace Paramore.Brighter
                         await DispatchAsync(messages, requestContext,false, CancellationToken.None);
                     }
 
-                    requestContext.Span?.SetStatus(ActivityStatusCode.Ok);
                     s_logger.LogInformation("Messages have been cleared");
                 }
                 catch (Exception e)
@@ -619,6 +619,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
+                    _tracer.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -799,51 +800,56 @@ namespace Paramore.Brighter
         
         private async Task BulkDispatchAsync(IEnumerable<Message> posts, RequestContext requestContext, CancellationToken cancellationToken)
         {
+            var parentSpan = requestContext.Span;
+            var producerSpans = new Dictionary<string, Activity>();
+            
             //Chunk into Topics
-            var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
-
-            foreach (var topicBatch in messagesByTopic)
+            try
             {
-                var producer = _producerRegistry.LookupBy(topicBatch.Key);
+                var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
 
-                if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
+                foreach (var topicBatch in messagesByTopic)
                 {
-                    var messages = topicBatch.ToArray();
-                    
-                    s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}",
-                        messages.Length, topicBatch.Key
-                    );
-                    
-                    requestContext.Span?.AddEvent(
-                        new ActivityEvent(
-                            BULKDISPATCHMESSAGE,
-                            tags: new ActivityTagsCollection
-                            {
-                                { "Topic", topicBatch.Key }, { "Number Of Messages", messages.Length }
-                            }
-                        )
-                    );
-                    
-                    var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
+                    var producer = _producerRegistry.LookupBy(topicBatch.Key);
+                    var span = _tracer.CreateProducerSpan(producer.Publication, null, requestContext.Span, _instrumentationOptions);
+                    producer.Span = span;
+                    producerSpans.Add(topicBatch.Key, span);
 
-                    await foreach (var successfulMessage in dispatchesMessages)
+                    if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
                     {
-                        if (!(producer is ISupportPublishConfirmation))
+                        var messages = topicBatch.ToArray();
+                    
+                        s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}",
+                            messages.Length, topicBatch.Key
+                        );
+                    
+                    
+                        var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
+
+                        await foreach (var successfulMessage in dispatchesMessages)
                         {
-                            await RetryAsync(async _ => 
-                                    await _asyncOutbox.MarkDispatchedAsync(
-                                        successfulMessage, requestContext, DateTime.UtcNow, cancellationToken: cancellationToken
-                                    ),
-                                requestContext,
-                                cancellationToken: cancellationToken
-                            );
+                            if (!(producer is ISupportPublishConfirmation))
+                            {
+                                await RetryAsync(async _ => 
+                                        await _asyncOutbox.MarkDispatchedAsync(
+                                            successfulMessage, requestContext, DateTime.UtcNow, cancellationToken: cancellationToken
+                                        ),
+                                    requestContext,
+                                    cancellationToken: cancellationToken
+                                );
+                            }
                         }
                     }
+                    else
+                    {
+                        throw new InvalidOperationException("No async bulk message producer defined.");
+                    }
                 }
-                else
-                {
-                    throw new InvalidOperationException("No async bulk message producer defined.");
-                }
+            }
+            finally
+            {
+                _tracer.EndSpans(producerSpans);
+                requestContext.Span = parentSpan;
             }
         }
         
@@ -866,7 +872,7 @@ namespace Paramore.Brighter
                     ); 
                 
                     var producer = _producerRegistry.LookupBy(message.Header.Topic);
-                    var span = _tracer.CreateProducerSpan(producer.Publication, message, requestContext.Span, _instrumentationOptions);
+                    var span = _tracer.CreateProducerSpan(producer.Publication, message, parentSpan, _instrumentationOptions);
                     producer.Span = span;
                     producerSpans.Add(message.Id, span);
 
@@ -911,6 +917,7 @@ namespace Paramore.Brighter
             finally
             {
                 _tracer.EndSpans(producerSpans); 
+                requestContext.Span = parentSpan;
             }
         }
         

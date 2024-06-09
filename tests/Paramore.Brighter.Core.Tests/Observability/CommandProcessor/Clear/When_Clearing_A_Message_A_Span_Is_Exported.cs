@@ -70,7 +70,7 @@ public class CommandProcessorClearObservabilityTests
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
                 Topic = new RoutingKey(_topic),
-                Type = nameof(MyCommand),
+                Type = nameof(MyEvent),
             }
         };
 
@@ -200,5 +200,7 @@ public class CommandProcessorClearObservabilityTests
         produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeVersion && (string)t.Value == "1.0").Should().BeTrue();
         produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeSubject && (string)t.Value == _producer.Publication.Subject).Should().BeTrue();
         produceEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.CeType && (string)t.Value == _producer.Publication.Type).Should().BeTrue();
+        
+        //TODO: There should be  a span event to mark as dispatched
     }
 }
