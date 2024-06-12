@@ -155,7 +155,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
+            _administrationClient.DeleteChannelAsync(_topicName, false).GetAwaiter().GetResult();
             _channel?.Dispose();
             _producerRegistry?.Dispose();
         }
