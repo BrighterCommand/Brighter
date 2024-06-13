@@ -6,17 +6,10 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Storage.Azure;
 
-public class AzureBlobArchiveProvider : IAmAnArchiveProvider
+public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) : IAmAnArchiveProvider
 {
-    private readonly BlobContainerClient _containerClient;
-    private readonly AzureBlobArchiveProviderOptions _options;
+    private readonly BlobContainerClient _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
     private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobArchiveProvider>();
-
-    public AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options)
-    {
-        _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
-        _options = options;
-    }
 
     /// <summary>
     /// Send a Message to the archive provider
@@ -96,7 +89,7 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
 
     private BlobClient GetBlobClient(Message message)
     {
-        var storageLocation = _options.StorageLocationFunc.Invoke(message);
+        var storageLocation = options.StorageLocationFunc.Invoke(message);
         _logger.LogDebug("Uploading Message with Id {MessageId} to {ArchiveLocation}", message.Id, storageLocation);
         return _containerClient.GetBlobClient(storageLocation);
     }
@@ -105,20 +98,20 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
     {
         var opts = new BlobUploadOptions()
         {
-            AccessTier = _options.AccessTier,
+            AccessTier = options.AccessTier,
             TransferOptions = new StorageTransferOptions
             {
                 // Set the maximum number of workers that 
                 // may be used in a parallel transfer.
-                MaximumConcurrency = _options.MaxConcurrentUploads,
+                MaximumConcurrency = options.MaxConcurrentUploads,
 
                 // Set the maximum length of a transfer to 50MB.
-                MaximumTransferSize = _options.MaxUploadSize * 1024 * 1024
+                MaximumTransferSize = options.MaxUploadSize * 1024 * 1024
             }
         };
 
-        if (_options.TagBlobs)
-            opts.Tags = _options.TagsFunc.Invoke(message);
+        if (options.TagBlobs)
+            opts.Tags = options.TagsFunc.Invoke(message);
 
         return opts;
     }
