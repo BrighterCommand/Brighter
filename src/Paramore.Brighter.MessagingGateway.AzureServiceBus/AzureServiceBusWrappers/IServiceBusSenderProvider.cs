@@ -8,8 +8,8 @@
         /// <summary>
         /// Get a ServiceBusSenderWrapper for a Topic.
         /// </summary>
-        /// <param name="topic">The name of the Topic.</param>
+        /// <param name="topicOrQueueName">The name of the Topic.</param>
         /// <returns>A ServiceBusSenderWrapper for the given Topic.</returns>
-        IServiceBusSenderWrapper Get(string topic);
+        IServiceBusSenderWrapper Get(string topicOrQueueName);
     }
 }

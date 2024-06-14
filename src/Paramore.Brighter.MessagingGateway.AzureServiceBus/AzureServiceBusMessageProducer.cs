@@ -262,7 +262,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
-                if (_administrationClientWrapper.TopicExists(topic))
+                if (_administrationClientWrapper.TopicOrQueueExists(topic, _publication.UseServiceBusQueue))
                 {
                     _topicCreated = true;
                     return;
@@ -272,8 +272,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 {
                     throw new ChannelFailureException($"Topic {topic} does not exist and missing channel mode set to Validate.");
                 }
-
-                _administrationClientWrapper.CreateTopic(topic);
+                
+                _administrationClientWrapper.CreateChannel(topic, _publication.UseServiceBusQueue);
                 _topicCreated = true;
             }
             catch (Exception e)
