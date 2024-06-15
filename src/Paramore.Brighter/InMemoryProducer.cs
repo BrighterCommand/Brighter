@@ -92,6 +92,7 @@ namespace Paramore.Brighter
             var msgs = messages as Message[] ?? messages.ToArray();
             foreach (var msg in msgs)
             {
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg, true);
                 bus.Enqueue(msg);
                 OnMessagePublished?.Invoke(true, msg.Id); 
                 yield return new[] { msg.Id };

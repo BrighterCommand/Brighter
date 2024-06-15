@@ -19,6 +19,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.CommandProcessor.Clear;
 
+[Collection("Observability")]
 public class AsyncCommandProcessorClearObservabilityTests 
 {
     private readonly List<Activity> _exportedActivities;
