@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Transactions;
 using FakeItEasy;
 using FluentAssertions;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
@@ -28,7 +29,8 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _sender = _senderFactory.Create<Message, CommittableTransaction>(
                 _fakeOutbox, 
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", _fakeGateway},}));
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", _fakeGateway},}),
+                tracer: new BrighterTracer());
 
             //_should_create_a_control_bus_sender
             _sender.Should().NotBeNull();

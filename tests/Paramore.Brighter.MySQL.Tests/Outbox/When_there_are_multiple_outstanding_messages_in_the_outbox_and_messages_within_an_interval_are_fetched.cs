@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -13,35 +13,34 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutbox _mySqlOutbox;
-        private readonly string _TopicFirstMessage = "test_topic";
-        private readonly string _TopicLastMessage = "test_topic3";
-        private readonly Message _message1;
-        private readonly Message _message2;
-        private readonly Message _messageEarliest;
+        private readonly string _topicFirstMessage = "test_topic";
+        private readonly string _topicLastMessage = "test_topic3";
+        private readonly RequestContext _context;
 
         public MySqlOutboxFetchOutstandingMessageTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
+            _context = new RequestContext();
 
-            _messageEarliest = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _TopicFirstMessage, MessageType.MT_DOCUMENT), 
+            Message messageEarliest = new(
+                new MessageHeader(Guid.NewGuid().ToString(), _topicFirstMessage, MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
-            _message1 = new Message(
+            Message message1 = new(
                 new MessageHeader(Guid.NewGuid().ToString(), "test_topic2", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body2")
             );
-            _message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _TopicLastMessage, MessageType.MT_DOCUMENT), 
+            Message message2 = new(
+                new MessageHeader(Guid.NewGuid().ToString(), _topicLastMessage, MessageType.MT_DOCUMENT), 
                 new MessageBody("message body3")
             );
-            _mySqlOutbox.Add(_messageEarliest);
+            _mySqlOutbox.Add(messageEarliest, _context);
             Thread.Sleep(100);
-            _mySqlOutbox.Add(_message1);
+            _mySqlOutbox.Add(message1, _context);
             Thread.Sleep(100);
-            _mySqlOutbox.Add(_message2);
+            _mySqlOutbox.Add(message2, _context);
 
             // Not sure why (assuming time skew) but needs time to settle
             Thread.Sleep(7000);
@@ -50,21 +49,22 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public void When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched()
         {
-            var messages = _mySqlOutbox.OutstandingMessages(millSecondsSinceSent: 0);
+            var messages = _mySqlOutbox.OutstandingMessages(millSecondsSinceSent: 0, _context);
 
-            messages.Should().NotBeNullOrEmpty();
+            var msgs = messages as Message[] ?? messages.ToArray();
+            msgs.Should().NotBeNullOrEmpty();
 
-            messages.Should().HaveCount(3);
+            msgs.Should().HaveCount(3);
         }
         
         [Fact]
         public async Task When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched_async()
         {
-            var messages = await _mySqlOutbox.OutstandingMessagesAsync(millSecondsSinceSent: 0);
+            var messages = await _mySqlOutbox.OutstandingMessagesAsync(millSecondsSinceSent: 0, _context);
 
-            messages.Should().NotBeNullOrEmpty();
-
-            messages.Should().HaveCount(3);
+            var msgs = messages as Message[] ?? messages.ToArray();
+            msgs.Should().NotBeNullOrEmpty();
+            msgs.Should().HaveCount(3);
         }
 
         public void Dispose()

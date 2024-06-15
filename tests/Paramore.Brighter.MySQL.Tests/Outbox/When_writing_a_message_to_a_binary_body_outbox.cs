@@ -48,13 +48,13 @@ namespace Paramore.Brighter.MySQL.Tests
                 messageHeader, 
                 new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, "application/octet-stream", CharacterEncoding.Raw )
                 );
-            _mySqlOutbox.Add(_messageEarliest);
+            _mySqlOutbox.Add(_messageEarliest, new RequestContext());
         }
 
         [Fact]
         public void When_writing_a_message_to_a_binary_body_outbox()
         {
-            _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id);
+            _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id, new RequestContext());
 
             //should read the message from the sql outbox
             _storedMessage.Body.Bytes.Should().Equal(_messageEarliest.Body.Bytes);

@@ -48,13 +48,13 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
                 new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
-            _mySqlOutbox.Add(_messageEarliest);
+            _mySqlOutbox.Add(_messageEarliest, new RequestContext());
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Outbox()
         {
-            _exception = Catch.Exception(() => _mySqlOutbox.Add(_messageEarliest));
+            _exception = Catch.Exception(() => _mySqlOutbox.Add(_messageEarliest, new RequestContext()));
             _exception.Should().BeNull();
         }
 

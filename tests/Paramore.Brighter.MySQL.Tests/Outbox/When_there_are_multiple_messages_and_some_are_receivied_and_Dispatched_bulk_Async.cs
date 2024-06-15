@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -14,17 +13,18 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly string _Topic1 = "test_topic";
         private readonly string _Topic2 = "test_topic3";
-        private IEnumerable<Message> _messages;
         private readonly Message _message1;
         private readonly Message _message2;
         private readonly Message _message3;
         private readonly Message _message;
         private readonly MySqlOutbox _sqlOutbox;
+        private readonly RequestContext _context;
 
         public MySqlOutboxBulkAsyncTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
+            _context = new RequestContext();
 
             _sqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
             _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic1, MessageType.MT_COMMAND),
@@ -40,20 +40,20 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_there_are_multiple_messages_and_some_are_recievied_and_Dispatched_bulk_Async()
         {
-            await _sqlOutbox.AddAsync(_message);
+            await _sqlOutbox.AddAsync(_message, _context);
             await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message1);
+            await _sqlOutbox.AddAsync(_message1, _context);
             await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message2);
+            await _sqlOutbox.AddAsync(_message2, _context);
             await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message3);
+            await _sqlOutbox.AddAsync(_message3, _context);
             await Task.Delay(100);
 
-            await _sqlOutbox.MarkDispatchedAsync(new []{_message1.Id, _message2.Id}, DateTime.UtcNow);
+            await _sqlOutbox.MarkDispatchedAsync(new []{_message1.Id, _message2.Id}, _context, DateTime.UtcNow);
 
             await Task.Delay(TimeSpan.FromSeconds(5));
 
-            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0);
+            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0, _context);
 
             undispatchedMessages.Count().Should().Be(2);
         }

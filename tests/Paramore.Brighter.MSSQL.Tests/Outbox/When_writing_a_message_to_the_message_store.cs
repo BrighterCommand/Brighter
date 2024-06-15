@@ -77,7 +77,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         public void When_Writing_A_Message_To_The_MSSQL_Outbox()
         {
             _message = new Message(_messageHeader, new MessageBody("message body"));
-            _sqlOutbox.Add(_message);
+            _sqlOutbox.Add(_message, new RequestContext());
 
             AssertMessage();
         }
@@ -86,14 +86,14 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         public void When_Writing_A_Message_With_a_Null_To_The_MSSQL_Outbox()
         {
             _message = new Message(_messageHeader, new MessageBody((byte[])null));
-            _sqlOutbox.Add(_message);
+            _sqlOutbox.Add(_message, new RequestContext());
 
             AssertMessage();
         }
 
         private void AssertMessage()
         {
-            _storedMessage = _sqlOutbox.Get(_message.Id);
+            _storedMessage = _sqlOutbox.Get(_message.Id, new RequestContext());
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);

@@ -32,6 +32,7 @@ using Paramore.Brighter.Logging;
 using System.Text.Json;
 using System.Transactions;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -62,6 +63,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = new BrighterOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
+            services.TryAddSingleton<IAmABrighterTracer>(new BrighterTracer());
 
             return BrighterHandlerBuilder(services, options);
         }
@@ -223,12 +225,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
            
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnExternalBusService),
                (serviceProvider) => BuildExternalBus(
-                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox, busConfiguration.ArchiveProvider
+                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
                    ),
                ServiceLifetime.Singleton));
 
             return brighterBuilder;
         }
+        
         
         private static INeedARequestContext AddEventBus(
             IServiceProvider provider,
@@ -301,7 +304,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (featureSwitchRegistry != null)
                 needHandlers = needHandlers.ConfigureFeatureSwitches(featureSwitchRegistry);
-
+            
             var policyBuilder = needHandlers.Handlers(handlerConfiguration);
 
             var messagingBuilder = options.PolicyRegistry == null
@@ -323,26 +326,29 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             Type transactionType,
             ExternalBusConfiguration busConfiguration,
             IPolicyRegistry<string> policyRegistry,
-            IAmAnOutbox outbox, IAmAnArchiveProvider archiver = null) 
+            IAmAnOutbox outbox) 
         {
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
             var busType = typeof(ExternalBusService<,>).MakeGenericType(typeof(Message), transactionType);
 
-            return (IAmAnExternalBusService)Activator.CreateInstance(busType,
+            return (IAmAnExternalBusService)Activator.CreateInstance(
+                busType,
                 busConfiguration.ProducerRegistry,
                 policyRegistry,
                 MessageMapperRegistry(serviceProvider),
                 TransformFactory(serviceProvider),
                 TransformFactoryAsync(serviceProvider),
+                Tracer(serviceProvider),
                 outbox,
-                archiver,
-                busConfiguration.OutboxBulkChunkSize,
+                busConfiguration.ArchiveProvider,
+                RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
                 busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
                 busConfiguration.OutBoxBag,
-                busConfiguration.ArchiveBatchSize);
+                busConfiguration.ArchiveBatchSize,
+                busConfiguration.InstrumentationOptions);
         }
 
         /// <summary>
@@ -445,8 +451,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             return provider.GetService<IAmARequestContextFactory>();
         }
+        
+        private static IAmABrighterTracer Tracer(IServiceProvider serviceProvider)
+        {
+            return serviceProvider.GetService<BrighterTracer>();
+        }
 
-        /// <summary>
+        /// <summary>                                                            x
         /// Creates transforms. Normally you don't need to call this, it is called by the builder for Brighter or
         /// the Service Activator
         /// Visibility is required for use from both

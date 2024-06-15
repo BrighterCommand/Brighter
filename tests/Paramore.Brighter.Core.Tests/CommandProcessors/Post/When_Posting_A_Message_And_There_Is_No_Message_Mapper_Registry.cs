@@ -26,8 +26,10 @@ using System;
 using System.Collections.Generic;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -39,8 +41,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
         private Exception _exception;
 
         public CommandProcessorNoMessageMapperTests()
@@ -48,7 +48,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(new InternalBus(), timeProvider)
+            {
+                Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+            };
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -64,16 +68,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _producer },
+                { topic, producer },
             });
 
             var policyRegistry = new PolicyRegistry
             {
                 { CommandProcessor.RETRYPOLICY, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            }; 
-            
-            _fakeOutbox = new FakeOutbox();
+            };
+
+            var tracer = new BrighterTracer(timeProvider);
+            var outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -81,7 +86,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                _fakeOutbox
+                tracer,
+                outbox
             );
         
             CommandProcessor.ClearServiceBus();
@@ -97,7 +103,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
 
-            //_should_throw_an_exception
             _exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
 

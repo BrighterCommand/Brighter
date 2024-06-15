@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Context
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyContextAwareCommandHandler>();
-            var handlerFactory = new TestHandlerFactorySync<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler());
+            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler());
             _request_context = new RequestContext();
             _myCommand = new MyCommand();
             MyContextAwareCommandHandler.TestString = null;

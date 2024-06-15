@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using FakeItEasy;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
@@ -46,8 +47,12 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             var dispatcher = A.Fake<IDispatcher>();
             var messageProducerFactory = A.Fake<IAmAProducerRegistryFactory>();
 
+            var timeProvider = new FakeTimeProvider();
             A.CallTo(() => messageProducerFactory.Create())
-                .Returns(new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", new FakeMessageProducerWithPublishConfirmation()},}));
+                .Returns(new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                {
+                    {"MyTopic", new InMemoryProducer(new InternalBus(), timeProvider)},
+                }));
 
             _busReceiverBuilder = ControlBusReceiverBuilder
                 .With()

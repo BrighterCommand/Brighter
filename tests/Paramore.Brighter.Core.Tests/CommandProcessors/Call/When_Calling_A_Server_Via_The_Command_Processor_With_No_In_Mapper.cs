@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly;
 using Polly.Registry;
@@ -34,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
-            var handlerFactory = new TestHandlerFactorySync<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
+            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyResponseHandler());
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -47,9 +48,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var replySubscriptions = new List<Subscription>();
 
             const string topic = "MyRequest";
+            var timeProvider = new FakeTimeProvider();
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}} },
+                { topic, new InMemoryProducer(new InternalBus(), timeProvider)
+                {
+                    Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}
+                } },
             });
 
             var policyRegistry = new PolicyRegistry
@@ -57,6 +62,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 { CommandProcessor.RETRYPOLICY, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
+
+            var tracer = new BrighterTracer();
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -64,7 +71,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                new InMemoryOutbox(new FakeTimeProvider())
+                tracer,
+                new InMemoryOutbox( timeProvider) {Tracer = tracer}
                 );
         
             CommandProcessor.ClearServiceBus();

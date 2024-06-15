@@ -27,6 +27,7 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
@@ -43,7 +44,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
-                ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
+                ExpirationScanInterval = TimeSpan.FromMilliseconds(100),
+                Tracer = new BrighterTracer(timeProvider)
             };
             
             var messageId = Guid.NewGuid().ToString();
@@ -53,16 +55,16 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             
             //Act
-            outbox.Add(messageToAdd);
+            outbox.Add(messageToAdd, new RequestContext());
             
             timeProvider.Advance(TimeSpan.FromMilliseconds(500)); //give the entry to time to expire
             
             //Trigger a cache clean
-            await outbox.GetAsync(messageId);
+            await outbox.GetAsync(messageId, new RequestContext());
 
             await Task.Delay(500); //Give the sweep time to run
             
-            var message = await outbox.GetAsync(messageId);
+            var message = await outbox.GetAsync(messageId, new RequestContext());
             
             //Assert
             message.Should().BeNull();
@@ -77,7 +79,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                {
                    //set low time to live but long sweep perioc
                    EntryTimeToLive = TimeSpan.FromMilliseconds(50),
-                   ExpirationScanInterval = TimeSpan.FromMilliseconds(10000)
+                   ExpirationScanInterval = TimeSpan.FromMilliseconds(10000),
+                   Tracer = new BrighterTracer(timeProvider)
                };
                
                var messageId = Guid.NewGuid().ToString();
@@ -87,11 +90,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                
                
                //Act
-               await outbox.AddAsync(messageToAdd);
+               await outbox.AddAsync(messageToAdd, new RequestContext());
                
                timeProvider.Advance(TimeSpan.FromMilliseconds(50)); //TTL has passed, but not expired yet
    
-               var message = await outbox.GetAsync(messageId);
+               var message = await outbox.GetAsync(messageId, new RequestContext());
                
                //Assert
                message.Should().NotBeNull();

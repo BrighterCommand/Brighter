@@ -54,8 +54,9 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_messageEarliest);
-            _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest));
+            var context = new RequestContext();
+            await _sqlOutbox.AddAsync(_messageEarliest, context);
+            _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest, context));
             _exception.Should().BeNull();
         }
 

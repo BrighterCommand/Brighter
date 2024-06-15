@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Outbox_Async()
         {
-            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //should return an empty message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
