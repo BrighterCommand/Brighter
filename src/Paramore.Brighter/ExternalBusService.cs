@@ -525,10 +525,11 @@ namespace Paramore.Brighter
             Dictionary<string, object> args
         )
         {
-            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
+            WaitHandle[] clearTokens = new WaitHandle[2];
+            clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
+            clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
+            if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
-                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
-                
                 var parentSpan = requestContext.Span;
                 var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
 
@@ -580,9 +581,11 @@ namespace Paramore.Brighter
             Dictionary<string, object> args
         )
         {
-            if (await s_backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
+            WaitHandle[] clearTokens = new WaitHandle[2];
+            clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
+            clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
+            if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
-                await s_clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 
                 var parentSpan = requestContext.Span;
                 var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
