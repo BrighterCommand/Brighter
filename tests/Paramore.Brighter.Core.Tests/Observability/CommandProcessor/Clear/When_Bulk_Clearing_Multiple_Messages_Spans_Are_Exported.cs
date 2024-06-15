@@ -117,7 +117,7 @@ public class CommandProcessorBulkClearObservabilityTests
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutboxRange(3, 0, false, context);
+        _commandProcessor.ClearOutstandingFromOutbox(3, 0, false, context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         

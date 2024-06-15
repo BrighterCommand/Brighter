@@ -412,7 +412,7 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="requestContext">The request context for the pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearOutboxRange(int amountToClear,
+        public void ClearOustandingFromOutbox(int amountToClear,
             int minimumAge,
             bool useBulk,
             RequestContext requestContext,

@@ -249,14 +249,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
             ClearOutbox(posts.ToArray());
 
-            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
 
-        public void ClearOutboxRange(
+        public void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
             int minimumAge = 5000, 
             bool useBulk = false,

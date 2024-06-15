@@ -474,7 +474,7 @@ namespace Paramore.Brighter
                 var now = _timeProvider.GetUtcNow();
                 var sentBefore = now.AddMilliseconds(-1 * millSecondsSinceSent);
                 var outstandingMessages = Requests.Values
-                    .Where(oe => (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
+                    .Where(oe => oe.TimeFlushed == DateTime.MinValue && oe.WriteTime <= sentBefore.DateTime)
                     .Take(pageSize)
                     .Select(oe => oe.Message).ToArray();
                 return outstandingMessages;

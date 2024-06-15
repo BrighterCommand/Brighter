@@ -120,7 +120,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             _outbox.Add(_message, context);
             _outbox.Add(_message2, context);
 
-            _commandProcessor.ClearOutboxRange(1,0);
+            _commandProcessor.ClearOutstandingFromOutbox(1,0);
             
             var topic = new RoutingKey(Topic);
             for (var i = 1; i <= 10; i++)
@@ -136,7 +136,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 if (_bus.Stream(topic).Count() == 2)
                     break;
                 Thread.Sleep(i * 100);
-                _commandProcessor.ClearOutboxRange(1, 0);
+                _commandProcessor.ClearOutstandingFromOutbox(1, 0);
             }
 
             //_should_send_a_message_via_the_messaging_gateway

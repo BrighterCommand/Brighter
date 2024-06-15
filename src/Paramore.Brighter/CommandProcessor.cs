@@ -448,7 +448,7 @@ namespace Paramore.Brighter
         /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}"/> or a
         /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}"/>
         /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use Deposit,
-        /// and then after you have committed your transaction use ClearOutboxRange
+        /// and then after you have committed your transaction use ClearOutstandingFromOutbox
         /// </summary>
         /// <param name="request">The request.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
@@ -911,7 +911,7 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearOutboxRange(
+        public void ClearOutstandingFromOutbox(
             int amountToClear = 100,
             int minimumAge = 5000,
             bool useBulk = false,
@@ -924,7 +924,7 @@ namespace Paramore.Brighter
 
             try
             {
-                s_bus.ClearOutboxRange(amountToClear, minimumAge, useBulk, context, args);
+                s_bus.ClearOustandingFromOutbox(amountToClear, minimumAge, useBulk, context, args);
             }
             finally
             {

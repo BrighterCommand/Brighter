@@ -198,7 +198,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
         }
 
-        public void ClearOutboxRange(
+        public void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
             int minimumAge = 5000, 
             bool useBulk = false, 
