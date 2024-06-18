@@ -105,7 +105,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
         /// <returns>INeedAListOfSubcriptions.</returns>
-        public INeedAListOfSubcriptions DefaultChannelFactory(IAmAChannelFactory channelFactory)
+        public INeedAListOfSubcriptions ChannelFactory(IAmAChannelFactory channelFactory)
         {
             _defaultChannelFactory = channelFactory;
             return this;
@@ -193,7 +193,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
         /// <returns>INeedAListOfSubcriptions.</returns>
-        INeedAListOfSubcriptions DefaultChannelFactory(IAmAChannelFactory channelFactory);
+        INeedAListOfSubcriptions ChannelFactory(IAmAChannelFactory channelFactory);
     }
 
     /// <summary>

@@ -79,7 +79,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
-                .DefaultChannelFactory(options.ChannelFactory)
+                .ChannelFactory(options.ChannelFactory)
                 .Subscriptions(options.Subscriptions).Build();
         }
     }
