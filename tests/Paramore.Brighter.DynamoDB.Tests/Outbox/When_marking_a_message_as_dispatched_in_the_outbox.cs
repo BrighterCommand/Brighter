@@ -36,7 +36,7 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
         var messages = _dynamoDbOutbox.DispatchedMessages(0, context,100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
-        message.Body.Should().Be(_message.Body);
+        message.Body.Value.Should().Be(_message.Body.Value);
     }
 
     [Fact]
@@ -52,6 +52,6 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
         var messages = _dynamoDbOutbox.DispatchedMessages(0, context, 100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
-        message.Body.Should().Be(_message.Body);
+        message.Body.Value.Should().Be(_message.Body.Value);
     }
 }
