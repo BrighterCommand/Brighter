@@ -103,7 +103,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
         /// <param name="requestContextFactory">The factory used to make a request context</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
-        public Dispatcher(Func<IAmACommandProcessorProvider> commandProcessorFactory,
+        public Dispatcher(
+             Func<IAmACommandProcessorProvider> commandProcessorFactory,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry messageMapperRegistry = null,
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync = null, 
@@ -142,7 +143,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
         /// <param name="requestContextFactory">The factory used to make a request context</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>        
-        public Dispatcher(IAmACommandProcessor commandProcessor,
+        public Dispatcher(
+            IAmACommandProcessor commandProcessor,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry messageMapperRegistry = null,
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync = null, 
