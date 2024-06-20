@@ -3,6 +3,8 @@ using Confluent.SchemaRegistry;
 using GreetingsPorts.Requests;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.MessagingGateway.RMQ;
 
@@ -25,6 +27,7 @@ public static class ConfigureTransport
         {
             MessagingGlobals.RMQ => MessagingTransport.Rmq,
             MessagingGlobals.KAFKA => MessagingTransport.Kafka,
+            MessagingGlobals.ASB => MessagingTransport.Asb,
             _ => throw new ArgumentOutOfRangeException(nameof(MessagingGlobals.BRIGHTER_TRANSPORT),
                 "Messaging transport is not supported")
         };
@@ -36,9 +39,27 @@ public static class ConfigureTransport
         {
             MessagingTransport.Rmq => GetRmqProducerRegistry(),
             MessagingTransport.Kafka => GetKafkaProducerRegistry(),
+            MessagingTransport.Asb => GetAsbProducerRegistry(),
             _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport),
                 "Messaging transport is not supported")
         };
+    }
+
+    private static IAmAProducerRegistry GetAsbProducerRegistry()
+    {
+        var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+                new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net"),
+                new AzureServiceBusPublication[] { 
+                    new()
+                    {
+                        Topic = new RoutingKey("GreetingMade"),
+                        RequestType = typeof(GreetingMade)
+                    }, 
+                }
+            )
+            .Create();
+        
+        return producerRegistry;
     }
 
     public static IAmAProducerRegistry GetKafkaProducerRegistry()
@@ -48,7 +69,7 @@ public static class ConfigureTransport
                 {
                     Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
                 },
-                new KafkaPublication[]
+                new[]
                 {
                     new KafkaPublication
                     {
@@ -82,7 +103,7 @@ public static class ConfigureTransport
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             },
-            new RmqPublication[]
+            new[]
             {
                 new RmqPublication
                 {

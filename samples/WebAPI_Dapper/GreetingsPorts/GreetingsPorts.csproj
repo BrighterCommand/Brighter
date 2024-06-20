@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />

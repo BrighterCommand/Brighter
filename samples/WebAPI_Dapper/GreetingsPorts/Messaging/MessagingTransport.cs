@@ -7,6 +7,7 @@ public static class MessagingGlobals
     
     public const string RMQ = "RabbitMQ";
     public const string KAFKA = "Kafka";
+    public const string ASB = "AzureServiceBus";
 }
 
 
@@ -15,6 +16,7 @@ public static class MessagingGlobals
 /// </summary>
 public enum MessagingTransport
 {
+    Asb,
     Rmq,
     Kafka
 }
