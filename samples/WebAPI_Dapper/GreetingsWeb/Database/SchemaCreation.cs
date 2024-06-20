@@ -2,7 +2,8 @@
 using System.Data;
 using System.Data.Common;
 using FluentMigrator.Runner;
-using GreetingsWeb.Messaging;
+using GreetingsPorts.Database;
+using GreetingsPorts.Messaging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
@@ -31,13 +32,13 @@ namespace GreetingsWeb.Database
             var services = scope.ServiceProvider;
             var env = services.GetService<IWebHostEnvironment>();
             var config = services.GetService<IConfiguration>();
-            var (dbType, connectionString) = DbServerConnectionString(config, env);
+            var (dbType, connectionString) = ConnectionResolver.ServerConnectionString(config);
 
             //We don't check db availability in development as we always use Sqlite which is a file not a server
             if (env.IsDevelopment()) return webHost;
 
             WaitToConnect(dbType, connectionString);
-            CreateDatabaseIfNotExists(dbType, GetDbConnection(dbType, connectionString));
+            CreateDatabaseIfNotExists(dbType, DbConnectionFactory.GetConnection(dbType, connectionString));
 
             return webHost;
         }
@@ -46,17 +47,16 @@ namespace GreetingsWeb.Database
         {
             using var scope = webHost.Services.CreateScope();
             var services = scope.ServiceProvider;
-            var env = services.GetService<IWebHostEnvironment>();
             var config = services.GetService<IConfiguration>();
 
-            CreateOutbox(config, env, hasBinaryPayload);
+            CreateOutbox(config, hasBinaryPayload);
 
             return webHost;
         }
 
         public static bool HasBinaryMessagePayload(this IHost webHost)
         {
-            return GetTransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) == MessagingTransport.Kafka;
+            return ConfigureTransport.TransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) == MessagingTransport.Kafka;
         }
 
         public static IHost MigrateDatabase(this IHost webHost)
@@ -73,13 +73,12 @@ namespace GreetingsWeb.Database
             catch (Exception ex)
             {
                 var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "An error occurred while migrating the database.");
+                LoggerExtensions.LogError(logger, ex, "An error occurred while migrating the database.");
                 throw;
             }
 
             return webHost;
         }
-
 
         private static void CreateDatabaseIfNotExists(DatabaseType databaseType, DbConnection conn)
         {
@@ -107,7 +106,7 @@ namespace GreetingsWeb.Database
                 if (!pe.Message.Contains("already exists"))
                     throw;
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine($"Issue with creating Greetings tables, {e.Message}");
                 //Rethrow, if we can't create the Outbox, shut down
@@ -115,16 +114,17 @@ namespace GreetingsWeb.Database
             }
         }
 
-        private static void CreateOutbox(IConfiguration config, IWebHostEnvironment env, bool hasBinaryPayload)
+        private static void CreateOutbox(IConfiguration config, bool hasBinaryPayload)
         {
             try
             {
-                var connectionString = DbConnectionString(config, env);
+                var connectionString = ConnectionResolver.DbConnectionString(config);
 
-                if (env.IsDevelopment())
-                    CreateOutboxDevelopment(connectionString, hasBinaryPayload);
-                else
-                    CreateOutboxProduction(GetDatabaseType(config), connectionString, hasBinaryPayload);
+                CreateOutboxProduction(
+                        DbResolver.GetDatabaseType(config[DatabaseGlobals.DATABASE_TYPE_ENV]), 
+                        connectionString, 
+                        hasBinaryPayload
+                    );
             }
             catch (NpgsqlException pe)
             {
@@ -135,17 +135,12 @@ namespace GreetingsWeb.Database
                     throw;
                 }
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine($"Issue with creating Outbox table, {e.Message}");
                 //Rethrow, if we can't create the Outbox, shut down
                 throw;
             }
-        }
-
-        private static void CreateOutboxDevelopment(string connectionString, bool hasBinaryPayload)
-        {
-            CreateOutboxSqlite(connectionString, hasBinaryPayload);
         }
 
        private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString, bool hasBinaryPayload) 
@@ -184,7 +179,6 @@ namespace GreetingsWeb.Database
             using var command = sqlConnection.CreateCommand();
             command.CommandText = SqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
             command.ExecuteScalar();
-            
         }
 
         private static void CreateOutboxMySql(string connectionString, bool hasBinaryPayload)
@@ -237,110 +231,20 @@ namespace GreetingsWeb.Database
             command.ExecuteScalar();
         }
 
-        private static string DbConnectionString(IConfiguration config, IWebHostEnvironment env)
-        {
-            //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? GetDevConnectionString() : GetProductionDbConnectionString(config, GetDatabaseType(config)); 
-        }
-
-        private static (DatabaseType, string) DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
-        {
-            var databaseType = GetDatabaseType(config);
-            var connectionString = env.IsDevelopment() ? GetDevConnectionString() : GetProductionConnectionString(config, databaseType);
-            return (databaseType, connectionString);
-        }
-
-        private static string GetDevConnectionString()
-        {
-            return "Filename=Greetings.db;Cache=Shared";
-        }
-
-        private static DbConnection GetDbConnection(DatabaseType databaseType, string connectionString)
-        {
-            return databaseType switch
-            {
-                DatabaseType.MySql => new MySqlConnection(connectionString),
-                DatabaseType.MsSql => new SqlConnection(connectionString),
-                DatabaseType.Postgres => new NpgsqlConnection(connectionString),
-                DatabaseType.Sqlite => new SqliteConnection(connectionString),
-                _ => throw new InvalidOperationException("Could not determine the database type")
-            };
-        }
-        
-        private static string GetProductionConnectionString(IConfiguration config, DatabaseType databaseType)
-        {
-            return databaseType switch
-            { 
-                DatabaseType.MySql => config.GetConnectionString("MySqlDb"),
-                DatabaseType.MsSql => config.GetConnectionString("MsSqlDb"),
-                DatabaseType.Postgres => config.GetConnectionString("PostgreSqlDb"),
-                DatabaseType.Sqlite => GetDevConnectionString(),
-                _ => throw new InvalidOperationException("Could not determine the database type")
-            };
-        }
-
-        private static string GetProductionDbConnectionString(IConfiguration config, DatabaseType databaseType)
-        {
-            return databaseType switch
-            {
-                DatabaseType.MySql => config.GetConnectionString("GreetingsMySql"),
-                DatabaseType.MsSql => config.GetConnectionString("GreetingsMsSql"),
-                DatabaseType.Postgres => config.GetConnectionString("GreetingsPostgreSql"),
-                DatabaseType.Sqlite => GetDevConnectionString(),
-                _ => throw new InvalidOperationException("Could not determine the database type")
-             };
-        }
-
-        private static DatabaseType GetDatabaseType(IConfiguration config)
-        {
-            return config[DatabaseGlobals.DATABASE_TYPE_ENV] switch
-            {
-                DatabaseGlobals.MYSQL => DatabaseType.MySql,
-                DatabaseGlobals.MSSQL => DatabaseType.MsSql,
-                DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
-                DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
-                _ => throw new InvalidOperationException("Could not determine the database type")
-            };
-        }
-
         private static void WaitToConnect(DatabaseType dbType, string connectionString)
         {
             var policy = Policy.Handle<DbException>().WaitAndRetryForever(
-                retryAttempt => TimeSpan.FromSeconds(2),
-                (exception, timespan) =>
+                _ => TimeSpan.FromSeconds(2),
+                (exception, _) =>
                 {
                     Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
                 });
 
             policy.Execute(() =>
             {
-                using var conn = GetConnection(dbType, connectionString);
+                using var conn = DbConnectionFactory.GetConnection(dbType, connectionString);
                 conn.Open();
             });
         }
-
-        private static DbConnection GetConnection(DatabaseType databaseType, string connectionString)
-        {
-            return databaseType switch
-            {
-                DatabaseType.MySql => new MySqlConnection(connectionString),
-                DatabaseType.MsSql => new SqlConnection(connectionString),
-                DatabaseType.Postgres => new NpgsqlConnection(connectionString),
-                DatabaseType.Sqlite => new SqliteConnection(connectionString),
-                _ => throw new ArgumentOutOfRangeException(nameof(databaseType), databaseType, null)
-            };
-        }
-        
-        private static MessagingTransport GetTransportType(string brighterTransport)
-        {
-            return brighterTransport switch
-            {
-                MessagingGlobals.RMQ => MessagingTransport.Rmq,
-                MessagingGlobals.KAFKA => MessagingTransport.Kafka,
-                _ => throw new ArgumentOutOfRangeException(nameof(MessagingGlobals.BRIGHTER_TRANSPORT),
-                    "Messaging transport is not supported")
-            };
-        }
- 
     }
 }

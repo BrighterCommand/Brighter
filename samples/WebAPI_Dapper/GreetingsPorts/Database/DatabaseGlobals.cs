@@ -1,4 +1,4 @@
-﻿namespace GreetingsWeb.Database;
+﻿namespace GreetingsPorts.Database;
 
 public static class DatabaseGlobals
 {
@@ -10,11 +10,3 @@ public static class DatabaseGlobals
     public const string POSTGRESSQL = "PostgresSQL";
     public const string SQLITE = "Sqlite";
 }
-
-public enum DatabaseType
-{
-    MySql,
-    MsSql,
-    Postgres,
-    Sqlite
-} 

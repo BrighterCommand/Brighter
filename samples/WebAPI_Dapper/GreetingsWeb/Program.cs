@@ -31,7 +31,7 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
             webBuilder.UseContentRoot(Directory.GetCurrentDirectory());
             webBuilder.CaptureStartupErrors(true);
             webBuilder.UseSetting("detailedErrors", "true");
-            webBuilder.ConfigureLogging((hostingContext, logging) =>
+            webBuilder.ConfigureLogging((_, logging) =>
             {
                 logging.AddConsole();
                 logging.AddDebug();

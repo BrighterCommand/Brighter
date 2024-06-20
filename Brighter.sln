@@ -333,6 +333,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Extensions.Diagnostics", "src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj", "{7FD4C263-74DA-4648-AD2A-7EB34FCBE18E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_Sweeper", "samples\WebAPI_Dapper\Greetings_Sweeper\Greetings_Sweeper.csproj", "{D96B97E7-EABA-4224-A861-CF249CF55031}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1903,6 +1905,18 @@ Global
 		{7FD4C263-74DA-4648-AD2A-7EB34FCBE18E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{7FD4C263-74DA-4648-AD2A-7EB34FCBE18E}.Release|x86.ActiveCfg = Release|Any CPU
 		{7FD4C263-74DA-4648-AD2A-7EB34FCBE18E}.Release|x86.Build.0 = Release|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|x86.Build.0 = Debug|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Release|x86.ActiveCfg = Release|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
