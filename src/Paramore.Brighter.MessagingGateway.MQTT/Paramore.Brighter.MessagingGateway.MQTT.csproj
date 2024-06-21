@@ -11,9 +11,5 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MQTTnet" />
-    <PackageReference Update="MinVer" />
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 </Project>
