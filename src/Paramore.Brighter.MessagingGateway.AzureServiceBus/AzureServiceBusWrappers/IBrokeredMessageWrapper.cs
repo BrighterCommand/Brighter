@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// Message Body.
         /// </summary>
         byte[] MessageBodyValue { get; }
-        
+
         /// <summary>
         /// Application Properties
         /// </summary>
@@ -26,11 +26,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <summary>
         /// The message Id.
         /// </summary>
-        Guid Id { get; }
+        string Id { get; }
+
         /// <summary>
         /// The Correlation Id.
         /// </summary>
-        Guid CorrelationId { get; }
+        string CorrelationId { get; }
 
         /// <summary>
         /// The Mime Type.

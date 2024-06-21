@@ -31,10 +31,10 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqliteOutboxWritingMessageAsyncTests : IDisposable
+    public class SqliteOutboxWritingMessageAsyncTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sqlOutboxSync;
+        private readonly SqliteOutbox _sqlOutbox;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _key3 = "name3";
@@ -52,13 +52,12 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
-
+            _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
+ 
             var messageHeader = new MessageHeader(
-                Guid.NewGuid(), 
-                "test_topic", 
-                MessageType.MT_DOCUMENT,
-                DateTime.UtcNow.AddDays(-1), 5, 5);
+                Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1), handledCount:5, delayedMilliseconds: 5
+            );
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -71,15 +70,16 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutboxSync.AddAsync(_messageEarliest);
+            await _sqlOutbox.AddAsync(_messageEarliest, new RequestContext());
 
-            _storedMessage = await _sqlOutboxSync.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the message header first bag item from the sql outbox
             //should read the message header timestamp from the sql outbox
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss")
+                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
             //should read the message header topic from the sql outbox =
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             //should read the message header type from the sql outbox
@@ -98,9 +98,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage.Header.Bag[_key5].Should().Be(_value5);
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _sqliteTestHelper.CleanUpDb();
+            await _sqliteTestHelper.CleanUpDbAsync();
         }
     }
 }

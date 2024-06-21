@@ -83,7 +83,6 @@ namespace GreetingsReceiverConsole
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     })
-                    .UseInMemoryOutbox()
                     .AutoFromAssemblies();
 
                     

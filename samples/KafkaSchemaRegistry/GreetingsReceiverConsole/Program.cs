@@ -23,9 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.IO;
-using System.Threading.Tasks;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Greetings.Ports.Commands;
@@ -38,63 +36,55 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
-namespace GreetingsReceiverConsole
-{
-    public class Program
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureHostConfiguration(configurationBuilder =>
     {
-        public static async Task Main(string[] args)
+        configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
+        configurationBuilder.AddJsonFile("appsettings.json", optional: true);
+        configurationBuilder.AddCommandLine(args);
+    })
+    .ConfigureLogging((context, builder) =>
+    {
+        builder.AddConsole();
+        builder.AddDebug();
+    })
+    .ConfigureServices((hostContext, services) =>
+    {
+        var subscriptions = new KafkaSubscription[]
         {
-            var host = Host.CreateDefaultBuilder(args)
-                .ConfigureHostConfiguration(configurationBuilder =>
-                {
-                    configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
-                    configurationBuilder.AddJsonFile("appsettings.json", optional: true);
-                    configurationBuilder.AddCommandLine(args);
-                })
-                .ConfigureLogging((context, builder) =>
-                {
-                    builder.AddConsole();
-                    builder.AddDebug();
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    var subscriptions = new KafkaSubscription[]
+            new KafkaSubscription<GreetingEvent>(
+                new SubscriptionName("paramore.example.greeting"),
+                channelName: new ChannelName("greeting.event"),
+                routingKey: new RoutingKey("greeting.event"),
+                groupId: "kafka-GreetingsReceiverConsole-Sample",
+                timeoutInMilliseconds: 100,
+                offsetDefault: AutoOffsetReset.Earliest,
+                commitBatchSize: 5,
+                sweepUncommittedOffsetsIntervalMs: 10000,
+                runAsync: true)
+        };
+
+        //We take a direct dependency on the schema registry in the message mapper
+        var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
+        var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+        services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
+
+        services.AddServiceActivator(options =>
+        {
+            options.Subscriptions = subscriptions;
+            options.ChannelFactory = new ChannelFactory(
+                new KafkaMessageConsumerFactory(
+                    new KafkaMessagingGatewayConfiguration
                     {
-                        new KafkaSubscription<GreetingEvent>(
-                            new SubscriptionName("paramore.example.greeting"),
-                            channelName: new ChannelName("greeting.event"),
-                            routingKey: new RoutingKey("greeting.event"),
-                            groupId: "kafka-GreetingsReceiverConsole-Sample",
-                            timeoutInMilliseconds: 100,
-                            offsetDefault: AutoOffsetReset.Earliest,
-                            commitBatchSize: 5,
-                            sweepUncommittedOffsetsIntervalMs: 10000)
-                    };
-                    
-                    //We take a direct dependency on the schema registry in the message mapper
-                    var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
-                    var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
-                    services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
+                        Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
+                    }
+                ));
+        }).AutoFromAssemblies();
 
 
-                    //create the gateway
-                    var consumerFactory = new KafkaMessageConsumerFactory(
-                        new KafkaMessagingGatewayConfiguration { Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" } }
-                    );
+        services.AddHostedService<ServiceActivatorHostedService>();
+    })
+    .UseConsoleLifetime()
+    .Build();
 
-                    services.AddServiceActivator(options =>
-                    {
-                        options.Subscriptions = subscriptions;
-                        options.ChannelFactory = new ChannelFactory(consumerFactory);
-                    }).AutoFromAssemblies();
-
-
-                    services.AddHostedService<ServiceActivatorHostedService>();
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            await host.RunAsync();
-        }
-    }
-}
+await host.RunAsync();

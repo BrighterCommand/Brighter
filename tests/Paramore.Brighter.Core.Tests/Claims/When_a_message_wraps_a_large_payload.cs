@@ -14,35 +14,37 @@ public class ClaimCheckLargePayloadTests
     private readonly ClaimCheckTransformer _transformer;
     private readonly Message _message;
     private readonly string _body;
-    private readonly InMemoryStorageProviderAsync _store;
+    private readonly InMemoryStorageProvider _store;
+    private string _topic;
 
     public ClaimCheckLargePayloadTests()
     {
         //arrange
-        _store = new InMemoryStorageProviderAsync();
+        _store = new InMemoryStorageProvider();
         _transformer = new ClaimCheckTransformer(store: _store);
         _transformer.InitializeWrapFromAttributeParams(5);
 
         _body = DataGenerator.CreateString(6000);
+        _topic = "test_topic";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(_body));
     }
     
     [Fact]
-    public async Task When_a_message_wraps_a_large_payload()
+    public void When_a_message_wraps_a_large_payload()
     {
         //act
-        var luggageCheckedMessage = await _transformer.WrapAsync(_message);
+        var luggageCheckedMessage = _transformer.Wrap(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //assert
-        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object storedData);
+        bool hasLuggage = !string.IsNullOrEmpty(luggageCheckedMessage.Header.DataRef);
 
         hasLuggage.Should().BeTrue();
 
-        var claimCheck = (string)storedData;
+        var claimCheck = luggageCheckedMessage.Header.DataRef;
 
-        var luggage = await new StreamReader(await _store.RetrieveAsync(claimCheck)).ReadToEndAsync(); 
+        var luggage = new StreamReader(_store.Retrieve(claimCheck)).ReadToEnd(); 
         
         luggage.Should().Be(_body);
     }

@@ -1,4 +1,6 @@
-﻿using Paramore.Brighter;
+﻿using OpenTelemetry.Shared.Commands;
+using OpenTelemetry.Shared.Events;
+using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 
 namespace OpenTelemetry.Shared.Helpers;
@@ -12,27 +14,24 @@ public static class Helpers
             {
                 new()
                 {
-                    MaxOutStandingMessages = 5,
-                    MaxOutStandingCheckIntervalMilliSeconds = 500,
                     WaitForConfirmsTimeOutInMilliseconds = 1000,
                     MakeChannels = OnMissingChannel.Create,
-                    Topic = new RoutingKey("MyDistributedEvent")
+                    Topic = new RoutingKey("MyDistributedEvent"),
+                    RequestType = typeof(MyDistributedEvent)
                 },
                 new()
                 {
-                    MaxOutStandingMessages = 5,
-                    MaxOutStandingCheckIntervalMilliSeconds = 500,
                     WaitForConfirmsTimeOutInMilliseconds = 1000,
                     MakeChannels = OnMissingChannel.Create,
-                    Topic = new RoutingKey("ProductUpdatedEvent")
+                    Topic = new RoutingKey("ProductUpdatedEvent"),
+                    RequestType = typeof(ProductUpdatedEvent)
                 },
                 new()
                 {
-                    MaxOutStandingMessages = 5,
-                    MaxOutStandingCheckIntervalMilliSeconds = 500,
                     WaitForConfirmsTimeOutInMilliseconds = 1000,
                     MakeChannels = OnMissingChannel.Create,
-                    Topic = new RoutingKey("UpdateProductCommand")
+                    Topic = new RoutingKey("UpdateProductCommand"),
+                    RequestType = typeof(UpdateProductCommand)
                 }
             }).Create();
     }

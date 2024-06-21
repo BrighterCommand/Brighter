@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Diagnostics;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -31,41 +33,35 @@ namespace Paramore.Brighter.ServiceActivator
     /// Used when the message pump should block for I/O
     /// Will guarantee strict ordering of the messages on the queue
     /// Predictable performance as only one thread, allows you to configure number of performers for number of threads to use
-    /// Lower throughput than asuync
+    /// Lower throughput than async
     /// </summary>
     /// <typeparam name="TRequest"></typeparam>
     public class MessagePumpBlocking<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
+        private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
+
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
+        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         public MessagePumpBlocking(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistry messageMapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
-            : base(commandProcessorProvider, messageMapperRegistry, messageTransformerFactory)
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmARequestContextFactory requestContextFactory) 
+            : base(commandProcessorProvider, requestContextFactory)
         {
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
+            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
         
-        /// <summary>
-        /// Constructs a message pump 
-        /// </summary>
-        /// <param name="commandProcessor">A command processor</param>
-        /// <param name="messageMapperRegistry">The registry of mappers</param>
-        /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
-        public MessagePumpBlocking(
-            IAmACommandProcessor commandProcessor, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory = null) :
-            this(new CommandProcessorProvider(commandProcessor), messageMapperRegistry, messageTransformerFactory)
-        {}
-
-        protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
+        protected override void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
         {
             s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
 
             var messageType = messageHeader.MessageType;
 
@@ -75,16 +71,39 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    CommandProcessorProvider.Get().Send(request);
+                    CommandProcessorProvider.Get().Send(request, requestContext);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    CommandProcessorProvider.Get().Publish(request);
+                    CommandProcessorProvider.Get().Publish(request, requestContext);
                     break;
                 }
             }
+        }
+
+        protected override TRequest TranslateMessage(Message message, RequestContext requestContext)
+        {
+            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
+            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
+
+            TRequest request;
+
+            try
+            {
+                request = _unwrapPipeline.Unwrap(message, requestContext);
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
+
+            return request;
         }
     }
 }

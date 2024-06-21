@@ -38,9 +38,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
             var topic = HeaderResult<string>.Empty();
-            var messageId = HeaderResult<Guid>.Empty();
+            var messageId = HeaderResult<string>.Empty();
             var contentType = HeaderResult<string>.Empty();
-            var correlationId = HeaderResult<Guid>.Empty();
+            var correlationId = HeaderResult<string>.Empty();
             var handledCount = HeaderResult<int>.Empty();
             var messageType = HeaderResult<MessageType>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
@@ -61,19 +61,23 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 timeStamp = ReadTimestamp();
                 replyTo = ReadReplyTo();
                 receiptHandle = ReadReceiptHandle(sqsMessage);
+                
+                //TODO:CLOUD_EVENTS parse from headers
 
-                var messageHeader = timeStamp.Success
-                    ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, 0)
-                    : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
-
-                if (correlationId.Success)
-                    messageHeader.CorrelationId = correlationId.Result;
-
-                if (replyTo.Success)
-                    messageHeader.ReplyTo = replyTo.Result;
-
-                if (contentType.Success)
-                    messageHeader.ContentType = contentType.Result;
+                var messageHeader = new MessageHeader(
+                    messageId: messageId.Result,
+                    topic: topic.Result,
+                    messageType: messageType.Result,
+                    source: null,
+                    type: "",
+                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                    correlationId: correlationId.Success ? correlationId.Result : "",
+                    replyTo: replyTo.Result,
+                    contentType: contentType.Result,
+                    handledCount: handledCount.Result,
+                    dataSchema: null,
+                    subject: null,
+                    delayedMilliseconds: 0);
 
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage));
 
@@ -85,7 +89,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
 
                 if (receiptHandle.Success)
-                    message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
+                    message.Header.Bag.Add("ReceiptHandle", sqsMessage.ReceiptHandle);
             }
             catch (Exception e)
             {
@@ -200,30 +204,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<int>(0, true);
         }
 
-        private HeaderResult<Guid> ReadCorrelationId()
+        private HeaderResult<string> ReadCorrelationId()
         {
             if (_messageAttributes.TryGetValue(HeaderNames.CorrelationId, out var correlationId))
             {
-                if (Guid.TryParse(correlationId.GetValueInString(), out var value))
-                {
-                    return new HeaderResult<Guid>(value, true);
-                }
+                return new HeaderResult<string>(correlationId.GetValueInString(), true);
             }
 
-            return new HeaderResult<Guid>(Guid.Empty, true);
+            return new HeaderResult<string>(string.Empty, true);
         }
 
-        private HeaderResult<Guid> ReadMessageId()
+        private HeaderResult<string> ReadMessageId()
         {
             if (_messageAttributes.TryGetValue(HeaderNames.Id, out var messageId))
             {
-                if (Guid.TryParse(messageId.GetValueInString(), out var value))
-                {
-                    return new HeaderResult<Guid>(value, true);
-                }
+                return new HeaderResult<string>(messageId.GetValueInString(), true);
             }
 
-            return new HeaderResult<Guid>(Guid.Empty, true);
+            return new HeaderResult<string>(string.Empty, true);
         }
 
         private HeaderResult<string> ReadTopic()

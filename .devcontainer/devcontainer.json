@@ -1,0 +1,43 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/dotnet:8.0",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "additionalVersions": "6.0, 7.0"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitHub.copilot",
+        "GitHub.vscode-github-actions",
+        "ms-dotnettools.vscode-dotnet-runtime",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnetools.csharp"
+      ]
+    }
+  },
+  // "forwardPorts": [
+  //   8080,
+  //   8081
+  // ],
+  "postCreateCommand": "dotnet restore",
+  "hostRequirements": {
+    "memory": "16gb",
+    "cpus": 4
+  }//,
+  // "remoteEnv": {
+  //   "TARGET": "net8.0"
+  // }
+  // "portsAttributes": {
+  //   "8080": {
+  //     "label": "Weather API",
+  //     "onAutoForward": "notify"
+  //   },
+  //   "8081": {
+  //     "label": "Weather Front End",
+  //     "onAutoForward": "notify"
+  //   }
+  // }
+}

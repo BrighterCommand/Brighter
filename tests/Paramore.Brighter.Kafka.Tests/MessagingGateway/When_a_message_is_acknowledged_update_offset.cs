@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication[] {new KafkaPublication()
+                new KafkaPublication[] {new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -50,10 +50,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             var groupId = Guid.NewGuid().ToString();
             
             //send x messages to Kafka
-            var sentMessages = new Guid[10];
+            var sentMessages = new string[10];
             for (int i = 0; i < 10; i++)
             {
-                var msgId = Guid.NewGuid();
+                var msgId = Guid.NewGuid().ToString();
                 SendMessage(msgId);
                 sentMessages[i] = msgId;
             }
@@ -81,11 +81,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             }
         }
 
-        private void SendMessage(Guid messageId)
+        private void SendMessage(string messageId)
         {
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
-                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
-                new MessageBody($"test content [{_queueName}]")));
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(
+                new Message(
+                    new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
+                    new MessageBody($"test content [{_queueName}]")
+                )
+            );
         }
 
         private Message[] ConsumeMessages(string groupId, int batchLimit)
@@ -110,7 +113,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     try
                     {
                         maxTries++;
-                        Task.Delay(500).Wait(); //Let topic propogate in the broker
+                        Task.Delay(500).Wait(); //Let topic propagate in the broker
                         messages = consumer.Receive(1000);
 
                         if (messages[0].Header.MessageType != MessageType.MT_NONE)
@@ -122,7 +125,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     }
                     catch (ChannelFailureException cfx)
                     {
-                        //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
+                        //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                         _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                     }
                 } while (maxTries <= 3);

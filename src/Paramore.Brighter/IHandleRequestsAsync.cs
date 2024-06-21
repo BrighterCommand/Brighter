@@ -47,7 +47,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
-        /// or access the Result or otherwise block. You may need the orginating thread if you need to access thread specific storage
+        /// or access the Result or otherwise block. You may need the originating thread if you need to access thread specific storage
         /// such as HTTPContext 
         /// </summary>
         bool ContinueOnCapturedContext { get; set; }
@@ -101,7 +101,7 @@ namespace Paramore.Brighter
         /// <param name="request">The request.</param>
         /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        Task<TRequest> HandleAsync(TRequest request, CancellationToken cancellationToken = default(CancellationToken));
+        Task<TRequest> HandleAsync(TRequest request, CancellationToken cancellationToken = default);
 
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Paramore.Brighter
         /// <param name="request">The request.</param>
         /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        Task<TRequest> FallbackAsync(TRequest request, CancellationToken cancellationToken = default(CancellationToken));
+        Task<TRequest> FallbackAsync(TRequest request, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Sets the successor.

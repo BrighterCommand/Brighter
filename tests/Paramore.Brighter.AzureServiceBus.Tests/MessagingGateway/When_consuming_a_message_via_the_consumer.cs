@@ -18,7 +18,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         private readonly Message _message;
         private readonly IAmAChannel _channel;
         private readonly IAmAProducerRegistry _producerRegistry;
-        private readonly Guid _correlationId;
+        private readonly string _correlationId;
         private readonly string _contentType;
         private readonly string _topicName;
         private readonly string _channelName;
@@ -28,13 +28,13 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public ASBConsumerTests()
         {
-            var command = new ASBTestCommand()
+            var command = new ASBTestCommand
             {
                 CommandValue = "Do the things.",
                 CommandNumber = 26
             };
 
-            _correlationId = Guid.NewGuid();
+            _correlationId = Guid.NewGuid().ToString();
             _channelName = $"Consumer-Tests-{Guid.NewGuid()}".Truncate(50);
             _topicName = $"Consumer-Tests-{Guid.NewGuid()}";
             var routingKey = new RoutingKey(_topicName);
@@ -48,11 +48,13 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _contentType = "application/json";
 
             _message = new Message(
-                new MessageHeader(command.Id, _topicName, MessageType.MT_COMMAND, _correlationId, contentType: _contentType),
+                new MessageHeader(command.Id, _topicName, MessageType.MT_COMMAND, correlationId:_correlationId, 
+                    contentType: _contentType
+                ),
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
 
-            _subscriptionConfiguration = new AzureServiceBusSubscriptionConfiguration()
+            _subscriptionConfiguration = new AzureServiceBusSubscriptionConfiguration
             {
                 DeadLetteringOnMessageExpiration = true,
                 DefaultMessageTimeToLive = TimeSpan.FromDays(4),
@@ -85,7 +87,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         public async Task When_Rejecting_a_message_via_the_consumer()
         {
             //arrange
-            var deadLetterReceiver = _serviceBusClient.CreateReceiver(_topicName, _channelName, new ServiceBusReceiverOptions(){
+            var deadLetterReceiver = _serviceBusClient.CreateReceiver(_topicName, _channelName, new ServiceBusReceiverOptions
+            {
                 SubQueue = SubQueue.DeadLetter
             });
 
@@ -152,7 +155,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
+            _administrationClient.DeleteChannelAsync(_topicName, false).GetAwaiter().GetResult();
             _channel?.Dispose();
             _producerRegistry?.Dispose();
         }

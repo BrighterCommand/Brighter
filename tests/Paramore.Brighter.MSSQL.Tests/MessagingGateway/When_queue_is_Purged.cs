@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new ChannelName(_topic), new RoutingKey(_topic));
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration, 
-                new Publication[] {new Publication() {Topic = new RoutingKey(_topic)}}
+                new Publication[] {new Publication {Topic = new RoutingKey(_topic)}}
             ).Create();
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
@@ -64,9 +64,9 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             }
         }
 
-        private Guid SendMessage()
+        private string SendMessage()
         {
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
 
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
                 new MessageHeader(messageId, _topic, MessageType.MT_COMMAND),
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 }
                 catch (ChannelFailureException)
                 {
-                    //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
+                    //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     //_output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
             } while (maxTries <= 3);
@@ -103,11 +103,11 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     public class ExampleCommand : ICommand
     {
 
-        public Guid Id { get; set; }
+        public string Id { get; set; }
 
         public ExampleCommand()
         {
-            Id = new Guid();
+            Id = Guid.NewGuid().ToString();
         }
         
         /// <summary>

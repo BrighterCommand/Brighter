@@ -46,7 +46,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var connection = new Subscription<MyEvent>(
@@ -55,17 +57,25 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 timeoutInMilliseconds: 1000, 
                 channelFactory: new InMemoryChannelFactory(_channel),
                 channelName: new ChannelName("fakeChannel"), 
-                routingKey: new RoutingKey("fakekey"));
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
+                routingKey: new RoutingKey("fakekey")
+            );
+            
+            _dispatcher = new Dispatcher(
+                _commandProcessor, 
+                new List<Subscription> { connection },
+                messageMapperRegistry,
+                requestContextFactory: new InMemoryRequestContextFactory()
+            );
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = connection.RoutingKey});
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
 
+#pragma warning disable xUnit1031
         [Fact]
         public void When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler()
         {
@@ -81,6 +91,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_published_async
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.Publish);
         }
+#pragma warning restore xUnit1031
         
         public void Dispose()
         {

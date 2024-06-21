@@ -9,7 +9,7 @@ public class MySimpleTransformAsync : TransformAsync
     public static readonly string HEADER_KEY = "MySimpleTransformTest";
     public static readonly string TRANSFORM_VALUE = "I am a transformed value";
 
-    public override Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    public override Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<Message>(cancellationToken);
         message.Header.Bag.Add(HEADER_KEY, TRANSFORM_VALUE);
@@ -17,7 +17,7 @@ public class MySimpleTransformAsync : TransformAsync
         return tcs.Task;
     }
 
-    public override Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    public override Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<Message>(cancellationToken);
         var oldCommand = JsonSerializer.Deserialize<MyTransformableCommand>(message.Body.Value);

@@ -47,6 +47,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly MsSqlTestHelper _msSqlTestHelper;
+        private readonly RequestContext _requestContext = new();
 
         public SqlOutboxWritingMessageAsyncTests ()
         {
@@ -55,13 +56,13 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid(),
+                messageId:Guid.NewGuid().ToString(),
                 topic: "test_topic", 
                 messageType: MessageType.MT_DOCUMENT, 
                 timeStamp: DateTime.UtcNow.AddDays(-1), 
                 handledCount:5, 
                 delayedMilliseconds:5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
@@ -71,21 +72,22 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _message = new Message(messageHeader, new MessageBody("message body"));
-            _sqlOutbox.Add(_message);
+            _sqlOutbox.Add(_message, _requestContext);
         }
 
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_message);
+            await _sqlOutbox.AddAsync(_message, _requestContext);
 
-            _storedMessage = await _sqlOutbox.GetAsync(_message.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_message.Id, _requestContext);
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
-            _storedMessage.Header.TimeStamp.Should().Be(_message.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
+                .Should().Be(_message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_message.Header.CorrelationId);

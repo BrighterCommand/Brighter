@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
                 throw new ArgumentNullException(nameof(connectionString),
                     "Configuration is null, ensure this is set in the constructor.");
             }
-            
+
             _connectionString = connectionString;
         }
 

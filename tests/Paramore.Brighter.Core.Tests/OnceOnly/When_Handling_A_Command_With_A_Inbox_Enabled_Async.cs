@@ -5,6 +5,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -23,7 +24,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
         public CommandProcessorUsingInboxAsyncTests()
         {
-            _inbox = new InMemoryInbox();
+            _inbox = new InMemoryInbox(new FakeTimeProvider());
 
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandHandlerAsync>();
@@ -33,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddTransient<MyStoredCommandToFailHandlerAsync>();
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
           
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
@@ -50,14 +51,14 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await _commandProcessor.SendAsync(_command);
 
            // should_store_the_command_to_the_inbox
-            _inbox.GetAsync<MyCommand>(_command.Id, _contextKey).Result.Value.Should().Be(_command.Value);
+            (await _inbox.GetAsync<MyCommand>(_command.Id, _contextKey)).Value.Should().Be(_command.Value);
         }
 
         [Fact]
         public async Task Command_Is_Not_Stored_If_The_Handler_Is_Not_Successful()
         {
-            Guid id = Guid.NewGuid();
-            await Catch.ExceptionAsync(async () =>await _commandProcessor.SendAsync(new MyCommandToFail() { Id = id }));
+            string id = Guid.NewGuid().ToString();
+            await Catch.ExceptionAsync(async () =>await _commandProcessor.SendAsync(new MyCommandToFail { Id = id }));
 
             var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
             exists.Should().BeFalse();
@@ -65,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

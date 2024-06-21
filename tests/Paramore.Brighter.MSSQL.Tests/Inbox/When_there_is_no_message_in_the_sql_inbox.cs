@@ -37,7 +37,6 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly MsSqlInbox _sqlInbox;
         private readonly string _contextKey;
-        private MyCommand _storedCommand;
 
         public SqlInboxEmptyWhenSearchedTests()
         {
@@ -51,16 +50,16 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Get()
         {
-            Guid commandId = Guid.NewGuid();
-            var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(commandId, _contextKey));
+            string commandId = Guid.NewGuid().ToString();
+            var exception = Catch.Exception(() => _sqlInbox.Get<MyCommand>(commandId, _contextKey));
 
-            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
 
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Exists()
         {
-            Guid commandId = Guid.NewGuid();
+            string commandId = Guid.NewGuid().ToString();
             _sqlInbox.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
         }
 

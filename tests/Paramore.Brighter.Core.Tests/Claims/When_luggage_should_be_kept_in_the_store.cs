@@ -11,13 +11,13 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class RetrieveClaimLeaveLuggage
 {
-    private readonly InMemoryStorageProviderAsync _store;
+    private readonly InMemoryStorageProvider _store;
     private readonly ClaimCheckTransformer _transformer;
     private readonly string _contents;
 
     public RetrieveClaimLeaveLuggage()
     {
-        _store = new InMemoryStorageProviderAsync();
+        _store = new InMemoryStorageProvider();
         _transformer = new ClaimCheckTransformer(store: _store);
         _transformer.InitializeUnwrapFromAttributeParams(true);
         
@@ -25,28 +25,28 @@ public class RetrieveClaimLeaveLuggage
     }
 
     [Fact]
-    public async Task When_luggage_should_be_kept_in_the_store()
+    public void When_luggage_should_be_kept_in_the_store()
     {
         //arrange
         var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
-        await writer.WriteAsync(_contents);
-        await writer.FlushAsync();
+        writer.WriteAsync(_contents);
+        writer.FlushAsync();
         stream.Position = 0;
 
-        var id = await _store.StoreAsync(stream);
+        var id = _store.Store(stream);
 
         var message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
-        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
+        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
 
         //act
-        var unwrappedMessage = await _transformer.UnwrapAsync(message);
+        var unwrappedMessage = _transformer.Unwrap(message);
         
         //assert
-        message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _).Should().BeTrue();
-        (await _store.HasClaimAsync(id)).Should().BeTrue();
+        message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _).Should().BeTrue();
+        _store.HasClaim(id).Should().BeTrue();
         
     }
 }

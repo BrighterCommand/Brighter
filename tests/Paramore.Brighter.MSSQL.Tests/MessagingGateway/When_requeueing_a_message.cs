@@ -19,14 +19,15 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         public MsSqlMessageConsumerRequeueTests()
         {
             var myCommand = new MyCommand { Value = "Test" };
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
             var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";
             _topic = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId, 
+                    replyTo:replyTo, contentType:contentType),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new ChannelName(_topic), new RoutingKey(_topic));
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration, 
-                new Publication[] {new Publication() {Topic = new RoutingKey(_topic)}}
+                new Publication[] {new Publication {Topic = new RoutingKey(_topic)}}
             ).Create();
             _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration));
         }

@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <TargetFrameworks>net6.0</TargetFrameworks>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
@@ -9,19 +9,21 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="3.2.0">
+    <PackageReference Include="coverlet.collector">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="FluentAssertions" Version="6.10.0" />
-    <PackageReference Include="FakeItEasy" Version="7.3.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
-    <PackageReference Include="OpenTelemetry" Version="1.4.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.InMemory" Version="1.4.0" />
-    <PackageReference Include="Serilog.Sinks.TestCorrelator" Version="3.2.0" />
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
-    <PackageReference Include="xunit" Version="2.4.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="FakeItEasy" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+    <PackageReference Include="Serilog.Extensions.Hosting" />
+    <PackageReference Include="Serilog.Sinks.TestCorrelator" />
+    <PackageReference Include="System.Reflection.TypeExtensions" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -31,5 +33,10 @@
     <None Update="xunit.runner.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Observability\CommandProcessor\Fallback\" />
+    <Folder Include="Observability\ServiceActivator\" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Data.Common;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -10,7 +12,7 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
     /// A connection provider that uses the same connection as EF Core
     /// </summary>
     /// <typeparam name="T">The Db Context to take the connection from</typeparam>
-    public class MySqlEntityFrameworkConnectionProvider<T> : IMySqlTransactionConnectionProvider where T: DbContext
+    public class MySqlEntityFrameworkConnectionProvider<T> : RelationalDbTransactionProvider where T: DbContext
     {
         private readonly T _context;
 
@@ -24,14 +26,39 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         }
         
         /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        public override void Commit()
+        {
+            if (HasOpenTransaction)
+            {
+                _context.Database.CurrentTransaction?.Commit();
+            }
+        }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public override Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                _context.Database.CurrentTransaction?.CommitAsync(cancellationToken);
+            }
+            
+            return Task.CompletedTask;
+        }
+        
+        /// <summary>
         /// Get the current connection of the DB context
         /// </summary>
         /// <returns>The Sqlite Connection that is in use</returns>
-        public MySqlConnection GetConnection()
+        public override DbConnection GetConnection()
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             _context.Database.CanConnect();
-            return (MySqlConnection) _context.Database.GetDbConnection();
+            return _context.Database.GetDbConnection();
         }
 
         /// <summary>
@@ -39,23 +66,33 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
         /// <returns></returns>
-        public async Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             await _context.Database.CanConnectAsync(cancellationToken);
-            return (MySqlConnection)_context.Database.GetDbConnection();
+            return _context.Database.GetDbConnection();
         }
 
         /// <summary>
         /// Get the ambient EF Core Transaction
         /// </summary>
         /// <returns>The Sqlite Transaction</returns>
-        public MySqlTransaction GetTransaction()
+        public override DbTransaction GetTransaction()
         {
-            return (MySqlTransaction)_context.Database.CurrentTransaction?.GetDbTransaction();
+            return _context.Database.CurrentTransaction?.GetDbTransaction();
+        }
+        
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
+        public override async Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            if (HasOpenTransaction)
+            {
+                try { await ((MySqlTransaction)GetTransaction()).RollbackAsync(cancellationToken); } catch (Exception) { /* Ignore*/}
+                Transaction = null;
+            }
         }
 
-        public bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
-        public bool IsSharedConnection { get => true; }
     }
 }

@@ -6,8 +6,18 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
     /// <summary>
     /// Subscriptions used when creating a service activator
     /// </summary>
-    public class ServiceActivatorOptions : BrighterOptions
+    public class ServiceActivatorOptions : BrighterOptions, IServiceActivatorOptions
     {
+        /// <summary>
+        /// Used to create a channel, an abstraction over a message processing pipeline
+        /// </summary>
+        public IAmAChannelFactory ChannelFactory { get; set; }
+
+        /// <summary>
+        /// The configuration of our inbox
+        /// </summary>
+        public InboxConfiguration InboxConfiguration { get; set; } = new InboxConfiguration();
+
         /// <summary>
         /// An iterator over the subscriptions that this ServiceActivator has
         /// </summary>

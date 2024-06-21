@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
@@ -25,26 +26,34 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         public static IBrighterBuilder AddServiceActivator(
             this IServiceCollection services,
             Action<ServiceActivatorOptions> configure = null)
-        {
-            if (services == null)
-                throw new ArgumentNullException(nameof(services));
+       {
+           if (services == null)
+               throw new ArgumentNullException(nameof(services));
 
-            var options = new ServiceActivatorOptions();
-            configure?.Invoke(options);
-            services.TryAddSingleton(options);
-            services.TryAddSingleton<IBrighterOptions>(options);
+           var options = new ServiceActivatorOptions();
+           configure?.Invoke(options);
+           services.TryAddSingleton<IBrighterOptions>(options);
+           services.TryAddSingleton<IServiceActivatorOptions>(options);
+           services.TryAddSingleton<BrighterTracer>();
+           
+           services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
+               (serviceProvider) => (IDispatcher)BuildDispatcher(serviceProvider),
+              ServiceLifetime.Singleton));
+           
+           services.TryAddSingleton(options.InboxConfiguration);
+           var inbox = options.InboxConfiguration.Inbox;
+           if (inbox is IAmAnInboxSync inboxSync) services.TryAddSingleton(inboxSync);
+           if (inbox is IAmAnInboxAsync inboxAsync) services.TryAddSingleton(inboxAsync);
 
-            services.TryAddSingleton<IDispatcher>(BuildDispatcher);
+           return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
+       }
 
-            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
-        }
-
-        private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
+       private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
             var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;
 
-            var options = serviceProvider.GetService<ServiceActivatorOptions>();
+            var options = serviceProvider.GetService<IServiceActivatorOptions>();
 
             Func<IAmACommandProcessorProvider> providerFactory;
 
@@ -58,14 +67,19 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 providerFactory = () => new CommandProcessorProvider(commandProcessor);
             }
 
-            var dispatcherBuilder = DispatchBuilder.With().CommandProcessorFactory(providerFactory);
+            var requestContextFactory = serviceProvider.GetService<IAmARequestContextFactory>();
+            
+            var dispatcherBuilder = DispatchBuilder
+                .With()
+                .CommandProcessorFactory(providerFactory, requestContextFactory);
 
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             var messageTransformFactory = ServiceCollectionExtensions.TransformFactory(serviceProvider);
+            var messageTransformFactoryAsync = ServiceCollectionExtensions.TransformFactoryAsync(serviceProvider);
             
             return dispatcherBuilder
-                .MessageMappers(messageMapperRegistry, messageTransformFactory)
-                .DefaultChannelFactory(options.ChannelFactory)
+                .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
+                .ChannelFactory(options.ChannelFactory)
                 .Subscriptions(options.Subscriptions).Build();
         }
     }

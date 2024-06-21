@@ -24,8 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
@@ -33,48 +32,63 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqlOutboxDeletingMessagesTests 
+    public class SqlOutboxDeletingMessagesTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sqlOutboxSync;
-        private readonly Message _messageEarliest;
-        private readonly Message _message2;
-        private readonly Message _messageLatest;
-        private IEnumerable<Message> _retrievedMessages;
+        private readonly SqliteOutbox _outbox;
+        private readonly Message _firstMessage;
+        private readonly Message _secondMessage;
+        private readonly Message _thirdMessage;
 
         public SqlOutboxDeletingMessagesTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _outbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
 
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            _firstMessage =
+                new Message(
+                    new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, 
+                        timeStamp: DateTime.UtcNow.AddHours(-3)
+                    ),
+                    new MessageBody("Body"));
+            _secondMessage =
+                new Message(
+                    new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, 
+                        timeStamp: DateTime.UtcNow.AddHours(-2)
+                ),
+                    new MessageBody("Body2"));
+            _thirdMessage =
+                new Message(
+                    new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, 
+                        timeStamp: DateTime.UtcNow.AddHours(-1)
+                    ),
+                    new MessageBody("Body3")
+                );
         }
 
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            _sqlOutboxSync.Add(_messageEarliest);
-            _sqlOutboxSync.Add(_message2);
-            _sqlOutboxSync.Add(_messageLatest);
+            var context = new RequestContext();
+            _outbox.Add(_firstMessage, context);
+            _outbox.Add(_secondMessage, context);
+            _outbox.Add(_thirdMessage, context);
 
-            _retrievedMessages = _sqlOutboxSync.Get();
-            _sqlOutboxSync.Delete(_retrievedMessages.First().Id);
+            _outbox.Delete([_firstMessage.Id, _thirdMessage.Id], context);
 
-            var remainingMessages = _sqlOutboxSync.Get();
-
-            remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            _outbox.Get(_secondMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+            _outbox.Get(_firstMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_NONE);
+            _outbox.Get(_thirdMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_NONE);
             
-            _sqlOutboxSync.Delete(remainingMessages.Select(m => m.Id).ToArray());
+            _outbox.Delete([_secondMessage.Id], context);
 
-            var messages = _sqlOutboxSync.Get();
-
-            messages.Should().HaveCount(0);
+            _outbox.Get(_secondMessage.Id, context).Should().NotBeNull();
         }
-        
-  }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _sqliteTestHelper.CleanUpDbAsync();
+        }
+    }
 }

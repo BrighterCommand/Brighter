@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.InMemory.Tests.Data;
 using Xunit;
@@ -12,12 +13,13 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
     public class InboxEntryTimeToLiveTests
     {
         [Fact]
-        public void When_expiring_a_cache_entry_no_longer_there()
+        public async Task When_expiring_a_cache_entry_no_longer_there()
         {
             //Arrange
             const string contextKey = "Inbox_Cache_Expiry_Tests";
             
-            var inbox = new InMemoryInbox()
+            var timeProvider = new FakeTimeProvider();
+            var inbox = new InMemoryInbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
@@ -27,9 +29,9 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var command = new SimpleCommand();            
             
             //Act
-            inbox.Add(command, contextKey);
+            await inbox.AddAsync(command, contextKey);
             
-            Task.Delay(500).Wait(); //give the entry to time to expire
+            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
             
             //Trigger a cache clean
             SimpleCommand foundCommand = null;
@@ -42,9 +44,9 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
                 //early sweeper run means it doesn't exist already
             }
 
-            Task.Delay(500).Wait(); //Give the sweep time to run
+            await Task.Delay(500); //Give the sweep time to run
             
-            var afterExpiryExists = inbox.Exists<SimpleCommand>(command.Id, contextKey);
+            var afterExpiryExists = await inbox.ExistsAsync<SimpleCommand>(command.Id, contextKey);
             
             //Assert
             foundCommand.Should().NotBeNull();
@@ -52,34 +54,40 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
         }
 
         [Fact]
-        public void When_expiring_some_but_not_all()
+        public async Task When_expiring_some_but_not_all()
         {
             //Arrange
             const string contextKey = "Inbox_Cache_Expiry_Tests";
             
-            var inbox = new InMemoryInbox()
+            var timeProvider = new FakeTimeProvider();
+            var inbox = new InMemoryInbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
-                EntryTimeToLive = TimeSpan.FromMilliseconds(500),
+                EntryTimeToLive = TimeSpan.FromMilliseconds(1),
                 ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
             };
 
-            var earlyCommands = new SimpleCommand[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};            
-            
             //Act
+            var earlyCommands = new[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};            
             foreach (var command in earlyCommands)
             {
-                inbox.Add(command, contextKey);
+                await inbox.AddAsync(command, contextKey);
             }
+            
+            //allow any sweeper to expire
+            await Task.Delay(1000);
+            
+            //expire these and allow another expiration to run
+            timeProvider.Advance(TimeSpan.FromSeconds(5));
 
-            Task.Delay(2000).Wait();  //expire these items
-
-            var lateCommands = new SimpleCommand[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
-
+            //add live entries
+            var lateCommands = new[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
             foreach (var command in lateCommands) //This will trigger cleanup
             {
-                inbox.Add(command, contextKey);
+                await inbox.AddAsync(command, contextKey);
             }
+            
+            await Task.Delay(500); //Give the sweep time to run and clear the old entries
             
             //Assert
             inbox.EntryCount.Should().Be(3);

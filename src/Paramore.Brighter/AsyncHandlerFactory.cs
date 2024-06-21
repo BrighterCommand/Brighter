@@ -29,7 +29,6 @@ namespace Paramore.Brighter
     /// <summary>
     /// Class AsyncHandlerFactory
     /// </summary>
-    /// <typeparam name="TRequest">The type of the t request.</typeparam>
     internal static class AsyncHandlerFactory
     {
         /// <summary>
@@ -39,6 +38,7 @@ namespace Paramore.Brighter
         /// <param name="attribute">The attribute.</param>
         /// <param name="requestContext">The request context.</param>
         /// <returns><see cref="IHandleRequestsAsync{TRequest}"/>.</returns>
+        /// <typeparam name="TRequest">The type of the <see cref="TRequest"/> request.</typeparam>
         public static IHandleRequestsAsync<TRequest> CreateAsyncRequestHandler<TRequest>(this IAmAHandlerFactoryAsync factory, RequestHandlerAttribute attribute, IRequestContext requestContext)
              where TRequest : class, IRequest
         {

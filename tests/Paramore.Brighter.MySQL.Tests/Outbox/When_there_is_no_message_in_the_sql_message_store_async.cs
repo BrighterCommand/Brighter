@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxEmptyStoreAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutboxSync _mySqlOutboxSync;
+        private readonly MySqlOutbox _mySqlOutbox;
         private readonly Message _messageEarliest;
         private Message _storedMessage;
 
@@ -43,15 +43,17 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
-                new MessageBody("message body"));
+            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
+            _messageEarliest = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT),
+                new MessageBody("message body")
+            );
         }
 
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Outbox_Async()
         {
-            _storedMessage = await _mySqlOutboxSync.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //should return an empty message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

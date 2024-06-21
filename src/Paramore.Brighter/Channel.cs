@@ -48,7 +48,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="channelName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
-        /// <param name="maxQueueLength">What is the maximum buffer size we will accelt</param>
+        /// <param name="maxQueueLength">What is the maximum buffer size we will accept</param>
         public Channel(string channelName, IAmAMessageConsumer messageConsumer, int maxQueueLength = 1)
         {
             _channelName = channelName;
@@ -74,7 +74,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Inserts messages into the channel for consumption by the message pump.
-        /// Note that there is an upperbound to what we can enqueue, although we always allow enqueing a quit
+        /// Note that there is an upperbound to what we can enqueue, although we always allow enqueueing a quit
         /// message. We will always try to clear the channel, when closing, as the stop message will get inserted
         /// after the queue
         /// </summary>
@@ -111,13 +111,13 @@ namespace Paramore.Brighter
         /// <summary>
         ///  Receives the specified timeout in milliseconds.
         /// </summary>
-        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutinMilliseconds)
+        public Message Receive(int timeoutInMilliseconds)
         {
             if (!_queue.TryDequeue(out Message message))
             {
-                Enqueue(_messageConsumer.Receive(timeoutinMilliseconds));
+                Enqueue(_messageConsumer.Receive(timeoutInMilliseconds));
                 if (!_queue.TryDequeue(out message))
                 {
                     message = s_NoneMessage; //Will be MT_NONE

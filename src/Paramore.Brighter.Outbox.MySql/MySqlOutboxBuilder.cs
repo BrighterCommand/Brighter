@@ -23,23 +23,25 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.ComponentModel;
 
 namespace Paramore.Brighter.Outbox.MySql
 {
-     /// <summary>
-     /// Provide SQL statement helpers for creation of an Outbox
-     /// </summary>
-     public class MySqlOutboxBuilder
+    /// <summary>
+    /// Provide SQL statement helpers for creation of an Outbox
+    /// </summary>
+    public class MySqlOutboxBuilder
     {
-        const string OutboxDdl = @"CREATE TABLE {0} ( 
-	`MessageId` CHAR(36) NOT NULL , 
+        const string TextOutboxDdl = @"CREATE TABLE {0} ( 
+	`MessageId`VARCHAR(255) NOT NULL , 
 	`Topic` VARCHAR(255) NOT NULL , 
 	`MessageType` VARCHAR(32) NOT NULL , 
 	`Timestamp` TIMESTAMP(3) NOT NULL , 
-    `CorrelationId` CHAR(36) NULL ,
+    `CorrelationId`VARCHAR(255) NULL ,
     `ReplyTo` VARCHAR(255) NULL ,
-    `ContentType` VARCHAR(128) NULL ,  
+    `ContentType` VARCHAR(128) NULL , 
+    `PartitionKey` VARCHAR(128) NULL , 
     `Dispatched` TIMESTAMP(3) NULL , 
 	`HeaderBag` TEXT NOT NULL , 
 	`Body` TEXT NOT NULL , 
@@ -49,18 +51,38 @@ namespace Paramore.Brighter.Outbox.MySql
 	PRIMARY KEY (`MessageId`)
 ) ENGINE = InnoDB;";
         
-        const string outboxExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
+        const string BinaryOutboxDdl = @"CREATE TABLE {0} ( 
+	`MessageId` VARCHAR(255) NOT NULL , 
+	`Topic` VARCHAR(255) NOT NULL , 
+	`MessageType` VARCHAR(32) NOT NULL , 
+	`Timestamp` TIMESTAMP(3) NOT NULL , 
+    `CorrelationId` VARCHAR(255) NULL ,
+    `ReplyTo` VARCHAR(255) NULL ,
+    `ContentType` VARCHAR(128) NULL ,  
+    `PartitionKey` VARCHAR(128) NULL ,
+    `Dispatched` TIMESTAMP(3) NULL , 
+	`HeaderBag` TEXT NOT NULL , 
+	`Body` BLOB NOT NULL , 
+    `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
+    `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
+    UNIQUE(`CreatedID`),
+	PRIMARY KEY (`MessageId`)
+) ENGINE = InnoDB;";
+
+        const string outboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{0}') AS TableExists;";
 
         /// <summary>
         /// Get the DDL that describes the table we will store messages in
         /// </summary>
         /// <param name="outboxTableName">The name of the table to store messages in</param>
+        /// <param name="hasBinaryMessagePayload">Should the message body be stored as binary? Conversion of binary data to/from UTF-8 is lossy</param>
         /// <returns></returns>
-        public static string GetDDL(string outboxTableName)
+        public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
         {
             if (string.IsNullOrEmpty(outboxTableName))
-                throw new InvalidEnumArgumentException($"You must provide a tablename for the OutBox table");
-            return string.Format(OutboxDdl, outboxTableName);
+                throw new ArgumentNullException(outboxTableName, $"You must provide a tablename for the OutBox table");
+
+            return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, outboxTableName);
         }
 
         /// <summary>
@@ -74,7 +96,6 @@ namespace Paramore.Brighter.Outbox.MySql
             if (string.IsNullOrEmpty(inboxTableName))
                 throw new InvalidEnumArgumentException($"You must provide a tablename for the  OutBox table");
             return string.Format(outboxExistsQuery, inboxTableName);
-             
         }
     }
 }

@@ -2,7 +2,6 @@
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using FluentAssertions;
-using Paramore.Brighter.Azure.TestDoubles.Tests;
 using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.Azure;
@@ -18,7 +17,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
     private readonly string _bucketName;
     private Uri _bucketUrl;
     private AzureBlobLuggageStore _luggageStore;
-    private readonly TransformPipelineBuilder _pipelineBuilder;
+    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
 
     public LargeMessagePaylodUnwrapTests()
     {
@@ -32,21 +31,21 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()))
-        {
-            { typeof(MyLargeCommand), typeof(MyLargeCommandMessageMapper) }
-        };
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore));
+        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-    }
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+    }                                                                             
     
     [Test]
     public async Task When_unwrapping_a_large_message()
     {
         //arrange
-        await Task.Delay(3000); //allow bucket definition to propogate
+        await Task.Delay(3000); //allow bucket definition to propagate
             
         //store our luggage and get the claim check
         var contents = DataGenerator.CreateString(6000);
@@ -65,15 +64,15 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
  
         //set the headers, so that we have a claim check listed
         var message = new Message(
-            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
+        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
 
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-        var transformedMessage = await transformPipeline.UnwrapAsync(message);
+        var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
         
         //assert
         //contents should be from storage

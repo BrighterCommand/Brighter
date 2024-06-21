@@ -23,10 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
 using Polly.CircuitBreaker;
@@ -101,6 +103,11 @@ namespace Paramore.Brighter
         /// <returns>TRequest.</returns>
         public virtual TRequest Handle(TRequest command)
         {
+            if (Context?.Span != null)
+            {
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, isSink:_successor == null);
+            }   
+            
             if (_successor != null)
             {
                 s_logger.LogDebug("Passing request from {HandlerName} to {NextHandler}", Name, _successor.Name);
@@ -120,7 +127,7 @@ namespace Paramore.Brighter
         /// Steps that don't know how to handle should pass through.
         /// Useful alternatives for Fallback are to try via the cache.
         /// Note that a Fallback handler implementation should not catch exceptions in the <see cref="Fallback"/> chain to avoid an infinite loop.
-        /// Call <see cref="Successor"/>.<see cref="Handle"/> if having provided a Fallback you want the chain to return to the 'happy' path. Excerise caution here though
+        /// Call <see cref="Successor"/>.<see cref="Handle"/> if having provided a Fallback you want the chain to return to the 'happy' path. Exercise caution here though
         /// as you do not know who generated the exception that caused the fallback chain.
         /// For this reason, the <see cref="FallbackPolicyHandler{TRequest}"/> puts the exception in the request context.
         /// When the <see cref="FallbackPolicyAttribute"/> is set on the <see cref="Handle"/> method of a derived class
@@ -131,6 +138,11 @@ namespace Paramore.Brighter
         /// <returns>TRequest.</returns>
         public virtual TRequest Fallback(TRequest command)
         {
+            if (Context?.Span != null)
+            {
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, isSink:_successor == null);
+            }   
+            
             if (_successor != null)
             {
                 s_logger.LogDebug("Falling back from {HandlerName} to {NextHandler}", Name, _successor.Name);
@@ -150,7 +162,7 @@ namespace Paramore.Brighter
 
         internal MethodInfo FindHandlerMethod()
         {
-            var methods = GetType().GetTypeInfo().GetMethods();
+            var methods = GetType().GetMethods();
             return methods
                 .Where(method => method.Name == nameof(Handle))
                 .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));

@@ -4,17 +4,9 @@ using System.Linq;
 
 namespace Paramore.Brighter
 {
-    public class ProducerRegistry : IAmAProducerRegistry
+    public class ProducerRegistry(Dictionary<string, IAmAMessageProducer> messageProducers) : IAmAProducerRegistry
     {
-
-        private Dictionary<string, IAmAMessageProducer> _messageProducers;
-        private readonly bool _hasProducers;
-
-        public ProducerRegistry(Dictionary<string, IAmAMessageProducer> messageProducers)
-        {
-            _messageProducers = messageProducers;
-            _hasProducers = messageProducers != null && messageProducers.Any();
-        }
+        private readonly bool _hasProducers = messageProducers != null && messageProducers.Any();
 
         /// <summary>
         /// Will call CloseAll to terminate producers
@@ -35,29 +27,14 @@ namespace Paramore.Brighter
         /// </summary>
         public void CloseAll()
         {
-            foreach (var producer in _messageProducers)
+            foreach (var producer in messageProducers)
             {
                 producer.Value.Dispose();
             }
             
-            _messageProducers.Clear();
+            messageProducers.Clear();
         }
 
-        /// <summary>
-        /// Used to obtain values from the first producer for configuration of the Outbox. Workaround because the outbox properties are on the publication
-        /// expect to be removed
-        /// </summary>
-        /// <returns></returns>
-        public IAmAMessageProducer GetDefaultProducer()
-        {
-            //TODO: We have to do this for properties that are across many producers associated with the Outbox and it should move to seperate configuration
-            //The Producer Registry could store this, but probably separation of concerns implies Outbox configuration
-            
-            if (_hasProducers)
-                return _messageProducers.First().Value;
-
-            throw new ConfigurationException("No producers configured for the external service bus");
-        }
 
         /// <summary>
         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
@@ -66,24 +43,35 @@ namespace Paramore.Brighter
         /// <returns>A producer</returns>
         public IAmAMessageProducer LookupBy(string topic)
         {
-            return _messageProducers[topic];
+            return messageProducers[topic];
         }
 
         /// <summary>
-        /// Looks up the producer associated with this message via a topic or returns the default producer. The topic lives on the message headers
+        /// Find the publication for a given request type
         /// </summary>
-        /// <param name="topic">The topic we want to find the producer for</param>
-        /// <returns>A producer</returns>
-        public IAmAMessageProducer LookupByOrDefault(string topic)
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <returns></returns>
+        /// <exception cref="ConfigurationException">Thrown if we have too many publications or none at all</exception>
+        public Publication LookupPublication<TRequest>() where TRequest : class, IRequest
         {
-            if (_messageProducers.ContainsKey(topic)) return LookupBy(topic);
+            var publications = from producer in messageProducers
+            where producer.Value.Publication.RequestType == typeof(TRequest)
+                select producer.Value.Publication;
 
-            return GetDefaultProducer();
+            if (publications.Count() > 1)
+                throw new ConfigurationException("Only one producer per request type is supported. Have you added the request type to multiple Publications?");
+            
+            var publication = publications.FirstOrDefault();
+            
+            if (publication is null)
+                throw new ConfigurationException("No producer found for request type. Have you set the request type on the Publication?");
+
+            return publication;
         }
 
         /// <summary>
         /// An iterable list of all the producers in the registry
         /// </summary>
-        public IEnumerable<IAmAMessageProducer> Producers { get { return _messageProducers.Values; } }
+        public IEnumerable<IAmAMessageProducer> Producers { get { return messageProducers.Values; } }
     }
 }

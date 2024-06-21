@@ -36,18 +36,19 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private readonly Message _message;
         private HeartbeatRequest _request;
         private const string TOPIC = "test.topic";
-        private readonly Guid _correlationId = Guid.NewGuid();
-        private readonly Guid _commandId = Guid.NewGuid();
+        private readonly string _correlationId = Guid.NewGuid().ToString();
+        private readonly string _commandId = Guid.NewGuid().ToString();
 
         public HeartbeatMessageToRequestTests()
         {
             _mapper = new HeartbeatRequestCommandMessageMapper();
             var messageHeader = new MessageHeader(
-                Guid.NewGuid(),
+                Guid.NewGuid().ToString(),
                 "Heartbeat",
                 MessageType.MT_COMMAND,
-                DateTime.UtcNow,
-                _correlationId, TOPIC);
+                timeStamp: DateTime.UtcNow,
+                correlationId:_correlationId,
+                replyTo:TOPIC);
 
             var body = String.Format("\"Id\": \"{0}\"", _commandId);
             var messageBody = new MessageBody("{" + body + "}");

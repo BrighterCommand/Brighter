@@ -4,6 +4,7 @@ using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Paramore.Brighter.Inbox.Exceptions;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 using Paramore.Brighter.Inbox.Handlers;
@@ -19,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         
         public OnceOnlyAttributeTests()
         {
-            _inbox = new InMemoryInbox();
+            _inbox = new InMemoryInbox(new FakeTimeProvider());
             
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandHandler>();
@@ -28,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddTransient<MyStoredCommandHandler>();
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

@@ -41,7 +41,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageConsumerChannelFailureTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
             _sentMessage = new Message(messageHeader, new MessageBody("test content"));
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //_should_return_a_channel_failure_exception
             _firstException.Should().BeOfType<ChannelFailureException>();
-            //_should_return_an_explainging_inner_exception
+            //_should_return_an_explaining_inner_exception
             _firstException.InnerException.Should().BeOfType<NotSupportedException>();
         }
 

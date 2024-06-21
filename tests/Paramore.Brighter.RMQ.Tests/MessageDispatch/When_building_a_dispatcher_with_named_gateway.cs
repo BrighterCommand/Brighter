@@ -43,7 +43,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
         public DispatchBuilderWithNamedGateway()
         {
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+                null
+                );
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             var policyRegistry = new PolicyRegistry
             {
@@ -76,9 +79,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                 .Build();
 
             _builder = DispatchBuilder.With()
-                .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
-                .MessageMappers(messageMapperRegistry, null)
-                .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
+                .CommandProcessorFactory(() => 
+                    new CommandProcessorProvider(commandProcessor),
+                    new InMemoryRequestContextFactory()
+                )
+                .MessageMappers(messageMapperRegistry, null, null, null)
+                .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
                 .Subscriptions(new []
                 {
                     new RmqSubscription<MyEvent>(
@@ -100,12 +106,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            AssertionExtensions.Should((object) _dispatcher).NotBeNull();
+            AssertionExtensions.Should(_dispatcher).NotBeNull();
         }
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

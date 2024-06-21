@@ -17,16 +17,15 @@ public class OrdersControllers : ControllerBase
     }
     
     [HttpGet("{orderId}")]
-    public async Task<IActionResult> GetOrder(int orderId, CancellationToken cancellationToken)
+    public IActionResult GetOrder(int orderId, CancellationToken cancellationToken)
     {
-    
         return Ok();
     }
 
     [HttpPost("")]
     public async Task<IActionResult> CreateOrder([FromBody]CreateOrderRequest request, CancellationToken cancellationToken)
     {
-        var command = new CreateOrderCommand() { Number = request.Number, Type = request.OrderType };
+        var command = new CreateOrderCommand { Number = request.Number, Type = request.OrderType };
         
         await _commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
 
@@ -36,7 +35,7 @@ public class OrdersControllers : ControllerBase
     [HttpPatch("{orderId}")]
     public async Task<IActionResult> UpdateOrder([FromBody]UpdateOrderRequest request, int orderId, CancellationToken cancellationToken)
     {
-        var command = new UpdateOrderCommand()
+        var command = new UpdateOrderCommand
         {
             OrderId = orderId,
             Status = request.Status

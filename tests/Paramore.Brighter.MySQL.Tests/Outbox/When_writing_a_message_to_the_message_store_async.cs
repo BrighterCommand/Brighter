@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxWritingMessageAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutboxSync _mySqlOutboxSync;
+        private readonly MySqlOutbox _mySqlOutbox;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _key3 = "name3";
@@ -51,9 +51,11 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
+            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
 
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,DateTime.UtcNow.AddDays(-1), 5, 5);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "test_topic", 
+                MessageType.MT_DOCUMENT,timeStamp: DateTime.UtcNow.AddDays(-1), handledCount:5, delayedMilliseconds:5
+            );
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -66,16 +68,18 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _mySqlOutboxSync.AddAsync(_messageEarliest);
+            var context = new RequestContext();
+            await _mySqlOutbox.AddAsync(_messageEarliest, context);
 
-            _storedMessage = await _mySqlOutboxSync.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id, context);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
+                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);

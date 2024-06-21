@@ -1,32 +1,52 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-public class TestTransform : IAmAMessageTransformAsync
+public class TestTransform : IAmAMessageTransformAsync, IAmAMessageTransform
 {
+    public List<object> WrapInitializerList { get; set; } = new List<object>();
+    public List<object> UnwrapInitializerList { get; set; } = new List<object>();
+    
+    public IRequestContext Context { get; set; }
+    
     public void Dispose()
     {
-        throw new System.NotImplementedException();
+        WrapInitializerList.Clear();
     }
 
     public void InitializeWrapFromAttributeParams(params object[] initializerList)
     {
-        throw new System.NotImplementedException();
+        WrapInitializerList.AddRange(initializerList);
     }
 
     public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
     {
-        throw new System.NotImplementedException();
+       UnwrapInitializerList.AddRange(initializerList); 
     }
 
-    public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken)
+    public Message Wrap(Message message, Publication publication)
     {
-        throw new System.NotImplementedException();
+        return message;
     }
 
-    public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken)
+    public Message Unwrap(Message message)
     {
-        throw new System.NotImplementedException();
+        return message;
+    }
+
+    public Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken)
+    {
+        var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(message);
+        return tcs.Task;
+    }
+
+    public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken)
+    {
+        var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(message);
+        return tcs.Task;
     }
 }

@@ -43,11 +43,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqMessageProducerTTLTests ()
         {
            _messageOne = new Message(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
            
            _messageTwo = new Message(
-               new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+               new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
                new MessageBody("test content"));
 
              var rmqConnection = new RmqMessagingGatewayConnection
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_rejecting_a_message_to_a_dead_letter_queue()
+        public async Task When_rejecting_a_message_to_a_dead_letter_queue()
         {
             _messageProducer.Send(_messageOne);
             _messageProducer.Send(_messageTwo);
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             messageOne.Id.Should().Be(_messageOne.Id);
 
             //Let it expire
-            Task.Delay(11000).Wait();
+            await Task.Delay(11000);
 
             var dlqMessage = _messageConsumer.Receive(10000).First();
             

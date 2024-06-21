@@ -23,8 +23,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Amazon.SimpleNotificationService;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -33,30 +35,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync
     {
-        /// <summary>
-        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
-        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
-        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
-        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
-        /// </summary>
-        public int MaxOutStandingMessages { get; set; } = -1;
-        
-        /// <summary>
-        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
-        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
-        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
-        /// </summary>
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        /// <summary>
-        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
-        /// This bag provides the args required
-        /// </summary>
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
-
         private readonly AWSMessagingGatewayConnection _connection;
         private readonly SnsPublication _publication;
+        
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
+        public Publication Publication { get { return _publication; } }
 
+        /// <summary>
+        /// The OTel Span we are writing Producer events too
+        /// </summary>
+        public Activity Span { get; set; }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
@@ -71,8 +62,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (publication.TopicArn != null)
                 ChannelTopicArn = publication.TopicArn;
 
-            MaxOutStandingMessages = publication.MaxOutStandingMessages;
-            MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingMessages;
         }
         
        public bool ConfirmTopicExists(string topic = null)
@@ -101,21 +90,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             ConfirmTopicExists(message.Header.Topic);
 
-            using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
+            using var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region);
+            var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
+            var messageId = publisher.Publish(message);
+            if (messageId != null)
             {
-                var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
-                var messageId = publisher.Publish(message);
-                if (messageId != null)
-                {
-                    s_logger.LogDebug(
-                        "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-                        message.Header.Topic, message.Id, messageId);
-                    return;
-                }
-
-                throw new InvalidOperationException(
-                    string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
+                s_logger.LogDebug(
+                    "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+                    message.Header.Topic, message.Id, messageId);
+                return;
             }
+
+            throw new InvalidOperationException(
+                string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
         }
 
         /// <summary>

@@ -63,11 +63,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         /// <summary>
         /// What do we do if there is no offset stored in ZooKeeper for this consumer
-        /// AutoOffsetReset.Earlist -  (default) Begin reading the stream from the start
+        /// AutoOffsetReset.Earliest -  (default) Begin reading the stream from the start
         /// AutoOffsetReset.Latest - Start from now i.e. only consume messages after we start
         /// AutoOffsetReset.Error - Consider it an error to be lacking a reset
         /// </summary>
         public AutoOffsetReset OffsetDefault { get; set; } = AutoOffsetReset.Earliest;
+        
+        /// <summary>
+        /// How should we assign partitions to consumers in the group?
+        /// Range - Assign to co-localise partitions to consumers in the same group
+        /// RoundRobin - Assign partitions to consumers in a round robin fashion
+        /// CooperativeSticky - Brighter's default, reduce the number of re-balances by assigning partitions to the consumer that previously owned them
+        /// </summary>
+        public PartitionAssignmentStrategy PartitionAssignmentStrategy { get; set; }
 
         /// <summary>
         /// How long before we time out when we are reading the committed offsets back (mainly used for debugging)
@@ -95,6 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public int TopicFindTimeoutMs { get; set; } = 5000;
 
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
@@ -115,12 +124,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="maxPollIntervalMs">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance</param>
         /// <param name="sweepUncommittedOffsetsIntervalMs">How often do we commit offsets that have yet to be saved</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
-        /// <param name="isAsync">Is this channel read asynchronously</param>
+        /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
         /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>       /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         public KafkaSubscription (
             Type dataType, 
             SubscriptionName name = null, 
@@ -139,15 +149,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int maxPollIntervalMs = 300000, 
             int sweepUncommittedOffsetsIntervalMs = 30000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            bool isAsync = false, 
+            bool runAsync = false, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
+            int channelFailureDelay = 1000,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
             GroupId = groupId;
@@ -158,6 +169,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             SessionTimeoutMs = sessionTimeoutMs;
             NumPartitions = numOfPartitions;
             ReplicationFactor = replicationFactor;
+            PartitionAssignmentStrategy = partitionAssignmentStrategy;
+            
+            if (PartitionAssignmentStrategy == PartitionAssignmentStrategy.CooperativeSticky)
+                throw new ArgumentOutOfRangeException("partitionAssignmentStrategy",
+                    "CooperativeSticky is not supported for with manual commits, see https://github.com/confluentinc/librdkafka/issues/4059");
         }
     }
 
@@ -182,13 +198,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="maxPollIntervalMs">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance</param>
         /// <param name="sweepUncommittedOffsetsIntervalMs">How often do we commit offsets that have yet to be saved</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
-        /// <param name="isAsync">Is this channel read asynchronously</param>
+        /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
         /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         public KafkaSubscription(
             SubscriptionName name = null, 
             ChannelName channelName = null, 
@@ -206,17 +223,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int maxPollIntervalMs = 300000,
             int sweepUncommittedOffsetsIntervalMs = 30000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            bool isAsync = false, 
+            bool runAsync = false, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
+            int channelFailureDelay = 1000,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, 
                 requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
-                sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync, 
-                numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, runAsync, 
+                numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay,
+                partitionAssignmentStrategy)
         {
         }
     }

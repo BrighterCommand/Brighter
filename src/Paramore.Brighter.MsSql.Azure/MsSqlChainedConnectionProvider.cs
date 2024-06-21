@@ -6,7 +6,7 @@ using Azure.Identity;
 
 namespace Paramore.Brighter.MsSql.Azure
 {
-    public class ServiceBusChainedClientProvider : MsSqlAzureConnectionProviderBase
+    public class ServiceBusChainedClientConnectionProvider : MsSqlAzureConnectionProviderBase
     {
         private readonly ChainedTokenCredential _credential;
         
@@ -15,7 +15,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
         /// <param name="credentialSources">List of Token Providers to use when trying to obtain a token.</param>
-        public ServiceBusChainedClientProvider(MsSqlConfiguration configuration,
+        public ServiceBusChainedClientConnectionProvider(RelationalDatabaseConfiguration configuration,
             params TokenCredential[] credentialSources) : base(configuration)
         {
             if (credentialSources == null || credentialSources.Length < 1)
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MsSql.Azure
 
         protected override async Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken)
         {
-            return await _credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);
+            return await _credential.GetTokenAsync(new TokenRequestContext(AuthenticationTokenScopes), cancellationToken);
         }
     }
 }

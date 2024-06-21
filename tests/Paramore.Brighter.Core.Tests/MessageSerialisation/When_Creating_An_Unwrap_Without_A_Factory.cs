@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
@@ -18,14 +19,16 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
-        
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
+
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
         
         _message = new Message(
-            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
@@ -42,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper");
 
         //wrap should just do message mapper                                          
-        var request = _transformPipeline.UnwrapAsync(_message).Result;
+        var request = _transformPipeline.Unwrap(_message, new RequestContext());
         
         //assert
         request.Value = _myCommand.Value;

@@ -38,10 +38,10 @@ namespace Paramore.Brighter
             _messageType = typeof(TRequest);
         }
 
-        public IAmAMessageTransformAsync CreateMessageTransformer()
+        public IAmAMessageTransform CreateMessageTransformer()
         {
             var transformerType = _attribute.GetHandlerType();
-            var transformer = (IAmAMessageTransformAsync)_factory.Create(transformerType);
+            var transformer = _factory.Create(transformerType);
             if (_attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(_attribute.InitializerParams());
             if (_attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(_attribute.InitializerParams());
             return transformer;

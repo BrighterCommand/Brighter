@@ -9,11 +9,19 @@ namespace Paramore.Brighter.MySQL.Tests
 {
     public class MySqlTestHelper
     {
+        private readonly bool _binaryMessagePayload;
         private string _tableName;
         private MySqlSettings _mysqlSettings;
+        
+        public RelationalDatabaseConfiguration InboxConfiguration =>
+            new(_mysqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
 
-        public MySqlTestHelper()
+        public RelationalDatabaseConfiguration OutboxConfiguration => 
+            new(_mysqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
+
+        public MySqlTestHelper(bool binaryMessagePayload = false)
         {
+            _binaryMessagePayload = binaryMessagePayload;
             var builder = new ConfigurationBuilder().AddEnvironmentVariables();
             var configuration = builder.Build();
 
@@ -23,17 +31,13 @@ namespace Paramore.Brighter.MySQL.Tests
             _tableName = $"test_{Guid.NewGuid()}";
         }
 
-       public void CreateDatabase()
+        public void CreateDatabase()
         {
-            using (var connection = new MySqlConnection(_mysqlSettings.TestsMasterConnectionString))
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = @"CREATE DATABASE IF NOT EXISTS BrighterTests;";
-                    command.ExecuteNonQuery();
-                }
-            }
+            using var connection = new MySqlConnection(_mysqlSettings.TestsMasterConnectionString);
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"CREATE DATABASE IF NOT EXISTS BrighterTests;";
+            command.ExecuteNonQuery();
         }
 
         public void SetupMessageDb()
@@ -48,59 +52,46 @@ namespace Paramore.Brighter.MySQL.Tests
             CreateInboxTable();
         }
 
-        public MySqlInboxConfiguration InboxConfiguration => new MySqlInboxConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
-
-        public MySqlConfiguration OutboxConfiguration => new MySqlConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
-
-        public void CleanUpDb()
-        {
-            using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
+       public void CleanUpDb()
+       {
+           using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
+           connection.Open();
+           using var command = connection.CreateCommand();
+           command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
+           command.ExecuteNonQuery();
+       }
 
         public void CreateOutboxTable()
         {
-            using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
-            {
-                _tableName = $"`message_{_tableName}`";
-                var createTableSql = MySqlOutboxBuilder.GetDDL(_tableName);
+            using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
+            _tableName = $"`message_{_tableName}`";
+            var createTableSql =
+                MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: _binaryMessagePayload);
 
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = createTableSql;
-                    command.ExecuteNonQuery();
-                }
-            }
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = createTableSql;
+            command.ExecuteNonQuery();
         }
 
         public void CreateInboxTable()
         {
-            using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
-            {
-                _tableName = $"`command_{_tableName}`";
-                var createTableSql = MySqlInboxBuilder.GetDDL(_tableName);
+            using var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString);
+            _tableName = $"`command_{_tableName}`";
+            var createTableSql = MySqlInboxBuilder.GetDDL(_tableName);
 
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = createTableSql;
-                    command.ExecuteNonQuery();
-                }
-            }
+            connection.Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = createTableSql;
+            command.ExecuteNonQuery();
         }
     }
 
     internal class MySqlSettings
     {
-        public string TestsBrighterConnectionString { get; set; } = "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
+        public string TestsBrighterConnectionString { get; set; } =
+            "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
+
         public string TestsMasterConnectionString { get; set; } = "Server=localhost;Uid=root;Pwd=root;";
     }
 }

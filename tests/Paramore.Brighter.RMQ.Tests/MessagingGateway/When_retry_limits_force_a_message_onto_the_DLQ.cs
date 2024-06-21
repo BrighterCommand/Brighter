@@ -27,7 +27,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RMQMessageConsumerRetryDLQTests()
         {
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string contentType = "text\\plain";
             var channelName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
             _topicName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
@@ -36,7 +36,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Requeue" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId, "", contentType),
+                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: correlationId, 
+                    contentType: contentType
+                ),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -64,7 +66,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             //how do we send to the queue
-            _sender = new RmqMessageProducer(rmqConnection, new RmqPublication());
+            _sender = new RmqMessageProducer(rmqConnection, new RmqPublication
+            {
+                Topic = routingKey, 
+                RequestType = typeof(MyDeferredCommand)
+            });
 
             //set up our receiver
             _channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
@@ -84,13 +90,16 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
+            var provider = new CommandProcessorProvider(_commandProcessor);
 
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)));
+                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(_commandProcessor, messageMapperRegistry)
+            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
+                null, new InMemoryRequestContextFactory())
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };
@@ -105,29 +114,29 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_retry_limits_force_a_message_onto_the_dlq()
+        public async Task When_retry_limits_force_a_message_onto_the_dlq()
         {
             //NOTE: This test is **slow** because it needs to ensure infrastructure and then wait whilst we requeue a message a number of times,
             //then propagate to the DLQ
             
             //start a message pump, let it create infrastructure 
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(20000).Wait();
+            await Task.Delay(20000);
 
             //put something on an SNS topic, which will be delivered to our SQS queue
             _sender.Send(_message);
 
             //Let the message be handled and deferred until it reaches the DLQ
-            Task.Delay(20000).Wait();
+            await Task.Delay(20000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
-            Task.Delay(5000).Wait();
+            await Task.Delay(5000);
 
             //inspect the dlq
             var dlqMessage = _deadLetterConsumer.Receive(10000).First();

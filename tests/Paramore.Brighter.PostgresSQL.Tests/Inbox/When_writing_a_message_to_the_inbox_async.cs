@@ -37,7 +37,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
     public class SqlInboxAddMessageAsyncTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _pgTestHelper;
-        private readonly PostgresSqlInbox _pgSqlInbox;
+        private readonly PostgreSqlInbox _pgSqlInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
         private MyCommand _storedCommand;
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             _pgTestHelper = new PostgresSqlTestHelper();
             _pgTestHelper.SetupCommandDb();
 
-            _pgSqlInbox = new PostgresSqlInbox(_pgTestHelper.InboxConfiguration);
+            _pgSqlInbox = new PostgreSqlInbox(_pgTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
         }
@@ -60,11 +60,11 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             _storedCommand = await _pgSqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__sql_inbox
-            AssertionExtensions.Should((object) _storedCommand).NotBeNull();
+            AssertionExtensions.Should(_storedCommand).NotBeNull();
             //_should_read_the_command_value
-            AssertionExtensions.Should((string) _storedCommand.Value).Be(_raisedCommand.Value);
+            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
             //_should_read_the_command_id
-            AssertionExtensions.Should((Guid) _storedCommand.Id).Be(_raisedCommand.Id);
+            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
         }
 
         public void Dispose()

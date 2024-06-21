@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <returns>Configuration values</returns>
         public override object[] InitializerParams()
         {
-            return new object[] { _compressionMethod, _compressionLevel, _thresholdInKb };
+            return [_compressionMethod, _compressionLevel, _thresholdInKb];
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <returns>The type for the compression middleware</returns>
         public override Type GetHandlerType()
         {
-            return typeof(CompressPayloadTransformer);
+            return typeof(CompressPayloadTransformerAsync);
         }
     }
 }

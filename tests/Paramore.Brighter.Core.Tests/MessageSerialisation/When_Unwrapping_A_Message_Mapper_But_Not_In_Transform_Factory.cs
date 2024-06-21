@@ -16,9 +16,11 @@ public class MessageUnwrapRequestMissingTransformTests
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
-        
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
+
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         MyTransformableCommand myCommand = new();
         
@@ -27,7 +29,7 @@ public class MessageUnwrapRequestMissingTransformTests
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         Message message = new(
-            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 

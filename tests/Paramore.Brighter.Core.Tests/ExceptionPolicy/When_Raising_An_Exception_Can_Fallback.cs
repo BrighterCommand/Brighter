@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var container = new ServiceCollection();
             container.AddSingleton<MyFailsWithFallbackDivideByZeroHandler>();
             container.AddSingleton<FallbackPolicyHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
             
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
@@ -65,13 +65,13 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyFailsWithFallbackDivideByZeroHandler.ShouldReceive(_myCommand);
             //_should_call_the_fallback_chain
             MyFailsWithFallbackDivideByZeroHandler.ShouldFallback(_myCommand);
-            //_should_set_the_exeception_into_context
+            //_should_set_the_exception_into_context
             MyFailsWithFallbackDivideByZeroHandler.ShouldSetException(_myCommand);
         }
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

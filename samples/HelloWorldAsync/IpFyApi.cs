@@ -51,21 +51,19 @@ namespace HelloWorldAsync
             _endpoint = endpoint;
         }
 
-        public async Task<IpFyApiResult> GetAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IpFyApiResult> GetAsync(CancellationToken cancellationToken = default)
         {
-            using (var client = new HttpClient())
-            {
-                client.BaseAddress = _endpoint;
-                client.DefaultRequestHeaders.Clear();
+            using var client = new HttpClient();
+            client.BaseAddress = _endpoint;
+            client.DefaultRequestHeaders.Clear();
 
-                var response = await client.GetAsync("", cancellationToken);
-                string result;
-                if (response.IsSuccessStatusCode)
-                    result = await response.Content.ReadAsStringAsync();
-                else
-                    result = "API returned HTTP status " + response.StatusCode;
-                return new IpFyApiResult(response.IsSuccessStatusCode, result);
-            }
+            var response = await client.GetAsync("", cancellationToken);
+            string result;
+            if (response.IsSuccessStatusCode)
+                result = await response.Content.ReadAsStringAsync(cancellationToken);
+            else
+                result = "API returned HTTP status " + response.StatusCode;
+            return new IpFyApiResult(response.IsSuccessStatusCode, result);
         }
     }
 }

@@ -39,15 +39,15 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
         public DynamoDbInboxEmptyWhenSearchedAsyncTests()
         {
-            _dynamoDbInbox = new DynamoDbInbox(Client);
+            _dynamoDbInbox = new DynamoDbInbox(Client, new DynamoDbInboxConfiguration());
         }
 
         [Fact]
         public async void When_There_Is_No_Message_In_The_Sql_Inbox()
         {
             var exception =
-                await Catch.ExceptionAsync(() => _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid(), "some key"));
-            AssertionExtensions.Should((object)exception).BeOfType<RequestNotFoundException<MyCommand>>();
+                await Catch.ExceptionAsync(() => _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid().ToString(), "some key"));
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
     }
 }

@@ -31,14 +31,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyEventHandlerAsync : RequestHandlerAsync<MyEvent>
     {
-        private readonly IDictionary<string, Guid> _receivedMessages;
+        private readonly IDictionary<string, string> _receivedMessages;
 
-        public MyEventHandlerAsync(IDictionary<string, Guid> receivedMessages)
+        public MyEventHandlerAsync(IDictionary<string, string> receivedMessages)
         {
             _receivedMessages = receivedMessages;
         }
 
-        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default)
         {
             if (cancellationToken.IsCancellationRequested)
                 return command;

@@ -2,7 +2,7 @@
 
 /* The MIT License (MIT)
 Copyright © 2017 Wayne Hunsley <whunsley@gmail.com>
-Copyright © 2021 Ian Cooper Ian Cooper <ian_hammond_cooper@yahoo.co.uk> 
+Copyright © 2021 Ian Cooper Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -26,8 +26,8 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using Greetings.Ports.Commands;
+using GreetingsSender;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,86 +38,77 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Polly;
 using Polly.Registry;
 
-namespace GreetingsSender
-{
-    internal static class Program
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureHostConfiguration(configurationBuilder =>
     {
-        static async Task Main(string[] args)
+        configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
+        configurationBuilder.AddJsonFile("appsettings.json", optional: true);
+        configurationBuilder.AddCommandLine(args);
+    })
+    .ConfigureLogging((context, builder) =>
+    {
+        builder.ClearProviders();
+        builder.AddConsole();
+        builder.AddDebug();
+    })
+    .ConfigureServices((hostContext, services) =>
+    {
+        var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
         {
-            var host = (IHost)Host.CreateDefaultBuilder(args)
-                .ConfigureHostConfiguration(configurationBuilder =>
+            TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
+        });
+
+        var circuitBreakerPolicy =
+            Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+        var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[]
+        {
+            TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
+        });
+
+        var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
+            .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
+
+        var policyRegistry = new PolicyRegistry
+        {
+            { CommandProcessor.RETRYPOLICY, retryPolicy },
+            { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
+            { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
+            { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
+        };
+
+        var producerRegistry = new KafkaProducerRegistryFactory(
+                new KafkaMessagingGatewayConfiguration
                 {
-                    configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
-                    configurationBuilder.AddJsonFile("appsettings.json", optional: true);
-                    configurationBuilder.AddCommandLine(args);
-                })
-                .ConfigureLogging((context, builder) =>
+                    Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
+                },
+                new KafkaPublication[]
                 {
-                    builder.ClearProviders();
-                    builder.AddConsole();
-                    builder.AddDebug();
+                    new KafkaPublication
+                    {
+                        Topic = new RoutingKey("greeting.event"),
+                        RequestType = typeof(GreetingEvent),
+                        NumPartitions = 3,
+                        MessageSendMaxRetries = 3,
+                        MessageTimeoutMs = 1000,
+                        MaxInFlightRequestsPerConnection = 1
+                    }
                 })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
-                    {
-                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
-                    });
+            .Create();
 
-                    var circuitBreakerPolicy =
-                        Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+        services.AddBrighter(options =>
+            {
+                options.PolicyRegistry = policyRegistry;
+            })
+            .UseExternalBus((configure) =>
+            {
+                configure.ProducerRegistry = producerRegistry;
+            })
+            .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
 
-                    var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[]
-                    {
-                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
-                    });
+        services.AddHostedService<TimedMessageGenerator>();
+    })
+    .UseConsoleLifetime()
+    .Build();
 
-                    var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
-                        .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
-
-                    var policyRegistry = new PolicyRegistry()
-                    {
-                        {CommandProcessor.RETRYPOLICY, retryPolicy},
-                        {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy},
-                        {CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync},
-                        {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
-                    };
-
-                    services.AddBrighter(options =>
-                        {
-                            options.PolicyRegistry = policyRegistry;
-                        })
-                        .UseInMemoryOutbox()
-                        .UseExternalBus(
-                            new KafkaProducerRegistryFactory(
-                                    new KafkaMessagingGatewayConfiguration()
-                                    {
-                                        Name = "paramore.brighter.greetingsender",
-                                        BootStrapServers = new[] {"localhost:9092"}
-                                    },
-                                    new KafkaPublication[]
-                                    {
-                                        new KafkaPublication()
-                                        {
-                                            Topic = new RoutingKey("greeting.event"),
-                                            NumPartitions = 3,
-                                            MessageSendMaxRetries = 3,
-                                            MessageTimeoutMs = 1000,
-                                            MaxInFlightRequestsPerConnection = 1
-                                        }
-                                    })
-                                .Create())
-                        .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
-
-                    services.AddHostedService<TimedMessageGenerator>();
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-                await host.RunAsync();
-        }
-    }
-}
-
+await host.RunAsync();

@@ -36,20 +36,26 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
-        private readonly SpyRequeueCommandProcessor _commandProcessor;
 
         public MessagePumpUnacceptableMessageLimitTests()
         {
-            _commandProcessor = new SpyRequeueCommandProcessor();
+            SpyRequeueCommandProcessor commandProcessor = new();
+            var provider = new CommandProcessorProvider(commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(_commandProcessor, messageMapperRegistry) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3 };
+            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
+            {
+                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+            };
 
-            var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
+            var unmappableMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }")
+            );
 
             _channel.Enqueue(unmappableMessage);
             _channel.Enqueue(unmappableMessage);
@@ -57,12 +63,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached()
+        public async Task When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(new[] { task });
 
             //should_have_acknowledge_the_3_messages
             _channel.AcknowledgeCount.Should().Be(3);

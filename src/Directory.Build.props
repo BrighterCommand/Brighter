@@ -19,6 +19,8 @@
     <!-- Recommended: Embed symbols containing Source Link in the main file (exe/dll) -->
     <DebugType>embedded</DebugType>
 
+    <LangVersion>latest</LangVersion>
+
     <!-- Version numbers have to be included at the same level as source link otherwise versions are reset to 1.0.0 -->
     <AssemblyVersion>9.0.0.0</AssemblyVersion>
     <FileVersion>9.0.0.0</FileVersion>
@@ -31,17 +33,6 @@
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
-
-  <ItemGroup Label="Package References">
-    <PackageReference Include="MinVer" Version="4.2.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\images\BrighterSticker.png" Pack="true" PackagePath="packageicon.png"/>

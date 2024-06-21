@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -16,18 +18,21 @@ public class MessageUnwrapRequestTests
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
-        
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
+
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
+            null
+        );
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         MyTransformableCommand myCommand = new();
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
+        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransform()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         _message = new Message(
-            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
@@ -39,9 +44,9 @@ public class MessageUnwrapRequestTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = _transformPipeline.UnwrapAsync(_message).Result;
+        var request = _transformPipeline.Unwrap(_message, new RequestContext());
         
         //assert
-        request.Value = MySimpleTransformAsync.HEADER_KEY;
+        request.Value.Should().Be( MySimpleTransformAsync.TRANSFORM_VALUE);
     }
 }

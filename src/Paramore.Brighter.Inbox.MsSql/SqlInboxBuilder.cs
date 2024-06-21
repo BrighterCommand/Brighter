@@ -29,19 +29,19 @@ namespace Paramore.Brighter.Inbox.MsSql
     /// </summary>
     public class SqlInboxBuilder
     {
-        private const string OutboxDDL = @"
+        private const string InboxDDL = @"
                     CREATE TABLE {0}
                         (
                             [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
-                            [CommandId] [UNIQUEIDENTIFIER] NOT NULL ,
+                            [CommandId] [NVARCHAR](256) NOT NULL ,
                             [CommandType] [NVARCHAR](256) NULL ,
-                            [CommandBody] [NTEXT] NULL ,
+                            [CommandBody] [NVARCHAR](MAX) NULL ,
                             [Timestamp] [DATETIME] NULL ,
                             [ContextKey] [NVARCHAR](256) NULL,
                             PRIMARY KEY ( [Id] )
                         );";
 
-        private const string InboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
+        private const string InboxExistsSQL = @"IF EXISTS (SELECT 1  FROM sys.tables WHERE  name = '{0}')  SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
         
         /// <summary>
         /// Get the DDL statements to create an Inbox in MSSQL
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <returns>The required DDL</returns>
          public static string GetDDL(string inboxTableName)
         {
-            return string.Format(OutboxDDL, inboxTableName);
+            return string.Format(InboxDDL, inboxTableName);
         }
         
         /// <summary>

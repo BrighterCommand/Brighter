@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
@@ -58,13 +57,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
             var messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayedMilliseconds: 5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
@@ -76,29 +75,32 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             _messageEarliest = new Message(messageHeader,
                 new MessageBody(body, "application/json", CharacterEncoding.UTF8));
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName));
         }
 
         [Fact]
         public async Task When_writing_a_utf8_message_to_the_dynamo_db_outbox()
         {
-            //act
-            await _dynamoDbOutbox.AddAsync(_messageEarliest);
+            //arrange
+            var context = new RequestContext();
             
-            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id);
+            //act
+            await _dynamoDbOutbox.AddAsync(_messageEarliest, context);
+
+            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id, context);
 
             //assert
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the header from the outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ").Should()
+                .Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-
 
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();

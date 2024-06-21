@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
@@ -13,16 +14,21 @@ public class MessageWrapCleanupTests
     private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
     public static string s_released;
+    private readonly Publication _publication;
 
     public MessageWrapCleanupTests()
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
+        
+        _publication = new Publication { Topic = new RoutingKey("MyTransformableCommand") };
         
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory());
     }
@@ -32,23 +38,22 @@ public class MessageWrapCleanupTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = _transformPipeline.WrapAsync(_myCommand).Result;
+        var message = _transformPipeline.Wrap(_myCommand, new RequestContext(), _publication);
         _transformPipeline.Dispose();
         
         //assert
-        s_released.Should().Be("|MySimpleTransformAsync");
+        s_released.Should().Be("|MySimpleTransform");
 
     }
     
-    
     private class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {
-        public IAmAMessageTransformAsync Create(Type transformerType)
+        public IAmAMessageTransform Create(Type transformerType)
         {
-            return new MySimpleTransformAsync();
+            return new MySimpleTransform();
         }
 
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(IAmAMessageTransform transformer)
         {
             var disposable = transformer as IDisposable;
             disposable?.Dispose();

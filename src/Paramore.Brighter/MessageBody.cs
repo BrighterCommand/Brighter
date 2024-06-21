@@ -24,9 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using System.Net;
-using System.Net.Mime;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -95,6 +92,12 @@ namespace Paramore.Brighter
             
             if (characterEncoding == CharacterEncoding.Raw) throw new ArgumentOutOfRangeException("characterEncoding", "Raw encoding is not supported for string constructor");
 
+            if (body == null)
+            {
+                Bytes = Array.Empty<byte>();
+                return;
+            }
+            
             Bytes = CharacterEncoding switch
             {
                 CharacterEncoding.Base64 => Convert.FromBase64String(body),
@@ -113,9 +116,16 @@ namespace Paramore.Brighter
         [JsonConstructor]
         public MessageBody(byte[] bytes, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
-            Bytes = bytes;
             ContentType = contentType;
             CharacterEncoding = characterEncoding;
+            
+            if (bytes == null)
+            {
+                Bytes = Array.Empty<byte>();
+                return;
+            }
+            
+            Bytes = bytes;
         }
 
         /// <summary>

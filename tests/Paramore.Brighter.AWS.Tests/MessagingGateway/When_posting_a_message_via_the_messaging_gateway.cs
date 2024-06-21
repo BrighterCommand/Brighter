@@ -19,7 +19,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
-        private readonly Guid _correlationId;
+        private readonly string _correlationId;
         private readonly string _replyTo;
         private readonly string _contentType;
         private readonly string _topicName;
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public SqsMessageProducerSendTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
-            _correlationId = Guid.NewGuid();
+            _correlationId = Guid.NewGuid().ToString();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -41,7 +41,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
+                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: _correlationId,
+                    replyTo: _replyTo, contentType: _contentType),
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -58,12 +59,12 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
         [Fact]
-        public void When_posting_a_message_via_the_producer()
+        public async Task When_posting_a_message_via_the_producer()
         {
             //arrange
             _messageProducer.Send(_message);
             
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
             
             var message =_channel.Receive(5000);
             

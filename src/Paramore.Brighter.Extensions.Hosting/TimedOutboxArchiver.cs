@@ -9,34 +9,30 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.Extensions.Hosting
 {
 
-    public class TimedOutboxArchiver : IHostedService, IDisposable
+    public class TimedOutboxArchiver(
+        IServiceScopeFactory serviceScopeFactory,
+        IDistributedLock distributedLock,
+        TimedOutboxArchiverOptions options)
+        : IHostedService, IDisposable
     {
-        private readonly TimedOutboxArchiverOptions _options;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
-        private IAmAnOutbox<Message> _outbox;
-        private IAmAnArchiveProvider _archiveProvider;
         private Timer _timer;
 
-        public TimedOutboxArchiver(IAmAnOutbox<Message> outbox, IAmAnArchiveProvider archiveProvider,
-            TimedOutboxArchiverOptions options)
-        {
-            _outbox = outbox;
-            _archiveProvider = archiveProvider;
-            _options = options;
-        }
+        private const string LockingResourceName = "Archiver";
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Archiver Service is starting.");
+            s_logger.LogInformation("Outbox Archiver Service is starting");
 
-            _timer = new Timer(Archive, null, TimeSpan.Zero, TimeSpan.FromSeconds(_options.TimerInterval));
+            _timer = new Timer(async (e) => await Archive(e, cancellationToken), null, TimeSpan.Zero,
+                TimeSpan.FromSeconds(options.TimerInterval));
 
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Archiver Service is stopping.");
+            s_logger.LogInformation("Outbox Archiver Service is stopping");
 
             _timer?.Change(Timeout.Infinite, 0);
 
@@ -48,26 +44,35 @@ namespace Paramore.Brighter.Extensions.Hosting
             _timer.Dispose();
         }
 
-        private void Archive(object state)
+        private async Task Archive(object state, CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
-
-            try
+            var lockId = await distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
+            if (lockId != null)
             {
-                var outBoxArchiver = new OutboxArchiver(
-                    _outbox,
-                    _archiveProvider,
-                    _options.BatchSize);
+                var scope = serviceScopeFactory.CreateScope();
+                s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
+                try
+                {
+                    IAmAnExternalBusService externalBusService = scope.ServiceProvider.GetService<IAmAnExternalBusService>();
+                    
+                    await externalBusService.ArchiveAsync(options.MinimumAge,  new RequestContext(), cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e, "Error while sweeping the outbox");
+                }
+                finally
+                {
+                    await distributedLock.ReleaseLockAsync(LockingResourceName, lockId, cancellationToken);
+                }
 
-                outBoxArchiver.Archive(_options.MinimumAge);
+                s_logger.LogInformation("Outbox Sweeper sleeping");
             }
-            catch (Exception e)
+            else
             {
-                s_logger.LogError(e, "Error while sweeping the outbox.");
-                throw;
+                s_logger.LogWarning("Outbox Archiver is still running - abandoning attempt");
             }
-
-            s_logger.LogInformation("Outbox Sweeper sleeping");
+            
         }
     }
 }

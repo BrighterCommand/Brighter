@@ -100,7 +100,7 @@ namespace GreetingsSender.Web.Controllers
             
             await _commandProcessor.DepositPostAsync(greetingAsync2);
 
-            var msgs = new List<Guid>();
+            var msgs = new List<string>();
             // msgs.Add(greeting.Id);
             // msgs.Add(greetingAsync.Id);
             msgs.Add(greeting2.Id);
@@ -113,8 +113,8 @@ namespace GreetingsSender.Web.Controllers
 
         public async Task<IActionResult> AddGreeting()
         {
-            var command = new AddGreetingCommand() {GreetingMessage = "Welcome to the Example.", ThrowError = false};
-            var failingCommand = new AddGreetingCommand() { GreetingMessage = "This should never reach the DB or outbox.", ThrowError = true };
+            var command = new AddGreetingCommand {GreetingMessage = "Welcome to the Example.", ThrowError = false};
+            var failingCommand = new AddGreetingCommand { GreetingMessage = "This should never reach the DB or outbox.", ThrowError = true };
             await _commandProcessor.PostAsync(command);
             await _commandProcessor.PostAsync(failingCommand);
             

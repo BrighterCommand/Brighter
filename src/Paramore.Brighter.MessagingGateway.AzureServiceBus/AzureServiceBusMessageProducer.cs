@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -35,6 +36,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 using Polly.Retry;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -43,29 +45,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// </summary>
     public class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
-        /// <summary>
-        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
-        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
-        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
-        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
-        /// </summary>
-        public int MaxOutStandingMessages { get; set; } = -1;
-  
-        /// <summary>
-        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
-        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
-        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
-        /// </summary>
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        /// <summary>
-        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
-        /// This bag provides the args required
-        /// </summary>
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
-
         private readonly IAdministrationClientWrapper _administrationClientWrapper;
         private readonly IServiceBusSenderProvider _serviceBusSenderProvider;
+        private readonly AzureServiceBusPublication _publication;
         private bool _topicCreated;
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMessageProducer>();
@@ -75,20 +57,36 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private readonly int _bulkSendBatchSize;
 
         /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
+        public Publication Publication { get { return _publication; } }
+        
+        /// <summary>
+        /// The OTel Span we are writing Producer events too
+        /// </summary>
+        public Activity Span { get; set; }
+
+        /// <summary>
         /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
         /// </summary>
         /// <param name="administrationClientWrapper">The administrative client.</param>
         /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
-        /// <param name="makeChannel">Behaviour to use when verifying Channels <see cref="OnMissingChannel"/>.</param>
+        /// <param name="publication">Configuration of a producer</param>
         /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
-        public AzureServiceBusMessageProducer(IAdministrationClientWrapper administrationClientWrapper, IServiceBusSenderProvider serviceBusSenderProvider, OnMissingChannel makeChannel = OnMissingChannel.Create, int bulkSendBatchSize = 10)
+        public AzureServiceBusMessageProducer(
+            IAdministrationClientWrapper administrationClientWrapper, 
+            IServiceBusSenderProvider serviceBusSenderProvider, 
+            AzureServiceBusPublication publication, 
+            int bulkSendBatchSize = 10
+            )
         {
             _administrationClientWrapper = administrationClientWrapper;
             _serviceBusSenderProvider = serviceBusSenderProvider;
-            _makeChannel = makeChannel;
+            _publication = publication;
+            _makeChannel = _publication.MakeChannels;
             _bulkSendBatchSize = bulkSendBatchSize;
         }
-        
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -97,6 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             SendWithDelay(message);
         }
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -110,11 +109,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Sends a Batch of Messages
         /// </summary>
         /// <param name="messages">The messages to send.</param>
-        /// <param name="batchSize">The size of batches to send messages in.</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <param name="batchSize">The size of batches to send messages in.</param>
         /// <returns>List of Messages successfully sent.</returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var topics = messages.Select(m => m.Header.Topic).Distinct();
             if (topics.Count() != 1)
@@ -124,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             var topic = topics.Single();
 
-            var batches = Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)_bulkSendBatchSize)))
+            var batches = Enumerable.Range(0, (int)Math.Ceiling(messages.Count() / (decimal)_bulkSendBatchSize))
                 .Select(i => new List<Message>(messages
                     .Skip(i * _bulkSendBatchSize)
                     .Take(_bulkSendBatchSize)
@@ -192,7 +192,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                 s_logger.LogDebug(
                     "Published message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}", message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
-                ;
             }
             catch (Exception e)
             {
@@ -240,13 +239,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
             azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
             azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
+
             foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
             {
                 azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
             }
+            
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
             azureServiceBusMessage.ContentType = message.Header.ContentType;
             azureServiceBusMessage.MessageId = message.Header.Id.ToString();
+            if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object value))
+                azureServiceBusMessage.SessionId = value.ToString();
 
             return azureServiceBusMessage;
         }
@@ -258,7 +262,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
-                if (_administrationClientWrapper.TopicExists(topic))
+                if (_administrationClientWrapper.TopicOrQueueExists(topic, _publication.UseServiceBusQueue))
                 {
                     _topicCreated = true;
                     return;
@@ -268,8 +272,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 {
                     throw new ChannelFailureException($"Topic {topic} does not exist and missing channel mode set to Validate.");
                 }
-
-                _administrationClientWrapper.CreateTopic(topic);
+                
+                _administrationClientWrapper.CreateChannel(topic, _publication.UseServiceBusQueue);
                 _topicCreated = true;
             }
             catch (Exception e)

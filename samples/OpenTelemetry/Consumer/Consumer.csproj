@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -18,7 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.4.0" />
+      <PackageReference Include="OpenTelemetry.Exporter.Jaeger" />
     </ItemGroup>
 
 </Project>

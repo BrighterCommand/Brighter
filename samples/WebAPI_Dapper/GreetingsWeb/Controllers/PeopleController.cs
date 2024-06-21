@@ -29,7 +29,7 @@ namespace GreetingsWeb.Controllers
         {
             var foundPerson = await _queryProcessor.ExecuteAsync(new FindPersonByName(name));
 
-            if (foundPerson == null) return new NotFoundResult();
+            if (foundPerson.Person == null) return new NotFoundResult();
 
             return Ok(foundPerson);
         }
@@ -49,11 +49,11 @@ namespace GreetingsWeb.Controllers
         {
             await _commandProcessor.SendAsync(new AddPerson(newPerson.Name));
 
-            var addedPeson = await _queryProcessor.ExecuteAsync(new FindPersonByName(newPerson.Name));
+            var addedPerson = await _queryProcessor.ExecuteAsync(new FindPersonByName(newPerson.Name));
 
-            if (addedPeson == null) return new NotFoundResult(); 
+            if (addedPerson == null) return new NotFoundResult(); 
 
-            return Ok(addedPeson);
+            return Ok(addedPerson);
         }
         
     }

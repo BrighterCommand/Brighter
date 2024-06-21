@@ -24,31 +24,45 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Transactions;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class ControlBusSenderFactory. Helper for creating instances of a control bus (which requires messaging, but not subcribers).
+    /// Class ControlBusSenderFactory. Helper for creating instances of a control bus (which requires messaging, but not subscribers).
     /// </summary>
     public class ControlBusSenderFactory : IAmAControlBusSenderFactory
     {
         /// <summary>
         /// Creates the specified configuration.
         /// </summary>
-        /// <param name="logger">The logger to use</param>
         /// <param name="outbox">The outbox for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAProducerRegistry producerRegistry)
+        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry, BrighterTracer tracer)
+            where T : Message
         {
-            var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
+            var mapper = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()),
+                null);
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
-            return new ControlBusSender(CommandProcessorBuilder.With()
-                    .Handlers(new HandlerConfiguration())
-                    .DefaultPolicy()
-                    .ExternalBus(new ExternalBusConfiguration(producerRegistry, mapper),outbox)
+            var bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry: producerRegistry,
+                policyRegistry: new DefaultPolicy(),
+                mapperRegistry: mapper,
+                messageTransformerFactory: new EmptyMessageTransformerFactory(),
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
+                outbox: outbox
+                ); 
+            
+            return new ControlBusSender(
+                CommandProcessorBuilder.With()
+                .Handlers(new HandlerConfiguration())
+                .DefaultPolicy()
+                .ExternalBus(ExternalBusType.FireAndForget, bus)   
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );

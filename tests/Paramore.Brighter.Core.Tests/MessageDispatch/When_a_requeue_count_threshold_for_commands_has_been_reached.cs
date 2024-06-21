@@ -44,31 +44,37 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpCommandRequeueCountThresholdTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()));
+                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
+                null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-             _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, messageMapperRegistry) 
+             _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
             _command = new MyCommand();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options)));
+            var message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
+            );
+            var message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
+            );
             _channel.Enqueue(message1);
             _channel.Enqueue(message2);
         }
 
         [Fact]
-        public void When_A_Requeue_Count_Threshold_For_Commands_Has_Been_Reached()
+        public async Task When_A_Requeue_Count_Threshold_For_Commands_Has_Been_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             //_should_send_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);

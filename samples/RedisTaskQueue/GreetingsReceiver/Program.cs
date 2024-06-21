@@ -49,8 +49,7 @@ namespace GreetingsReceiver
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(redisConsumerFactory);
                     })
-                        .UseInMemoryOutbox()
-                        .AutoFromAssemblies();
+                    .AutoFromAssemblies();
 
 
                     services.AddHostedService<ServiceActivatorHostedService>();

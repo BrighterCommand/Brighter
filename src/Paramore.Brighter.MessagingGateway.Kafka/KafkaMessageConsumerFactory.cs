@@ -65,6 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 sweepUncommittedOffsetsIntervalMs: kafkaSubscription.SweepUncommittedOffsetsIntervalMs,
                 readCommittedOffsetsTimeoutMs: kafkaSubscription.ReadCommittedOffsetsTimeOutMs,
                 numPartitions: kafkaSubscription.NumPartitions,
+                partitionAssignmentStrategy: kafkaSubscription.PartitionAssignmentStrategy,
                 replicationFactor: kafkaSubscription.ReplicationFactor,
                 topicFindTimeoutMs: kafkaSubscription.TopicFindTimeoutMs,
                 makeChannels: kafkaSubscription.MakeChannels

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Paramore.Brighter
 {
@@ -54,28 +55,28 @@ namespace Paramore.Brighter
         /// <value>The name.</value>
         public ChannelName ChannelName { get; set; }
 
-       /// <summary>
-       /// How long to pause when there is a channel failure in milliseconds
-       /// </summary>
-       public int ChannelFailureDelay { get; set; }
-       
-     /// <summary>
+        /// <summary>
+        /// How long to pause when there is a channel failure in milliseconds
+        /// </summary>
+        public int ChannelFailureDelay { get; set; }
+
+        /// <summary>
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
         /// </summary>
         /// <value>The type of the data.</value>
         public Type DataType { get; }
 
-       /// <summary>
+        /// <summary>
         /// How long to pause when a channel is empty in milliseconds
         /// </summary>
         public int EmptyChannelDelay { get; set; }
-       
-    /// <summary>
+
+        /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
         /// </summary>
         public OnMissingChannel MakeChannels { get; }
 
-         /// <summary>
+        /// <summary>
         /// Gets or sets the name of the subscription, for identification.
         /// </summary>
         /// <value>The name.</value>
@@ -84,8 +85,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the no of threads that we will use to read from  this channel.
         /// </summary>
-        /// <value>The no of peformers.</value>
-        public int NoOfPeformers { get; }
+        /// <value>The no of performers.</value>
+        public int NoOfPerformers { get; private set; }
 
         /// <summary>
         /// Gets or sets the number of times that we can requeue a message before we abandon it as poison pill.
@@ -116,14 +117,13 @@ namespace Paramore.Brighter
         /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
         /// or busy
         /// </summary>
-        /// <value>The timeout in miliseconds.</value>
-        public int TimeoutInMiliseconds { get; }
+        /// <value>The timeout in milliseconds.</value>
+        public int TimeoutInMilliseconds { get; }
 
         /// <summary>
         /// Gets the number of messages before we will terminate the channel due to high error rates
         /// </summary>
         public int UnacceptableMessageLimit { get; }
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -165,8 +165,8 @@ namespace Paramore.Brighter
             ChannelName = channelName ?? new ChannelName(dataType.FullName);
             RoutingKey = routingKey ?? new RoutingKey(dataType.FullName);
             BufferSize = bufferSize;
-            NoOfPeformers = noOfPerformers;
-            TimeoutInMiliseconds = timeoutInMilliseconds;
+            NoOfPerformers = noOfPerformers;
+            TimeoutInMilliseconds = timeoutInMilliseconds;
             RequeueCount = requeueCount;
             RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
             UnacceptableMessageLimit = unacceptableMessageLimit;
@@ -175,6 +175,11 @@ namespace Paramore.Brighter
             MakeChannels = makeChannels;
             EmptyChannelDelay = emptyChannelDelay;
             ChannelFailureDelay = channelFailureDelay;
+        }
+
+        public void SetNumberOfPerformers(int numberOfPerformers)
+        {
+            NoOfPerformers = numberOfPerformers < 0 ? 0 : numberOfPerformers;
         }
     }
 

@@ -23,8 +23,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            var messageMapperRegistry = new MessageMapperRegistry(
+                null,
+                new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync())
+                );
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             var connection = new Subscription<MyEvent>(
                 new SubscriptionName("test"),
@@ -33,18 +36,28 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 channelFactory: new InMemoryChannelFactory(_channel),
                 channelName: new ChannelName("fakeChannel"), 
                 routingKey: new RoutingKey("fakekey"),
-                runAsync: true);
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
+                runAsync: true
+            );
+
+            _dispatcher = new Dispatcher(
+                _commandProcessor, 
+                new List<Subscription> { connection }, 
+                null, 
+                messageMapperRegistry,
+               requestContextFactory: new InMemoryRequestContextFactory() 
+            );
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new() { Topic = connection.RoutingKey }).Result;
+            
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
+#pragma warning disable xUnit1031
         
-        [Fact(Timeout = 10000)]
+        [Fact]
         public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
         {
             Task.Delay(5000).Wait();

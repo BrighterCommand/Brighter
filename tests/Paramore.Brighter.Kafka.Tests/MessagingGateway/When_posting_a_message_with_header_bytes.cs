@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication[] {new KafkaPublication()
+                new KafkaPublication[] {new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             var schemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(body.Skip(1).Take(4).ToArray()));
 
             var sent = new Message(
-                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },

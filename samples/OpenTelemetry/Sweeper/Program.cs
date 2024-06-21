@@ -1,12 +1,14 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Transactions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
-using Sweeper.Doubles;
+
+const string topic = "Test.Topic";
 
 Console.WriteLine("Hello, World!");
 
@@ -23,24 +25,22 @@ Paramore.Brighter.Logging.ApplicationLogging.LoggerFactory = LoggerFactory.Creat
 using var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Brighter Sweeper Sample"))
     .AddSource("Paramore.Brighter")
-    // .AddZipkinExporter(o => o.HttpClientFactory = () =>
-    // {
-    //     HttpClient client = new HttpClient();
-    //     client.DefaultRequestHeaders.Add("X-MyCustomHeader", "value");
-    //     return client;
-    //     o.Endpoint = new Uri("http://localhost:9411/api/v2/spans");
-    // })
     .AddJaegerExporter()
     .Build();
 
-IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>()
+IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
 {
-    {"default", new FakeMessageProducer()}
+    {"default", new InMemoryProducer(new InternalBus(), TimeProvider.System){Publication = { Topic  = new RoutingKey(topic)}}}
 });
 
+var requestContextFactory = new InMemoryRequestContextFactory();
+
 builder.Services.AddBrighter()
-    .UseExternalBus(producerRegistry)
-    .UseInMemoryOutbox()
+    .UseExternalBus((configure) =>
+    {
+        configure.ProducerRegistry = producerRegistry;
+        configure.RequestContextFactory = requestContextFactory;
+    })
     .UseOutboxSweeper(options =>
     {
         options.TimerInterval = 5;
@@ -49,9 +49,16 @@ builder.Services.AddBrighter()
 
 var app = builder.Build();
 
-var outBox = app.Services.GetService<IAmAnOutboxSync<Message>>();
-outBox.Add(new Message(new MessageHeader(Guid.NewGuid(), "Test.Topic", MessageType.MT_COMMAND, DateTime.UtcNow),
-    new MessageBody("Hello")));
+var outBox = app.Services.GetService<IAmAnOutboxSync<Message, CommittableTransaction>>();
+if (outBox == null)
+    throw new InvalidOperationException("Outbox is null");
+
+outBox.Add(
+    new Message(
+        new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND, timeStamp:DateTime.UtcNow),
+        new MessageBody("Hello")),
+    requestContextFactory.Create()
+    );
 
 app.Run();
 

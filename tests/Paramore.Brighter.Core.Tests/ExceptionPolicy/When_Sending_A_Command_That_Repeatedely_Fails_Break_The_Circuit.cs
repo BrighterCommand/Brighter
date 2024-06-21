@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -53,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var container = new ServiceCollection();
             container.AddSingleton<MyFailsWithDivideByZeroHandler>();
             container.AddSingleton<ExceptionPolicyHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
@@ -68,20 +69,21 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                policyRegistry);
         }
 
         //We have to catch the final exception that bubbles out after retry
         [Fact]
         public void When_Sending_A_Command_That_Repeatedly_Fails_Break_The_Circuit()
         {
-                //First two should be caught, and increment the count
-                _firstException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
-                _secondException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
-                //this one should tell us that the circuit is broken
-                _thirdException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
+            //First two should be caught, and increment the count
+            _firstException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
+            _secondException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
+            //this one should tell us that the circuit is broken
+            _thirdException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-                //_should_send_the_command_to_the_command_handler
+            //_should_send_the_command_to_the_command_handler
             MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand).Should().BeTrue();
             //_should_bubble_up_the_first_exception
             _firstException.Should().BeOfType<DivideByZeroException>();
@@ -93,7 +95,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

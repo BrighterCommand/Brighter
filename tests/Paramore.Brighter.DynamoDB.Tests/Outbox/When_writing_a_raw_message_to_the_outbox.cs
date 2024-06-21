@@ -29,7 +29,6 @@ using System.Net;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
-using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
@@ -54,35 +53,35 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             var serdesBody = payload.Concat(Encoding.ASCII.GetBytes(body)).ToArray();
 
             var messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayedMilliseconds: 5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
 
             var dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName));
 
             var messageEarliest = new Message(
                 messageHeader,
-                new MessageBody(serdesBody, MediaTypeNames.Application.Octet, CharacterEncoding.Raw));     
+                new MessageBody(serdesBody, MediaTypeNames.Application.Octet, CharacterEncoding.Raw));
             
-            //act
+            var context = new RequestContext();
 
-            dynamoDbOutbox.Add(messageEarliest);
-            
-            var storedMessage = dynamoDbOutbox.Get(messageEarliest.Id);
+            //act
+            dynamoDbOutbox.Add(messageEarliest, context);
+
+            var storedMessage = dynamoDbOutbox.Get(messageEarliest.Id, context);
             var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(storedMessage.Body.Bytes.Skip(1).Take(4).ToArray()));
 
             //assert
             retrievedSchemaId.Should().Be(schemaId);
             storedMessage.Body.Bytes.Should().Equal(messageEarliest.Body.Bytes);
             storedMessage.Body.Value.Should().Be(messageEarliest.Body.Value);
-            
         }
     }
 }

@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             container.AddTransient<MonitorHandlerAsync<MyCommand>>();
             container.AddSingleton<IAmAControlBusSenderAsync>(_controlBusSender);
             container.AddSingleton(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

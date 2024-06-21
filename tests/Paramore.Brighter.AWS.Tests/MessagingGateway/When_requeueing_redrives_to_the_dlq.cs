@@ -29,7 +29,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public SqsMessageProducerDlqTests ()
         {
             MyCommand myCommand = new MyCommand{Value = "Test"};
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
             var channelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -45,7 +45,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _message = new Message(
-                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: replyTo, contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
             );
  
@@ -90,26 +91,21 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public int GetDLQCount(string queueName)
         {
-            using(var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
+            using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+            var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName).GetAwaiter().GetResult();
+            var response = sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
             {
-                var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName).GetAwaiter().GetResult();
-                var response = sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
-                {
-                    QueueUrl = queueUrlResponse.QueueUrl,
-                    WaitTimeSeconds = 5,
-                    AttributeNames = new List<string> { "ApproximateReceiveCount" },
-                    MessageAttributeNames = new List<string> { "All" }
-                }).GetAwaiter().GetResult();
+                QueueUrl = queueUrlResponse.QueueUrl,
+                WaitTimeSeconds = 5,
+                MessageAttributeNames = new List<string> { "All",  "ApproximateReceiveCount" }
+            }).GetAwaiter().GetResult();
 
-                if (response.HttpStatusCode != HttpStatusCode.OK)
-                {
-                    throw new AmazonSQSException($"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
-                }
-                
-                return response.Messages.Count;
-
+            if (response.HttpStatusCode != HttpStatusCode.OK)
+            {
+                throw new AmazonSQSException($"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
             }
-           
+                
+            return response.Messages.Count;
         }
 
     }

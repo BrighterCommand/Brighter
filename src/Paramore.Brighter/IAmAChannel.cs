@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -53,9 +53,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Receives the specified timeout in milliseconds.
         /// </summary>
-        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        Message Receive(int timeoutinMilliseconds);
+        Message Receive(int timeoutInMilliseconds);
 
         /// <summary>
         /// Rejects the specified message.
@@ -79,7 +79,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        /// <returns>True if the message should be Acked, false otherwise
+        /// <returns>True if the message should be Acked, false otherwise</returns>
         bool Requeue(Message message, int delayMilliseconds = 0);
 
    }

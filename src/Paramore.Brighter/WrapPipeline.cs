@@ -23,16 +23,18 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
     /// <summary>
     /// class WrapPipeline
-    /// A pipeline with a source of a <see cref="MessageMapper"/> that:
+    /// A pipeline with a source of a <see cref="TransformPipeline{TRequest}.MessageMapper"/> that:
     /// Takes a request and maps it to a message
     /// Runs transforms on that message
     /// </summary>
@@ -47,7 +49,8 @@ namespace Paramore.Brighter
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
-            IEnumerable<IAmAMessageTransformAsync> transforms)
+            IEnumerable<IAmAMessageTransform> transforms
+            )
         {
             MessageMapper = messageMapper;
             Transforms = transforms;
@@ -75,12 +78,23 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="request">The request to wrap</param>
-        /// <param name="cancellationToken">The cancellation token</param>
-        /// <returns></returns>
-        public async Task<Message> WrapAsync(TRequest request, CancellationToken cancellationToken = default(CancellationToken))
+        /// <param name="requestContext">The context of the request in this pipeline</param>
+        /// <param name="publication">The publication for this channel, provides metadata such as topic or Cloud Events attributes</param>
+        /// <returns>The message created from the request via the pipeline</returns>
+        public Message Wrap(TRequest request, RequestContext requestContext, Publication publication)
         {
-            var message = MessageMapper.MapToMessage(request);
-            await Transforms.EachAsync(async transform => message = await transform.WrapAsync(message, cancellationToken));
+            requestContext.Span ??= Activity.Current;
+
+            MessageMapper.Context = requestContext;
+            var message = MessageMapper.MapToMessage(request, publication);
+            BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, MessageMapper.GetType().Name, false, true);
+            
+            Transforms.Each(transform =>
+            {
+                transform.Context = requestContext;
+                message = transform.Wrap(message, publication);
+                BrighterTracer.WriteMapperEvent(message, publication, requestContext.Span, transform.GetType().Name, false);
+            });
             return message;
         }
     }

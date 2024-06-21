@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -39,17 +38,20 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private readonly DynamoDbOutbox _dynamoDbOutbox;
 
         public DynamoDbOutboxMessageAlreadyExistsTests()
-        {            
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
-            
-            _dynamoDbOutbox.AddAsync(_messageEarliest).Wait();
+        {
+            _messageEarliest = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageBody("message body")
+            );
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+
+            _dynamoDbOutbox.AddAsync(_messageEarliest, new RequestContext()).Wait();
          }
 
         [Fact]
         public void When_the_message_is_already_in_the_outbox()
         {
-            _exception = Catch.Exception(() => _dynamoDbOutbox.Add(_messageEarliest));
+            _exception = Catch.Exception(() => _dynamoDbOutbox.Add(_messageEarliest, new RequestContext()));
 
             //_should_ignore_the_duplicate_key_and_still_succeed
             _exception.Should().BeNull();

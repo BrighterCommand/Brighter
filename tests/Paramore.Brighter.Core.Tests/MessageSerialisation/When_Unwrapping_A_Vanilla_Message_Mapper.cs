@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -17,9 +18,11 @@ public class VanillaMessageUnwrapRequestTests
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
-          
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyVanillaCommandMessageMapper) } };
+
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
         
@@ -28,7 +31,7 @@ public class VanillaMessageUnwrapRequestTests
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         _message = new Message(
-            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
@@ -40,7 +43,7 @@ public class VanillaMessageUnwrapRequestTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = _transformPipeline.UnwrapAsync(_message).Result;
+        var request = _transformPipeline.Unwrap(_message, new RequestContext());
         
         //assert
         request.Value = _myCommand.Value;

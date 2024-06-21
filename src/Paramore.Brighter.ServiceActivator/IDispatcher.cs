@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Paramore.Brighter.ServiceActivator.Status;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -82,5 +83,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="connectionName">Name of the subscription.</param>
         void Shut(string connectionName);
+
+        /// <summary>
+        /// Get the current running state of the dispatcher
+        /// </summary>
+        /// <returns>Array of all available subscriptions and how many are currency running</returns>
+        DispatcherStateItem[] GetState();
+
+        void SetActivePerformers(string connectionName, int numberOfPerformers);
     }
 }

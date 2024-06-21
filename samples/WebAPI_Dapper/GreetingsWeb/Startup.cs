@@ -1,23 +1,24 @@
 using System;
-using DapperExtensions;
-using DapperExtensions.Sql;
+using Confluent.SchemaRegistry;
 using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
-using Greetings_SqliteMigrations.Migrations;
-using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
+using GreetingsPorts.Requests;
 using GreetingsWeb.Database;
-using Hellang.Middleware.ProblemDetails;
+using GreetingsWeb.Messaging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
+using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
@@ -27,22 +28,28 @@ namespace GreetingsWeb
 {
     public class Startup
     {
-        private const string _outBoxTableName = "Outbox";
-        private IWebHostEnvironment _env;
+        
+        private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _env;
 
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
-            Configuration = configuration;
+            _configuration = configuration;
             _env = env;
         }
 
-        public IConfiguration Configuration { get; }
+        private void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTransport messagingTransport)
+        {
+            if (messagingTransport != MessagingTransport.Kafka) return;
+            
+            var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
+            var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+            services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
+        }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseProblemDetails();
-
             if (env.IsDevelopment())
             {
                 app.UseSwagger();
@@ -71,29 +78,26 @@ namespace GreetingsWeb
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
             });
 
+            services.AddOpenTelemetry()
+                .WithTracing(builder => builder
+                    .AddAspNetCoreInstrumentation()
+                    .AddConsoleExporter())
+                .WithMetrics(builder => builder
+                    .AddAspNetCoreInstrumentation()
+                    .AddConsoleExporter());
+
             ConfigureMigration(services);
-            ConfigureDapper(services);
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
 
         private void ConfigureMigration(IServiceCollection services)
         {
+            //dev is always Sqlite
             if (_env.IsDevelopment())
-            {
-                services
-                    .AddFluentMigratorCore()
-                    .ConfigureRunner(c =>
-                    {
-                        c.AddSQLite()
-                            .WithGlobalConnectionString(DbConnectionString())
-                            .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations();
-                    });
-            }
+                ConfigureSqlite(services);
             else
-            {
                 ConfigureProductionDatabase(GetDatabaseType(), services);
-            }
         }
 
         private void ConfigureProductionDatabase(DatabaseType databaseType, IServiceCollection services)
@@ -103,9 +107,29 @@ namespace GreetingsWeb
                 case DatabaseType.MySql:
                     ConfigureMySql(services);
                     break;
+                case DatabaseType.MsSql:
+                    ConfigureMsSql(services);
+                    break;
+                case DatabaseType.Postgres:
+                    ConfigurePostgreSql(services);
+                    break;
+                case DatabaseType.Sqlite:
+                    ConfigureSqlite(services);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
             }
+        }
+
+       private void ConfigureMsSql(IServiceCollection services)
+        {
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddSqlServer()
+                    .WithGlobalConnectionString(DbConnectionString())
+                    .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
+                )
+                .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.MsSql.ToString()});
         }
 
         private void ConfigureMySql(IServiceCollection services)
@@ -114,52 +138,48 @@ namespace GreetingsWeb
                 .AddFluentMigratorCore()
                 .ConfigureRunner(c => c.AddMySql5()
                     .WithGlobalConnectionString(DbConnectionString())
-                    .ScanIn(typeof(MySqlInitialCreate).Assembly).For.Migrations()
-                );
+                    .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
+                )
+                .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.MySql.ToString()});
         }
 
-        private void ConfigureDapper(IServiceCollection services)
+        private void ConfigurePostgreSql(IServiceCollection services)
         {
-            services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString()));
-
-            ConfigureDapperByHost(GetDatabaseType(), services);
-
-            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
-            DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddPostgres()
+                    .ConfigureGlobalProcessorOptions(opt => opt.ProviderSwitches = "Force Quote=false")
+                    .WithGlobalConnectionString(DbConnectionString())
+                    .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
+                )
+                .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.Postgres.ToString()});
         }
 
-        private static void ConfigureDapperByHost(DatabaseType databaseType, IServiceCollection services)
+        private void ConfigureSqlite(IServiceCollection services)
         {
-            switch (databaseType)
-            {
-                case DatabaseType.Sqlite:
-                    ConfigureDapperSqlite(services);
-                    break;
-                case DatabaseType.MySql:
-                    ConfigureDapperMySql(services);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddSQLite()
+                        .WithGlobalConnectionString(DbConnectionString())
+                        .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
+                )
+                .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.Sqlite.ToString()});
             }
-        }
-
-        private static void ConfigureDapperSqlite(IServiceCollection services)
-        {
-            DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
-            DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
-        }
-
-        private static void ConfigureDapperMySql(IServiceCollection services)
-        {
-            DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
-            DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
-        }
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
+            var messagingTransport = GetTransportType();
+            
+            AddSchemaRegistryMaybe(services, messagingTransport);
+
+            var outboxConfiguration = new RelationalDatabaseConfiguration(
+                DbConnectionString(),
+                binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
+            );
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
+
+            (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+                OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration, services);
 
             services.AddBrighter(options =>
                 {
@@ -169,30 +189,19 @@ namespace GreetingsWeb
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                        new RmqMessagingGatewayConnection
-                        {
-                            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                            Exchange = new Exchange("paramore.brighter.exchange"),
-                        },
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("GreetingMade"),
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        }
-                    ).Create()
-                )
-                //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
-                //types easily. You may just choose to call the methods directly if you do not need to support multiple
-                //db types (which we just need to allow you to see how to configure your outbox type).
-                //It's also an example of how you can extend the DSL here easily if you have this kind of variability
-                .AddOutbox(_env, GetDatabaseType(), DbConnectionString(), _outBoxTableName)
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = ConfigureProducerRegistry(messagingTransport);
+                    configure.Outbox = makeOutbox.outbox;
+                    configure.TransactionProvider = makeOutbox.transactionProvider;
+                    configure.ConnectionProvider = makeOutbox.connectionProvider;
+                    configure.MaxOutStandingMessages = 5;
+                    configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+                })
+                .UseOutboxSweeper(options => {
+                    options.TimerInterval = 5;
+                    options.MinimumMessageAge = 5000;
+                 })
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 
@@ -208,6 +217,16 @@ namespace GreetingsWeb
                 .AddPolicies(new GreetingsPolicy());
         }
 
+        private static IAmAProducerRegistry ConfigureProducerRegistry(MessagingTransport messagingTransport)
+        {
+            return messagingTransport switch
+            {
+                MessagingTransport.Rmq => GetRmqProducerRegistry(),
+                MessagingTransport.Kafka => GetKafkaProducerRegistry(),
+                _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport), "Messaging transport is not supported")
+            };
+        }
+
         private string DbConnectionString()
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
@@ -216,13 +235,13 @@ namespace GreetingsWeb
 
         private DatabaseType GetDatabaseType()
         {
-            return Configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
+            return _configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
             {
                 DatabaseGlobals.MYSQL => DatabaseType.MySql,
                 DatabaseGlobals.MSSQL => DatabaseType.MsSql,
                 DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
                 DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
-                _ => throw new InvalidOperationException("Could not determine the database type")
+                _ => throw new ArgumentOutOfRangeException(nameof(DatabaseGlobals.DATABASE_TYPE_ENV), "Database type is not supported")
             };
         }
 
@@ -235,8 +254,68 @@ namespace GreetingsWeb
         {
             return databaseType switch
             {
-                DatabaseType.MySql => Configuration.GetConnectionString("GreetingsMySql"),
-                _ => throw new InvalidOperationException("Could not determine the database type")
+                DatabaseType.MySql => _configuration.GetConnectionString("GreetingsMySql"),
+                DatabaseType.MsSql => _configuration.GetConnectionString("GreetingsMsSql"),
+                DatabaseType.Postgres => _configuration.GetConnectionString("GreetingsPostgreSql"),
+                DatabaseType.Sqlite => GetDevDbConnectionString(),
+                _ => throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported") 
+            };
+        }
+        
+        private static IAmAProducerRegistry GetKafkaProducerRegistry()
+        {
+            var producerRegistry = new KafkaProducerRegistryFactory(
+                    new KafkaMessagingGatewayConfiguration
+                    {
+                        Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
+                    },
+                    new KafkaPublication[]
+                    {
+                        new KafkaPublication
+                        {
+                            Topic = new RoutingKey("GreetingMade"),
+                            RequestType = typeof(GreetingMade),
+                            MessageSendMaxRetries = 3,
+                            MessageTimeoutMs = 1000,
+                            MaxInFlightRequestsPerConnection = 1,
+                            MakeChannels = OnMissingChannel.Create
+                        }
+                    })
+                .Create();
+            
+            return producerRegistry;
+        }
+        
+        private static IAmAProducerRegistry GetRmqProducerRegistry()
+        {
+            var producerRegistry = new RmqProducerRegistryFactory(
+                new RmqMessagingGatewayConnection
+                {
+                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                    Exchange = new Exchange("paramore.brighter.exchange"),
+                },
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("GreetingMade"),
+                        RequestType = typeof(GreetingMade),
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+            return producerRegistry;
+        }
+       
+       private MessagingTransport GetTransportType()
+       {
+           return _configuration[MessagingGlobals.BRIGHTER_TRANSPORT] switch
+           {
+               MessagingGlobals.RMQ => MessagingTransport.Rmq,
+               MessagingGlobals.KAFKA => MessagingTransport.Kafka,
+               _ => throw new ArgumentOutOfRangeException(nameof(MessagingGlobals.BRIGHTER_TRANSPORT),
+                   "Messaging transport is not supported")
             };
         }
     }

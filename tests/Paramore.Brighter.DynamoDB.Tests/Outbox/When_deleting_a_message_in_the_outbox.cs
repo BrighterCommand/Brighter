@@ -1,0 +1,49 @@
+﻿using System;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Outbox.DynamoDB;
+using Xunit;
+
+namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
+
+public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest 
+{
+    
+    [Fact]
+    public void When_deleting_a_message_in_the_outbox()
+    {
+        // arrange
+        var message = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+            new MessageBody("message body")
+            );
+        
+        var context = new RequestContext();
+        var dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+        dynamoDbOutbox.Add(message, context);
+
+        // act
+        dynamoDbOutbox.Delete([message.Id], context);
+
+        // assert
+        var foundMessage = dynamoDbOutbox.Get(message.Id, context);
+        foundMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+    }
+    
+    [Fact]
+    public async Task When_deleting_a_message_in_the_outbox_async()
+    {
+        // arrange
+        var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+        var context = new RequestContext();
+        var dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+        await dynamoDbOutbox.AddAsync(message, context);
+
+        // act
+        await dynamoDbOutbox.DeleteAsync([message.Id], context);
+
+        // assert
+        var foundMessage = await dynamoDbOutbox.GetAsync(message.Id, context);
+        foundMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+    }
+}

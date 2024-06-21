@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication[] {new KafkaPublication()
+                new KafkaPublication[] {new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -75,16 +75,17 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public void When_a_consumer_declares_topics()
         {
             var message = new Message(
-                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
-                new MessageBody($"test content [{_queueName}]"));
+                new MessageBody($"test content [{_queueName}]")
+            );
             
             bool messagePublished = false;
             var producer = _producerRegistry.LookupBy(_topic);
             var producerConfirm = producer as ISupportPublishConfirmation;
-            producerConfirm.OnMessagePublished += delegate(bool success, Guid id)
+            producerConfirm.OnMessagePublished += delegate(bool success, string id)
             {
                 if (success) messagePublished = true;
             };

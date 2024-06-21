@@ -25,7 +25,9 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
@@ -34,64 +36,70 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
     public class OutboxMaxSize
     {
         [Fact]
-        public void When_max_size_is_exceeded_shrink()
+        public async Task When_max_size_is_exceeded_shrink()
         {
             //Arrange
             const int limit = 5;
             
-            var outbox = new InMemoryOutbox()
+            var timeProvider = new FakeTimeProvider(); 
+            var outbox = new InMemoryOutbox(timeProvider)
             {
                 EntryLimit = limit,
-                CompactionPercentage = 0.5
+                CompactionPercentage = 0.5,
+                Tracer = new BrighterTracer(timeProvider)
             };
-            
+
+            var context = new RequestContext();
             for(int i =1; i <= limit; i++)
-                outbox.Add(new MessageTestDataBuilder());
+                outbox.Add(new MessageTestDataBuilder(), context);
 
             //Act
             outbox.EntryCount.Should().Be(5);
             
-            outbox.Add(new MessageTestDataBuilder());
+            outbox.Add(new MessageTestDataBuilder(), context);
 
-            Task.Delay(500).Wait(); //Allow time for compaction to run
+            await Task.Delay(500); //Allow time for compaction to run
             
             //should clear compaction percentage from the outbox, and then add  the  new one
             outbox.EntryCount.Should().Be(3);
         }
 
         [Fact]
-        public void When_shrinking_evict_oldest_messages_first()
+        public async Task When_shrinking_evict_oldest_messages_first()
         {
             //Arrange
             const int limit = 5;
             
-            var outbox = new InMemoryOutbox()
+            var timeProvider = new FakeTimeProvider();
+            var outbox = new InMemoryOutbox(timeProvider) 
             {
                 EntryLimit = limit,
-                CompactionPercentage = 0.5
+                CompactionPercentage = 0.5,
+                Tracer = new BrighterTracer(timeProvider)
             };
 
-            var messageIds = new Guid[] {Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()};
+            var messageIds = new string[] {Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString()};
 
+            var context = new RequestContext();
             for (int i = 0; i <= limit - 1; i++)
             {
-                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
-                Task.Delay(1000);
+                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]), context);
+                timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
             }
 
             //Act
             outbox.EntryCount.Should().Be(5);
             
-            outbox.Add(new MessageTestDataBuilder());
+            outbox.Add(new MessageTestDataBuilder(), context);
 
-            Task.Delay(500).Wait(); //Allow time for compaction to run
+            await Task.Delay(500); //Allow time for compaction to run
             
             //should clear compaction percentage from the outbox, and then add  the  new one
-            outbox.Get(messageIds[0]).Should().BeNull();
-            outbox.Get(messageIds[1]).Should().BeNull();
-            outbox.Get(messageIds[2]).Should().BeNull();
-            outbox.Get(messageIds[3]).Should().NotBeNull();
-            outbox.Get(messageIds[4]).Should().NotBeNull();
+            outbox.Get(messageIds[0], context).Should().BeNull();
+            outbox.Get(messageIds[1], context).Should().BeNull();
+            outbox.Get(messageIds[2], context).Should().BeNull();
+            outbox.Get(messageIds[3], context).Should().NotBeNull();
+            outbox.Get(messageIds[4], context).Should().NotBeNull();
         }
     }
 }

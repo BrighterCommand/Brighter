@@ -25,18 +25,21 @@ THE SOFTWARE. */
 using Greetings.Ports.Commands;
 using MessagePack;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 
 namespace Greetings.Ports.Mappers
 {
     public class FarewellEventMessageMapper : IAmAMessageMapper<FarewellEvent>
     {
-        public Message MapToMessage(FarewellEvent request)
+        public IRequestContext Context { get; set; }
+
+        public Message MapToMessage(FarewellEvent request, Publication publication)
         {
 
             var header = new MessageHeader(
                 messageId: request.Id,
-                topic: "farewell.event",
-                messageType: MessageType.MT_EVENT,
+                topic: publication.Topic,
+                messageType: request.RequestToMessageType(),
                 contentType: "application/vnd.msgpack");
 
             var body = new MessageBody(MessagePackSerializer.Serialize(request), "MessagePack");

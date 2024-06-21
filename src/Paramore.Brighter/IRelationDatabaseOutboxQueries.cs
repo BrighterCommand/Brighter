@@ -12,5 +12,7 @@
         string GetMessageCommand { get; }
         string GetMessagesCommand { get; }
         string DeleteMessagesCommand { get; }
+        string DispatchedCommand { get; }
+        string GetNumberOfOutstandingMessagesCommand { get; }
     }
 }

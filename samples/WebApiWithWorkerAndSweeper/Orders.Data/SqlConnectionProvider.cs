@@ -1,10 +1,10 @@
+using System.Data.Common;
 using Microsoft.Data.SqlClient;
-using Orders.Domain;
-using Paramore.Brighter.MsSql;
+using Paramore.Brighter;
 
 namespace Orders.Data;
 
-public class SqlConnectionProvider : IMsSqlTransactionConnectionProvider
+public class SqlConnectionProvider : RelationalDbConnectionProvider
 {
     private readonly SqlUnitOfWork _sqlConnection;
     
@@ -13,21 +13,16 @@ public class SqlConnectionProvider : IMsSqlTransactionConnectionProvider
         _sqlConnection = sqlConnection;
     }
     
-    public SqlConnection GetConnection()
+    public override DbConnection GetConnection()
     {
         return _sqlConnection.Connection;
     }
 
-    public Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
-    {
-        return Task.FromResult(_sqlConnection.Connection);
-    }
-
-    public SqlTransaction? GetTransaction()
+    public override DbTransaction? GetTransaction()
     {
         return _sqlConnection.Transaction;
     }
 
-    public bool HasOpenTransaction { get => _sqlConnection.Transaction != null; }
-    public bool IsSharedConnection { get => true; }
+    public override bool HasOpenTransaction { get => _sqlConnection.Transaction != null; }
+    public override bool IsSharedConnection { get => true; }
 }

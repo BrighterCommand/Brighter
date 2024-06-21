@@ -27,42 +27,34 @@ namespace Paramore.Brighter.Core.Tests.Logging
         public void When_A_Request_Logger_Is_In_The_Pipeline()
         {
             Log.Logger = new LoggerConfiguration().MinimumLevel.Information().WriteTo.TestCorrelator().CreateLogger();
-            using (var context = TestCorrelator.CreateContext())
-            {
-                var myCommand = new MyCommand();
+            using var context = TestCorrelator.CreateContext();
+            var myCommand = new MyCommand();
 
-                var registry = new SubscriberRegistry();
-                registry.Register<MyCommand, IHandleRequests<MyCommand>>();
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, IHandleRequests<MyCommand>>();
 
-                var requestLogger = new RequestLoggingHandler<MyCommand>();
+            var requestLogger = new RequestLoggingHandler<MyCommand>();
 
-                var container = new ServiceCollection();
-                container.AddTransient<MyLoggedHandler>();
-                container.AddTransient(typeof(RequestLoggingHandler<MyCommand>), provider => requestLogger);
+            var container = new ServiceCollection();
+            container.AddTransient<MyLoggedHandler>();
+            container.AddTransient(typeof(RequestLoggingHandler<MyCommand>), provider => requestLogger);
 
-                var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-                var commandProcessor = new  CommandProcessor(registry, handlerFactory: handlerFactory, 
-                    new InMemoryRequestContextFactory(), new PolicyRegistry());
+            var commandProcessor = new  CommandProcessor(registry, handlerFactory: handlerFactory, 
+                new InMemoryRequestContextFactory(), new PolicyRegistry());
 
 
-                commandProcessor.Send(myCommand);
+            commandProcessor.Send(myCommand);
 
-                //_should_log_the_request_handler_call
-                //_should_log_the_type_of_handler_in_the_call
-
-                //TestCorrelator.GetLogEventsFromCurrentContext().Should().HaveCount(3);
-                TestCorrelator.GetLogEventsFromContextGuid(context.Guid)
-                    .Should().Contain(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"))
-                    .Which.Properties["1"].ToString().Should().Be($"\"{typeof(MyCommand)}\"");
-
-            }
-
+            TestCorrelator.GetLogEventsFromContextId(context.Id)
+                .Should().Contain(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"))
+                .Which.Properties["1"].ToString().Should().Be($"\"{typeof(MyCommand)}\"");
         }
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

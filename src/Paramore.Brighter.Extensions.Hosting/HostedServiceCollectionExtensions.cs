@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             return brighterBuilder;
         }
 
-        public static IBrighterBuilder UseOutboxArchiver(this IBrighterBuilder brighterBuilder,
+        public static IBrighterBuilder UseOutboxArchiver<TTransaction>(this IBrighterBuilder brighterBuilder,
             IAmAnArchiveProvider archiveProvider,
             Action<TimedOutboxArchiverOptions> timedOutboxArchiverOptionsAction = null)
         {

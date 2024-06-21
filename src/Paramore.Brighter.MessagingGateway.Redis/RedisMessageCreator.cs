@@ -57,44 +57,41 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 return message;
             }
-            
-            using (var reader = new StringReader(redisMessage))
+
+            using var reader = new StringReader(redisMessage);
+            var header = reader.ReadLine();
+            if (header.TrimEnd() != "<HEADER")
             {
-                var header = reader.ReadLine();
-                if (header.TrimEnd() != "<HEADER")
-                {
-                    s_logger.LogError("Expected message to begin with <HEADER, but was {ErrorMessage}", redisMessage);
-                    return message;
-                }
-                
-                var messageHeader = ReadHeader(reader.ReadLine());
-                
-                header = reader.ReadLine();
-                if (header.TrimStart() != "HEADER/>")
-                {
-                    s_logger.LogError("Expected message to find end of HEADER/>, but was {ErrorMessage}", redisMessage);
-                    return message;
-                }
-
-                var body = reader.ReadLine();
-                if (body.TrimEnd() != "<BODY")
-                {
-                    s_logger.LogError("Expected message to have beginning of <BODY, but was {ErrorMessage}", redisMessage);
-                    return message;
-                }
-                
-                var messageBody = ReadBody(reader);
-
-                body = reader.ReadLine();
-                if (body.TrimStart() != "BODY/>")
-                {
-                    s_logger.LogError("Expected message to find end of BODY/>, but was {ErrorMessage}", redisMessage);
-                    return message;
-                }
-                
-                message = new Message(messageHeader, messageBody);
-
+                s_logger.LogError("Expected message to begin with <HEADER, but was {ErrorMessage}", redisMessage);
+                return message;
             }
+                
+            var messageHeader = ReadHeader(reader.ReadLine());
+                
+            header = reader.ReadLine();
+            if (header.TrimStart() != "HEADER/>")
+            {
+                s_logger.LogError("Expected message to find end of HEADER/>, but was {ErrorMessage}", redisMessage);
+                return message;
+            }
+
+            var body = reader.ReadLine();
+            if (body.TrimEnd() != "<BODY")
+            {
+                s_logger.LogError("Expected message to have beginning of <BODY, but was {ErrorMessage}", redisMessage);
+                return message;
+            }
+                
+            var messageBody = ReadBody(reader);
+
+            body = reader.ReadLine();
+            if (body.TrimStart() != "BODY/>")
+            {
+                s_logger.LogError("Expected message to find end of BODY/>, but was {ErrorMessage}", redisMessage);
+                return message;
+            }
+                
+            message = new Message(messageHeader, messageBody);
 
             return message;
         }
@@ -135,6 +132,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             //correlation id
             var correlationId = ReadCorrelationId(headers);
             
+            //TODO:CLOUD_EVENTS parse from headers
 
             if (!messageId.Success)
             {
@@ -142,9 +140,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             else
             {
-                var messageHeader = timeStamp.Success
-                    ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result)
-                    : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
+                var messageHeader = new MessageHeader(
+                    messageId: messageId.Result, 
+                    topic:topic.Result, 
+                    messageType:messageType.Result,
+                    source: null,
+                    type: "",
+                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                    correlationId: "",
+                    replyTo: replyTo.Result,
+                    contentType: "",
+                    handledCount: handledCount.Result,
+                    dataSchema: null,
+                    subject: null,
+                    delayedMilliseconds: delayedMilliseconds.Result);
 
                 if (replyTo.Success)
                 {
@@ -180,43 +189,40 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="topic"></param>
         /// <param name="messageId"></param>
         /// <returns></returns>
-        private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<Guid> messageId)
+        private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<string> messageId)
         {
             return new MessageHeader(
-                messageId.Success ? messageId.Result : Guid.Empty,
+                messageId.Success ? messageId.Result : string.Empty,
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
         }
         
         private HeaderResult<string> ReadContentType(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.CONTENT_TYPE))
+            if (headers.TryGetValue(HeaderNames.CONTENT_TYPE, out string header))
             {
-                return new HeaderResult<string>(headers[HeaderNames.CONTENT_TYPE], true);
+                return new HeaderResult<string>(header, true);
             }
             return new HeaderResult<string>(String.Empty, false);
         }
 
-        private HeaderResult<Guid> ReadCorrelationId(Dictionary<string, string> headers)
+        private HeaderResult<string> ReadCorrelationId(Dictionary<string, string> headers)
         {
-            var messageId = Guid.Empty;
+            var newCorrelationId = string.Empty;
             
-            if (headers.ContainsKey(HeaderNames.CORRELATION_ID))
+            if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string correlatonId))
             {
-                if (Guid.TryParse(headers[HeaderNames.CORRELATION_ID], out messageId))
-                {
-                    return new HeaderResult<Guid>(messageId, true);
-                }
+                return new HeaderResult<string>(correlatonId, true);
             }
             
-            return new HeaderResult<Guid>(messageId, false);
+            return new HeaderResult<string>(newCorrelationId, false);
         }
 
          private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.DELAYED_MILLISECONDS))
+            if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out string header))
             {
-                if (int.TryParse(headers[HeaderNames.DELAYED_MILLISECONDS], out int delayedMilliseconds))
+                if (int.TryParse(header, out int delayedMilliseconds))
                 {
                     return new HeaderResult<int>(delayedMilliseconds, true); 
                 }
@@ -226,9 +232,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.HANDLED_COUNT))
+            if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out string header))
             {
-                if (int.TryParse(headers[HeaderNames.HANDLED_COUNT], out int handledCount))
+                if (int.TryParse(header, out int handledCount))
                 {
                     return new HeaderResult<int>(handledCount, true); 
                 }
@@ -248,10 +254,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, string> headers)
         {
 
-            if (headers.ContainsKey(HeaderNames.BAG))
+            if (headers.TryGetValue(HeaderNames.BAG, out string header))
             {
-                var bagJson = headers[HeaderNames.BAG];
-                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(bagJson, JsonSerialisationOptions.Options);
+                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(header, JsonSerialisationOptions.Options);
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
             return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
@@ -260,9 +265,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
          private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.MESSAGE_TYPE))
+            if (headers.TryGetValue(HeaderNames.MESSAGE_TYPE, out string header))
             {
-                if (Enum.TryParse(headers[HeaderNames.MESSAGE_TYPE], out MessageType messageType))
+                if (Enum.TryParse(header, out MessageType messageType))
                 {
                     return new HeaderResult<MessageType>(messageType, true);
                 }
@@ -271,26 +276,21 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
-        private HeaderResult<Guid> ReadMessageId(IDictionary<string, string> headers)
+        private HeaderResult<string> ReadMessageId(IDictionary<string, string> headers)
         {
-            var messageId = Guid.Empty;
-            
-            if (headers.ContainsKey(HeaderNames.MESSAGE_ID))
+            if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string header))
             {
-                if (Guid.TryParse(headers[HeaderNames.MESSAGE_ID], out messageId))
-                {
-                    return new HeaderResult<Guid>(messageId, true);
-                }
+                    return new HeaderResult<string>(header, true);
             }
             
-            return new HeaderResult<Guid>(messageId, false);
+            return new HeaderResult<string>(string.Empty, false);
         }
         
         private HeaderResult<string> ReadReplyTo(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.REPLY_TO))
+            if (headers.TryGetValue(HeaderNames.REPLY_TO, out string header))
             {
-                return new HeaderResult<string>(headers[HeaderNames.REPLY_TO], true);
+                return new HeaderResult<string>(header, true);
             }
             return new HeaderResult<string>(string.Empty, false);
         }
@@ -302,9 +302,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>The result, always a success because we don't break for missing timestamp, just use now</returns>
         private HeaderResult<DateTime> ReadTimeStamp(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.TIMESTAMP))
+            if (headers.TryGetValue(HeaderNames.TIMESTAMP, out string header))
             {
-                if(DateTime.TryParse(headers[HeaderNames.TIMESTAMP], out DateTime timestamp))
+                if(DateTime.TryParse(header, out DateTime timestamp))
                 {
                     return new HeaderResult<DateTime>(timestamp, true);
                 }
@@ -315,9 +315,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private HeaderResult<string> ReadTopic(Dictionary<string, string> headers)
         {
             var topic = string.Empty;
-            if (headers.ContainsKey(HeaderNames.TOPIC))
+            if (headers.TryGetValue(HeaderNames.TOPIC, out string header))
             {
-                return new HeaderResult<string>(headers[HeaderNames.TOPIC], false);
+                return new HeaderResult<string>(header, false);
             }
             return new HeaderResult<string>(String.Empty, false);
         }

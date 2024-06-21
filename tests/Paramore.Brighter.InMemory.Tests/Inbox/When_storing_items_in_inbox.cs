@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Data;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
         public void When_storing_a_seen_message_in_the_inbox()
         {
             //Arrange
-            var inbox = new InMemoryInbox();
+            var inbox = new InMemoryInbox(new FakeTimeProvider());
             const string contextKey = "Developer_Test";
 
             var command = new SimpleCommand();
@@ -58,7 +59,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
         public void When_testing_for_a_message_in_the_inbox()
         {
             //Arrange
-            var inbox = new InMemoryInbox();
+            var inbox = new InMemoryInbox(new FakeTimeProvider());
             const string contextKey = "Developer_Test";
 
             var command = new SimpleCommand();
@@ -76,7 +77,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
         public void When_testing_for_a_missing_command()
         {
             //Arrange
-            var inbox = new InMemoryInbox();
+            var inbox = new InMemoryInbox(new FakeTimeProvider());
             const string contextKey = "Developer_Test";
 
             var command = new SimpleCommand();
@@ -93,7 +94,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
         public void When_storing_multiple_entries_retrieve_the_right_one()
         {
            //Arrange
-           var inbox = new InMemoryInbox();
+           var inbox = new InMemoryInbox(new FakeTimeProvider());
            const string contextKey = "Developer_Test";
 
            var commands = new SimpleCommand[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
@@ -119,7 +120,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
         public void When_storing_multiple_entries_exists_should_find()
         {
             //Arrange
-            var inbox = new InMemoryInbox();
+            var inbox = new InMemoryInbox(new FakeTimeProvider());
             const string contextKey = "Developer_Test";
  
             var commands = new SimpleCommand[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
@@ -142,7 +143,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
         public void When_storing_many_but_not_requested_exists_should_not_find()
         {
             //Arrange
-            var inbox = new InMemoryInbox();
+            var inbox = new InMemoryInbox(new FakeTimeProvider());
             const string contextKey = "Developer_Test";
  
             var commands = new SimpleCommand[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
@@ -152,7 +153,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             }
              
             //Act
-            var firstCommandExists = inbox.Exists<SimpleCommand>(Guid.NewGuid(), contextKey);
+            var firstCommandExists = inbox.Exists<SimpleCommand>(Guid.NewGuid().ToString(), contextKey);
  
             //Assert
             firstCommandExists.Should().BeFalse();

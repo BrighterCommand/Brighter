@@ -61,7 +61,7 @@ public class OrderRepository : IOrderRepository
 
         var reader = await command.ExecuteReaderAsync(cancellationToken);
 
-        Order order = null;
+        Order? order = null;
         
         if (await reader.ReadAsync(cancellationToken))
         {
@@ -74,6 +74,9 @@ public class OrderRepository : IOrderRepository
 
             order = new Order(id, number, type, pending, status, version);
         }
+        
+        if (order == null)
+            throw new InvalidOperationException("Order not found");
 
         return order;
     }

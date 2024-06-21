@@ -55,25 +55,29 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         }
             
         [Fact]
-        public void When_a_message_consumer_reads_multiple_messages()
+        public async Task When_a_message_consumer_reads_multiple_messages()
         {
             var messageOne = new Message(
-                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content one")
                 );
             
             var messageTwo= new Message(
-                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content two")
                 );
            
             var messageThree= new Message(
-                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content three")
                 );
              
             var messageFour= new Message(
-                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content four")
                 );
              
@@ -109,7 +113,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                  
                 messagesReceivedCount = messagesReceived.Count;
                 
-                Task.Delay(1000).Wait();
+                await Task.Delay(1000);
 
             } while ((iteration <= 5) && (messagesReceivedCount <  _messageCount));
     

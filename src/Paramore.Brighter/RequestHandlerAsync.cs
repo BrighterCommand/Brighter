@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
 using Polly.CircuitBreaker;
@@ -64,7 +65,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
-        /// or access the Result or otherwise block. You may need the orginating thread if you need to access thread specific storage
+        /// or access the Result or otherwise block. You may need the originating thread if you need to access thread specific storage
         /// such as HTTPContext 
         /// </summary>
         /// 
@@ -111,8 +112,13 @@ namespace Paramore.Brighter
         /// <param name="command">The command.</param>
         /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        public virtual async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        public virtual async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
+            if (Context?.Span != null)
+            {
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:true, isSink:_successor == null);
+            }   
+            
             if (_successor != null)
             {
                 s_logger.LogDebug("Passing request from {HandlerName} to {NextHandler}", Name, _successor.Name);
@@ -132,7 +138,7 @@ namespace Paramore.Brighter
         /// Steps that don't know how to handle should pass through.
         /// Useful alternatives for Fallback are to try via the cache.
         /// Note that a Fallback handler implementation should not catch exceptions in the <see cref="FallbackAsync"/> chain to avoid an infinite loop.
-        /// Call <see cref="Successor"/>.<see cref="HandleAsync"/> if having provided a Fallback you want the chain to return to the 'happy' path. Excerise caution here though
+        /// Call <see cref="Successor"/>.<see cref="HandleAsync"/> if having provided a Fallback you want the chain to return to the 'happy' path. Excercise caution here though
         /// as you do not know who generated the exception that caused the fallback chain.
         /// For this reason, the <see cref="FallbackPolicyHandler"/> puts the exception in the request context.
         /// When the <see cref="FallbackPolicyAttribute"/> is set on the <see cref="HandleAsync"/> method of a derived class
@@ -142,8 +148,13 @@ namespace Paramore.Brighter
         /// <param name="command">The command.</param>
         /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        public virtual async Task<TRequest> FallbackAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        public virtual async Task<TRequest> FallbackAsync(TRequest command, CancellationToken cancellationToken = default)
         {
+            if (Context?.Span != null)
+            {
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:true, isSink:_successor == null);
+            }   
+            
             if (_successor != null)
             {
                 s_logger.LogDebug("Falling back from {HandlerName} to {NextHandler}", Name, _successor.Name);
@@ -162,7 +173,7 @@ namespace Paramore.Brighter
 
         internal MethodInfo FindHandlerMethod()
         {
-            var methods = GetType().GetTypeInfo().GetMethods();
+            var methods = GetType().GetMethods();
             return methods
                 .Where(method => method.Name == nameof(HandleAsync))
                 .SingleOrDefault(method => method.GetParameters().Length == 2 

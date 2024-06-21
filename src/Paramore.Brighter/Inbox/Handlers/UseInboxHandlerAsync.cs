@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <param name="command">The command that we want to store.</param>
         /// <param name="cancellationToken">Allows the caller to cancel the pipeline if desired</param>
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
-        public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default)
         {
             
             if (_onceOnly)

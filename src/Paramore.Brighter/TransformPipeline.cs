@@ -6,7 +6,7 @@ namespace Paramore.Brighter
     public abstract class TransformPipeline<TRequest> : IDisposable where TRequest : class, IRequest
     {
         protected IAmAMessageMapper<TRequest> MessageMapper;
-        protected IEnumerable<IAmAMessageTransformAsync> Transforms;
+        protected IEnumerable<IAmAMessageTransform> Transforms;
         protected TransformLifetimeScope InstanceScope;
 
         /// <summary>

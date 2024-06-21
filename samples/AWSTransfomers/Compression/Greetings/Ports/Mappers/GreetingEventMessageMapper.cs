@@ -34,12 +34,13 @@ namespace Greetings.Ports.Mappers
 {
     public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
     {
-    
+        public IRequestContext Context { get; set; }
+        
         //Although SNS allows 256K, we have to use UTF8 strings, which is not the format of a compressed message
         //so we have to convert the bytes to base64 and then use that as the message body
         //this inflates the byte count, see https://stackoverflow.com/questions/54224029/aws-sns-publising-compressed-payload
         [Compress(0, CompressionMethod.GZip, CompressionLevel.Optimal, 150)]
-        public Message MapToMessage(GreetingEvent request)
+        public Message MapToMessage(GreetingEvent request, Publication publication)
         {
             var header = new MessageHeader(messageId: request.Id, topic: typeof(GreetingEvent).FullName.ToValidSNSTopicName(), messageType: MessageType.MT_EVENT);
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));

@@ -22,21 +22,19 @@ namespace GreetingsWeb.Database
 
         public static IHost MigrateDatabase(this IHost webHost)
         {
-            using (var scope = webHost.Services.CreateScope())
+            using var scope = webHost.Services.CreateScope();
+            var services = scope.ServiceProvider;
+
+            try
             {
-                var services = scope.ServiceProvider;
+                var db = services.GetRequiredService<GreetingsEntityGateway>();
 
-                try
-                {
-                    var db = services.GetRequiredService<GreetingsEntityGateway>();
-
-                    db.Database.Migrate();
-                }
-                catch (Exception ex)
-                {
-                    var logger = services.GetRequiredService<ILogger<Program>>();
-                    logger.LogError(ex, "An error occurred while migrating the database.");
-                }
+                db.Database.Migrate();
+            }
+            catch (Exception ex)
+            {
+                var logger = services.GetRequiredService<ILogger<Program>>();
+                logger.LogError(ex, "An error occurred while migrating the database.");
             }
 
             return webHost;
@@ -86,14 +84,12 @@ namespace GreetingsWeb.Database
 
         public static IHost CreateOutbox(this IHost webHost)
         {
-            using (var scope = webHost.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var env = services.GetService<IWebHostEnvironment>();
-                var config = services.GetService<IConfiguration>();
+            using var scope = webHost.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IWebHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
 
-                CreateOutbox(config, env);
-            }
+            CreateOutbox(config, env);
 
             return webHost;
         }
@@ -140,7 +136,8 @@ namespace GreetingsWeb.Database
 
             using var existsQuery = sqlConnection.CreateCommand();
             existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
-            bool exists = existsQuery.ExecuteScalar() != null;
+            var findOutbox = existsQuery.ExecuteScalar();
+            bool exists = findOutbox is long and > 0;
 
             if (exists) return;
 

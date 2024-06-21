@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Transforms.Attributes
 
         public override object[] InitializerParams()
         {
-            return new object[] { _thresholdInKb };
+            return [_thresholdInKb];
         }
 
         /// <summary>
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <returns>The type of the Claims Check Transformer</returns>
         public override Type GetHandlerType()
         {
-            return typeof(ClaimCheckTransformer);
+            return typeof(ClaimCheckTransformerAsync);
         }
     }
 }

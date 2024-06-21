@@ -25,7 +25,7 @@ namespace Paramore.Brighter.DynamoDb
         /// <param name="createTableRequest">The request to build tables from</param>
         /// <param name="ct"></param>
         /// <returns>The response to table creation</returns>
-        public async Task<CreateTableResponse> Build(CreateTableRequest createTableRequest, CancellationToken ct = default(CancellationToken))
+        public async Task<CreateTableResponse> Build(CreateTableRequest createTableRequest, CancellationToken ct = default)
         {
             var modifiedTableRequest = RemoveNonSchemaAttributes(createTableRequest);
             return await _client.CreateTableAsync(modifiedTableRequest, ct);
@@ -34,22 +34,22 @@ namespace Paramore.Brighter.DynamoDb
         /// <summary>
         /// Delete the specified tables. Note that tables will be in TableStatus.Deleting until gone
         /// </summary>
-        /// <param name="tableNames">The list of tables to delette</param>
+        /// <param name="tableNames">The list of tables to delete</param>
         /// <param name="ct">A cancellation token</param>
         /// <returns>The response to table deletion</returns>
-        public async Task<DeleteTableResponse[]> Delete(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
+        public async Task<DeleteTableResponse[]> Delete(IEnumerable<string> tableNames, CancellationToken ct = default)
         {
             var allDeletes = tableNames.Select(tn => _client.DeleteTableAsync(tn, ct)).ToList();
             return await Task.WhenAll(allDeletes);
         }
         
         //EnsureTablesGone. Deleting until cannot be found
-        public async Task EnsureTablesDeleted(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
+        public async Task EnsureTablesDeleted(IEnumerable<string> tableNames, CancellationToken ct = default)
         {
             Dictionary<string, bool> tableResults = null;
             do
             {
-                var tableQuery = new DynampDbTableQuery();
+                var tableQuery = new DynamoDbTableQuery();
                 tableResults = await tableQuery.HasTables(_client, tableNames, ct: ct);
             } while (tableResults.Any(tr => tr.Value));
         }
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.DynamoDb
         /// <param name="targetStatus">The status that defines ready</param>
         /// <param name="ct">A cancellation token</param>
         /// <returns></returns>
-        public async Task EnsureTablesReady(IEnumerable<string> tableNames, TableStatus targetStatus, CancellationToken ct = default(CancellationToken))
+        public async Task EnsureTablesReady(IEnumerable<string> tableNames, TableStatus targetStatus, CancellationToken ct = default)
         {
             // Let us wait until all tables are created. Call DescribeTable.
             var tableStates = (from tableName in tableNames
@@ -93,15 +93,15 @@ namespace Paramore.Brighter.DynamoDb
             } while (tableStates.Any(ts => !ts.IsReady));
         }
         
-        public async Task<(bool exist, IEnumerable<string> missing)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
+        public async Task<(bool exist, IEnumerable<string> missing)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default)
         {
             
             var tableCheck = tableNames.ToDictionary(tableName => tableName, tableName => false);
             
-            string lastEvalutatedTableName = null;
+            string lastEvaluatedTableName = null;
             do
             {
-                var tablesResponse = await _client.ListTablesAsync();
+                var tablesResponse = await _client.ListTablesAsync(ct);
 
                 foreach (var tableName in tablesResponse.TableNames)
                 {
@@ -109,8 +109,8 @@ namespace Paramore.Brighter.DynamoDb
                         tableCheck[tableName] = true;
                 }
                 
-                lastEvalutatedTableName = tablesResponse.LastEvaluatedTableName;
-            } while (lastEvalutatedTableName != null);
+                lastEvaluatedTableName = tablesResponse.LastEvaluatedTableName;
+            } while (lastEvaluatedTableName != null);
 
             return tableCheck.Any(kv => kv.Value) ? 
                 (true, tableCheck.Where(tbl => tbl.Value).Select(tbl => tbl.Key)) : 
@@ -131,7 +131,7 @@ namespace Paramore.Brighter.DynamoDb
 
                 if (!added)
                 {
-                     added = AddGobalSecondaryIndexUsedFields(tableRequest, attribute, keyMatchedAttributes);
+                     added = AddGlobalSecondaryIndexUsedFields(tableRequest, attribute, keyMatchedAttributes);
                 }
 
                 if (!added)
@@ -164,7 +164,7 @@ namespace Paramore.Brighter.DynamoDb
             return false;
         }
 
-        private static bool AddGobalSecondaryIndexUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
+        private static bool AddGlobalSecondaryIndexUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
             List<AttributeDefinition> keyMatchedAttributes)
         {
             foreach (var index in tableRequest.GlobalSecondaryIndexes)

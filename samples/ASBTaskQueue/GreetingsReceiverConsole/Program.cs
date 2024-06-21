@@ -32,18 +32,18 @@ namespace GreetingsReceiverConsole
                     var subscriptions = new Subscription[]
                     {
                         new AzureServiceBusSubscription<GreetingAsyncEvent>(
-                            new SubscriptionName(GreetingEventAsyncMessageMapper.Topic),
+                            new SubscriptionName("Async Event"),
                             new ChannelName("paramore.example.greeting"),
-                            new RoutingKey(GreetingEventAsyncMessageMapper.Topic),
+                            new RoutingKey("greeting.Asyncevent"),
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
                             isAsync: true),
 
                         new AzureServiceBusSubscription<GreetingEvent>(
-                            new SubscriptionName(GreetingEventMessageMapper.Topic),
+                            new SubscriptionName("Event"),
                             new ChannelName("paramore.example.greeting"),
-                            new RoutingKey(GreetingEventMessageMapper.Topic),
+                            new RoutingKey("greeting.event"),
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
@@ -60,7 +60,6 @@ namespace GreetingsReceiverConsole
                         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
                         options.UseScoped = false;
                     })
-                    .UseInMemoryOutbox()
                     .AutoFromAssemblies();
 
                     services.AddHostedService<ServiceActivatorHostedService>();

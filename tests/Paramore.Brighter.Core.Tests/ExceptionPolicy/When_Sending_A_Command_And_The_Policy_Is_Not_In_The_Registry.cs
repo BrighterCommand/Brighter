@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var container = new ServiceCollection();
             container.AddTransient<MyDoesNotFailPolicyHandler>();
             container.AddTransient<ExceptionPolicyHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }
