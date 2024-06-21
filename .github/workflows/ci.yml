@@ -128,6 +128,30 @@ jobs:
       - name: Redis Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
   
+  mqtt-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    
+    services:
+      mosquitto:  
+        image: efrecon/mosquitto:latest
+        ports:
+        - 1883:1883
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup dotnet 6
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: |
+            6.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: MQTT Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+
   rabbitmq-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
