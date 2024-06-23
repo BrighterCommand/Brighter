@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Paramore.Brighter;
 
@@ -41,6 +42,8 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     private readonly InternalBus _bus;
     private readonly TimeProvider _timeProvider;
     private readonly int _ackTimeoutMs;
+    private readonly ITimer _lockTimer;
+    private ITimer _requeueTimer;
 
     /// <summary>
     /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="Paramore.Brighter.InMemoryProducer"/>
@@ -60,7 +63,12 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
         _timeProvider = timeProvider;
         _ackTimeoutMs = ackTimeoutMs;
         
-        _timeProvider.CreateTimer(_ => CheckLockedMessages(), null, TimeSpan.FromMilliseconds(_ackTimeoutMs), TimeSpan.FromMilliseconds(_ackTimeoutMs));
+        _lockTimer = _timeProvider.CreateTimer(
+            _ => CheckLockedMessages(), 
+            null, 
+            TimeSpan.FromMilliseconds(_ackTimeoutMs), 
+            TimeSpan.FromMilliseconds(_ackTimeoutMs)
+        );
 
     }
 
@@ -119,12 +127,20 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
             return Requeue(message);
 
         //we don't want to block, so we use a timer to invoke the requeue after a delay
-        _timeProvider.CreateTimer(msg => Requeue((Message)msg), message, TimeSpan.FromMilliseconds(delayMilliseconds), TimeSpan.Zero);
+        _requeueTimer = _timeProvider.CreateTimer(
+            msg => Requeue((Message)msg), 
+            message, 
+            TimeSpan.FromMilliseconds(delayMilliseconds), 
+            TimeSpan.Zero
+        );
 
         return true;
     }
 
-    public void Dispose() {}
+    public void Dispose()
+    {
+        _lockTimer.Dispose();
+    }
     
     private void CheckLockedMessages()
     {
@@ -140,13 +156,20 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     
     private bool Requeue(Message message)
     {
-        if (_lockedMessages.TryRemove(message.Id, out _))
+        try
         {
-            _bus.Enqueue(message);
-            return true;
-        }
+            if (_lockedMessages.TryRemove(message.Id, out _))
+            {
+                _bus.Enqueue(message);
+                return true;
+            }
 
-        return false;
+            return false;
+        }
+        finally
+        {
+            _requeueTimer?.Dispose();
+        }
     }
 
     private record LockedMessage(Message Message, DateTimeOffset LockedAt);
