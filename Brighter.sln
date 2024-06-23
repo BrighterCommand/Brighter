@@ -26,8 +26,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Messaging
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessagingGateway.AzureServiceBus", "src\Paramore.Brighter.MessagingGateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.csproj", "{3A9F4CF4-AC46-4209-AEC5-1751403E87BA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloAsyncListeners", "samples\HelloAsyncListeners\HelloAsyncListeners.csproj", "{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Outbox.Sqlite", "src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj", "{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Inbox.Sqlite", "src\Paramore.Brighter.Inbox.Sqlite\Paramore.Brighter.Inbox.Sqlite.csproj", "{5A8F1495-B8D2-4018-8B3D-6DA25A14290F}"
@@ -443,18 +441,6 @@ Global
 		{3A9F4CF4-AC46-4209-AEC5-1751403E87BA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{3A9F4CF4-AC46-4209-AEC5-1751403E87BA}.Release|x86.ActiveCfg = Release|Any CPU
 		{3A9F4CF4-AC46-4209-AEC5-1751403E87BA}.Release|x86.Build.0 = Release|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Debug|x86.Build.0 = Debug|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Release|x86.ActiveCfg = Release|Any CPU
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB}.Release|x86.Build.0 = Release|Any CPU
 		{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{24E3EE6D-BA0A-41E5-8370-BBD30DA61DF4}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -1914,7 +1900,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{7397E1D1-140E-4C5E-A60A-2DB34F962601} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{EEDF9610-AAE0-4604-999C-159B39B52532} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
-		{0263A8BE-EE46-483E-AA2C-40B3DC62B0FB} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{BC8C2D08-2713-4DDB-89A9-875943D87EF1} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{307DEC51-0941-4066-AD66-7D680DD00591} = {BC8C2D08-2713-4DDB-89A9-875943D87EF1}

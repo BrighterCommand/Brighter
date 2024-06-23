@@ -36,20 +36,7 @@ namespace HelloWorldAsync
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
         public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)
         {
-            var api = new IpFyApi(new Uri("https://api.ipify.org"));
-
-            IpFyApiResult result;
-            try
-            {
-                result = await api.GetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            }
-            catch (HttpRequestException httpRequestException)
-            {
-                Console.WriteLine("Your call to IpFy API failed : {0}", httpRequestException.Message);
-                return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            }
-
-            Console.WriteLine("Hello {0}, your IP address is: {1}", command.Name, result.Message);
+            Console.WriteLine("Hello {0}}", command.Name);
 
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
