@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FakeItEasy;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
@@ -31,29 +32,33 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class ChannelNackTests
     {
         private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _gateway;
-        private readonly Message _receivedMessage;
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
+        private const string Topic = "myTopic";
 
         public ChannelNackTests()
         {
-            _gateway = A.Fake<IAmAMessageConsumer>();
+            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _timeProvider, 1000);
 
-            _channel = new Channel("test", _gateway);
+            _channel = new Channel(Topic, gateway);
 
-            _receivedMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
+            var sentMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
-
-            _receivedMessage.DeliveryTag = 12345UL;
+            
+            _bus.Enqueue(sentMessage);
         }
+
 
         [Fact]
         public void When_No_Acknowledge_Is_Called_On_A_Channel()
         {
-            _channel.Reject(_receivedMessage);
+            var receivedMessage = _channel.Receive(1000);
+            _channel.Reject(receivedMessage);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //allow for message to timeout if not rejected 
 
-            //_should_acknowledge_the_message
-            A.CallTo(() => _gateway.Reject(_receivedMessage)).MustHaveHappened();
+            Assert.Empty(_bus.Stream(new RoutingKey(Topic)));
         }
     }
 }

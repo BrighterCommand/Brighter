@@ -5,35 +5,32 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
-public class InMemoryConsumerRecieveTests
+public class InMemoryConsumerRejectTests
 {
-    private readonly InMemoryConsumerRequeueTests _inMemoryConsumerRequeueTests = new InMemoryConsumerRequeueTests();
-    private readonly InMemoryConsumerAcknowledgeTests _inMemoryConsumerAcknowledgeTests = new InMemoryConsumerAcknowledgeTests();
-    private readonly InMemoryConsumerRejectTests _inMemoryConsumerRejectTests = new InMemoryConsumerRejectTests();
-
     [Fact]
-    public void When_reading_messages_via_a_consumer()
+    public void When_a_dequeued_item_is_rejected()
     {
         //arrange
         const string myTopic = "my topic";
         var routingKey = new RoutingKey(myTopic);
-        
+
         var expectedMessage = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), myTopic, MessageType.MT_EVENT),
             new MessageBody("a test body"));
-
-
+        
         var bus = new InternalBus();
         bus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), 1000);
+        var timeProvider = new FakeTimeProvider();
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, 1000);
         
         //act
         var receivedMessage = consumer.Receive().Single();
-        consumer.Acknowledge(receivedMessage);
-
+        consumer.Reject(receivedMessage);
+        
+        timeProvider.Advance(TimeSpan.FromSeconds(2));  //-- the message should be returned to the bus if there is no Acknowledge or Reject
+        
         //assert
-        Assert.Equal(expectedMessage, receivedMessage);
         Assert.Empty(bus.Stream(routingKey));
     }
 }

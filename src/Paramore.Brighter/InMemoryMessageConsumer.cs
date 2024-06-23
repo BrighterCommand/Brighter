@@ -123,7 +123,7 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     /// <returns>True if the message should be acked, false otherwise</returns>
     public bool Requeue(Message message, int delayMilliseconds)
     {
-        if (delayMilliseconds < 0)
+        if (delayMilliseconds <= 0)
             return Requeue(message);
 
         //we don't want to block, so we use a timer to invoke the requeue after a delay

@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
@@ -32,27 +32,31 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class ChannelRequeueWithoutDelayTest
     {
         private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _consumer;
-        private readonly Message _requeueMessage;
+        private const string Topic = "myTopic";
+        private readonly InternalBus _bus = new();
 
         public ChannelRequeueWithoutDelayTest()
         {
-            _consumer = A.Fake<IAmAMessageConsumer>();
+            var consumer = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, new FakeTimeProvider(), 1000); 
 
-            _channel = new Channel("test", _consumer);
+            _channel = new Channel(Topic, consumer);
 
-            _requeueMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
+            var sentMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
+            
+            _bus.Enqueue(sentMessage);
         }
+
 
         [Fact]
         public void When_Requeuing_A_Message_With_No_Delay()
         {
-            _channel.Requeue(_requeueMessage);
+            var requeueMessage = _channel.Receive(1000);
+            _channel.Requeue(requeueMessage);
 
-            //_should_call_the_messaging_gateway
-            A.CallTo(() => _consumer.Requeue(_requeueMessage, 0)).MustHaveHappened();
+            _bus.Stream(new RoutingKey(Topic)).Should().HaveCount(1);
+            _bus.Stream(new RoutingKey(Topic)).Should().Contain(requeueMessage);
         }
     }
 }
