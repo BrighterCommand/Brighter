@@ -27,6 +27,7 @@ public class InMemoryChannelTests
         
         //act
         var receivedMessage = consumer.Receive().Single();
+        consumer.Acknowledge(receivedMessage);
 
         //assert
         Assert.Equal(expectedMessage, receivedMessage);
@@ -59,7 +60,7 @@ public class InMemoryChannelTests
     }
     
     [Fact]
-    public async Task When_requeueing_a_message_with_a_delay_it_should_not_be_available_immediately()
+    public void When_requeueing_a_message_with_a_delay_it_should_not_be_available_immediately()
     {
         //arrange
         const string myTopic = "my topic";
@@ -85,6 +86,87 @@ public class InMemoryChannelTests
         timeProvider.Advance(TimeSpan.FromSeconds(2));
         
         Assert.Single(bus.Stream(routingKey));
+    }
+
+    [Fact]
+    public void When_a_dequeud_item_lock_expires()
+    {
+        //arrange
+        const string myTopic = "my topic";
+        var routingKey = new RoutingKey(myTopic);
+
+        var expectedMessage = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), myTopic, MessageType.MT_EVENT),
+            new MessageBody("a test body"));
+        
+        var bus = new InternalBus();
+        bus.Enqueue(expectedMessage);
+
+        var timeProvider = new FakeTimeProvider();
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, 1000);
+        
+        //act
+        var receivedMessage = consumer.Receive().Single();
+        
+        timeProvider.Advance(TimeSpan.FromSeconds(2));
+        
+        //assert
+        Assert.Single(bus.Stream(routingKey));  //-- the message should be returned to the bus if there is no Acknowledge or Reject
+        
+    }
+    
+    [Fact]
+    public void When_a_dequeued_item_is_acknowledged()
+    {
+        //arrange
+        const string myTopic = "my topic";
+        var routingKey = new RoutingKey(myTopic);
+
+        var expectedMessage = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), myTopic, MessageType.MT_EVENT),
+            new MessageBody("a test body"));
+        
+        var bus = new InternalBus();
+        bus.Enqueue(expectedMessage);
+
+        var timeProvider = new FakeTimeProvider();
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, 1000);
+        
+        //act
+        var receivedMessage = consumer.Receive().Single();
+        consumer.Acknowledge(receivedMessage);
+        
+        timeProvider.Advance(TimeSpan.FromSeconds(2));  //-- the message should be returned to the bus if there is no Acknowledge or Reject
+        
+        //assert
+        Assert.Empty(bus.Stream(routingKey));
+    }
+    
+    [Fact]
+    public void When_a_dequeued_item_is_rejected()
+    {
+        //arrange
+        const string myTopic = "my topic";
+        var routingKey = new RoutingKey(myTopic);
+
+        var expectedMessage = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), myTopic, MessageType.MT_EVENT),
+            new MessageBody("a test body"));
+        
+        var bus = new InternalBus();
+        bus.Enqueue(expectedMessage);
+
+        var timeProvider = new FakeTimeProvider();
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, 1000);
+        
+        //act
+        var receivedMessage = consumer.Receive().Single();
+        consumer.Reject(receivedMessage);
+        
+        timeProvider.Advance(TimeSpan.FromSeconds(2));  //-- the message should be returned to the bus if there is no Acknowledge or Reject
+        
+        //assert
+        Assert.Empty(bus.Stream(routingKey));
     }
 
 }
