@@ -1,5 +1,4 @@
 ﻿using System;
-using FakeItEasy;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
@@ -11,7 +10,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Context
     public class ContextBagVisibilityTests : IDisposable
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
-        private readonly RequestContext _request_context;
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand;
 
@@ -20,28 +18,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Context
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyContextAwareCommandHandler>();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler());
-            _request_context = new RequestContext();
             _myCommand = new MyCommand();
             MyContextAwareCommandHandler.TestString = null;
 
-            var requestContextFactory = A.Fake<IAmARequestContextFactory>();
-            A.CallTo(() => requestContextFactory.Create()).Returns(_request_context);
-
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, requestContextFactory, new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyCommand>.ClearPipelineCache();
-
-            _request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         }
 
         [Fact]
         public void When_Putting_A_Variable_Into_The_Bag_Should_Be_Accessible_In_The_Handler()
         {
-            _commandProcessor.Send(_myCommand);
+            var requestContext = new RequestContext();
+            requestContext.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
+            
+            _commandProcessor.Send(_myCommand, requestContext);
 
-            //_should_have_seen_the_data_we_pushed_into_the_bag
             MyContextAwareCommandHandler.TestString.Should().Be(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
-            //_should_have_been_filled_by_the_handler
-            _request_context.Bag["MyContextAwareCommandHandler"].Should().Be("I was called and set the context");
+            requestContext.Bag["MyContextAwareCommandHandler"].Should().Be("I was called and set the context");
         }
 
         public void Dispose()

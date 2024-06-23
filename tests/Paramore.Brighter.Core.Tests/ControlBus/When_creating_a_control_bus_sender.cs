@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Transactions;
-using FakeItEasy;
 using FluentAssertions;
 using Paramore.Brighter.Observability;
 using Xunit;
@@ -13,13 +12,13 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
     {
         private IAmAControlBusSender _sender;
         private readonly IAmAControlBusSenderFactory _senderFactory;
-        private readonly IAmAnOutboxSync<Message, CommittableTransaction> _fakeOutbox;
-        private readonly IAmAMessageProducerSync _fakeGateway;
+        private readonly IAmAnOutboxSync<Message, CommittableTransaction> _outbox;
+        private readonly IAmAMessageProducerSync _gateway;
 
         public ControlBusSenderFactoryTests()
         {
-            _fakeOutbox = A.Fake<IAmAnOutboxSync<Message, CommittableTransaction>>();
-            _fakeGateway = A.Fake<IAmAMessageProducerSync>();
+            _outbox = new InMemoryOutbox(TimeProvider.System);
+            _gateway = new InMemoryProducer(new InternalBus(), TimeProvider.System);
  
             _senderFactory = new ControlBusSenderFactory();
         }
@@ -28,11 +27,10 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public void When_creating_a_control_bus_sender()
         {
             _sender = _senderFactory.Create<Message, CommittableTransaction>(
-                _fakeOutbox, 
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", _fakeGateway},}),
+                _outbox, 
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", _gateway},}),
                 tracer: new BrighterTracer());
 
-            //_should_create_a_control_bus_sender
             _sender.Should().NotBeNull();
         }
         

@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using FakeItEasy;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
-using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;

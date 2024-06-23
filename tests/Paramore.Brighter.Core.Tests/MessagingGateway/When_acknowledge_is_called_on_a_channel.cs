@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 

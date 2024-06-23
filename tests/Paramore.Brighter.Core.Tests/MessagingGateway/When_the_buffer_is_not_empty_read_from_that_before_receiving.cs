@@ -1,5 +1,4 @@
 using System;
-using FakeItEasy;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
