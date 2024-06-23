@@ -10,7 +10,7 @@ var routingKey = new RoutingKey("greeting.command");
 
 var bus = new InternalBus();
 
-var publications = new[] { new Publication { Topic = routingKey } }; 
+var publications = new[] { new Publication { Topic = routingKey, RequestType = typeof(GreetingCommand)} }; 
 
 var subscriptions = new[]
 {
@@ -48,6 +48,6 @@ var host = Host.CreateDefaultBuilder()
 
 var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
 
-commandProcessor.Send(new GreetingCommand("Ian"));
+commandProcessor.Post(new GreetingCommand("Ian"));
 
-host.WaitForShutdown();
+await host.RunAsync();

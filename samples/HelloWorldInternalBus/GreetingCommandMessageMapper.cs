@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,12 +22,30 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Text.Json;
+using HelloWorldInternalBus;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 
-namespace HelloWorldInternalBus
+namespace HelloWorld
 {
-    public class GreetingCommand(string name) : Command(Guid.NewGuid())
+    public class GreetingCommandMessageMapper : IAmAMessageMapper<GreetingCommand>
     {
-        public string Name { get; } = name;
+        public IRequestContext Context { get; set; }
+
+        public Message MapToMessage(GreetingCommand request, Publication publication)
+        {
+            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
+            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
+            var message = new Message(header, body);
+            return message;
+        }
+
+        public GreetingCommand MapToRequest(Message message)
+        {
+            var greetingCommand = JsonSerializer.Deserialize<GreetingCommand>(message.Body.Value, JsonSerialisationOptions.Options);
+            
+            return greetingCommand;
+        }
     }
 }
