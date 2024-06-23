@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,12 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using HelloWorldInternalBus;
 using Paramore.Brighter;
+using Paramore.Brighter.Logging.Attributes;
 
 namespace HelloWorld
 {
-    internal class GreetingCommand(string name) : Command(Guid.NewGuid())
+    internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
-        public string Name { get; } = name;
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+        public override GreetingCommand Handle(GreetingCommand command)
+        {
+            Console.WriteLine("Hello {0}", command.Name);
+            return base.Handle(command);
+        }
     }
 }

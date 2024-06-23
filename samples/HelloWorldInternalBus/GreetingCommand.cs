@@ -22,10 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Paramore.Brighter;
 
-namespace HelloWorld
+namespace HelloWorldInternalBus
 {
     internal class GreetingCommand(string name) : Command(Guid.NewGuid())
     {
