@@ -7,7 +7,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Used to create a channel, an abstraction over a message processing pipeline
         /// </summary>
-        IAmAChannelFactory ChannelFactory { get; set; }
+        IAmAChannelFactory DefaultChannelFactory { get; set; }
         
         /// <summary>
         /// The configuration of our inbox
