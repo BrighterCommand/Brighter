@@ -47,7 +47,7 @@ namespace GreetingsReceiver
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
-                        options.ChannelFactory = new ChannelFactory(redisConsumerFactory);
+                        options.DefaultChannelFactory = new ChannelFactory(redisConsumerFactory);
                     })
                     .AutoFromAssemblies();
 

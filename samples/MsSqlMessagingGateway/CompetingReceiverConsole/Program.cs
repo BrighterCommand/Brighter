@@ -42,7 +42,7 @@ namespace CompetingReceiverConsole
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
-                        options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
+                        options.DefaultChannelFactory = new ChannelFactory(messageConsumerFactory);
                     })
                     .AutoFromAssemblies();
 
