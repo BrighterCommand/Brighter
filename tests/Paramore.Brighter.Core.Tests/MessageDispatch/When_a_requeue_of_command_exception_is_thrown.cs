@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
@@ -81,7 +82,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);
             
-            Assert.Empty(_bus.Stream(_routingKey));
+            Assert.Equal(2, _bus.Stream(_routingKey).Count());
             
             
         }

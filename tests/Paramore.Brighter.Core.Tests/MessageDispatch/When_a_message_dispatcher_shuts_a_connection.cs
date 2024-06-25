@@ -74,11 +74,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Receive();
         }
 
-#pragma warning disable xUnit1031
         [Fact]
-        public void When_A_Message_Dispatcher_Shuts_A_Connection()
+        public async Task When_A_Message_Dispatcher_Shuts_A_Connection()
         {
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
             _dispatcher.Shut(_subscription);
             _dispatcher.End().Wait();
 
@@ -86,7 +85,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
             _dispatcher.Consumers.Should().BeEmpty();
         }
-#pragma warning restore xUnit1031
         
         public void Dispose()
         {

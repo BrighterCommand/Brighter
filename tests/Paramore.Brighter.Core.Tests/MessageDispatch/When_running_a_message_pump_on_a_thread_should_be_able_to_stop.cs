@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), 
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
-            _bus.Enqueue(message);
+            channel.Enqueue(message);
 
             Performer performer = new(channel, messagePump);
             _performerTask = performer.Run();
