@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
+        <RootNamespace>GreetingsPorts</RootNamespace>
     </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +19,6 @@
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-    <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
   </ItemGroup>
 
     <ItemGroup>

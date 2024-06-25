@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SalutationEntities
+namespace SalutationPorts.Entities
 {
     public class Salutation
     {

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using GreetingsEntities;
+using GreetingsPorts.Entities;
 using GreetingsPorts.Requests;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;

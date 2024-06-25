@@ -9,7 +9,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
-using SalutationEntities;
+using SalutationPorts.Entities;
 using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers

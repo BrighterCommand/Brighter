@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace GreetingsEntities
+namespace GreetingsPorts.Entities
 {
     public class Person
     {

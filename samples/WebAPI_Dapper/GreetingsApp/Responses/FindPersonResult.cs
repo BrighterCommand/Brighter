@@ -1,4 +1,4 @@
-using GreetingsEntities;
+using GreetingsPorts.Entities;
 
 namespace GreetingsPorts.Responses
 {

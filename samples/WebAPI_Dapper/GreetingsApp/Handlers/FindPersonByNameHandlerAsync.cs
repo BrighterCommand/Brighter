@@ -2,7 +2,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using GreetingsEntities;
+using GreetingsPorts.Entities;
 using GreetingsPorts.Policies;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
