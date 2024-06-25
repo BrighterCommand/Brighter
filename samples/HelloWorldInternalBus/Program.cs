@@ -27,7 +27,7 @@ var host = Host.CreateDefaultBuilder()
         services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.ChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
+            options.DefaultChannelFactory = new InMemoryChannelFactory(bus, TimeProvider.System);
             options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
