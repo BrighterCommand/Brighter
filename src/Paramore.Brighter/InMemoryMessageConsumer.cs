@@ -158,13 +158,10 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     {
         try
         {
-            if (_lockedMessages.TryRemove(message.Id, out _))
-            {
-                _bus.Enqueue(message);
-                return true;
-            }
+            _lockedMessages.TryRemove(message.Id, out _); //--allow requeue even if not from locked msg in bus
+            _bus.Enqueue(message);
+            return true;
 
-            return false;
         }
         finally
         {

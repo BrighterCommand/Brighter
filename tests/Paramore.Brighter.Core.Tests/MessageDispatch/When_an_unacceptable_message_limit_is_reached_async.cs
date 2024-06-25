@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
 
-            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 3);
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -74,10 +74,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new MessageBody("")
             );
 
-            _bus.Enqueue(unacceptableMessage1);
-            _bus.Enqueue(unacceptableMessage2);
-            _bus.Enqueue(unacceptableMessage3);
-            _bus.Enqueue(unacceptableMessage4);
+            channel.Enqueue(unacceptableMessage1);
+            channel.Enqueue(unacceptableMessage2);
+            channel.Enqueue(unacceptableMessage3);
+            channel.Enqueue(unacceptableMessage4);
         }
 
         [Fact]

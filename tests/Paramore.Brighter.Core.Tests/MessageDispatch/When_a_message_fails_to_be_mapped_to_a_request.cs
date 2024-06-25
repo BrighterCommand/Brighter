@@ -44,6 +44,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public async Task When_A_Message_Fails_To_Be_Mapped_To_A_Request ()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+
+            await Task.Delay(2000);
             
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 

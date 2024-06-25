@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class DispatcherAddNewConnectionTests : IDisposable
     {
         private const string TopicName = "MyEvent";
+        private const string TopicNameTwo = "OtherEvent";
         private readonly Dispatcher _dispatcher;
         private readonly Subscription _newSubscription;
         private readonly InternalBus _bus;
@@ -45,6 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public DispatcherAddNewConnectionTests()
         {
             var routingKey = new RoutingKey(TopicName);
+            var routingKeyTwo = new RoutingKey(TopicNameTwo);
             
             _bus = new InternalBus();
             
@@ -55,8 +57,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            Subscription subscription = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _newSubscription = new Subscription<MyEvent>(new SubscriptionName("newTest"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            Subscription subscription = new Subscription<MyEvent>(
+                new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, 
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), channelName: new ChannelName("fakeChannel"), 
+                routingKey: routingKey
+            );
+            
+            _newSubscription = new Subscription<MyEvent>(
+                new SubscriptionName("newTest"), noOfPerformers: 1, timeoutInMilliseconds: 1000, 
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), 
+                channelName: new ChannelName("fakeChannelTwo"), routingKey: routingKeyTwo);
             _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistry);
 
             var @event = new MyEvent();
@@ -73,7 +83,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Open(_newSubscription);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = new RoutingKey(TopicName)});
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = new RoutingKey(TopicNameTwo)});
             _bus.Enqueue(message);
 
             await Task.Delay(1000);
