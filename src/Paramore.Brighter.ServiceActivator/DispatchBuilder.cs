@@ -103,11 +103,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
-        /// <param name="channelFactory">The channel factory.</param>
+        /// <param name="defaultChannelFactory">The default channel factory that will be used if no Channel Factory is provided for each subscription.</param>
         /// <returns>INeedAListOfSubcriptions.</returns>
-        public INeedAListOfSubcriptions ChannelFactory(IAmAChannelFactory channelFactory)
+        public INeedAListOfSubcriptions ChannelFactory(IAmAChannelFactory defaultChannelFactory)
         {
-            _defaultChannelFactory = channelFactory;
+            _defaultChannelFactory = defaultChannelFactory;
             return this;
         }
 
@@ -191,9 +191,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
-        /// <param name="channelFactory">The channel factory.</param>
+        /// <param name="defaultChannelFactory">The channel factory.</param>
         /// <returns>INeedAListOfSubcriptions.</returns>
-        INeedAListOfSubcriptions ChannelFactory(IAmAChannelFactory channelFactory);
+        INeedAListOfSubcriptions ChannelFactory(IAmAChannelFactory defaultChannelFactory);
     }
 
     /// <summary>
