@@ -26,8 +26,8 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
-    internal class FailingChannel(ChannelName channelName, IAmAMessageConsumer messageConsumer)
-        : Channel(channelName, messageConsumer)
+    internal class FailingChannel(ChannelName channelName, IAmAMessageConsumer messageConsumer, int maxQueueLength= 1)
+        : Channel(channelName, messageConsumer, maxQueueLength)
     {
         public int NumberOfRetries { get; set; } = 0;
         private int _attempts = 0;

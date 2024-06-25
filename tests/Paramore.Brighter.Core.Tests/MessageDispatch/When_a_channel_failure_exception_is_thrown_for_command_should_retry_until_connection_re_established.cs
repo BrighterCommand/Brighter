@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            var channel = new FailingChannel(new ChannelName(Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000))
+            var channel = new FailingChannel(new ChannelName(Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2)
             {
                 NumberOfRetries = 1
             };

@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _bus = new InternalBus();
             var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, 1000);
             
-            IAmAChannel channel = new Channel(Topic, consumer);
+            IAmAChannel channel = new Channel(Topic, consumer, 6);
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -78,14 +78,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public void WhenAMessageDispatcherStartsMultiplePerformers()
         {
             _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
-            //should_have_multiple_consumers
             _dispatcher.Consumers.Count().Should().Be(3);
 
             _dispatcher.End().Wait();
             
-            //_should_have_consumed_the_messages_in_the_channel
             _bus.Stream(new RoutingKey(Topic)).Count().Should().Be(0); 
-            //_should_have_a_stopped_state
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
         }
 #pragma warning restore xUnit1031

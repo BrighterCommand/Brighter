@@ -65,10 +65,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel.Enqueue(msg);
         }
 
-        public MessagePumpEventProcessingDeferMessageActionTestsAsync(InternalBus bus)
-        {
-            _bus = bus;
-        }
 
         [Fact]
         public async Task When_an_event_handler_throws_a_defer_message_Then_message_is_requeued_until_rejectedAsync()
