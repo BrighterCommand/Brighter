@@ -1,25 +1,27 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
 
     public class MessagePumpFailingMessageTranslationTests
     {
+        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new RoutingKey(Topic);
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
-        private readonly SpyRequeueCommandProcessor _commandProcessor;
+        private readonly Channel _channel;
+        private readonly InternalBus _bus = new();
 
         public MessagePumpFailingMessageTranslationTests()
         {
-            _commandProcessor = new SpyRequeueCommandProcessor();
-            var provider = new CommandProcessorProvider(_commandProcessor);
-            _channel = new FakeChannel();
+            SpyRequeueCommandProcessor commandProcessor = new();
+            var provider = new CommandProcessorProvider(commandProcessor);
+            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
                 null);
@@ -31,24 +33,25 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             };
 
             var unmappableMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), 
                 new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }")
                 );
 
-            _channel.Enqueue(unmappableMessage);
+            _bus.Enqueue(unmappableMessage);
         }
 
         [Fact]
         public async Task When_A_Message_Fails_To_Be_Mapped_To_A_Request ()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
             _channel.Stop();
 
             await Task.WhenAll(task);
 
-            //should_have_acknowledge_the_message
-            _channel.AcknowledgeHappened.Should().BeTrue();
+            Assert.Empty(_bus.Stream(_routingKey));
         }
     }
 }

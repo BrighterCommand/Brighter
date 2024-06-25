@@ -23,21 +23,16 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
-    internal class FailingChannel : FakeChannel
+    internal class FailingChannel(ChannelName channelName, IAmAMessageConsumer messageConsumer)
+        : Channel(channelName, messageConsumer)
     {
-        public int NumberOfRetries { get; set; }
+        public int NumberOfRetries { get; set; } = 0;
         private int _attempts = 0;
 
-        public FailingChannel()
-        {
-            NumberOfRetries = 0;
-        }
-
-        public override Message Receive(int timeoutinMilliseconds)
+        public new Message Receive(int timeoutinMilliseconds)
         {
             if (_attempts <= NumberOfRetries)
             {

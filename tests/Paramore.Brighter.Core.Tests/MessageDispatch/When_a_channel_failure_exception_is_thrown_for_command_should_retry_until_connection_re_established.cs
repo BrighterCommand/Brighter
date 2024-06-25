@@ -30,11 +30,16 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
+        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
         private readonly SpyCommandProcessor _commandProcessor;
 
@@ -42,7 +47,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            var channel = new FailingChannel { NumberOfRetries = 1 };
+            var channel = new FailingChannel(new ChannelName(Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000))
+            {
+                NumberOfRetries = 1
+            };
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
@@ -56,11 +64,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             //two command, will be received when subscription restored
             var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
             var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
             channel.Enqueue(message1);

@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -81,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 policyRegistry,
                 bus,
                 replySubscriptions:replySubs,
-                responseChannelFactory: new InMemoryChannelFactory()
+                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System)
             );
 
             PipelineBuilder<MyResponse>.ClearPipelineCache();

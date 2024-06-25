@@ -25,25 +25,30 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpUnacceptableMessageLimitBreachedTests
     {
+        private const string Topic = "MyTopic";
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
+        private readonly InternalBus _bus;
+        private readonly FakeTimeProvider _timeProvider = new();
+        private readonly RoutingKey _routingKey = new RoutingKey(Topic);
 
         public MessagePumpUnacceptableMessageLimitBreachedTests()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
+
+            _bus = new InternalBus();
             
-            _channel = new FakeChannel();
+            var channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
@@ -51,30 +56,30 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
             };
 
             var unacceptableMessage1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
                 new MessageBody("")
             );
             var unacceptableMessage2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
                 new MessageBody("")
             );
             var unacceptableMessage3 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
                 new MessageBody("")
             );
             var unacceptableMessage4 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
                 new MessageBody("")
             );
 
-            _channel.Enqueue(unacceptableMessage1);
-            _channel.Enqueue(unacceptableMessage2);
-            _channel.Enqueue(unacceptableMessage3);
-            _channel.Enqueue(unacceptableMessage4);
+            channel.Enqueue(unacceptableMessage1);
+            channel.Enqueue(unacceptableMessage2);
+            channel.Enqueue(unacceptableMessage3);
+            channel.Enqueue(unacceptableMessage4);
         }
 
         [Fact]
@@ -83,11 +88,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
 
             await Task.WhenAll(task);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
+            
+            _bus.Stream(_routingKey).Should().BeEmpty();
+            
+            //TODO: without inspection, how we would know you shut down? Observability?
 
-            //should_have_acknowledge_the_3_messages
-            _channel.AcknowledgeCount.Should().Be(3);
-            //should_dispose_the_input_channel
-            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }
