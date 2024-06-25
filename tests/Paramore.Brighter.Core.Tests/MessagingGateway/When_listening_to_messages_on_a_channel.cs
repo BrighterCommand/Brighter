@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
@@ -32,32 +32,33 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class ChannelMessageReceiveTests
     {
         private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _gateway;
-        private Message _receivedMessage;
+        private const string Topic = "MyTopic";
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _fakeTimeProvider = new();
         private readonly Message _sentMessage;
 
         public ChannelMessageReceiveTests()
         {
-            _gateway = A.Fake<IAmAMessageConsumer>();
+            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, 1000);
 
-            _channel = new Channel("test", _gateway);
+            _channel = new Channel(Topic, gateway);
 
             _sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
-
-            A.CallTo(() => _gateway.Receive(1000)).Returns(new Message[] {_sentMessage});
+            
+            _bus.Enqueue(_sentMessage);
         }
+
 
         [Fact]
         public void When_Listening_To_Messages_On_A_Channel()
         {
-            _receivedMessage = _channel.Receive(1000);
-
-            //_should_call_the_messaging_gateway
-            A.CallTo(() => _gateway.Receive(1000)).MustHaveHappened();
-            //_should_return_the_next_message_from_the_gateway
-            _receivedMessage.Should().Be(_sentMessage);
+            var receivedMessage = _channel.Receive(1000);
+            _channel.Acknowledge(receivedMessage);
+            
+            receivedMessage.Should().NotBeNull();
+            receivedMessage.Should().Be(_sentMessage);
         }
     }
 }

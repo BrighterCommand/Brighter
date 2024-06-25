@@ -63,7 +63,7 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
             var response = await client.GetBlobLeaseClient().AcquireAsync(options.LeaseValidity, cancellationToken: cancellationToken);
             return response.Value.LeaseId;
         }
-        catch (RequestFailedException e)
+        catch (RequestFailedException)
         {
             _logger.LogInformation("Could not Acquire Lease on Blob {LockResourceName}", resource);
             return null;
@@ -95,7 +95,7 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
             var response = client.GetBlobLeaseClient().Acquire(options.LeaseValidity);
             return response.Value.LeaseId;
         }
-        catch (RequestFailedException e)
+        catch (RequestFailedException)
         {
             _logger.LogInformation("Could not Acquire Lease on Blob {LockResourceName}", resource);
             return null;

@@ -1,6 +1,6 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,33 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
+using Paramore.Brighter;
 
-namespace Paramore.Brighter.ServiceActivator.TestHelpers
+namespace HelloWorldInternalBus
 {
-    public class InMemoryChannelFactory : IAmAChannelFactory
+    public class GreetingCommand(string name) : Command(Guid.NewGuid())
     {
-        private readonly List<Message> _seedMessages = new List<Message>();
-        private readonly IAmAChannel _channel;
-
-        public InMemoryChannelFactory(FakeChannel channel = null)
-        {
-            _channel = channel;
-        }
-
-        public IAmAChannel CreateChannel(Subscription subscription)
-        {
-            var  channel = _channel ?? new FakeChannel();
-            foreach (var message in _seedMessages)
-            {
-                channel.Enqueue(message);
-            }
-            return channel;
-        }
-
-        public void SeedChannel(IEnumerable<Message> seedMessages)
-        {
-            _seedMessages.AddRange(seedMessages);
-        }
+        public string Name { get; } = name;
     }
 }

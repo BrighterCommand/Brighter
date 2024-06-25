@@ -23,15 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using FakeItEasy;
 using FluentAssertions;
-using Microsoft.Extensions.Time.Testing;
-using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
@@ -45,20 +42,16 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public ControlBusBuilderTests()
         {
             var dispatcher = A.Fake<IDispatcher>();
-            var messageProducerFactory = A.Fake<IAmAProducerRegistryFactory>();
-
-            var timeProvider = new FakeTimeProvider();
-            A.CallTo(() => messageProducerFactory.Create())
-                .Returns(new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
-                {
-                    {"MyTopic", new InMemoryProducer(new InternalBus(), timeProvider)},
-                }));
+            var bus = new InternalBus();
 
             _busReceiverBuilder = ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(dispatcher)
-                .ProducerRegistryFactory(messageProducerFactory)
-                .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
+                .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(bus, new []
+                    {
+                        new Publication{Topic = new RoutingKey("MyTopic"), RequestType = typeof(ConfigurationCommand)}
+                    }))
+                .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System)) as ControlBusReceiverBuilder;
         }
 
         [Fact]
@@ -66,11 +59,8 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _controlBus = _busReceiverBuilder.Build(_hostName);
 
-            //_should_have_a_configuration_channel
             _controlBus.Connections.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.CONFIGURATION}");
-            //_should_have_a_heartbeat_channel
             _controlBus.Connections.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.HEARTBEAT}");
-            //_should_have_a_command_processor
             _controlBus.CommandProcessor.Should().NotBeNull();
         }
         

@@ -6,19 +6,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// Creates a message producer registry, which contains a producer for every publication
     /// keyed by the topic (routing key)
     /// </summary>
-    public class RmqProducerRegistryFactory : IAmAProducerRegistryFactory
+    public class RmqProducerRegistryFactory(
+        RmqMessagingGatewayConnection connection,
+        IEnumerable<RmqPublication> publications)
+        : IAmAProducerRegistryFactory
     {
-        private readonly RmqMessagingGatewayConnection _connection;
-        private readonly IEnumerable<RmqPublication> _publications;
-
-        public RmqProducerRegistryFactory(
-            RmqMessagingGatewayConnection connection,
-            IEnumerable<RmqPublication> publications)
-        {
-            _connection = connection;
-            _publications = publications;
-        }
-        
         /// <summary>
         /// Creates message producers.
         /// </summary>
@@ -26,9 +18,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public IAmAProducerRegistry Create()
         {
             var producers = new Dictionary<string, IAmAMessageProducer>();
-            foreach (var publication in _publications)
+            foreach (var publication in publications)
             {
-                producers[publication.Topic] = new RmqMessageProducer(_connection, publication);
+                producers[publication.Topic] = new RmqMessageProducer(connection, publication);
             }
 
             return new ProducerRegistry(producers);

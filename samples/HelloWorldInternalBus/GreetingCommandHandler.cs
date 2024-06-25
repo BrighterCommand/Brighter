@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,40 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Xunit;
+using HelloWorldInternalBus;
+using Paramore.Brighter;
+using Paramore.Brighter.Logging.Attributes;
 
-namespace Paramore.Brighter.Core.Tests.MessagingGateway
+namespace HelloWorld
 {
-    public class ChannelStopTests
+    internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
-        private const string Topic = "myTopic";
-        private readonly IAmAChannel _channel;
-        private readonly InternalBus _bus;
-
-        public ChannelStopTests()
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+        public override GreetingCommand Handle(GreetingCommand command)
         {
-            _bus = new InternalBus();
-            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, TimeProvider.System, 1000); 
-
-            _channel = new Channel(Topic, gateway);
-
-            Message sentMessage = new(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
-                new MessageBody("a test body"));
-            
-            _bus.Enqueue(sentMessage);
-
-            _channel.Stop();
-
-        }
-
-        [Fact]
-        public void When_A_Stop_Message_Is_Added_To_A_Channel()
-        {
-            var stopMessage = _channel.Receive(1000);
-            Assert.Equal(MessageType.MT_QUIT, stopMessage.Header.MessageType);
-            
-            Assert.Single(_bus.Stream(new RoutingKey(Topic)));
+            Console.WriteLine("Hello {0}", command.Name);
+            return base.Handle(command);
         }
     }
 }

@@ -123,8 +123,8 @@ public class CloudEventsTransformerTests
         Assert.Equal(new Uri("http://goparamore.io"), cloudEvents.Header.Source);
         Assert.Equal( "goparamore.io.Paramore.Brighter.Message", cloudEvents.Header.Type);
         Assert.Equal("text/plain", cloudEvents.Header.ContentType);
-        Assert.Equal(null, cloudEvents.Header.DataSchema);
-        Assert.Equal(null, cloudEvents.Header.Subject);
+        Assert.Null(cloudEvents.Header.DataSchema);
+        Assert.Null(cloudEvents.Header.Subject);
 
     }
 }

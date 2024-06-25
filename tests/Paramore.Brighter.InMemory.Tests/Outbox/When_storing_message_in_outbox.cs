@@ -140,7 +140,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         }
 
         [Fact]
-        public async Task When_there_are_multiple_items_and_some_are_dispatched()
+        public void When_there_are_multiple_items_and_some_are_dispatched()
         {
             //Arrange
             var timeProvider = new FakeTimeProvider();

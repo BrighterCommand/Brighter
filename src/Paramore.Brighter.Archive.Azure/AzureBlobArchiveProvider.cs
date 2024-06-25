@@ -73,7 +73,7 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
 
     }
 
-    private async Task<string> UploadSafe(Message message, CancellationToken cancellationToken)
+    private async Task<string?> UploadSafe(Message message, CancellationToken cancellationToken)
     {
         try
         {

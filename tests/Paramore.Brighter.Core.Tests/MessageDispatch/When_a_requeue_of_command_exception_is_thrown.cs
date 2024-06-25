@@ -23,52 +23,56 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpCommandRequeueTests
     {
+        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
         private readonly SpyCommandProcessor _commandProcessor;
-        private readonly MyCommand _command = new MyCommand();
+        private readonly MyCommand _command = new();
 
         public MessagePumpCommandRequeueTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            _channel = new FakeChannel();
+            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2);
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
              messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
              _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+                { Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
 
             var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
             );
             
             var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
             );
             
-            _channel.Enqueue(message1);
-            _channel.Enqueue(message2);
+            channel.Enqueue(message1);
+            channel.Enqueue(message2);
             var quitMessage = new Message(
                 new MessageHeader(string.Empty, "", MessageType.MT_QUIT), 
                 new MessageBody("")
             );
-            _channel.Enqueue(quitMessage);
+            channel.Enqueue(quitMessage);
         }
 
         [Fact]
@@ -76,12 +80,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _messagePump.Run();
 
-            //_should_send_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);
-            //_should_requeue_the_messages
-            _channel.Length.Should().Be(2);
-            //_should_dispose_the_input_channel
-            _channel.DisposeHappened.Should().BeTrue();
+            
+            Assert.Equal(2, _bus.Stream(_routingKey).Count());
+            
+            
         }
     }
 }
