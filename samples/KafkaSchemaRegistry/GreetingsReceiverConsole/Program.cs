@@ -72,7 +72,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.ChannelFactory = new ChannelFactory(
+            options.DefaultChannelFactory = new ChannelFactory(
                 new KafkaMessageConsumerFactory(
                     new KafkaMessagingGatewayConfiguration
                     {

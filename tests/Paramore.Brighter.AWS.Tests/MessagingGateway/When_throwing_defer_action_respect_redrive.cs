@@ -24,11 +24,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;
         private readonly string _dlqChannelName;
-        private readonly ChannelFactory _channelFactory;
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _sender;
-        private readonly string _topicName;
-        private readonly IAmACommandProcessor _commandProcessor;
         private readonly AWSMessagingGatewayConnection _awsConnection;
 
         public SnsReDrivePolicySDlqTests()
@@ -38,8 +35,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             string contentType = "text\\plain";
             var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            _topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            var routingKey = new RoutingKey(_topicName);
+            string topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            var routingKey = new RoutingKey(topicName);
 
             //how are we consuming
             var subscription = new SqsSubscription<MyCommand>(
@@ -60,7 +57,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: correlationId,
+                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId,
                     replyTo: replyTo, contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
@@ -74,15 +71,15 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 _awsConnection, 
                 new SnsPublication 
                     { 
-                        Topic = new RoutingKey(_topicName), 
+                        Topic = new RoutingKey(topicName), 
                         RequestType = typeof(MyDeferredCommand), 
                         MakeChannels = OnMissingChannel.Create 
                     }
                 );
 
             //We need to do this manually in a test - will create the channel from subscriber parameters
-            _channelFactory = new ChannelFactory(_awsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            ChannelFactory channelFactory = new(_awsConnection);
+            _channel = channelFactory.CreateChannel(subscription);
 
             //how do we handle a command
             IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
@@ -92,13 +89,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             subscriberRegistry.Register<MyDeferredCommand, MyDeferredCommandHandler>();
 
             //once we read, how do we dispatch to a handler. N.B. we don't use this for reading here
-            _commandProcessor = new CommandProcessor(
+            IAmACommandProcessor commandProcessor = new CommandProcessor(
                 subscriberRegistry: subscriberRegistry,
                 handlerFactory: new QuickHandlerFactory(() => handler),
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
-            var provider = new CommandProcessorProvider(_commandProcessor);
+            var provider = new CommandProcessorProvider(commandProcessor);
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
@@ -122,7 +119,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             {
                 QueueUrl = queueUrlResponse.QueueUrl,
                 WaitTimeSeconds = 5,
-                AttributeNames = new List<string> { "ApproximateReceiveCount" },
+                MessageSystemAttributeNames = ["ApproximateReceiveCount"],
                 MessageAttributeNames = new List<string> { "All" }
             }).GetAwaiter().GetResult();
 

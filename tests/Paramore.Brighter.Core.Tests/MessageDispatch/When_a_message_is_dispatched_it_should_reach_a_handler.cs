@@ -28,14 +28,18 @@ using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly.Registry;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpDispatchTests
     {
+        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
         private readonly MyEvent _myEvent = new();
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
@@ -57,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var channel = new FakeChannel();
+            var channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -70,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             };
 
             var message = new Message(
-                new MessageHeader(_myEvent.Id, "MyTopic", MessageType.MT_EVENT), 
+                new MessageHeader(_myEvent.Id, Topic, MessageType.MT_EVENT), 
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
             
@@ -83,8 +87,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler()
         {
             _messagePump.Run();
-
-            //_should_dispatch_the_message_to_a_handler
+            
             _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
         }
     }

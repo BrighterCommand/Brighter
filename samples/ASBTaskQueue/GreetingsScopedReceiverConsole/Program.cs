@@ -60,7 +60,7 @@ namespace GreetingsScopedReceiverConsole
                         .AddServiceActivator(options =>
                         {
                             options.Subscriptions = subscriptions;
-                            options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+                            options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
                             options.UseScoped = true;
                         })
                         .AutoFromAssemblies();

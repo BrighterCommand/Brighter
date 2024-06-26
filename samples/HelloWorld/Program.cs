@@ -23,33 +23,22 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Transactions;
+using HelloWorld;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Serilog;
 
-namespace HelloWorld
-{
-    public class Program
+var host = Host.CreateDefaultBuilder()
+    .ConfigureServices((context, collection) =>
     {
-        private static void Main()
-        {
-            var host = Host.CreateDefaultBuilder()
-                .ConfigureServices((context, collection) =>
-                {
-                    collection.AddBrighter().AutoFromAssemblies();
-                })
-                .UseConsoleLifetime()
-                .Build();
+        collection.AddBrighter().AutoFromAssemblies();
+    })
+    .UseConsoleLifetime()
+    .Build();
 
-            var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
+var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
 
-            commandProcessor.Send(new GreetingCommand("Ian"));
+commandProcessor.Send(new GreetingCommand("Ian"));
 
-            host.WaitForShutdown();
-        }
-   }
-}
+host.WaitForShutdown();

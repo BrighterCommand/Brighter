@@ -193,7 +193,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                     new CommandProcessorProvider(commandProcessor), new InMemoryRequestContextFactory()
                 )
                 .MessageMappers(incomingMessageMapperRegistry, null, null, null)
-                .DefaultChannelFactory(_channelFactory)                                        
+                .ChannelFactory(_channelFactory)                                        
                 .Subscriptions(subscriptions)
                 .Build();
         }

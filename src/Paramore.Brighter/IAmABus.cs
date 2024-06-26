@@ -28,7 +28,7 @@ namespace Paramore.Brighter;
 
 public interface IAmABus
 {
-    void Enqueue(Message message);
-    Message Dequeue(RoutingKey topic);
+    void Enqueue(Message message, int millisecondsTimeout = -1);
+    Message Dequeue(RoutingKey topic, int millisecondsTimeout = -1);
     IEnumerable<Message> Stream(RoutingKey topic);
 }

@@ -38,7 +38,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
-        message.Body.Should().Be(_message.Body);
+        message.Body.Value.Should().Be(_message.Body.Value);
     }
 
     [Fact]
@@ -56,6 +56,6 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
-        message.Body.Should().Be(_message.Body);
+        message.Body.Value.Should().Be(_message.Body.Value);
     }
 }

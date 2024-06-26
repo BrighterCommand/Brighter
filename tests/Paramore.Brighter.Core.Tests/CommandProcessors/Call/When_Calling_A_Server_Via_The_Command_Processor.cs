@@ -6,7 +6,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -16,12 +15,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
     [Collection("CommandProcessor")]
     public class CommandProcessorCallTests : IDisposable
     {
-        private const string _topic = "MyRequest";
+        private const string Topic = "MyRequest";
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
         private readonly Message _message;
         private readonly InternalBus _bus = new() ;
-
 
         public CommandProcessorCallTests()
         {
@@ -29,16 +27,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var timeProvider = new FakeTimeProvider();
             InMemoryProducer producer = new(_bus, timeProvider);
-            producer.Publication = new Publication{Topic = new RoutingKey(_topic), RequestType = typeof(MyRequest)};
+            producer.Publication = new Publication{Topic = new RoutingKey(Topic), RequestType = typeof(MyRequest)};
 
             var header = new MessageHeader(
                 messageId: _myRequest.Id, 
-                topic: _topic, 
+                topic: Topic, 
                 messageType:MessageType.MT_COMMAND,
                 correlationId: _myRequest.ReplyAddress.CorrelationId,
                 replyTo: _myRequest.ReplyAddress.Topic);
 
-            var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(_myRequest.Id.ToString(), _myRequest.RequestValue), JsonSerialisationOptions.Options));
+            var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(_myRequest.Id, _myRequest.RequestValue), JsonSerialisationOptions.Options));
             _message = new Message(header, body);
  
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
@@ -65,9 +63,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            InMemoryChannelFactory inMemoryChannelFactory = new InMemoryChannelFactory();
-            //we need to seed the response as the fake producer does not actually send across the wire
-            inMemoryChannelFactory.SeedChannel(new[] {_message});
+            var internalBus = new InternalBus();
+            InMemoryChannelFactory inMemoryChannelFactory = new(internalBus, TimeProvider.System);
             
             var replySubs = new List<Subscription>
             {
@@ -82,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { _topic, producer },
+                    { Topic, producer },
                 });
 
             var tracer = new BrighterTracer();
@@ -115,13 +112,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         {
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOutInMilliseconds: 500);
             
-            //should send a message via the messaging gateway
-            var message = _bus.Dequeue(new RoutingKey(_topic));
+            var message = _bus.Dequeue(new RoutingKey(Topic));
 
-            //should convert the command into a message
             message.Should().Be(_message);
             
-            //should forward response to a handler
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
 
         }

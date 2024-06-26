@@ -80,7 +80,7 @@ var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, fals
 builder.Services.AddServiceActivator(options =>
     {
         options.Subscriptions = subscriptions;
-        options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+        options.DefaultChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
         options.UseScoped = true;
         
     })

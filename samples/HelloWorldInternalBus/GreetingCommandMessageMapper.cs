@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,29 +22,30 @@ THE SOFTWARE. */
 
 #endregion
 
-using FakeItEasy;
-using Xunit;
+using System.Text.Json;
+using HelloWorldInternalBus;
+using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 
-namespace Paramore.Brighter.Core.Tests.MessagingGateway
+namespace HelloWorld
 {
-    public class ChannelDisposalTests
+    public class GreetingCommandMessageMapper : IAmAMessageMapper<GreetingCommand>
     {
-        private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        public IRequestContext Context { get; set; }
 
-        public ChannelDisposalTests()
+        public Message MapToMessage(GreetingCommand request, Publication publication)
         {
-            _messageConsumer = A.Fake<IAmAMessageConsumer>();
-            _channel = new Channel("test", _messageConsumer);
+            var header = new MessageHeader(messageId: request.Id, topic: publication.Topic, messageType: request.RequestToMessageType());
+            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
+            var message = new Message(header, body);
+            return message;
         }
 
-        [Fact]
-        public void When_Disposing_Channel()
+        public GreetingCommand MapToRequest(Message message)
         {
-            _channel.Dispose();
-
-            //_should_call_dispose_on_messaging_gateway
-            A.CallTo(() => _messageConsumer.Dispose()).MustHaveHappened();
+            var greetingCommand = JsonSerializer.Deserialize<GreetingCommand>(message.Body.Value, JsonSerialisationOptions.Options);
+            
+            return greetingCommand;
         }
     }
 }
