@@ -31,6 +31,7 @@ using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -41,22 +42,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
      public class ControlBusSenderPostMessageAsyncTests : IDisposable
     {
+        private const string Topic = "MyCommand";
         private readonly ControlBusSender _controlBusSender;
         private readonly MyCommand _myCommand = new();
         private readonly Message _message;
         private readonly IAmAnOutboxSync<Message, CommittableTransaction> _outbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
+        private readonly InternalBus _internalBus = new();
 
         public ControlBusSenderPostMessageAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
-            _outbox = new InMemoryOutbox(new FakeTimeProvider());
-            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
+            var timeProvider = new FakeTimeProvider();
+            var tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
+            InMemoryProducer producer = new(_internalBus, timeProvider);
 
-            const string topic = "MyCommand";
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -73,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{Topic, producer},});
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -81,6 +84,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
+                tracer,
                 _outbox
             );
 
@@ -100,11 +104,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             await _controlBusSender.PostAsync(_myCommand);
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
+            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
             
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _outbox
-              .DispatchedMessages(1200000, 1)
+              .DispatchedMessages(1200000, new RequestContext(), 1)
               .SingleOrDefault();
               
             message.Should().NotBeNull();

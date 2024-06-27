@@ -97,8 +97,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             {
                 QueueUrl = queueUrlResponse.QueueUrl,
                 WaitTimeSeconds = 5,
-                AttributeNames = new List<string> { "ApproximateReceiveCount" },
-                MessageAttributeNames = new List<string> { "All" }
+                MessageAttributeNames = new List<string> { "All",  "ApproximateReceiveCount" }
             }).GetAwaiter().GetResult();
 
             if (response.HttpStatusCode != HttpStatusCode.OK)

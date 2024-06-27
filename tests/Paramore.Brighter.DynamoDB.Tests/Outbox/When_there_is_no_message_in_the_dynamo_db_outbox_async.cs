@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -50,7 +49,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         [Fact]
         public async Task When_there_is_no_message_in_the_dynamo_db_outbox()
         {
-            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //_should_return_a_empty_message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

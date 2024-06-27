@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -13,7 +12,6 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly string _Topic1 = "test_topic";
         private readonly string _Topic2 = "test_topic3";
-        private IEnumerable<Message> _messages;
         private readonly Message _message1;
         private readonly Message _message2;
         private readonly Message _message3;
@@ -39,20 +37,21 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public async Task When_there_are_multiple_messages_and_some_are_received_and_Dispatched_bulk_Async()
         {
-            await _sqlOutbox.AddAsync(_message);
+            var context = new RequestContext();
+            await _sqlOutbox.AddAsync(_message, context);
             await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message1);
+            await _sqlOutbox.AddAsync(_message1, context);
             await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message2);
+            await _sqlOutbox.AddAsync(_message2, context);
             await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message3);
+            await _sqlOutbox.AddAsync(_message3, context);
             await Task.Delay(100);
 
-            await _sqlOutbox.MarkDispatchedAsync(new []{_message1.Id, _message2.Id}, DateTime.UtcNow);
+            await _sqlOutbox.MarkDispatchedAsync(new []{_message1.Id, _message2.Id}, context, DateTime.UtcNow);
             
             await Task.Delay(200);
 
-            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0);
+            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0, context);
 
             undispatchedMessages.Count().Should().Be(2);
         }

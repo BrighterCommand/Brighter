@@ -63,7 +63,8 @@ namespace Paramore.Brighter
         {
             var now = timeProvider.GetUtcNow().DateTime;
 
-            if (now - _lastScanAt < ExpirationScanInterval)
+            TimeSpan elapsedSinceLastScan = now - _lastScanAt;
+            if (elapsedSinceLastScan < ExpirationScanInterval)
                 return;
 
             //This is expensive, so use a background thread

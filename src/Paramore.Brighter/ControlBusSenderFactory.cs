@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Transactions;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -40,7 +41,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="outbox">The outbox for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry)
+        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry, BrighterTracer tracer)
             where T : Message
         {
             var mapper = new MessageMapperRegistry(
@@ -53,7 +54,7 @@ namespace Paramore.Brighter
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: mapper,
                 messageTransformerFactory: new EmptyMessageTransformerFactory(),
-                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
                 outbox: outbox
                 ); 
             

@@ -28,7 +28,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -38,19 +40,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class ControlBusSenderPostMessageTests : IDisposable
     {
-        private readonly CommandProcessor _commandProcessor;
         private readonly ControlBusSender _controlBusSender;
-        private readonly MyCommand _myCommand = new MyCommand();
+        private readonly MyCommand _myCommand = new();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducer _producer;
+        private readonly InMemoryOutbox _outbox;
 
         public ControlBusSenderPostMessageTests()
         {
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _producer = new FakeMessageProducer{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(new InternalBus(), timeProvider)
+            {
+                Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+            };
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
@@ -71,9 +75,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
-            
-            _fakeOutbox = new FakeOutbox();
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, producer},});
+
+            var tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -81,17 +86,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                _fakeOutbox
+                tracer,
+                _outbox
             );
 
             CommandProcessor.ClearServiceBus();
-            _commandProcessor = new CommandProcessor(
+            CommandProcessor commandProcessor = new(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
                 bus
             );
 
-            _controlBusSender = new ControlBusSender(_commandProcessor);
+            _controlBusSender = new ControlBusSender(commandProcessor);
         }
 
         [Fact]
@@ -100,8 +106,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _controlBusSender.Post(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            var message = _fakeOutbox
-              .DispatchedMessages(120000, 1)
+            var message = _outbox
+              .DispatchedMessages(120000, new RequestContext(), 1)
               .SingleOrDefault();
               
             message.Should().NotBeNull();

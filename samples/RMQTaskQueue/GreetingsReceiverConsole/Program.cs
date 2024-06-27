@@ -81,7 +81,7 @@ namespace GreetingsReceiverConsole
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
-                        options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                        options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     })
                     .AutoFromAssemblies();
 

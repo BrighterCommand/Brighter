@@ -4,7 +4,7 @@ Date: 2024-04-29
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -96,7 +96,7 @@ The span kind will always be Internal. This is because the command processor is 
 | `deposit` | A request is transfomed into a message and stored in an Outbox                      |
 | `clear`     | Requests in the Outbox are dispatched to a messaging broker via a messaging gateway |
 
-Note that we Publish, Deposit and Clear may be batch operations which result in multiple invocations of our pipeline. In a batch we will create a parent span (itself probably a child of another span that triggered it) and add each item within the batch as an activity via an activity link on the parent span. 
+Note that we Publish, Deposit and Clear may be batch operations which result in multiple invocations of our pipeline. In a batch we will create a parent `create` span (itself probably a child of another span that triggered it) and add each item within the batch as an activity via an activity link on the parent span. 
 
 #### Deposit Operation Spans, External Call Spans
 
@@ -106,15 +106,29 @@ The Command Processor span for a Deposit covers the entire transform and mapper 
 
 Storing the message in an Outbox should create a span, with low-cardinality (i.e. name of Outbox or Inbox operation) as per the [Otel specification](https://opentelemetry.io/docs/specs/semconv/database/database-spans/).
 
-A transformer is middleware used in the message mapping pipeline that turns a request into a message. A transformer may call externally, for exammple to object storage or a schema registry. These external calls should create a new span that has the Deposit Operation Span as a parent.
+A transformer is middleware used in the message mapping pipeline that turns a request into a message. A transformer may call externally, for example to object storage or a schema registry. These external calls should create a new span that has the Deposit Operation Span as a parent.
 
 In some cases semantic conventions will exist for these external calls. *For example see object storage: See the [OTel documentation for S3]*
 
 #### Clear Operation Spans, Publish and Create Spans
 
+During a Clear we retrieve a message from the Db, and then produce a message. There are existing conventions around producing and clearing.
+
+Because the CommandProcessor performs both these operations, and both involve a span that has it's own semantics, they need to be the child of a CommandProcessor span which spawns them. This span is named
+
+* `clear`
+
+We don't know the `channel` so we cannot provide more detail in the name
+
+When we Clear we always use a batch, so we may well be looping over a number of clear operations, each of which forms part of a batch, so this implies that each `clear` span is the child of another span
+
+* `create`
+
+Both the `create` span and the `clear` span our internal.
+
 During a Clear the Command Processor acts as a Producer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) semantic conventions for a Producer.
 
-We should create a span for producing a message, that is a child of the Command Processor span. The span is named:
+We should create a span for producing a message, that is a child of the Command Processor `clear` span. The span is named:
 
 * `<destination name>` `<operation name>`
 
@@ -123,7 +137,9 @@ where the destination name is the name of the channel and the operation name is 
 * Create Message => span name: `<channel> create` span kind: producer
 * Publish Message => span name: `<channel> publish` span kind: producer
 
-Producing a message is a Publish operation, unless the operation is within a Batch in which case the batch is a Publish with each message in the batch a Create span.
+Producing a message is a `publish` operation, unless the operation is within a Batch in which case the batch is a `publish` with each message in the batch a `create` span.
+
+Kind of the span is `producer` for the creator of the message. So a `publish` span is a `producer` span for a single message but a `client` for a batch, with the `create` being the `producer` in that case. 
 
 [Cloud Events](https://opentelemetry.io/docs/specs/semconv/cloudevents/cloudevents-spans/#attributes) offers alternative names the producer and consumer spans:
 
@@ -181,8 +197,8 @@ Other attributes are available in Brighter today:
 
 We may also wish to make the payload available (although it is not part of the Semantic Conventions).
 
-* `messaging.message.body`: what is the message payload?
-* `messaging.message.headers`: what are the message headers?
+* `messaging.messagebody`: what is the message payload?
+* `messaging.messageheaders`: what are the message headers?
 
 We should check Activity.IsAllDataRequested and only add the attributes if it is. Likely options we would need:
 

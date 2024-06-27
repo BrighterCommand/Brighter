@@ -9,9 +9,9 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
     public class ServiceActivatorOptions : BrighterOptions, IServiceActivatorOptions
     {
         /// <summary>
-        /// Used to create a channel, an abstraction over a message processing pipeline
+        /// Used to create a channel if no channel factory is provided on a subscription, an abstraction over a message processing pipeline
         /// </summary>
-        public IAmAChannelFactory ChannelFactory { get; set; }
+        public IAmAChannelFactory DefaultChannelFactory { get; set; }
 
         /// <summary>
         /// The configuration of our inbox

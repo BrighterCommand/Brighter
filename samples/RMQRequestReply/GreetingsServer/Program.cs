@@ -86,7 +86,7 @@ namespace GreetingsServer
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
-                        options.ChannelFactory = amAChannelFactory;
+                        options.DefaultChannelFactory = amAChannelFactory;
                     })
                         .UseExternalBus((configure) =>
                         {

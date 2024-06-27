@@ -6,6 +6,7 @@ using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -22,7 +23,10 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     {
         const string topic = "MyTopic";
 
-        var producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+        var producer = new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+        {
+            Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+        };
 
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
@@ -49,7 +53,8 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         }; 
         
         var timeProvider = new FakeTimeProvider();
-        _outbox = new InMemoryOutbox(timeProvider);
+        var tracer = new BrighterTracer();
+        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
         _archiveProvider = new InMemoryArchiveProvider();
         
         _bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -58,6 +63,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer, 
             _outbox,
             _archiveProvider 
         );
@@ -68,22 +74,23 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     public async Task When_Archiving_Old_Messages_From_The_Outbox()
     {
         //arrange
+        var context = new RequestContext();
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageOne);
-        await _outbox.MarkDispatchedAsync(messageOne.Id);
+        await _outbox.AddAsync(messageOne, context);
+        await _outbox.MarkDispatchedAsync(messageOne.Id, context);
         
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageTwo);
-        await _outbox.MarkDispatchedAsync(messageTwo.Id);
+        await _outbox.AddAsync(messageTwo, context);
+        await _outbox.MarkDispatchedAsync(messageTwo.Id, context);
         
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageThree);
-        await _outbox.MarkDispatchedAsync(messageThree.Id);
+        await _outbox.AddAsync(messageThree, context);
+        await _outbox.MarkDispatchedAsync(messageThree.Id, context);
 
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(20000, new CancellationToken());
+        await _bus.ArchiveAsync(20000, context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(0);
@@ -96,21 +103,22 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     public async Task When_Archiving_Some_Messages_From_The_Outbox()
     {
         //arrange
+        var context = new RequestContext();
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageOne);
-        await _outbox.MarkDispatchedAsync(messageOne.Id);
+        await _outbox.AddAsync(messageOne, context);
+        await _outbox.MarkDispatchedAsync(messageOne.Id, context);
         
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageTwo);
-        await _outbox.MarkDispatchedAsync(messageTwo.Id);
+        await _outbox.AddAsync(messageTwo, context);
+        await _outbox.MarkDispatchedAsync(messageTwo.Id, context);
         
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageThree);
+        await _outbox.AddAsync(messageThree, context);
 
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(20000, new CancellationToken());
+        await _bus.ArchiveAsync(20000, context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(1);
@@ -123,19 +131,20 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     public async Task When_Archiving_No_Messages_From_The_Outbox()
     {
         //arrange
+        var context = new RequestContext();
         var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageOne);
+        await _outbox.AddAsync(messageOne, context);
         
         var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageTwo);
+        await _outbox.AddAsync(messageTwo, context);
         
         var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
-        await _outbox.AddAsync(messageThree);
+        await _outbox.AddAsync(messageThree, context);
 
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(20000, new CancellationToken());
+        await _bus.ArchiveAsync(20000, context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(3);
@@ -147,8 +156,11 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     [Fact]
     public async Task When_Archiving_An_Empty_Outbox()
     {
+        //arrange
+        var context = new RequestContext();
+        
         //act
-        await _bus.ArchiveAsync(20000, new CancellationToken());
+        await _bus.ArchiveAsync(20000, context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(0);

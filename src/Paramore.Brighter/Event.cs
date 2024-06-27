@@ -37,6 +37,7 @@ namespace Paramore.Brighter
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
+        [NJsonSchema.Annotations.NotNull]
         public string Id { get; set; }
 
         /// <summary>

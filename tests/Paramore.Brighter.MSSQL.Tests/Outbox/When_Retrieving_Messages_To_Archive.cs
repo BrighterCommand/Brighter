@@ -34,16 +34,17 @@ public class MsSqlArchiveFetchTests : IDisposable
     [Fact]
     public async Task When_Retrieving_Messages_To_Archive_Async()
     {
-        await _sqlOutbox.AddAsync(new []{_messageEarliest, _messageDispatched, _messageUnDispatched});
-        await _sqlOutbox.MarkDispatchedAsync(_messageEarliest.Id, DateTime.UtcNow.AddHours(-3));
-        await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id);
+        var context = new RequestContext();
+        await _sqlOutbox.AddAsync(new []{_messageEarliest, _messageDispatched, _messageUnDispatched}, context);
+        await _sqlOutbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id, context);
         
         var allDispatched = 
-            await _sqlOutbox.DispatchedMessagesAsync(0, 100, cancellationToken: CancellationToken.None);
+            await _sqlOutbox.DispatchedMessagesAsync(0, context, 100, cancellationToken: CancellationToken.None);
         var messagesOverAnHour = 
-            await _sqlOutbox.DispatchedMessagesAsync(1, 100, cancellationToken: CancellationToken.None);
+            await _sqlOutbox.DispatchedMessagesAsync(1,context, 100, cancellationToken: CancellationToken.None);
         var messagesOver4Hours = 
-            await _sqlOutbox.DispatchedMessagesAsync(4, 100, cancellationToken: CancellationToken.None);
+            await _sqlOutbox.DispatchedMessagesAsync(4, context, 100, cancellationToken: CancellationToken.None);
         
         //Assert
         Assert.Equal(2, allDispatched.Count());

@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
@@ -31,29 +31,32 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class ChannelAcknowledgeTests
     {
         private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _gateway;
-        private readonly Message _receivedMessage;
+        private readonly InternalBus _bus = new InternalBus();
+        private readonly FakeTimeProvider _fakeTimeProvider = new FakeTimeProvider();
+        private const string Topic = "myTopic";
 
         public ChannelAcknowledgeTests()
         {
-            _gateway = A.Fake<IAmAMessageConsumer>();
+            const int ackTimeoutMs = 1000;
+            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, ackTimeoutMs); 
 
-            _channel = new  Channel("test", _gateway);
+            _channel = new  Channel(Topic, gateway);
 
-            _receivedMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
+            var sentMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
-
-            _receivedMessage.DeliveryTag = 12345UL;
+            
+            _bus.Enqueue(sentMessage);
         }
 
         [Fact]
-        public void When_Acknowledge_Is_Called_On_A_Channel()
+        public void When_Acknowledge_Is_Called_On_A_Channel_Should_Be_Removed()
         {
-            _channel.Acknowledge(_receivedMessage);
+            var receivedMessage = _channel.Receive(1000);
+            _channel.Acknowledge(receivedMessage);
+            
+            _fakeTimeProvider.Advance(TimeSpan.FromSeconds(2)); //allow for message to timeout if not acked
 
-            //_should_acknowledge_the_message
-            A.CallTo(() => _gateway.Acknowledge(_receivedMessage)).MustHaveHappened();
         }
     }
 }

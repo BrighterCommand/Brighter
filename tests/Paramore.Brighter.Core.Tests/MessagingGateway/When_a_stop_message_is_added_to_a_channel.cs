@@ -23,40 +23,40 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FakeItEasy;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
     public class ChannelStopTests
     {
+        private const string Topic = "myTopic";
         private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _gateway;
-        private Message _receivedMessage;
-        private readonly Message _sentMessage;
+        private readonly InternalBus _bus;
 
         public ChannelStopTests()
         {
-            _gateway = A.Fake<IAmAMessageConsumer>();
+            _bus = new InternalBus();
+            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, TimeProvider.System, 1000); 
 
-            _channel = new Channel("test", _gateway);
+            _channel = new Channel(Topic, gateway);
 
-            _sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
+            Message sentMessage = new(
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
+            
+            _bus.Enqueue(sentMessage);
 
             _channel.Stop();
 
-            A.CallTo(() => _gateway.Receive(1000)).Returns(new Message[] {_sentMessage});
         }
 
         [Fact]
         public void When_A_Stop_Message_Is_Added_To_A_Channel()
         {
-            _receivedMessage = _channel.Receive(1000);
-
-            //_should_call_the_messaging_gateway
-            A.CallTo(() => _gateway.Receive(1000)).MustNotHaveHappened();
+            var stopMessage = _channel.Receive(1000);
+            Assert.Equal(MessageType.MT_QUIT, stopMessage.Header.MessageType);
+            
+            Assert.Single(_bus.Stream(new RoutingKey(Topic)));
         }
     }
 }

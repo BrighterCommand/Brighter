@@ -20,14 +20,42 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private readonly int _batchSize;
         private IServiceBusReceiverWrapper _serviceBusReceiver;
         private readonly string _subscriptionName;
+        private readonly bool _useQueues;
         private bool _subscriptionCreated;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusConsumer>();
         private readonly OnMissingChannel _makeChannel;
         private readonly AzureServiceBusSubscriptionConfiguration _subscriptionConfiguration;
         private readonly ServiceBusReceiveMode _receiveMode;
+        
+        /// <summary>
+        /// Initializes an Instance of <see cref="AzureServiceBusConsumer"/> that uses Queues
+        /// </summary>
+        /// <param name="queueName">The name of the Topic.</param>
+        /// <param name="messageProducerSync">An instance of the Messaging Producer used for Requeue.</param>
+        /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
+        /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
+        /// <param name="batchSize">How many messages to receive at a time.</param>
+        /// <param name="receiveMode">The mode in which to Receive.</param>
+        /// <param name="makeChannels">The mode in which to make Channels.</param>
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
+        public AzureServiceBusConsumer(string queueName, IAmAMessageProducerSync messageProducerSync,
+            IAdministrationClientWrapper administrationClientWrapper,
+            IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10,
+            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = default): this(messageProducerSync,
+            administrationClientWrapper, serviceBusReceiverProvider, batchSize, receiveMode, makeChannels,
+            subscriptionConfiguration)
+        {
+            _useQueues = true;
+            _topicName = queueName;
+            
+            if (!_subscriptionConfiguration.RequireSession)
+                GetMessageReceiverProvider();
+        }
 
         /// <summary>
-        /// Initializes an Instance of <see cref="AzureServiceBusConsumer"/>
+        /// Initializes an Instance of <see cref="AzureServiceBusConsumer"/> that uses Topics
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription on the Topic.</param>
@@ -43,10 +71,25 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10,
             ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = default)
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = default) : this(messageProducerSync,
+            administrationClientWrapper, serviceBusReceiverProvider, batchSize, receiveMode, makeChannels,
+            subscriptionConfiguration)
         {
             _subscriptionName = subscriptionName;
             _topicName = topicName;
+            _useQueues = false;
+            
+            if (!_subscriptionConfiguration.RequireSession)
+                GetMessageReceiverProvider();
+        }
+
+        private AzureServiceBusConsumer(IAmAMessageProducerSync messageProducerSync,
+            IAdministrationClientWrapper administrationClientWrapper,
+            IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10,
+            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = default)
+        {
             _messageProducerSync = messageProducerSync;
             _administrationClientWrapper = administrationClientWrapper;
             _serviceBusReceiverProvider = serviceBusReceiverProvider;
@@ -54,9 +97,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _makeChannel = makeChannels;
             _subscriptionConfiguration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
             _receiveMode = receiveMode;
-
-            if(!_subscriptionConfiguration.RequireSession)
-                GetMessageReceiverProvider();
         }
 
         /// <summary>
@@ -237,7 +277,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             s_logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}", 
                 _subscriptionName, _topicName);
 
-            _administrationClientWrapper.DeleteTopicAsync(_topicName);
+            _administrationClientWrapper.DeleteChannelAsync(_topicName, _subscriptionConfiguration.UseServiceBusQueue);
             EnsureSubscription();
         }
 
@@ -258,7 +298,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 _topicName, _subscriptionName, _receiveMode);
             try
             {
-                _serviceBusReceiver = _serviceBusReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode, _subscriptionConfiguration.RequireSession);
+                _serviceBusReceiver = _useQueues
+                    ? _serviceBusReceiverProvider.Get(_topicName, _receiveMode,
+                        _subscriptionConfiguration.RequireSession)
+                    : _serviceBusReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode,
+                        _subscriptionConfiguration.RequireSession);
             }
             catch (Exception e)
             {
@@ -350,7 +394,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private void EnsureSubscription()
         {
-            if (_subscriptionCreated || _makeChannel.Equals(OnMissingChannel.Assume))
+            if (_subscriptionCreated || _makeChannel.Equals(OnMissingChannel.Assume) || _useQueues)
                 return;
 
             try

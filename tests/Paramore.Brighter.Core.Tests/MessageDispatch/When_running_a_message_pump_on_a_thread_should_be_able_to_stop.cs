@@ -29,38 +29,41 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class PerformerCanStopTests
     {
-        private readonly FakeChannel _channel;
+        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly Task _performerTask;
 
         public PerformerCanStopTests()
         {
             SpyCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            _channel = new FakeChannel();
+            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
             var messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory());
-            messagePump.Channel = _channel;
+            messagePump.Channel = channel;
             messagePump.TimeoutInMilliseconds = 5000;
 
             var @event = new MyEvent();
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), 
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
-            _channel.Enqueue(message);
+            channel.Enqueue(message);
 
-            Performer performer = new(_channel, messagePump);
+            Performer performer = new(channel, messagePump);
             _performerTask = performer.Run();
             performer.Stop();
         }
@@ -71,14 +74,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _performerTask.Wait();
 
-            //_should_terminate_successfully
             _performerTask.IsCompleted.Should().BeTrue();
-            //_should_not_have_errored
             _performerTask.IsFaulted.Should().BeFalse();
-            //_should_not_show_as_cancelled
             _performerTask.IsCanceled.Should().BeFalse();
-            //_should_have_consumed_the_messages_in_the_channel
-            _channel.Length.Should().Be(0);
+            Assert.Empty(_bus.Stream(_routingKey));
         }
 #pragma warning restore xUnit1031
     }

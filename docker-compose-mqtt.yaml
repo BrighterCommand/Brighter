@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  mosquitto:
+    image: efrecon/mosquitto
+    ports:
+      - 1883:1883

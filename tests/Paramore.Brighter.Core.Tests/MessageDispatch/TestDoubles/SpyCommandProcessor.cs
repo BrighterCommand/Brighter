@@ -241,20 +241,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
                 }
             }
         }
-
-        public void ClearOutbox(
-            int amountToClear = 100, 
-            int minimumAge = 5000, 
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null)
-        {
-            Commands.Add(CommandType.Clear);
-            ClearParamsList.Add(new ClearParams
-            {
-                AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args
-            });
-        }
-
+ 
         public async Task ClearOutboxAsync(
             IEnumerable<string> posts, 
             RequestContext requestContext = null,
@@ -262,14 +249,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
             ClearOutbox(posts.ToArray());
 
-            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
 
-        public void ClearAsyncOutbox(
+        public void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
             int minimumAge = 5000, 
             bool useBulk = false,
@@ -281,15 +269,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             {
                 AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args
             });
-        }
-
-        public Task BulkClearOutboxAsync(
-            IEnumerable<string> posts, 
-            RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default)
-        {
-            return ClearOutboxAsync(posts, requestContext, null, continueOnCapturedContext, cancellationToken);
         }
 
         public TResponse Call<T, TResponse>(

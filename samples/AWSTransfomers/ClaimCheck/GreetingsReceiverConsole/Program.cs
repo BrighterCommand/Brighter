@@ -74,7 +74,7 @@ namespace GreetingsReceiverConsole
                         services.AddServiceActivator(options =>
                         {
                             options.Subscriptions = subscriptions;
-                            options.ChannelFactory = new ChannelFactory(awsConnection);
+                            options.DefaultChannelFactory = new ChannelFactory(awsConnection);
                         })
                         .AutoFromAssemblies();
                         

@@ -13,21 +13,25 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <summary>
         /// Check if a Topic exists
         /// </summary>
-        /// <param name="topic">The name of the Topic.</param>
+        /// <param name="topic">The name of the Topic or Queue.</param>
+        /// <param name="useQueue">Use a Queue instead of a Topic</param>
         /// <returns>True if the Topic exists.</returns>
-        bool TopicExists(string topic);
+        bool TopicOrQueueExists(string topic, bool useQueue);
 
         /// /// <summary>
-        /// Create a Topic
+        /// Create a Channel
         /// </summary>
-        /// <param name="topic">The name of the Topic</param>
-        void CreateTopic(string topic, TimeSpan? autoDeleteOnIdle = null);
+        /// <param name="topicOrQueue">The Name of the Topic or Queue</param>
+        /// <param name="useQueues">If True a Queue will be created otherwise a Topic will be used</param>
+        /// <param name="autoDeleteOnIdle"></param>
+        void CreateChannel(string topicOrQueue, bool useQueues, TimeSpan? autoDeleteOnIdle = null);
 
         /// <summary>
         /// Delete a Topic.
         /// </summary>
-        /// <param name="topic">The name of the Topic.</param>
-        Task DeleteTopicAsync(string topic);
+        /// <param name="topicOrQueue"></param>
+        /// <param name="useQueues"></param>
+        Task DeleteChannelAsync(string topicOrQueue, bool useQueues);
 
         /// <summary>
         /// Check if a Subscription Exists for a Topic.
