@@ -2,17 +2,17 @@
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
-    internal class AllTopicsQueryContext
+    internal class DispatchedAllTopicsQueryContext
     {
         public int NextPage { get; private set; }
         public string LastEvaluatedKey { get; private set; }
-        public List<string> OutstandingTopics { get; private set; }
+        public List<string> RemainingTopics { get; private set; }
 
-        public AllTopicsQueryContext(int nextPage, string lastEvaluatedKey, List<string> outstandingTopics)
+        public DispatchedAllTopicsQueryContext(int nextPage, string lastEvaluatedKey, List<string> remainingTopics)
         {
             NextPage = nextPage;
             LastEvaluatedKey = lastEvaluatedKey;
-            OutstandingTopics = outstandingTopics;
+            RemainingTopics = remainingTopics;
         }   
     }
 }
