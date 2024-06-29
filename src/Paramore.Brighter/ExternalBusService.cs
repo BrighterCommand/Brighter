@@ -31,6 +31,7 @@ namespace Paramore.Brighter
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly int _archiveBatchSize;
         private readonly InstrumentationOptions _instrumentationOptions;
+        private readonly Dictionary<string, List<TMessage>> _outboxBatches = new Dictionary<string, List<TMessage>>();
 
         private static readonly SemaphoreSlim s_clearSemaphoreToken = new SemaphoreSlim(1, 1);
 
@@ -151,6 +152,7 @@ namespace Paramore.Brighter
         /// <param name="overridingTransactionProvider">The provider of the transaction for the outbox</param>
         /// <param name="continueOnCapturedContext">Use the same thread for a callback</param>
         /// <param name="cancellationToken">Allow cancellation of the message</param>
+        /// <param name="batchId">The id of the deposit batch, if this isn't set items will be added to the outbox as they come in and not as a batch</param>
         /// <typeparam name="TTransaction">The type of the transaction used to add to the Outbox</typeparam>
         /// <exception cref="ChannelFailureException">Thrown if we cannot write to the Outbox</exception>
         public async Task AddToOutboxAsync(
@@ -158,8 +160,14 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) 
+            CancellationToken cancellationToken = default,
+            string batchId = null) 
         {
+            if (batchId != null)
+            {
+                _outboxBatches[batchId].Add(message);
+                return;
+            }
             CheckOutboxOutstandingLimit();
             
             BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span, 
@@ -186,13 +194,20 @@ namespace Paramore.Brighter
         /// <param name="message">The message we intend to send</param>
         /// <param name="overridingTransactionProvider">A transaction provider that gives us the transaction to use with the Outbox</param>
         /// <param name="requestContext">The context of the request pipeline</param>
+        /// <param name="batchId">The id of the deposit batch, if this isn't set items will be added to the outbox as they come in and not as a batch</param>
         /// <exception cref="ChannelFailureException">Thrown if we fail to write all the messages</exception>
         public void AddToOutbox(
             TMessage message,
             RequestContext requestContext,
-            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null
+            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
+            string batchId = null
         )
         {
+            if (batchId != null)
+            {
+                _outboxBatches[batchId].Add(message);
+                return;
+            }
             CheckOutboxOutstandingLimit();
 
             BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span, 
@@ -498,7 +513,67 @@ namespace Paramore.Brighter
             {
                 throw new ArgumentOutOfRangeException(nameof(request),"No message mapper defined for request");
             }
-        } 
+        }
+
+        /// <summary>
+        /// Commence a batch of outbox messages to add
+        /// </summary>
+        /// <returns>The Id of the new batch</returns>
+        public string StartBatchAddToOutbox()
+        {
+            var batchId = Guid.NewGuid().ToString();
+            _outboxBatches.Add(batchId, new List<TMessage>());
+            return batchId;
+        }
+
+        public void EndBatchAddToOutbox(string batchId, IAmABoxTransactionProvider<TTransaction> transactionProvider,
+            RequestContext requestContext)
+        {
+            CheckOutboxOutstandingLimit();
+
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span, 
+                transactionProvider != null, false, _instrumentationOptions); 
+ 
+            var written = Retry(() => 
+                { _outBox.Add(_outboxBatches[batchId], requestContext, _outboxTimeout, transactionProvider); }, 
+                requestContext
+            );
+
+            if (!written)
+                throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
+        }
+
+        /// <summary>
+        /// Flush the batch of Messages to the outbox.
+        /// </summary>
+        /// <param name="batchId">The Id of the batch to be flushed</param>
+        /// <param name="transactionProvider"></param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="cancellationToken"></param>
+        public async Task EndBatchAddToOutboxAsync(string batchId,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider, RequestContext requestContext,
+            CancellationToken cancellationToken)
+        {
+            CheckOutboxOutstandingLimit();
+
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span,
+                transactionProvider != null, true, _instrumentationOptions);
+
+            var written = await RetryAsync(
+                async ct =>
+                {
+                    await _asyncOutbox.AddAsync(_outboxBatches[batchId], requestContext, _outboxTimeout,
+                        transactionProvider, cancellationToken);
+                },
+                requestContext,
+                cancellationToken: cancellationToken
+            );
+
+            if (!written)
+                throw new ChannelFailureException($"Could not write batch {batchId} to the outbox");
+
+            _outboxBatches.Remove(batchId);
+        }
 
         /// <summary>
         /// Do we have an async outbox defined?
