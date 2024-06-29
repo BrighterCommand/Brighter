@@ -532,7 +532,8 @@ namespace Paramore.Brighter
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext requestContext = null,
-            Dictionary<string, object> args = null) 
+            Dictionary<string, object> args = null,
+            string batchId = null) 
             where TRequest : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
@@ -549,7 +550,7 @@ namespace Paramore.Brighter
                 if (!bus.HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
 
-                bus.AddToOutbox(message, context, transactionProvider);
+                bus.AddToOutbox(message, context, transactionProvider, batchId);
 
                 return message.Id;
             }
@@ -606,14 +607,20 @@ namespace Paramore.Brighter
             try
             {
                 var successfullySentMessage = new List<string>();
+                
+                var bus = (IAmAnExternalBusService<Message, TTransaction>)s_bus;
+                
+                var batchId = bus.StartBatchAddToOutbox();
 
                 foreach (var request in requests)
                 {
                     var createSpan = context.Span;
-                    var messageId = CallDepositPost(request, transactionProvider, requestContext, args);
+                    var messageId = CallDepositPost(request, transactionProvider, context, args, batchId);
                     successfullySentMessage.Add(messageId);
                     context.Span = createSpan;
                 }
+                
+                bus.EndBatchAddToOutbox(batchId, transactionProvider, context);
                 
                 return successfullySentMessage.ToArray();
             }
@@ -628,7 +635,7 @@ namespace Paramore.Brighter
             // generic methods, like DepositPost, assume they have the derived type. This binds DepositPost to the right
             // type before we call it.
             string CallDepositPost(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> amABoxTransactionProvider, 
-                RequestContext requestContext1, Dictionary<string, object> dictionary)
+                RequestContext requestContext1, Dictionary<string, object> dictionary, string batchId)
             {
                 MethodInfo deposit;
                 var actualRequestType = actualRequest.GetType();
@@ -645,14 +652,14 @@ namespace Paramore.Brighter
                             m.Name == nameof(DepositPost)
                             && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAttribute))
                         )
-                        .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 4);
+                        .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 5);
 
                     deposit = depositMethod?.MakeGenericMethod(actualRequestType, typeof(TTransaction));
                     
                     s_boundDepositCalls[actualRequestType.Name] = deposit;
                 }
 
-                return deposit?.Invoke(this, new object[] { actualRequest, amABoxTransactionProvider, requestContext1, dictionary }) as string;
+                return deposit?.Invoke(this, new object[] { actualRequest, amABoxTransactionProvider, requestContext1, dictionary, batchId }) as string;
             }
         }
 
@@ -701,6 +708,7 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <param name="batchId">The id of the deposit batch, if this isn't set items will be added to the outbox as they come in and not as a batch</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of the transaction used by the Outbox</typeparam>
         /// <returns></returns>
@@ -711,7 +719,8 @@ namespace Paramore.Brighter
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : class, IRequest
+            CancellationToken cancellationToken = default,
+            string batchId = null) where TRequest : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
             
@@ -727,7 +736,8 @@ namespace Paramore.Brighter
                 if (!bus.HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
 
-                await bus.AddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext, cancellationToken);
+                await bus.AddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext,
+                    cancellationToken, batchId);
 
                 return message.Id;
             }
@@ -764,7 +774,7 @@ namespace Paramore.Brighter
                 requestContext,
                 args,
                 continueOnCapturedContext,
-                cancellationToken); 
+                cancellationToken);
         }
 
         /// <summary>
@@ -799,14 +809,20 @@ namespace Paramore.Brighter
             {
                 var successfullySentMessage = new List<string>();
 
+                var bus = (IAmAnExternalBusService<Message, TTransaction>)s_bus;
+                
+                var batchId = bus.StartBatchAddToOutbox();
+
                 foreach (var request in requests)
                 {
                     var createSpan = context.Span;
-                    var messageId = await CallDepositPostAsync(request, transactionProvider, requestContext, args);
+                    var messageId =
+                        await CallDepositPostAsync(request, transactionProvider, context, args, batchId);
 
                     successfullySentMessage.Add(messageId); 
                     context.Span = createSpan;
                 }
+                await bus.EndBatchAddToOutboxAsync(batchId, transactionProvider, context, cancellationToken);
 
                 return successfullySentMessage.ToArray();
             }
@@ -821,7 +837,7 @@ namespace Paramore.Brighter
             // generic methods, like DepositPost, assume they have the derived type. This binds DepositPostAsync to the right
             // type before we call it.
             Task<string> CallDepositPostAsync(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction> tp, 
-                RequestContext rc, Dictionary<string, object> bag)
+                RequestContext rc, Dictionary<string, object> bag, string batchId = null)
             {
                 MethodInfo deposit;
                 var actualRequestType = actualRequest.GetType();
@@ -838,14 +854,14 @@ namespace Paramore.Brighter
                             m.Name == nameof(DepositPostAsync)
                             && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAsyncAttribute))
                         )
-                        .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 6);
+                        .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 7);
 
                     deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction));
                     s_boundDepositCalls[actualRequestType.Name] = deposit;
                 }
 
                 return (Task<string>)deposit?
-                    .Invoke(this, new object[] { actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken }
+                    .Invoke(this, new object[] { actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId }
                 );
             }
         }
