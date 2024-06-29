@@ -84,7 +84,8 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             T request, 
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
-            Dictionary<string, object> args = null) where T : class, IRequest
+            Dictionary<string, object> args = null,
+            string batchId = null) where T : class, IRequest
         {
             return DepositPost(request);
         }
@@ -137,7 +138,8 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false, 
-            CancellationToken cancellationToken = default) 
+            CancellationToken cancellationToken = default,
+            string batchId = null) 
             where T : class, IRequest
         {
             return DepositPostAsync(request, requestContext, args, continueOnCapturedContext, cancellationToken);

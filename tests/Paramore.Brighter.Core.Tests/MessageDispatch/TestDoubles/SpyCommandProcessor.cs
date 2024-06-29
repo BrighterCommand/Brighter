@@ -140,7 +140,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
-            Dictionary<string, object> args = null) 
+            Dictionary<string, object> args = null,
+            string batchId = null) 
             where TRequest : class, IRequest
         {
             return DepositPost(request);
@@ -193,7 +194,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false, 
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            string batchId = null)
             where TRequest : class, IRequest
         {
             _postBox.Add(request.Id, request);
