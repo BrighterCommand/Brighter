@@ -71,8 +71,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMessageProducer>();
         private const int TopicConnectionSleepBetweenRetriesInMilliseconds = 100;
         private const int TopicConnectionRetryCount = 5;
-        private readonly OnMissingChannel _makeChannel;
         private readonly int _bulkSendBatchSize;
+
+        private readonly AzureServiceBusPublication _publication;
 
         /// <summary>
         /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
@@ -81,11 +82,27 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
         /// <param name="makeChannel">Behaviour to use when verifying Channels <see cref="OnMissingChannel"/>.</param>
         /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
+        [Obsolete("Please provide publication instead of OnMissingChannel. Removed in v10")]
         public AzureServiceBusMessageProducer(IAdministrationClientWrapper administrationClientWrapper, IServiceBusSenderProvider serviceBusSenderProvider, OnMissingChannel makeChannel = OnMissingChannel.Create, int bulkSendBatchSize = 10)
         {
             _administrationClientWrapper = administrationClientWrapper;
             _serviceBusSenderProvider = serviceBusSenderProvider;
-            _makeChannel = makeChannel;
+            _publication = new AzureServiceBusPublication() { MakeChannels = makeChannel };
+            _bulkSendBatchSize = bulkSendBatchSize;
+        }
+
+        /// <summary>
+        /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
+        /// </summary>
+        /// <param name="administrationClientWrapper">The administrative client.</param>
+        /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
+        /// <param name="publication">The Service Bus publication settings</param>
+        /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
+        public AzureServiceBusMessageProducer(IAdministrationClientWrapper administrationClientWrapper, IServiceBusSenderProvider serviceBusSenderProvider, AzureServiceBusPublication publication, int bulkSendBatchSize = 10)
+        {
+            _administrationClientWrapper = administrationClientWrapper;
+            _serviceBusSenderProvider = serviceBusSenderProvider;
+            _publication = publication;
             _bulkSendBatchSize = bulkSendBatchSize;
         }
 
@@ -258,23 +275,23 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private void EnsureTopicExists(string topic)
         {
-            if (_topicCreated || _makeChannel.Equals(OnMissingChannel.Assume))
+            if (_topicCreated || _publication.MakeChannels.Equals(OnMissingChannel.Assume))
                 return;
 
             try
             {
-                if (_administrationClientWrapper.TopicExists(topic))
+                if (_administrationClientWrapper.TopicOrQueueExists(topic, _publication.UseServiceBusQueue))
                 {
                     _topicCreated = true;
                     return;
                 }
 
-                if (_makeChannel.Equals(OnMissingChannel.Validate))
+                if (_publication.MakeChannels.Equals(OnMissingChannel.Validate))
                 {
                     throw new ChannelFailureException($"Topic {topic} does not exist and missing channel mode set to Validate.");
                 }
-
-                _administrationClientWrapper.CreateTopic(topic);
+                
+                _administrationClientWrapper.CreateChannel(topic, _publication.UseServiceBusQueue);
                 _topicCreated = true;
             }
             catch (Exception e)
