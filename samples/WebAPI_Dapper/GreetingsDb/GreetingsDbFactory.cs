@@ -9,10 +9,10 @@ public static class GreetingsDbFactory
 {
     public static void ConfigureMigration(IConfiguration configuration, IServiceCollection services)
     {
-        ConfigureProductionDatabase(configuration, services);
+        MakeGreetingsDatabase(configuration, services);
     }
 
-    private static void ConfigureProductionDatabase(IConfiguration configuration, IServiceCollection services)
+    private static void MakeGreetingsDatabase(IConfiguration configuration, IServiceCollection services)
     {
         string? greetingsDbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (string.IsNullOrWhiteSpace(greetingsDbType))

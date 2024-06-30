@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj"/>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj"/>
     <ProjectReference Include="..\Greetings_Migrations\Greetings_Migrations.csproj"/>
+    <ProjectReference Include="..\Salutations_Migrations\Salutations_Migrations.csproj" />
   </ItemGroup>
 
   <ItemGroup>

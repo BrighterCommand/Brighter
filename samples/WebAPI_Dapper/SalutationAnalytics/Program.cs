@@ -62,7 +62,7 @@ static IHostBuilder CreateHostBuilder(string[] args)
         })
         .ConfigureServices((hostContext, services) =>
         {
-            ConfigureMigration(hostContext, services);
+            SalutationsDbFactory.ConfigureMigration(hostContext, services);
             ConfigureDapper(hostContext, services);
             ConfigureBrighter(hostContext, services);
         })
@@ -135,102 +135,6 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddHostedService<ServiceActivatorHostedService>();
 }
 
-static void ConfigureMigration(HostBuilderContext hostContext, IServiceCollection services)
-{
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
-    ConfigureProductionDatabase(hostContext, DbResolver.GetDatabaseType(dbType), services);
-}
-
-static void ConfigureProductionDatabase(
-    HostBuilderContext hostBuilderContext,
-    DatabaseType databaseType,
-    IServiceCollection services)
-{
-    switch (databaseType)
-    {
-        case DatabaseType.MySql:
-            ConfigureMySql(hostBuilderContext, services);
-            break;
-        case DatabaseType.MsSql:
-            ConfigureMsSql(hostBuilderContext, services);
-            break;
-        case DatabaseType.Postgres:
-            ConfigurePostgreSql(hostBuilderContext, services);
-            break;
-        case DatabaseType.Sqlite:
-            ConfigureSqlite(hostBuilderContext, services);
-            break;
-        default:
-            throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
-    }
-}
-
-static void ConfigureMySql(HostBuilderContext hostContext, IServiceCollection services)
-{
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
-    services
-        .AddFluentMigratorCore()
-        .ConfigureRunner(c => c.AddMySql5()
-            .WithGlobalConnectionString(ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-                DbResolver.GetDatabaseType(dbType)))
-            .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
-        );
-}
-
-static void ConfigureMsSql(HostBuilderContext hostContext, IServiceCollection services)
-{
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
-    services
-        .AddFluentMigratorCore()
-        .ConfigureRunner(c => c.AddSqlServer()
-            .WithGlobalConnectionString(ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-                DbResolver.GetDatabaseType(dbType)))
-            .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
-        );
-}
-
-static void ConfigurePostgreSql(HostBuilderContext hostContext, IServiceCollection services)
-{
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
-    services
-        .AddFluentMigratorCore()
-        .ConfigureRunner(c => c.AddPostgres()
-            .ConfigureGlobalProcessorOptions(opt => opt.ProviderSwitches = "Force Quote=false")
-            .WithGlobalConnectionString(ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-                DbResolver.GetDatabaseType(dbType)))
-            .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
-        );
-}
-
-static void ConfigureSqlite(HostBuilderContext hostContext, IServiceCollection services)
-{
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
-    services
-        .AddFluentMigratorCore()
-        .ConfigureRunner(c =>
-        {
-            c.AddSQLite()
-                .WithGlobalConnectionString(
-                    ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-                        DbResolver.GetDatabaseType(dbType)))
-                .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations();
-        });
-}
 
 static void ConfigureDapper(HostBuilderContext hostContext, IServiceCollection services)
 {
