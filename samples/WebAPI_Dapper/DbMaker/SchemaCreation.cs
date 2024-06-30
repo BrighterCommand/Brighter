@@ -101,13 +101,16 @@ public static class SchemaCreation
 
     private static void CreateGreetingsIfNotExists(DatabaseType databaseType, DbConnection conn)
     {
+        //don't use DDL for SQlite
+        if (databaseType == DatabaseType.Sqlite)
+            return;
+        
         //The migration does not create the Db, so we need to create it sot that it will add it
         conn.Open();
         using DbCommand command = conn.CreateCommand();
 
         command.CommandText = databaseType switch
         {
-            DatabaseType.Sqlite => "CREATE DATABASE IF NOT EXISTS Greetings",
             DatabaseType.MySql => "CREATE DATABASE IF NOT EXISTS Greetings",
             DatabaseType.Postgres => "CREATE DATABASE Greetings",
             DatabaseType.MsSql =>
@@ -135,13 +138,16 @@ public static class SchemaCreation
 
     private static void CreateSalutationsIfNotExists(DatabaseType databaseType, DbConnection conn)
     {
+        //don't use DDL for SQlite
+        if (databaseType == DatabaseType.Sqlite)
+            return;
+        
         //The migration does not create the Db, so we need to create it sot that it will add it
         conn.Open();
         using DbCommand command = conn.CreateCommand();
 
         command.CommandText = databaseType switch
         {
-            DatabaseType.Sqlite => "CREATE DATABASE IF NOT EXISTS Salutations",
             DatabaseType.MySql => "CREATE DATABASE IF NOT EXISTS Salutations",
             DatabaseType.Postgres => "CREATE DATABASE Salutations",
             DatabaseType.MsSql =>
