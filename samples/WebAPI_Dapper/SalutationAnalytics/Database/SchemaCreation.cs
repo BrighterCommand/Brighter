@@ -19,453 +19,460 @@ using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
+using Polly.Retry;
 
-namespace SalutationAnalytics.Database
+namespace SalutationAnalytics.Database;
+
+public static class SchemaCreation
 {
-    public static class SchemaCreation
+    internal const string INBOX_TABLE_NAME = "Inbox";
+    internal const string OUTBOX_TABLE_NAME = "Outbox";
+
+    public static IHost CheckDbIsUp(this IHost host)
     {
-        internal const string INBOX_TABLE_NAME = "Inbox";
-        internal const string OUTBOX_TABLE_NAME = "Outbox";
+        using IServiceScope scope = host.Services.CreateScope();
 
-        public static IHost CheckDbIsUp(this IHost host)
+        IServiceProvider services = scope.ServiceProvider;
+        IHostEnvironment env = services.GetService<IHostEnvironment>();
+        IConfiguration config = services.GetService<IConfiguration>();
+        (DatabaseType dbType, string connectionString) = DbServerConnectionString(config, env);
+
+        //We don't check db availability in development as we always use Sqlite which is a file not a server
+        if (env.IsDevelopment()) return host;
+
+        WaitToConnect(dbType, connectionString);
+        CreateDatabaseIfNotExists(dbType, GetDbConnection(dbType, connectionString));
+
+        return host;
+    }
+
+    public static IHost CreateInbox(this IHost host)
+    {
+        using IServiceScope scope = host.Services.CreateScope();
+        IServiceProvider services = scope.ServiceProvider;
+        IHostEnvironment env = services.GetService<IHostEnvironment>();
+        IConfiguration config = services.GetService<IConfiguration>();
+
+        CreateInbox(config, env);
+
+        return host;
+    }
+
+    public static IHost CreateOutbox(this IHost webHost, bool hasBinaryMessagePayload)
+    {
+        using IServiceScope scope = webHost.Services.CreateScope();
+        IServiceProvider services = scope.ServiceProvider;
+        IHostEnvironment env = services.GetService<IHostEnvironment>();
+        IConfiguration config = services.GetService<IConfiguration>();
+
+        CreateOutbox(config, env, hasBinaryMessagePayload);
+
+        return webHost;
+    }
+
+    public static IHost MigrateDatabase(this IHost host)
+    {
+        using IServiceScope scope = host.Services.CreateScope();
+        IServiceProvider services = scope.ServiceProvider;
+
+        try
         {
-            using var scope = host.Services.CreateScope();
-
-            var services = scope.ServiceProvider;
-            var env = services.GetService<IHostEnvironment>();
-            var config = services.GetService<IConfiguration>();
-            var (dbType, connectionString) = DbServerConnectionString(config, env);
-
-            //We don't check db availability in development as we always use Sqlite which is a file not a server
-            if (env.IsDevelopment()) return host;
-
-            WaitToConnect(dbType, connectionString);
-            CreateDatabaseIfNotExists(dbType, GetDbConnection(dbType, connectionString));
-
-            return host;
+            IMigrationRunner runner = services.GetRequiredService<IMigrationRunner>();
+            runner.ListMigrations();
+            runner.MigrateUp();
+        }
+        catch (Exception ex)
+        {
+            ILogger<Program> logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while migrating the database.");
+            throw;
         }
 
-        public static IHost CreateInbox(this IHost host)
+        return host;
+    }
+
+    private static void CreateDatabaseIfNotExists(DatabaseType databaseType, DbConnection conn)
+    {
+        //The migration does not create the Db, so we need to create it sot that it will add it
+        conn.Open();
+        using DbCommand command = conn.CreateCommand();
+
+        command.CommandText = databaseType switch
         {
-            using var scope = host.Services.CreateScope();
-            var services = scope.ServiceProvider;
-            var env = services.GetService<IHostEnvironment>();
-            var config = services.GetService<IConfiguration>();
+            DatabaseType.Sqlite => "CREATE DATABASE IF NOT EXISTS Salutations",
+            DatabaseType.MySql => "CREATE DATABASE IF NOT EXISTS Salutations",
+            DatabaseType.Postgres => "CREATE DATABASE Salutations",
+            DatabaseType.MsSql =>
+                "IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'Salutations') CREATE DATABASE Salutations",
+            _ => throw new InvalidOperationException("Could not create instance of Salutations for unknown Db type")
+        };
 
-            CreateInbox(config, env);
-
-            return host;
+        try
+        {
+            command.ExecuteScalar();
         }
-        
-        public static IHost CreateOutbox(this IHost webHost, bool hasBinaryMessagePayload)
+        catch (NpgsqlException pe)
         {
-            using var scope = webHost.Services.CreateScope();
-            var services = scope.ServiceProvider;
-            var env = services.GetService<IHostEnvironment>();
-            var config = services.GetService<IConfiguration>();
-
-            CreateOutbox(config, env, hasBinaryMessagePayload);
-
-            return webHost;
+            //Ignore if the Db already exists - we can't test for this in the SQL for Postgres
+            if (!pe.Message.Contains("already exists"))
+                throw;
         }
-
-        public static IHost MigrateDatabase(this IHost host)
+        catch (Exception e)
         {
-            using var scope = host.Services.CreateScope();
-            var services = scope.ServiceProvider;
+            Console.WriteLine($"Issue with creating Greetings tables, {e.Message}");
+            //Rethrow, if we can't create the Outbox, shut down
+            throw;
+        }
+    }
 
-            try
+    private static void CreateInbox(IConfiguration config, IHostEnvironment env)
+    {
+        try
+        {
+            string connectionString = DbConnectionString(config, env);
+
+            if (env.IsDevelopment())
+                CreateInboxDevelopment(connectionString);
+            else
+                CreateInboxProduction(GetDatabaseType(config), connectionString);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Issue with creating Inbox table, {e.Message}");
+            throw;
+        }
+    }
+
+    private static void CreateInboxDevelopment(string connectionString)
+    {
+        CreateInboxSqlite(connectionString);
+    }
+
+    private static void CreateInboxProduction(DatabaseType databaseType, string connectionString)
+    {
+        switch (databaseType)
+        {
+            case DatabaseType.MySql:
+                CreateInboxMySql(connectionString);
+                break;
+            case DatabaseType.MsSql:
+                CreateInboxMsSql(connectionString);
+                break;
+            case DatabaseType.Postgres:
+                CreateInboxPostgres(connectionString);
+                break;
+            case DatabaseType.Sqlite:
+                CreateInboxSqlite(connectionString);
+                break;
+            default:
+                throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
+        }
+    }
+
+    private static void CreateInboxSqlite(string connectionString)
+    {
+        using SqliteConnection sqlConnection = new SqliteConnection(connectionString);
+        sqlConnection.Open();
+
+        using SqliteCommand exists = sqlConnection.CreateCommand();
+        exists.CommandText = SqliteInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
+        using SqliteDataReader reader = exists.ExecuteReader(CommandBehavior.SingleRow);
+
+        if (reader.HasRows) return;
+
+        using SqliteCommand command = sqlConnection.CreateCommand();
+        command.CommandText = SqliteInboxBuilder.GetDDL(INBOX_TABLE_NAME);
+        command.ExecuteScalar();
+    }
+
+    private static void CreateInboxMySql(string connectionString)
+    {
+        using MySqlConnection sqlConnection = new MySqlConnection(connectionString);
+        sqlConnection.Open();
+
+        using MySqlCommand existsQuery = sqlConnection.CreateCommand();
+        existsQuery.CommandText = MySqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
+        object findInbox = existsQuery.ExecuteScalar();
+        bool exists = findInbox is long and > 0;
+
+        if (exists) return;
+
+        using MySqlCommand command = sqlConnection.CreateCommand();
+        command.CommandText = MySqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
+        command.ExecuteScalar();
+    }
+
+    private static void CreateInboxMsSql(string connectionString)
+    {
+        using SqlConnection sqlConnection = new SqlConnection(connectionString);
+        sqlConnection.Open();
+
+        using SqlCommand existsQuery = sqlConnection.CreateCommand();
+        existsQuery.CommandText = SqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
+        object findInbox = existsQuery.ExecuteScalar();
+        bool exists = findInbox is > 0;
+
+        if (exists) return;
+
+        using SqlCommand command = sqlConnection.CreateCommand();
+        command.CommandText = SqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
+        command.ExecuteScalar();
+    }
+
+    private static void CreateInboxPostgres(string connectionString)
+    {
+        using NpgsqlConnection sqlConnection = new NpgsqlConnection(connectionString);
+        sqlConnection.Open();
+
+        using NpgsqlCommand existsQuery = sqlConnection.CreateCommand();
+        existsQuery.CommandText = PostgreSqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME.ToLower());
+
+        object findInbox = existsQuery.ExecuteScalar();
+        bool exists = findInbox is true;
+
+        if (exists) return;
+
+
+        using NpgsqlCommand command = sqlConnection.CreateCommand();
+        command.CommandText = PostgreSqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
+        command.ExecuteScalar();
+    }
+
+    private static void CreateOutbox(IConfiguration config, IHostEnvironment env, bool hasBinaryMessagePayload)
+    {
+        try
+        {
+            string connectionString = DbConnectionString(config, env);
+
+            if (env.IsDevelopment())
+                CreateOutboxDevelopment(connectionString, hasBinaryMessagePayload);
+            else
+                CreateOutboxProduction(GetDatabaseType(config), connectionString, hasBinaryMessagePayload);
+        }
+        catch (NpgsqlException pe)
+        {
+            //Ignore if the Db already exists - we can't test for this in the SQL for Postgres
+            if (!pe.Message.Contains("already exists"))
             {
-                var runner = services.GetRequiredService<IMigrationRunner>();
-                runner.ListMigrations();
-                runner.MigrateUp();
-            }
-            catch (Exception ex)
-            {
-                var logger = services.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "An error occurred while migrating the database.");
+                Console.WriteLine($"Issue with creating Outbox table, {pe.Message}");
                 throw;
             }
-
-            return host;
         }
-
-        private static void CreateDatabaseIfNotExists(DatabaseType databaseType, DbConnection conn)
+        catch (Exception e)
         {
-            //The migration does not create the Db, so we need to create it sot that it will add it
+            Console.WriteLine($"Issue with creating Outbox table, {e.Message}");
+            //Rethrow, if we can't create the Outbox, shut down
+            throw;
+        }
+    }
+
+    private static void CreateOutboxDevelopment(string connectionString, bool hasBinaryMessagePayload)
+    {
+        CreateOutboxSqlite(connectionString, hasBinaryMessagePayload);
+    }
+
+    private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString,
+        bool hasBinaryMessagePayload)
+    {
+        switch (databaseType)
+        {
+            case DatabaseType.MySql:
+                CreateOutboxMySql(connectionString, hasBinaryMessagePayload);
+                break;
+            case DatabaseType.MsSql:
+                CreateOutboxMsSql(connectionString, hasBinaryMessagePayload);
+                break;
+            case DatabaseType.Postgres:
+                CreateOutboxPostgres(connectionString, hasBinaryMessagePayload);
+                break;
+            case DatabaseType.Sqlite:
+                CreateOutboxSqlite(connectionString, hasBinaryMessagePayload);
+                break;
+            default:
+                throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
+        }
+    }
+
+    private static void CreateOutboxMsSql(string connectionString, bool hasBinaryMessagePayload)
+    {
+        using SqlConnection sqlConnection = new SqlConnection(connectionString);
+        sqlConnection.Open();
+
+        using SqlCommand existsQuery = sqlConnection.CreateCommand();
+        existsQuery.CommandText = SqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+        object findOutbox = existsQuery.ExecuteScalar();
+        bool exists = findOutbox is > 0;
+
+        if (exists) return;
+
+        using SqlCommand command = sqlConnection.CreateCommand();
+        command.CommandText = SqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
+        command.ExecuteScalar();
+    }
+
+    private static void CreateOutboxMySql(string connectionString, bool hasBinaryMessagePayload)
+    {
+        using MySqlConnection sqlConnection = new MySqlConnection(connectionString);
+        sqlConnection.Open();
+
+        using MySqlCommand existsQuery = sqlConnection.CreateCommand();
+        existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+        object findOutbox = existsQuery.ExecuteScalar();
+        bool exists = findOutbox is long and > 0;
+
+        if (exists) return;
+
+        using MySqlCommand command = sqlConnection.CreateCommand();
+        command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
+        command.ExecuteScalar();
+    }
+
+    private static void CreateOutboxPostgres(string connectionString, bool hasBinaryMessagePayload)
+    {
+        using NpgsqlConnection sqlConnection = new NpgsqlConnection(connectionString);
+        sqlConnection.Open();
+
+        using NpgsqlCommand existsQuery = sqlConnection.CreateCommand();
+        existsQuery.CommandText = PostgreSqlOutboxBulder.GetExistsQuery(OUTBOX_TABLE_NAME.ToLower());
+        object findOutbox = existsQuery.ExecuteScalar();
+        bool exists = findOutbox is true;
+
+        if (exists) return;
+
+        using NpgsqlCommand command = sqlConnection.CreateCommand();
+        command.CommandText = PostgreSqlOutboxBulder.GetDDL(OUTBOX_TABLE_NAME);
+        command.ExecuteScalar();
+    }
+
+    private static void CreateOutboxSqlite(string connectionString, bool hasBinaryMessagePayload)
+    {
+        using SqliteConnection sqlConnection = new SqliteConnection(connectionString);
+        sqlConnection.Open();
+
+        using SqliteCommand exists = sqlConnection.CreateCommand();
+        exists.CommandText = SqliteOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+        using SqliteDataReader reader = exists.ExecuteReader(CommandBehavior.SingleRow);
+
+        if (reader.HasRows) return;
+
+        using SqliteCommand command = sqlConnection.CreateCommand();
+        command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryMessagePayload);
+        command.ExecuteScalar();
+    }
+
+    private static string DbConnectionString(IConfiguration config, IHostEnvironment env)
+    {
+        //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
+        return env.IsDevelopment()
+            ? GetDevConnectionString()
+            : GetProductionDbConnectionString(config, GetDatabaseType(config));
+    }
+
+    private static (DatabaseType, string) DbServerConnectionString(IConfiguration config, IHostEnvironment env)
+    {
+        DatabaseType databaseType = GetDatabaseType(config);
+        string connectionString = env.IsDevelopment()
+            ? GetDevConnectionString()
+            : GetProductionConnectionString(config, databaseType);
+        return (databaseType, connectionString);
+    }
+
+    private static string GetDevConnectionString()
+    {
+        return "Filename=Salutations.db;Cache=Shared";
+    }
+
+    private static DbConnection GetDbConnection(DatabaseType databaseType, string connectionString)
+    {
+        return databaseType switch
+        {
+            DatabaseType.MySql => new MySqlConnection(connectionString),
+            DatabaseType.MsSql => new SqlConnection(connectionString),
+            DatabaseType.Postgres => new NpgsqlConnection(connectionString),
+            DatabaseType.Sqlite => new SqliteConnection(connectionString),
+            _ => throw new InvalidOperationException("Could not determine the database type")
+        };
+    }
+
+    private static string GetProductionConnectionString(IConfiguration config, DatabaseType databaseType)
+    {
+        return databaseType switch
+        {
+            DatabaseType.MySql => config.GetConnectionString("MySqlDb"),
+            DatabaseType.MsSql => config.GetConnectionString("MsSqlDb"),
+            DatabaseType.Postgres => config.GetConnectionString("PostgreSqlDb"),
+            DatabaseType.Sqlite => GetDevConnectionString(),
+            _ => throw new InvalidOperationException("Could not determine the database type")
+        };
+    }
+
+    private static string GetProductionDbConnectionString(IConfiguration config, DatabaseType databaseType)
+    {
+        return databaseType switch
+        {
+            DatabaseType.MySql => config.GetConnectionString("SalutationsMySql"),
+            DatabaseType.MsSql => config.GetConnectionString("SalutationsMsSql"),
+            DatabaseType.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
+            DatabaseType.Sqlite => GetDevConnectionString(),
+            _ => throw new InvalidOperationException("Could not determine the database type")
+        };
+    }
+
+    private static DatabaseType GetDatabaseType(IConfiguration config)
+    {
+        return config[DatabaseGlobals.DATABASE_TYPE_ENV] switch
+        {
+            DatabaseGlobals.MYSQL => DatabaseType.MySql,
+            DatabaseGlobals.MSSQL => DatabaseType.MsSql,
+            DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
+            DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
+            _ => throw new InvalidOperationException("Could not determine the database type")
+        };
+    }
+
+    private static void WaitToConnect(DatabaseType dbType, string connectionString)
+    {
+        RetryPolicy policy = Policy.Handle<DbException>().WaitAndRetryForever(
+            retryAttempt => TimeSpan.FromSeconds(2),
+            (exception, timespan) =>
+            {
+                Console.WriteLine(
+                    $"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
+            });
+
+        policy.Execute(() =>
+        {
+            using DbConnection conn = GetConnection(dbType, connectionString);
             conn.Open();
-            using var command = conn.CreateCommand();
+        });
+    }
 
-            command.CommandText = databaseType switch
+    private static DbConnection GetConnection(DatabaseType databaseType, string connectionString)
+    {
+        return databaseType switch
+        {
+            DatabaseType.MySql => new MySqlConnection(connectionString),
+            DatabaseType.MsSql => new SqlConnection(connectionString),
+            DatabaseType.Postgres => new NpgsqlConnection(connectionString),
+            DatabaseType.Sqlite => new SqliteConnection(connectionString),
+            _ => throw new ArgumentOutOfRangeException(nameof(databaseType), databaseType, null)
+        };
+    }
+
+    private static void WaitToConnect(string connectionString)
+    {
+        RetryPolicy policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
+            retryAttempt => TimeSpan.FromSeconds(2),
+            (exception, timespan) =>
             {
-                DatabaseType.Sqlite => "CREATE DATABASE IF NOT EXISTS Salutations",
-                DatabaseType.MySql => "CREATE DATABASE IF NOT EXISTS Salutations",
-                DatabaseType.Postgres => "CREATE DATABASE Salutations",
-                DatabaseType.MsSql =>
-                    "IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'Salutations') CREATE DATABASE Salutations",
-                _ => throw new InvalidOperationException("Could not create instance of Salutations for unknown Db type")
-            };
-
-            try
-            {
-                command.ExecuteScalar();
-            }
-            catch (NpgsqlException pe)
-            {
-                //Ignore if the Db already exists - we can't test for this in the SQL for Postgres
-                if (!pe.Message.Contains("already exists"))
-                    throw;
-            }
-            catch (System.Exception e)
-            {
-                Console.WriteLine($"Issue with creating Greetings tables, {e.Message}");
-                //Rethrow, if we can't create the Outbox, shut down
-                throw;
-            }
-        }
-        private static void CreateInbox(IConfiguration config, IHostEnvironment env)
-        {
-            try
-            {
-                var connectionString = DbConnectionString(config, env);
-
-                if (env.IsDevelopment())
-                    CreateInboxDevelopment(connectionString);
-                else
-                    CreateInboxProduction(GetDatabaseType(config), connectionString);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Issue with creating Inbox table, {e.Message}");
-                throw;
-            }
-        }
-
-        private static void CreateInboxDevelopment(string connectionString)
-        {
-            CreateInboxSqlite(connectionString);
-        }
-
-        private static void CreateInboxProduction(DatabaseType databaseType, string connectionString)
-        {
-            switch (databaseType)
-            {
-                case DatabaseType.MySql:
-                    CreateInboxMySql(connectionString);
-                    break;
-                case DatabaseType.MsSql:
-                    CreateInboxMsSql(connectionString);
-                    break;
-                case DatabaseType.Postgres:
-                    CreateInboxPostgres(connectionString);
-                    break;
-                case DatabaseType.Sqlite:
-                    CreateInboxSqlite(connectionString);
-                    break;
-                default:
-                    throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
-            }
-        }
-
-        private static void CreateInboxSqlite(string connectionString)
-        {
-            using var sqlConnection = new SqliteConnection(connectionString);
-            sqlConnection.Open();
-
-            using var exists = sqlConnection.CreateCommand();
-            exists.CommandText = SqliteInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
-            using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
-
-            if (reader.HasRows) return;
-
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqliteInboxBuilder.GetDDL(INBOX_TABLE_NAME);
-            command.ExecuteScalar();
-        }
-
-        private static void CreateInboxMySql(string connectionString)
-        {
-            using var sqlConnection = new MySqlConnection(connectionString);
-            sqlConnection.Open();
-
-            using var existsQuery = sqlConnection.CreateCommand();
-            existsQuery.CommandText = MySqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
-            var findInbox = existsQuery.ExecuteScalar();
-            bool exists = findInbox is long and > 0;
-
-            if (exists) return;
-
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = MySqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
-            command.ExecuteScalar();
-        }
-        
-        private static void CreateInboxMsSql(string connectionString)
-        {
-            using var sqlConnection = new SqlConnection(connectionString);
-            sqlConnection.Open();
-
-            using var existsQuery = sqlConnection.CreateCommand();
-            existsQuery.CommandText = SqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
-            var findInbox = existsQuery.ExecuteScalar();
-            bool exists = findInbox is > 0;
-
-            if (exists) return;
-
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
-            command.ExecuteScalar();
-        }
-        
-        private static void CreateInboxPostgres(string connectionString)
-        {
-            using var sqlConnection = new NpgsqlConnection(connectionString);
-            sqlConnection.Open();
-
-            using var existsQuery = sqlConnection.CreateCommand();
-            existsQuery.CommandText = PostgreSqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME.ToLower());
-            
-            var findInbox = existsQuery.ExecuteScalar();
-            bool exists = findInbox is true;
-
-            if (exists) return;
-
-
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = PostgreSqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
-            command.ExecuteScalar();
-        }
-
-        private static void CreateOutbox(IConfiguration config, IHostEnvironment env, bool hasBinaryMessagePayload)
-        {
-            try
-            {
-                var connectionString = DbConnectionString(config, env);
-
-                if (env.IsDevelopment())
-                    CreateOutboxDevelopment(connectionString, hasBinaryMessagePayload);
-                else
-                    CreateOutboxProduction(GetDatabaseType(config), connectionString, hasBinaryMessagePayload);
-            }
-            catch (NpgsqlException pe)
-            {
-                //Ignore if the Db already exists - we can't test for this in the SQL for Postgres
-                if (!pe.Message.Contains("already exists"))
-                {
-                    Console.WriteLine($"Issue with creating Outbox table, {pe.Message}");
-                    throw;
-                }
-            }
-            catch (System.Exception e)
-            {
-                Console.WriteLine($"Issue with creating Outbox table, {e.Message}");
-                //Rethrow, if we can't create the Outbox, shut down
-                throw;
-            }
-        }
-
-        private static void CreateOutboxDevelopment(string connectionString, bool hasBinaryMessagePayload)
-        {
-            CreateOutboxSqlite(connectionString, hasBinaryMessagePayload);
-        }
-
-       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString, bool hasBinaryMessagePayload) 
-       {
-            switch (databaseType)
-            {
-                case DatabaseType.MySql:
-                    CreateOutboxMySql(connectionString, hasBinaryMessagePayload);
-                    break;
-                case DatabaseType.MsSql:
-                    CreateOutboxMsSql(connectionString, hasBinaryMessagePayload);
-                    break;
-                case DatabaseType.Postgres:
-                    CreateOutboxPostgres(connectionString, hasBinaryMessagePayload);
-                    break;
-                case DatabaseType.Sqlite:
-                    CreateOutboxSqlite(connectionString, hasBinaryMessagePayload);
-                    break;
-                default:
-                    throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
-            }
-        }
-
-       private static void CreateOutboxMsSql(string connectionString, bool hasBinaryMessagePayload)
-       {
-            using var sqlConnection = new SqlConnection(connectionString);
-            sqlConnection.Open();
-
-            using var existsQuery = sqlConnection.CreateCommand();
-            existsQuery.CommandText = SqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
-            var findOutbox = existsQuery.ExecuteScalar();
-            bool exists = findOutbox is > 0;
-
-            if (exists) return;
-
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
-            command.ExecuteScalar();
-            
-        }
-
-        private static void CreateOutboxMySql(string connectionString, bool hasBinaryMessagePayload)
-        {
-            using var sqlConnection = new MySqlConnection(connectionString);
-            sqlConnection.Open();
-
-            using var existsQuery = sqlConnection.CreateCommand();
-            existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
-            var findOutbox = existsQuery.ExecuteScalar();
-            bool exists = findOutbox is long and > 0;
-
-            if (exists) return;
-
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
-            command.ExecuteScalar();
-        }
-        
-        private static void CreateOutboxPostgres(string connectionString, bool hasBinaryMessagePayload)
-        {
-             using var sqlConnection = new NpgsqlConnection(connectionString);
-             sqlConnection.Open();
- 
-             using var existsQuery = sqlConnection.CreateCommand();
-             existsQuery.CommandText = PostgreSqlOutboxBulder.GetExistsQuery(OUTBOX_TABLE_NAME.ToLower());
-             var findOutbox = existsQuery.ExecuteScalar();
-             bool exists = findOutbox is true;
-
-             if (exists) return;
- 
-             using var command = sqlConnection.CreateCommand();
-             command.CommandText = PostgreSqlOutboxBulder.GetDDL(OUTBOX_TABLE_NAME);
-             command.ExecuteScalar();
-        }
-
-        private static void CreateOutboxSqlite(string connectionString, bool hasBinaryMessagePayload)
-        {
-            using var sqlConnection = new SqliteConnection(connectionString);
-            sqlConnection.Open();
-
-            using var exists = sqlConnection.CreateCommand();
-            exists.CommandText = SqliteOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
-            using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
-
-            if (reader.HasRows) return;
-
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryMessagePayload);
-            command.ExecuteScalar();
-        }
-
-        private static string DbConnectionString(IConfiguration config, IHostEnvironment env)
-        {
-            //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? GetDevConnectionString() : GetProductionDbConnectionString(config, GetDatabaseType(config)); 
-        }
-
-        private static (DatabaseType, string) DbServerConnectionString(IConfiguration config, IHostEnvironment env)
-        {
-            var databaseType = GetDatabaseType(config);
-            var connectionString = env.IsDevelopment() ? GetDevConnectionString() : GetProductionConnectionString(config, databaseType);
-            return (databaseType, connectionString);
-        }
-
-        private static string GetDevConnectionString()
-        {
-            return "Filename=Salutations.db;Cache=Shared";
-        }
-
-        private static DbConnection GetDbConnection(DatabaseType databaseType, string connectionString)
-        {
-            return databaseType switch
-            {
-                DatabaseType.MySql => new MySqlConnection(connectionString),
-                DatabaseType.MsSql => new SqlConnection(connectionString),
-                DatabaseType.Postgres => new NpgsqlConnection(connectionString),
-                DatabaseType.Sqlite => new SqliteConnection(connectionString),
-                _ => throw new InvalidOperationException("Could not determine the database type")
-            };
-        }
-        
-        private static string GetProductionConnectionString(IConfiguration config, DatabaseType databaseType)
-        {
-            return databaseType switch
-            { 
-                DatabaseType.MySql => config.GetConnectionString("MySqlDb"),
-                DatabaseType.MsSql => config.GetConnectionString("MsSqlDb"),
-                DatabaseType.Postgres => config.GetConnectionString("PostgreSqlDb"),
-                DatabaseType.Sqlite => GetDevConnectionString(),
-                _ => throw new InvalidOperationException("Could not determine the database type")
-            };
-        }
-
-        private static string GetProductionDbConnectionString(IConfiguration config, DatabaseType databaseType)
-        {
-            return databaseType switch
-            {
-                DatabaseType.MySql => config.GetConnectionString("SalutationsMySql"),
-                DatabaseType.MsSql => config.GetConnectionString("SalutationsMsSql"),
-                DatabaseType.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
-                DatabaseType.Sqlite => GetDevConnectionString(),
-                _ => throw new InvalidOperationException("Could not determine the database type")
-             };
-        }
-
-        private static DatabaseType GetDatabaseType(IConfiguration config)
-        {
-            return config[DatabaseGlobals.DATABASE_TYPE_ENV] switch
-            {
-                DatabaseGlobals.MYSQL => DatabaseType.MySql,
-                DatabaseGlobals.MSSQL => DatabaseType.MsSql,
-                DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
-                DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
-                _ => throw new InvalidOperationException("Could not determine the database type")
-            };
-        }
-
-        private static void WaitToConnect(DatabaseType dbType, string connectionString)
-        {
-            var policy = Policy.Handle<DbException>().WaitAndRetryForever(
-                retryAttempt => TimeSpan.FromSeconds(2),
-                (exception, timespan) =>
-                {
-                    Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
-                });
-
-            policy.Execute(() =>
-            {
-                using var conn = GetConnection(dbType, connectionString);
-                conn.Open();
+                Console.WriteLine(
+                    $"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
             });
-        }
 
-        private static DbConnection GetConnection(DatabaseType databaseType, string connectionString)
+        policy.Execute(() =>
         {
-            return databaseType switch
-            {
-                DatabaseType.MySql => new MySqlConnection(connectionString),
-                DatabaseType.MsSql => new SqlConnection(connectionString),
-                DatabaseType.Postgres => new NpgsqlConnection(connectionString),
-                DatabaseType.Sqlite => new SqliteConnection(connectionString),
-                _ => throw new ArgumentOutOfRangeException(nameof(databaseType), databaseType, null)
-            };
-        }
-
-        private static void WaitToConnect(string connectionString)
-        {
-            var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
-                retryAttempt => TimeSpan.FromSeconds(2),
-                (exception, timespan) =>
-                {
-                    Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
-                });
-
-            policy.Execute(() =>
-            {
-                using var conn = new MySqlConnection(connectionString);
-                conn.Open();
-            });
-        }
+            using MySqlConnection conn = new MySqlConnection(connectionString);
+            conn.Open();
+        });
     }
 }

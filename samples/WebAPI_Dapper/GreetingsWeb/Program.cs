@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-var host = CreateHostBuilder(args).Build();
+IHost host = CreateHostBuilder(args).Build();
 
 host.CheckDbIsUp();
 host.MigrateDatabase();
@@ -18,14 +18,15 @@ host.CreateOutbox(HasBinaryMessagePayload());
 host.Run();
 return;
 
-static IHostBuilder CreateHostBuilder(string[] args) =>
-    Host.CreateDefaultBuilder(args)
+static IHostBuilder CreateHostBuilder(string[] args)
+{
+    return Host.CreateDefaultBuilder(args)
         .ConfigureAppConfiguration((context, configBuilder) =>
         {
-            var env = context.HostingEnvironment;
-            configBuilder.AddJsonFile("appsettings.json", optional: false);
-            configBuilder.AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true);
-            configBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
+            IHostEnvironment env = context.HostingEnvironment;
+            configBuilder.AddJsonFile("appsettings.json", false);
+            configBuilder.AddJsonFile($"appsettings.{env.EnvironmentName}.json", true);
+            configBuilder.AddEnvironmentVariables("BRIGHTER_");
         })
         .ConfigureWebHostDefaults(webBuilder =>
         {
@@ -41,14 +42,16 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
             });
             webBuilder.UseDefaultServiceProvider((context, options) =>
             {
-                var isDevelopment = context.HostingEnvironment.IsDevelopment();
+                bool isDevelopment = context.HostingEnvironment.IsDevelopment();
                 options.ValidateScopes = isDevelopment;
                 options.ValidateOnBuild = isDevelopment;
             });
             webBuilder.UseStartup<Startup>();
         });
+}
 
 static bool HasBinaryMessagePayload()
 {
-    return ConfigureTransport.TransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) == MessagingTransport.Kafka;
+    return ConfigureTransport.TransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) ==
+           MessagingTransport.Kafka;
 }

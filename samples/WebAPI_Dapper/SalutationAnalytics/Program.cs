@@ -9,7 +9,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Postgres;
@@ -26,9 +25,10 @@ using SalutationAnalytics.Database;
 using SalutationAnalytics.Messaging;
 using SalutationApp.Policies;
 using SalutationApp.Requests;
+using Salutations_Migrations.Migrations;
 using ChannelFactory = Paramore.Brighter.MessagingGateway.RMQ.ChannelFactory;
 
-var host = CreateHostBuilder(args).Build();
+IHost host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp();
 host.MigrateDatabase();
 host.CreateInbox();
@@ -40,22 +40,23 @@ static void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTranspo
 {
     if (messagingTransport != MessagingTransport.Kafka) return;
 
-    var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
-    var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+    SchemaRegistryConfig schemaRegistryConfig = new() { Url = "http://localhost:8081" };
+    CachedSchemaRegistryClient cachedSchemaRegistryClient = new(schemaRegistryConfig);
     services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 }
 
-static IHostBuilder CreateHostBuilder(string[] args) =>
-    Host.CreateDefaultBuilder(args)
+static IHostBuilder CreateHostBuilder(string[] args)
+{
+    return Host.CreateDefaultBuilder(args)
         .ConfigureHostConfiguration(configurationBuilder =>
         {
             configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
-            configurationBuilder.AddJsonFile("appsettings.json", optional: true);
-            configurationBuilder.AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
+            configurationBuilder.AddJsonFile("appsettings.json", true);
+            configurationBuilder.AddJsonFile($"appsettings.{GetEnvironment()}.json", true);
             configurationBuilder
                 .AddEnvironmentVariables(
-                    prefix: "ASPNETCORE_"); //NOTE: Although not web, we use this to grab the environment
-            configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
+                    "ASPNETCORE_"); //NOTE: Although not web, we use this to grab the environment
+            configurationBuilder.AddEnvironmentVariables("BRIGHTER_");
             configurationBuilder.AddCommandLine(args);
         })
         .ConfigureLogging((context, builder) =>
@@ -70,19 +71,21 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
             ConfigureBrighter(hostContext, services);
         })
         .UseConsoleLifetime();
+}
 
 static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
 {
-    var messagingTransport = GetTransportType(hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
+    MessagingTransport messagingTransport =
+        GetTransportType(hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
 
     AddSchemaRegistryMaybe(services, messagingTransport);
 
     Subscription[] subscriptions = GetSubscriptions(messagingTransport);
 
-    var relationalDatabaseConfiguration = new RelationalDatabaseConfiguration(DbConnectionString(hostContext));
+    RelationalDatabaseConfiguration relationalDatabaseConfiguration = new(DbConnectionString(hostContext));
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
 
-    var outboxConfiguration = new RelationalDatabaseConfiguration(
+    RelationalDatabaseConfiguration outboxConfiguration = new(
         DbConnectionString(hostContext),
         binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
     );
@@ -102,17 +105,15 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
                 CreateInbox(hostContext, relationalDatabaseConfiguration),
-                scope: InboxScope.Commands,
-                onceOnly: true,
-                actionOnExists: OnceOnlyAction.Throw
+                InboxScope.Commands
             );
         })
-        .ConfigureJsonSerialisation((options) =>
+        .ConfigureJsonSerialisation(options =>
         {
             //We don't strictly need this, but added as an example
             options.PropertyNameCaseInsensitive = true;
         })
-        .UseExternalBus((config) =>
+        .UseExternalBus(config =>
         {
             config.ProducerRegistry = ConfigureProducerRegistry(messagingTransport);
             config.Outbox = makeOutbox.outbox;
@@ -165,7 +166,7 @@ static void ConfigureMySql(HostBuilderContext hostBuilderContext, IServiceCollec
         .AddFluentMigratorCore()
         .ConfigureRunner(c => c.AddMySql5()
             .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-            .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations()
+            .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
         );
 }
 
@@ -175,7 +176,7 @@ static void ConfigureMsSql(HostBuilderContext hostBuilderContext, IServiceCollec
         .AddFluentMigratorCore()
         .ConfigureRunner(c => c.AddSqlServer()
             .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-            .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations()
+            .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
         );
 }
 
@@ -186,7 +187,7 @@ static void ConfigurePostgreSql(HostBuilderContext hostBuilderContext, IServiceC
         .ConfigureRunner(c => c.AddPostgres()
             .ConfigureGlobalProcessorOptions(opt => opt.ProviderSwitches = "Force Quote=false")
             .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-            .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations()
+            .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
         );
 }
 
@@ -198,7 +199,7 @@ static void ConfigureSqlite(HostBuilderContext hostBuilderContext, IServiceColle
         {
             c.AddSQLite()
                 .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-                .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations();
+                .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations();
         });
 }
 
@@ -254,10 +255,7 @@ static void ConfigureDapperPostgreSql(IServiceCollection services)
 
 static IAmAnInbox CreateInbox(HostBuilderContext hostContext, IAmARelationalDatabaseConfiguration configuration)
 {
-    if (hostContext.HostingEnvironment.IsDevelopment())
-    {
-        return new SqliteInbox(configuration);
-    }
+    if (hostContext.HostingEnvironment.IsDevelopment()) return new SqliteInbox(configuration);
 
     return CreateProductionInbox(GetDatabaseType(hostContext), configuration);
 }
@@ -351,14 +349,14 @@ static IAmAChannelFactory GetKafkaChannelFactory()
 
 static IAmAProducerRegistry GetKafkaProducerRegistry()
 {
-    var producerRegistry = new KafkaProducerRegistryFactory(
+    IAmAProducerRegistry producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
             },
             new KafkaPublication[]
             {
-                new KafkaPublication
+                new()
                 {
                     Topic = new RoutingKey("SalutationReceived"),
                     RequestType = typeof(SalutationReceived),
@@ -377,7 +375,7 @@ static IAmAChannelFactory GetRmqChannelFactory()
 {
     return new ChannelFactory(new RmqMessageConsumerFactory(new RmqMessagingGatewayConnection
         {
-            AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@localhost:5672")),
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
             Exchange = new Exchange("paramore.brighter.exchange")
         })
     );
@@ -385,15 +383,15 @@ static IAmAChannelFactory GetRmqChannelFactory()
 
 static IAmAProducerRegistry GetRmqProducerRegistry()
 {
-    var producerRegistry = new RmqProducerRegistryFactory(
+    IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
         new RmqMessagingGatewayConnection
         {
-            AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@localhost:5672")),
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
             Exchange = new Exchange("paramore.brighter.exchange")
         },
         new RmqPublication[]
         {
-            new RmqPublication
+            new()
             {
                 Topic = new RoutingKey("SalutationReceived"),
                 RequestType = typeof(SalutationReceived),
@@ -407,7 +405,7 @@ static IAmAProducerRegistry GetRmqProducerRegistry()
 
 static Subscription[] GetRmqSubscriptions()
 {
-    var subscriptions = new Subscription[]
+    Subscription[] subscriptions =
     {
         new RmqSubscription<GreetingMade>(
             new SubscriptionName("paramore.sample.salutationanalytics"),
@@ -417,7 +415,7 @@ static Subscription[] GetRmqSubscriptions()
             timeoutInMilliseconds: 200,
             isDurable: true,
             makeChannels: OnMissingChannel
-                .Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
+                .Create) //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
     };
     return subscriptions;
 }
@@ -434,13 +432,13 @@ static Subscription[] GetSubscriptions(MessagingTransport messagingTransport)
 
 static Subscription[] GetKafkaSubscriptions()
 {
-    var subscriptions = new KafkaSubscription[]
+    KafkaSubscription[] subscriptions =
     {
         new KafkaSubscription<GreetingMade>(
             new SubscriptionName("paramore.sample.salutationanalytics"),
-            channelName: new ChannelName("SalutationAnalytics"),
-            routingKey: new RoutingKey("GreetingMade"),
-            groupId: "kafka-GreetingsReceiverConsole-Sample",
+            new ChannelName("SalutationAnalytics"),
+            new RoutingKey("GreetingMade"),
+            "kafka-GreetingsReceiverConsole-Sample",
             timeoutInMilliseconds: 100,
             offsetDefault: AutoOffsetReset.Earliest,
             commitBatchSize: 5,

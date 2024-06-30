@@ -6,7 +6,7 @@ public enum DatabaseType
     MsSql,
     Postgres,
     Sqlite
-} 
+}
 
 public static class DbResolver
 {
@@ -18,8 +18,8 @@ public static class DbResolver
             DatabaseGlobals.MSSQL => DatabaseType.MsSql,
             DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
             DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
-            _ => throw new ArgumentOutOfRangeException(nameof(DatabaseGlobals.DATABASE_TYPE_ENV), "Database type is not supported")
+            _ => throw new ArgumentOutOfRangeException(nameof(DatabaseGlobals.DATABASE_TYPE_ENV),
+                "Database type is not supported")
         };
     }
-
 }

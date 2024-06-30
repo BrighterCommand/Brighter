@@ -1,7 +1,6 @@
-﻿namespace GreetingsWeb.Models
+﻿namespace GreetingsWeb.Models;
+
+public class NewGreeting
 {
-    public class NewGreeting
-    {
-        public string Greeting { get; set; }
-    }
+    public string Greeting { get; set; }
 }

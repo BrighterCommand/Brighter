@@ -1,22 +1,19 @@
 ﻿using System.Collections.Generic;
 
-namespace GreetingsPorts.Responses
+namespace GreetingsPorts.Responses;
+
+public class FindPersonsGreetings
 {
-    public class FindPersonsGreetings
-    {
-        public string Name { get; set; }
-        public IEnumerable<Salutation> Greetings { get;set; }
+    public string Name { get; set; }
+    public IEnumerable<Salutation> Greetings { get; set; }
+}
 
+public class Salutation
+{
+    public Salutation(string words)
+    {
+        Words = words;
     }
 
-    public class Salutation
-    {
-        public string Words { get; set; }
-        
-        public Salutation(string words)
-        {
-            Words = words;
-        }
-
-    }
+    public string Words { get; set; }
 }

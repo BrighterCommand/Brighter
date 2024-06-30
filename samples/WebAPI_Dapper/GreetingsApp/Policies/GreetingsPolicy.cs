@@ -1,20 +1,20 @@
 ﻿using Paramore.Brighter;
+using Paramore.Darker.Policies;
 
-namespace GreetingsPorts.Policies
+namespace GreetingsPorts.Policies;
+
+public class GreetingsPolicy : DefaultPolicy
 {
-    public class GreetingsPolicy : DefaultPolicy 
+    public GreetingsPolicy()
     {
-        public GreetingsPolicy()
-        {
-            AddGreetingsPolicies();
-        }
+        AddGreetingsPolicies();
+    }
 
-        private void AddGreetingsPolicies()
-        {
-            Add(Retry.RETRYPOLICYASYNC, Retry.GetSimpleHandlerRetryPolicy());
-            Add(Retry.EXPONENTIAL_RETRYPOLICYASYNC, Retry.GetExponentialHandlerRetryPolicy());
-            Add(Paramore.Darker.Policies.Constants.RetryPolicyName, Retry.GetDefaultRetryPolicy());
-            Add(Paramore.Darker.Policies.Constants.CircuitBreakerPolicyName, Retry.GetDefaultCircuitBreakerPolicy());    
-        }
+    private void AddGreetingsPolicies()
+    {
+        Add(Retry.RETRYPOLICYASYNC, Retry.GetSimpleHandlerRetryPolicy());
+        Add(Retry.EXPONENTIAL_RETRYPOLICYASYNC, Retry.GetExponentialHandlerRetryPolicy());
+        Add(Constants.RetryPolicyName, Retry.GetDefaultRetryPolicy());
+        Add(Constants.CircuitBreakerPolicyName, Retry.GetDefaultCircuitBreakerPolicy());
     }
 }

@@ -6,7 +6,7 @@ public static class ConnectionResolver
 {
     public static string? DbConnectionString(IConfiguration configuration)
     {
-        var dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+        string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
         return databaseType switch
         {
@@ -18,11 +18,12 @@ public static class ConnectionResolver
         };
     }
 
-    public static (DatabaseType databaseType, string? connectionString) ServerConnectionString(IConfiguration configuration)
+    public static (DatabaseType databaseType, string? connectionString) ServerConnectionString(
+        IConfiguration configuration)
     {
-        var dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-        var databaseType = DbResolver.GetDatabaseType(dbType);
-        var connectionString = databaseType switch
+        string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+        DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
+        string? connectionString = databaseType switch
         {
             DatabaseType.MySql => configuration.GetConnectionString("MySqlDb"),
             DatabaseType.MsSql => configuration.GetConnectionString("MsSqlDb"),

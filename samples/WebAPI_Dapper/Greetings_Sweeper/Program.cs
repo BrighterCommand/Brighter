@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Greetings_Sweeper.Database;
 using GreetingsDb;
 using GreetingsPorts.Messaging;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -9,17 +8,14 @@ using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.Observability;
 using ConnectionResolver = Greetings_Sweeper.Database.ConnectionResolver;
 
-var jsonOptions = new JsonSerializerOptions
-{
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    WriteIndented = true
-};
+JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-var messagingTransport = ConfigureTransport.TransportType(builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
+MessagingTransport messagingTransport =
+    ConfigureTransport.TransportType(builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
 
-var outboxConfiguration = new RelationalDatabaseConfiguration(
+RelationalDatabaseConfiguration outboxConfiguration = new(
     ConnectionResolver.DbConnectionString(builder.Configuration),
     binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
 );
@@ -28,15 +24,15 @@ builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfigu
 
 (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
     OutboxFactory.MakeOutbox(
-        DbResolver.GetDatabaseType(builder.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV]), 
-        outboxConfiguration, 
+        DbResolver.GetDatabaseType(builder.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV]),
+        outboxConfiguration,
         builder.Services
     );
 
-builder.Services.AddBrighter((options =>
+builder.Services.AddBrighter(options =>
 {
     options.InstrumentationOptions = InstrumentationOptions.All;
-})).UseExternalBus((configure) =>
+}).UseExternalBus(configure =>
 {
     configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry(messagingTransport);
     configure.Outbox = makeOutbox.outbox;
@@ -50,7 +46,7 @@ builder.Services.AddBrighter((options =>
     options.MinimumMessageAge = 5000;
 });
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 app.MapHealthChecks("/health");
 app.MapHealthChecks("/health/detail", new HealthCheckOptions
@@ -60,12 +56,8 @@ app.MapHealthChecks("/health/detail", new HealthCheckOptions
         var content = new
         {
             Status = report.Status.ToString(),
-            Results = report.Entries.ToDictionary(e => e.Key, e => new
-            {
-                Status = e.Value.Status.ToString(),
-                e.Value.Description,
-                e.Value.Duration
-            }),
+            Results = report.Entries.ToDictionary(e => e.Key,
+                e => new { Status = e.Value.Status.ToString(), e.Value.Description, e.Value.Duration }),
             report.TotalDuration
         };
 
@@ -76,4 +68,3 @@ app.MapHealthChecks("/health/detail", new HealthCheckOptions
 
 
 app.Run();
-

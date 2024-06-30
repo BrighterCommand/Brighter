@@ -11,19 +11,19 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 namespace GreetingsPorts.Messaging;
 
 /// <summary>
-/// NOTE: This class is intended to allow us to switch the sample between transports.
-/// Normally you can just inline this code into your application startup, as you do not need to be able to switch
-/// betweeen different transports, just use one.
-/// It is possible to merge producer registries, if you need to support multiple transports.
-/// With that in mind, something like this class can be helpful for two reasons:
-/// - Collate all your transport configuration in one place
-/// - Allow you to use the same code in app and sweeper easily as they use the same settings 
+///     NOTE: This class is intended to allow us to switch the sample between transports.
+///     Normally you can just inline this code into your application startup, as you do not need to be able to switch
+///     betweeen different transports, just use one.
+///     It is possible to merge producer registries, if you need to support multiple transports.
+///     With that in mind, something like this class can be helpful for two reasons:
+///     - Collate all your transport configuration in one place
+///     - Allow you to use the same code in app and sweeper easily as they use the same settings
 /// </summary>
 public static class ConfigureTransport
 {
     public static MessagingTransport TransportType(string brighterTransport)
     {
-        return  brighterTransport switch
+        return brighterTransport switch
         {
             MessagingGlobals.RMQ => MessagingTransport.Rmq,
             MessagingGlobals.KAFKA => MessagingTransport.Kafka,
@@ -32,7 +32,7 @@ public static class ConfigureTransport
                 "Messaging transport is not supported")
         };
     }
-    
+
     public static IAmAProducerRegistry MakeProducerRegistry(MessagingTransport messagingTransport)
     {
         return messagingTransport switch
@@ -47,24 +47,21 @@ public static class ConfigureTransport
 
     private static IAmAProducerRegistry GetAsbProducerRegistry()
     {
-        var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+        IAmAProducerRegistry producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net"),
-                new AzureServiceBusPublication[] { 
-                    new()
-                    {
-                        Topic = new RoutingKey("GreetingMade"),
-                        RequestType = typeof(GreetingMade)
-                    }, 
+                new AzureServiceBusPublication[]
+                {
+                    new() { Topic = new RoutingKey("GreetingMade"), RequestType = typeof(GreetingMade) }
                 }
             )
             .Create();
-        
+
         return producerRegistry;
     }
 
     public static IAmAProducerRegistry GetKafkaProducerRegistry()
     {
-        var producerRegistry = new KafkaProducerRegistryFactory(
+        IAmAProducerRegistry producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
@@ -89,19 +86,19 @@ public static class ConfigureTransport
     public static void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTransport messagingTransport)
     {
         if (messagingTransport != MessagingTransport.Kafka) return;
-            
-        var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
-        var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+
+        SchemaRegistryConfig schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
+        CachedSchemaRegistryClient cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
         services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
     }
 
     public static IAmAProducerRegistry GetRmqProducerRegistry()
     {
-        var producerRegistry = new RmqProducerRegistryFactory(
+        IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
             new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
+                Exchange = new Exchange("paramore.brighter.exchange")
             },
             new[]
             {

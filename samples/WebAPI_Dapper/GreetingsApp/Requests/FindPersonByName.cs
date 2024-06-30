@@ -1,15 +1,14 @@
 using GreetingsPorts.Responses;
 using Paramore.Darker;
 
-namespace GreetingsPorts.Requests
-{
-    public class FindPersonByName : IQuery<FindPersonResult>
-    {
-        public string Name { get; }
+namespace GreetingsPorts.Requests;
 
-        public FindPersonByName(string name)
-        {
-            Name = name;
-        }
+public class FindPersonByName : IQuery<FindPersonResult>
+{
+    public FindPersonByName(string name)
+    {
+        Name = name;
     }
+
+    public string Name { get; }
 }

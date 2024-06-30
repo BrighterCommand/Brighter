@@ -14,8 +14,8 @@ public static class GreetingsDbFactory
 
     private static void ConfigureProductionDatabase(IConfiguration configuration, IServiceCollection services)
     {
-        var databaseType = DbResolver.GetDatabaseType(configuration[DatabaseGlobals.DATABASE_TYPE_ENV]);
-        
+        DatabaseType databaseType = DbResolver.GetDatabaseType(configuration[DatabaseGlobals.DATABASE_TYPE_ENV]);
+
         switch (databaseType)
         {
             case DatabaseType.MySql:
@@ -43,7 +43,7 @@ public static class GreetingsDbFactory
                 .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(configuration))
                 .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
             )
-            .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration()
+            .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
                 DbType = DatabaseType.MsSql.ToString()
             });
@@ -57,7 +57,7 @@ public static class GreetingsDbFactory
                 .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(configuration))
                 .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
             )
-            .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration()
+            .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
                 DbType = DatabaseType.MySql.ToString()
             });
@@ -72,7 +72,7 @@ public static class GreetingsDbFactory
                 .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(configuration))
                 .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
             )
-            .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration()
+            .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
                 DbType = DatabaseType.Postgres.ToString()
             });
@@ -86,7 +86,7 @@ public static class GreetingsDbFactory
                 .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(configuration))
                 .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
             )
-            .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration()
+            .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
                 DbType = DatabaseType.Sqlite.ToString()
             });
