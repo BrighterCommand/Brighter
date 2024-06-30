@@ -1,5 +1,5 @@
 using System;
-using GreetingsPorts.Database;
+using GreetingsDb;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Messaging;
 using GreetingsPorts.Policies;

@@ -2,7 +2,7 @@
 using System.Data;
 using System.Data.Common;
 using FluentMigrator.Runner;
-using GreetingsPorts.Database;
+using GreetingsDb;
 using GreetingsPorts.Messaging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;

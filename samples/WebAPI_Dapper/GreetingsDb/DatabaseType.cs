@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace GreetingsPorts.Database;
+﻿namespace GreetingsDb;
 
 public enum DatabaseType
 {

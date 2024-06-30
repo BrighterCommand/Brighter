@@ -24,8 +24,8 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Sqlite;
 using SalutationAnalytics.Database;
 using SalutationAnalytics.Messaging;
-using SalutationPorts.Policies;
-using SalutationPorts.Requests;
+using SalutationApp.Policies;
+using SalutationApp.Requests;
 using ChannelFactory = Paramore.Brighter.MessagingGateway.RMQ.ChannelFactory;
 
 var host = CreateHostBuilder(args).Build();

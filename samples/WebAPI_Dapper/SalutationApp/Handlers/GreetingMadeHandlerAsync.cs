@@ -9,10 +9,10 @@ using Paramore.Brighter;
 using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
-using SalutationPorts.Entities;
-using SalutationPorts.Requests;
+using SalutationApp.Entities;
+using SalutationApp.Requests;
 
-namespace SalutationPorts.Handlers
+namespace SalutationApp.Handlers
 {
     public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
     {

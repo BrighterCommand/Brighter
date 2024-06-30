@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MySql;
@@ -10,7 +9,7 @@ using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.Sqlite;
 
-namespace GreetingsPorts.Database
+namespace GreetingsDb
 {
     public static class OutboxFactory
     {

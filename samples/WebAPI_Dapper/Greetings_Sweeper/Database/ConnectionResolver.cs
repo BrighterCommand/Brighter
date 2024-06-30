@@ -1,4 +1,4 @@
-﻿using GreetingsPorts.Database;
+﻿using GreetingsDb;
 
 namespace Greetings_Sweeper.Database;
 

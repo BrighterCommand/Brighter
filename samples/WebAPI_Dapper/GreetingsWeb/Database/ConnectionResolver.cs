@@ -1,5 +1,5 @@
 ﻿using System;
-using GreetingsPorts.Database;
+using GreetingsDb;
 using Microsoft.Extensions.Configuration;
 
 namespace GreetingsWeb.Database;

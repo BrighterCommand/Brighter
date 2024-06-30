@@ -1,7 +1,7 @@
 ﻿using System;
 using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
-using GreetingsPorts.Database;
+using GreetingsDb;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

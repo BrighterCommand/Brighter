@@ -209,7 +209,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.ServiceAc
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI_Dapper", "WebAPI_Dapper", "{202BA107-89D5-4868-AC5A-3527114C0109}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationPorts", "samples\WebAPI_Dapper\SalutationPorts\SalutationPorts.csproj", "{4B889714-78E1-429F-AB98-53A1381F12A7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationApp", "samples\WebAPI_Dapper\SalutationApp\SalutationApp.csproj", "{4B889714-78E1-429F-AB98-53A1381F12A7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationAnalytics", "samples\WebAPI_Dapper\SalutationAnalytics\SalutationAnalytics.csproj", "{ECDB8F7A-2D71-457D-8081-97C43D393FE8}"
 EndProject

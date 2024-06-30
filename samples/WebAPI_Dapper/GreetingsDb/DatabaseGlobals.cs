@@ -1,4 +1,4 @@
-﻿namespace GreetingsPorts.Database;
+﻿namespace GreetingsDb;
 
 public static class DatabaseGlobals
 {

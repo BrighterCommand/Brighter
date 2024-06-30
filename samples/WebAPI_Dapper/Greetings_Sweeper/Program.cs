@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Greetings_Sweeper.Database;
-using GreetingsPorts.Database;
+using GreetingsDb;
 using GreetingsPorts.Messaging;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Paramore.Brighter;

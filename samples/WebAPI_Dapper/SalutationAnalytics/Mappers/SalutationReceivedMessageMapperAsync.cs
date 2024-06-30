@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions;
-using SalutationPorts.Requests;
+using SalutationApp.Requests;
 
 namespace SalutationAnalytics.Mappers
 {
