@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 
-namespace GreetingsDb;
+namespace DbMaker;
 
 public static class ConnectionResolver
 {

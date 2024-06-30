@@ -1,4 +1,4 @@
-﻿namespace GreetingsDb;
+﻿namespace DbMaker;
 
 public enum DatabaseType
 {

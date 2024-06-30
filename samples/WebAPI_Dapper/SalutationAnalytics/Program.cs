@@ -3,7 +3,7 @@ using System.IO;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using FluentMigrator.Runner;
-using GreetingsDb;
+using DbMaker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

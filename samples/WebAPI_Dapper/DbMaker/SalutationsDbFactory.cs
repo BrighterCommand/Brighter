@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Salutations_Migrations.Migrations;
 
-namespace GreetingsDb;
+namespace DbMaker;
 
 public class SalutationsDbFactory
 {

@@ -3,7 +3,7 @@ using Greetings_MySqlMigrations.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GreetingsDb;
+namespace DbMaker;
 
 public static class GreetingsDbFactory
 {

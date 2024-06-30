@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 using MySqlConnector;
 using Npgsql;
 
-namespace GreetingsDb;
+namespace DbMaker;
 
 public static class DbConnectionFactory
 {

@@ -4,7 +4,7 @@ using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.Inbox.Sqlite;
 
-namespace GreetingsDb;
+namespace DbMaker;
 
 public static class InboxFactory
 {

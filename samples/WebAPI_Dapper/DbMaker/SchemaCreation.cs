@@ -20,7 +20,7 @@ using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
 using Polly.Retry;
 
-namespace GreetingsDb;
+namespace DbMaker;
 
 public static class SchemaCreation
 {

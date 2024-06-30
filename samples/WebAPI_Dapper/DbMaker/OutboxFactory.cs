@@ -9,7 +9,7 @@ using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.Sqlite;
 
-namespace GreetingsDb;
+namespace DbMaker;
 
 public static class OutboxFactory
 {

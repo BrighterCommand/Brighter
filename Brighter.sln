@@ -289,7 +289,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorldInternalBus", "sa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_Sweeper", "samples\WebAPI_Dapper\Greetings_Sweeper\Greetings_Sweeper.csproj", "{D96B97E7-EABA-4224-A861-CF249CF55031}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsDb", "samples\WebAPI_Dapper\GreetingsDb\GreetingsDb.csproj", "{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMaker", "samples\WebAPI_Dapper\DbMaker\DbMaker.csproj", "{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1729,6 +1729,10 @@ Global
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8}.Release|x86.ActiveCfg = Release|Any CPU
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8}.Release|x86.Build.0 = Release|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}.Debug|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

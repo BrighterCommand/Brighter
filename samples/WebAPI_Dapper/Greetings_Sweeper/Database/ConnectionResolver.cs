@@ -1,4 +1,4 @@
-﻿using GreetingsDb;
+﻿using DbMaker;
 
 namespace Greetings_Sweeper.Database;
 
