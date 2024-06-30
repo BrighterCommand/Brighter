@@ -3,7 +3,6 @@ using GreetingsDb;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Messaging;
 using GreetingsPorts.Policies;
-using GreetingsWeb.Database;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -88,7 +87,7 @@ namespace GreetingsWeb
 
             (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
                 OutboxFactory.MakeOutbox(
-                    DbResolver.GetDatabaseType(_configuration[DatabaseGlobals.DATABASE_TYPE_ENV]), 
+                    DbResolver.GetDatabaseType(_configuration[DatabaseGlobals.DATABASE_TYPE_ENV] ?? "Sqlite"), 
                     outboxConfiguration, 
                     services
                 );

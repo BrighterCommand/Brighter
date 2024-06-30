@@ -13,6 +13,16 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+      <ProjectReference Include="..\Greetings_Migrations\Greetings_Migrations.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FluentMigrator.Runner.Core" />
+      <PackageReference Include="FluentMigrator.Runner.MySql" />
+      <PackageReference Include="FluentMigrator.Runner.Postgres" />
+      <PackageReference Include="FluentMigrator.Runner.SQLite" />
+      <PackageReference Include="FluentMigrator.Runner.SqlServer" />
+      <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     </ItemGroup>
 
 </Project>

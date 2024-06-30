@@ -20,7 +20,6 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj" />
       <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj" />
       <ProjectReference Include="..\GreetingsDb\GreetingsDb.csproj" />
-      <ProjectReference Include="..\Greetings_Migrations\Greetings_Migrations.csproj" />
     </ItemGroup>
 
     <ItemGroup>

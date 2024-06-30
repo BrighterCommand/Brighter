@@ -29,6 +29,11 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="FluentMigrator" Version="5.2.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.Core" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.MySql" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="5.2.0" />
     <PackageVersion Include="MessagePack" Version="2.5.168" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.1" />
@@ -88,7 +93,7 @@
     <PackageVersion Include="Azure.Identity" Version="1.12.0" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.6" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.6.0" />
-    <PackageVersion Include="MQTTnet" Version="3.1.2"/>
+    <PackageVersion Include="MQTTnet" Version="3.1.2" />
     <PackageVersion Include="OpenTelemetry" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.9.0" />

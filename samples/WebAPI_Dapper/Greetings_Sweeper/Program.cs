@@ -7,6 +7,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.Observability;
+using ConnectionResolver = Greetings_Sweeper.Database.ConnectionResolver;
 
 var jsonOptions = new JsonSerializerOptions
 {

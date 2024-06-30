@@ -1,12 +1,10 @@
-﻿using System;
-using System.Data.Common;
-using GreetingsDb;
+﻿using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using MySqlConnector;
 using Npgsql;
 
-namespace GreetingsWeb.Database;
+namespace GreetingsDb;
 
 public static class DbConnectionFactory
 {

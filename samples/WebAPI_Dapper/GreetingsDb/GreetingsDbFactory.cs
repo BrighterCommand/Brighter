@@ -1,11 +1,9 @@
-﻿using System;
-using FluentMigrator.Runner;
+﻿using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
-using GreetingsDb;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace GreetingsWeb.Database;
+namespace GreetingsDb;
 
 public static class GreetingsDbFactory
 {

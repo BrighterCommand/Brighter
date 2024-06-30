@@ -1,7 +1,9 @@
+using System;
 using System.IO;
 using FluentMigrator.Runner;
+using GreetingsDb;
+using GreetingsPorts.Messaging;
 using GreetingsWeb;
-using GreetingsWeb.Database;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +13,7 @@ var host = CreateHostBuilder(args).Build();
 
 host.CheckDbIsUp();
 host.MigrateDatabase();
-host.CreateOutbox(host.HasBinaryMessagePayload());
+host.CreateOutbox(HasBinaryMessagePayload());
 
 host.Run();
 return;
@@ -45,3 +47,8 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
             });
             webBuilder.UseStartup<Startup>();
         });
+
+static bool HasBinaryMessagePayload()
+{
+    return ConfigureTransport.TransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) == MessagingTransport.Kafka;
+}

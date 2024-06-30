@@ -1,12 +1,10 @@
-﻿using System;
-using GreetingsDb;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 
-namespace GreetingsWeb.Database;
+namespace GreetingsDb;
 
 public static class ConnectionResolver
 {
-    public static string DbConnectionString(IConfiguration configuration)
+    public static string? DbConnectionString(IConfiguration configuration)
     {
         var dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
@@ -20,7 +18,7 @@ public static class ConnectionResolver
         };
     }
 
-    public static (DatabaseType, string) ServerConnectionString(IConfiguration configuration)
+    public static (DatabaseType databaseType, string? connectionString) ServerConnectionString(IConfiguration configuration)
     {
         var dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         var databaseType = DbResolver.GetDatabaseType(dbType);

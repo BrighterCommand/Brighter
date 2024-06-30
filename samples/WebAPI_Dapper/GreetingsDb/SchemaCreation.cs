@@ -1,10 +1,6 @@
-﻿using System;
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 using FluentMigrator.Runner;
-using GreetingsDb;
-using GreetingsPorts.Messaging;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
@@ -19,7 +15,7 @@ using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
 
-namespace GreetingsWeb.Database
+namespace GreetingsDb
 {
     public static class SchemaCreation
     {
@@ -27,15 +23,11 @@ namespace GreetingsWeb.Database
 
         public static IHost CheckDbIsUp(this IHost webHost)
         {
-            using var scope = webHost.Services.CreateScope();
+            using var scope = ServiceProviderServiceExtensions.CreateScope(webHost.Services);
 
             var services = scope.ServiceProvider;
-            var env = services.GetService<IWebHostEnvironment>();
             var config = services.GetService<IConfiguration>();
             var (dbType, connectionString) = ConnectionResolver.ServerConnectionString(config);
-
-            //We don't check db availability in development as we always use Sqlite which is a file not a server
-            if (env.IsDevelopment()) return webHost;
 
             WaitToConnect(dbType, connectionString);
             CreateDatabaseIfNotExists(dbType, DbConnectionFactory.GetConnection(dbType, connectionString));
@@ -45,7 +37,7 @@ namespace GreetingsWeb.Database
         
         public static IHost CreateOutbox(this IHost webHost, bool hasBinaryPayload)
         {
-            using var scope = webHost.Services.CreateScope();
+            using var scope = ServiceProviderServiceExtensions.CreateScope(webHost.Services);
             var services = scope.ServiceProvider;
             var config = services.GetService<IConfiguration>();
 
@@ -54,14 +46,11 @@ namespace GreetingsWeb.Database
             return webHost;
         }
 
-        public static bool HasBinaryMessagePayload(this IHost webHost)
-        {
-            return ConfigureTransport.TransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) == MessagingTransport.Kafka;
-        }
+
 
         public static IHost MigrateDatabase(this IHost webHost)
         {
-            using var scope = webHost.Services.CreateScope();
+            using var scope = ServiceProviderServiceExtensions.CreateScope(webHost.Services);
             var services = scope.ServiceProvider;
 
             try
@@ -72,7 +61,7 @@ namespace GreetingsWeb.Database
             }
             catch (Exception ex)
             {
-                var logger = services.GetRequiredService<ILogger<Program>>();
+                var logger = services.GetRequiredService<ILogger<IHost>>();
                 LoggerExtensions.LogError(logger, ex, "An error occurred while migrating the database.");
                 throw;
             }
@@ -143,7 +132,7 @@ namespace GreetingsWeb.Database
             }
         }
 
-       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString, bool hasBinaryPayload) 
+       private static void CreateOutboxProduction(DatabaseType databaseType, string? connectionString, bool hasBinaryPayload) 
        {
             switch (databaseType)
             {
@@ -164,7 +153,7 @@ namespace GreetingsWeb.Database
             }
         }
 
-       private static void CreateOutboxMsSql(string connectionString, bool hasBinaryPayload)
+       private static void CreateOutboxMsSql(string? connectionString, bool hasBinaryPayload)
        {
             using var sqlConnection = new SqlConnection(connectionString);
             sqlConnection.Open();
@@ -181,7 +170,7 @@ namespace GreetingsWeb.Database
             command.ExecuteScalar();
         }
 
-        private static void CreateOutboxMySql(string connectionString, bool hasBinaryPayload)
+        private static void CreateOutboxMySql(string? connectionString, bool hasBinaryPayload)
         {
             using var sqlConnection = new MySqlConnection(connectionString);
             sqlConnection.Open();
@@ -198,7 +187,7 @@ namespace GreetingsWeb.Database
             command.ExecuteScalar();
         }
         
-        private static void CreateOutboxPostgres(string connectionString, bool hasBinaryPayload)
+        private static void CreateOutboxPostgres(string? connectionString, bool hasBinaryPayload)
         {
              using var sqlConnection = new NpgsqlConnection(connectionString);
              sqlConnection.Open();
@@ -215,7 +204,7 @@ namespace GreetingsWeb.Database
              command.ExecuteScalar();
         }
 
-        private static void CreateOutboxSqlite(string connectionString, bool hasBinaryPayload)
+        private static void CreateOutboxSqlite(string? connectionString, bool hasBinaryPayload)
         {
             using var sqlConnection = new SqliteConnection(connectionString);
             sqlConnection.Open();
