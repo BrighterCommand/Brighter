@@ -22,7 +22,7 @@ public class GreetingMadeMessageMapperAsync : IAmAMessageMapperAsync<GreetingMad
     {
         //NOTE: We are showing an async pipeline here, but it is often overkill by comparison to using 
         //TaskCompletionSource for a Task over sync instead
-        using MemoryStream ms = new MemoryStream(message.Body.Bytes);
+        using MemoryStream ms = new(message.Body.Bytes);
         return await JsonSerializer.DeserializeAsync<GreetingMade>(ms, JsonSerialisationOptions.Options,
             cancellationToken);
     }

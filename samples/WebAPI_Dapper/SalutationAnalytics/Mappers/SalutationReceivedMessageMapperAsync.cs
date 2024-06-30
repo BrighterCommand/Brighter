@@ -18,11 +18,11 @@ public class SalutationReceivedMessageMapperAsync : IAmAMessageMapperAsync<Salut
     {
         //NOTE: We are showing an async pipeline here, but it is often overkill by comparison to using 
         //TaskCompletionSource for a Task over sync instead
-        MessageHeader header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());
-        using MemoryStream ms = new MemoryStream();
+        MessageHeader header = new(request.Id, publication.Topic, request.RequestToMessageType());
+        using MemoryStream ms = new();
         await JsonSerializer.SerializeAsync(ms, request, new JsonSerializerOptions(JsonSerializerDefaults.General),
             cancellationToken);
-        MessageBody body = new MessageBody(ms.ToArray());
+        MessageBody body = new(ms.ToArray());
         return new Message(header, body);
     }
 

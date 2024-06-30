@@ -3,13 +3,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <nullable>enable</nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Inbox.MsSql\Paramore.Brighter.Inbox.MsSql.csproj"/>
-    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Inbox.MySql\Paramore.Brighter.Inbox.MySql.csproj"/>
-    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Inbox.Postgres\Paramore.Brighter.Inbox.Postgres.csproj"/>
-    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Inbox.Sqlite\Paramore.Brighter.Inbox.Sqlite.csproj"/>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj"/>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.csproj"/>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj"/>
@@ -20,6 +17,7 @@
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.Hosting\Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj"/>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj"/>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj"/>
+    <ProjectReference Include="..\GreetingsDb\GreetingsDb.csproj"/>
     <ProjectReference Include="..\SalutationApp\SalutationApp.csproj"/>
     <ProjectReference Include="..\Salutations_Migrations\Salutations_Migrations.csproj"/>
   </ItemGroup>

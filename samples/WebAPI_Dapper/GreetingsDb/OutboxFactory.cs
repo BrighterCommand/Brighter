@@ -22,7 +22,7 @@ public static class OutboxFactory
         {
             DatabaseType.MySql => MakeMySqlOutbox(configuration),
             DatabaseType.MsSql => MakeMsSqlOutbox(configuration),
-            DatabaseType.Postgres => MakePostgresSqlOutbox(configuration, services),
+            DatabaseType.Postgres => MakePostgresSqlOutbox(configuration),
             DatabaseType.Sqlite => MakeSqliteOutBox(configuration),
             _ => throw new InvalidOperationException("Unknown Db type for Outbox configuration")
         };
@@ -31,8 +31,7 @@ public static class OutboxFactory
     }
 
     private static (IAmAnOutbox, Type, Type) MakePostgresSqlOutbox(
-        RelationalDatabaseConfiguration configuration,
-        IServiceCollection services)
+        RelationalDatabaseConfiguration configuration)
     {
         return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlConnectionProvider),
             typeof(PostgreSqlUnitOfWork));

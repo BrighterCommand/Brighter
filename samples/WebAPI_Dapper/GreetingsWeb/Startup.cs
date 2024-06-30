@@ -80,14 +80,18 @@ public class Startup
         ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
 
         RelationalDatabaseConfiguration outboxConfiguration = new(
-            ConnectionResolver.DbConnectionString(_configuration),
+            ConnectionResolver.GreetingsDbConnectionString(_configuration),
             binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
         );
         services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
+        string dbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+        if (string.IsNullOrWhiteSpace(dbType))
+            throw new InvalidOperationException("DbType is not set");
+        
         (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
             OutboxFactory.MakeOutbox(
-                DbResolver.GetDatabaseType(_configuration[DatabaseGlobals.DATABASE_TYPE_ENV] ?? "Sqlite"),
+                DbResolver.GetDatabaseType(dbType),
                 outboxConfiguration,
                 services
             );
