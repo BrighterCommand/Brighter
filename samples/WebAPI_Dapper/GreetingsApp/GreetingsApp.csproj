@@ -31,4 +31,8 @@
     <PackageReference Include="Polly.Contrib.WaitAndRetry"/>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Messaging\" />
+  </ItemGroup>
+
 </Project>
