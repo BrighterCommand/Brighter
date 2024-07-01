@@ -291,10 +291,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_Sweeper", "sample
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMaker", "samples\WebAPI_Dapper\DbMaker\DbMaker.csproj", "{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransportMaker", "samples\WebAPI_Dapper\TransportMaker\TransportMaker.csproj", "{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransportMaker", "samples\WebAPI_Dapper\TransportMaker\TransportMaker.csproj", "{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1737,30 +1733,6 @@ Global
 		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Debug|x86.Build.0 = Debug|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Release|x86.ActiveCfg = Release|Any CPU
-		{986959F2-9708-49A0-8A0E-F6C35D1DCB9C}.Release|x86.Build.0 = Release|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Debug|x86.Build.0 = Debug|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Release|x86.ActiveCfg = Release|Any CPU
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1858,7 +1830,6 @@ Global
 		{D96B97E7-EABA-4224-A861-CF249CF55031} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
-		{2ABED9E2-7417-4A5F-B900-60A54D2E1A85} = {202BA107-89D5-4868-AC5A-3527114C0109}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

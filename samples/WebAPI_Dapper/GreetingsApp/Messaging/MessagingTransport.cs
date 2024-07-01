@@ -1,4 +1,4 @@
-﻿namespace TransportMaker;
+﻿namespace GreetingsPorts.Messaging;
 
 public static class MessagingGlobals
 {

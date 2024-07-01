@@ -7,9 +7,6 @@ public static class ConnectionResolver
     public static string? DbConnectionString(IConfiguration configuration)
     {
         string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-        if (dbType == null)
-            throw new InvalidOperationException("No Db Type has been configured");
-        
         DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
         return databaseType switch
         {
@@ -25,11 +22,7 @@ public static class ConnectionResolver
         IConfiguration configuration)
     {
         string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-        if (dbType == null)
-            throw new InvalidOperationException("No Db Type has been configured");
-         
         DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
-       
         string? connectionString = databaseType switch
         {
             DatabaseType.MySql => configuration.GetConnectionString("MySqlDb"),

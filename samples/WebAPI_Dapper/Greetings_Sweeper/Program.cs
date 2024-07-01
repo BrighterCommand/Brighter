@@ -1,24 +1,19 @@
 using System.Text.Json;
 using DbMaker;
-using GreetingsPorts.Requests;
+using GreetingsPorts.Messaging;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.Observability;
-using TransportMaker;
 using ConnectionResolver = Greetings_Sweeper.Database.ConnectionResolver;
 
 JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-string? transport = builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
-if (transport == null)
-    throw new InvalidOperationException("No transport was configured");
-        
 MessagingTransport messagingTransport =
-    ConfigureTransport.TransportType(transport);
+    ConfigureTransport.TransportType(builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
 
 RelationalDatabaseConfiguration outboxConfiguration = new(
     ConnectionResolver.DbConnectionString(builder.Configuration),
@@ -27,13 +22,9 @@ RelationalDatabaseConfiguration outboxConfiguration = new(
 
 builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
-string? greetingsDbType = builder.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-if (greetingsDbType == null)
-    throw new InvalidOperationException("No Db Type has been configuree");
-
 (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
     OutboxFactory.MakeOutbox(
-        DbResolver.GetDatabaseType(greetingsDbType),
+        DbResolver.GetDatabaseType(builder.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV]),
         outboxConfiguration,
         builder.Services
     );
@@ -43,7 +34,7 @@ builder.Services.AddBrighter(options =>
     options.InstrumentationOptions = InstrumentationOptions.All;
 }).UseExternalBus(configure =>
 {
-    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry(messagingTransport);
     configure.Outbox = makeOutbox.outbox;
     configure.TransactionProvider = makeOutbox.transactionProvider;
     configure.ConnectionProvider = makeOutbox.connectionProvider;

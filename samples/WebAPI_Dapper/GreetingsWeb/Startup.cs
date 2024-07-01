@@ -1,8 +1,8 @@
 using System;
 using DbMaker;
 using GreetingsPorts.Handlers;
+using GreetingsPorts.Messaging;
 using GreetingsPorts.Policies;
-using GreetingsPorts.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -16,7 +16,6 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
-using TransportMaker;
 
 namespace GreetingsWeb;
 
@@ -107,7 +106,7 @@ public class Startup
             })
             .UseExternalBus(configure =>
             {
-                configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+                configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry(messagingTransport);
                 configure.Outbox = makeOutbox.outbox;
                 configure.TransactionProvider = makeOutbox.transactionProvider;
                 configure.ConnectionProvider = makeOutbox.connectionProvider;

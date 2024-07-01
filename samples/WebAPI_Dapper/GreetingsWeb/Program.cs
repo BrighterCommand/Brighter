@@ -1,13 +1,13 @@
 using System;
 using System.IO;
+using FluentMigrator.Runner;
+using DbMaker;
+using GreetingsPorts.Messaging;
+using GreetingsWeb;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using FluentMigrator.Runner;
-using DbMaker;
-using GreetingsWeb;
-using TransportMaker;
 
 IHost host = CreateHostBuilder(args).Build();
 

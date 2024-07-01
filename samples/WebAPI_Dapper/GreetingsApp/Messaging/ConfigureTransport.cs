@@ -1,4 +1,6 @@
-﻿using Confluent.SchemaRegistry;
+﻿using System;
+using Confluent.SchemaRegistry;
+using GreetingsPorts.Requests;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -6,7 +8,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.MessagingGateway.RMQ;
 
-namespace TransportMaker;
+namespace GreetingsPorts.Messaging;
 
 /// <summary>
 ///     NOTE: This class is intended to allow us to switch the sample between transports.
@@ -31,25 +33,25 @@ public static class ConfigureTransport
         };
     }
 
-    public static IAmAProducerRegistry MakeProducerRegistry<T>(MessagingTransport messagingTransport) where T: IRequest
+    public static IAmAProducerRegistry MakeProducerRegistry(MessagingTransport messagingTransport)
     {
         return messagingTransport switch
         {
-            MessagingTransport.Rmq => GetRmqProducerRegistry<T>(),
-            MessagingTransport.Kafka => GetKafkaProducerRegistry<T>(),
-            MessagingTransport.Asb => GetAsbProducerRegistry<T>(),
+            MessagingTransport.Rmq => GetRmqProducerRegistry(),
+            MessagingTransport.Kafka => GetKafkaProducerRegistry(),
+            MessagingTransport.Asb => GetAsbProducerRegistry(),
             _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport),
                 "Messaging transport is not supported")
         };
     }
 
-    private static IAmAProducerRegistry GetAsbProducerRegistry<T>() where T: IRequest
+    private static IAmAProducerRegistry GetAsbProducerRegistry()
     {
         IAmAProducerRegistry producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net"),
                 new AzureServiceBusPublication[]
                 {
-                    new() { Topic = new RoutingKey("GreetingMade"), RequestType = typeof(T) }
+                    new() { Topic = new RoutingKey("GreetingMade"), RequestType = typeof(GreetingMade) }
                 }
             )
             .Create();
@@ -57,7 +59,7 @@ public static class ConfigureTransport
         return producerRegistry;
     }
 
-    public static IAmAProducerRegistry GetKafkaProducerRegistry<T>() where T:IRequest
+    public static IAmAProducerRegistry GetKafkaProducerRegistry()
     {
         IAmAProducerRegistry producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -69,7 +71,7 @@ public static class ConfigureTransport
                     new KafkaPublication
                     {
                         Topic = new RoutingKey("GreetingMade"),
-                        RequestType = typeof(T),
+                        RequestType = typeof(GreetingMade),
                         MessageSendMaxRetries = 3,
                         MessageTimeoutMs = 1000,
                         MaxInFlightRequestsPerConnection = 1,
@@ -90,7 +92,7 @@ public static class ConfigureTransport
         services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
     }
 
-    public static IAmAProducerRegistry GetRmqProducerRegistry<T>() where T:IRequest
+    public static IAmAProducerRegistry GetRmqProducerRegistry()
     {
         IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
             new RmqMessagingGatewayConnection
@@ -103,7 +105,7 @@ public static class ConfigureTransport
                 new RmqPublication
                 {
                     Topic = new RoutingKey("GreetingMade"),
-                    RequestType = typeof(T),
+                    RequestType = typeof(GreetingMade),
                     WaitForConfirmsTimeOutInMilliseconds = 1000,
                     MakeChannels = OnMissingChannel.Create
                 }
