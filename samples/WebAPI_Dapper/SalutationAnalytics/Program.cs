@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
-using Confluent.Kafka;
 using Confluent.SchemaRegistry;
-using FluentMigrator.Runner;
 using DbMaker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,25 +8,20 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.MessagingGateway.Kafka;
-using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Sqlite;
-using SalutationAnalytics.Messaging;
+using SalutationApp.Messaging;
 using SalutationApp.Policies;
-using SalutationApp.Requests;
-using Salutations_Migrations.Migrations;
-using ChannelFactory = Paramore.Brighter.MessagingGateway.RMQ.ChannelFactory;
 
 IHost host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp();
 host.MigrateDatabase();
 host.CreateInbox();
-host.CreateOutbox(HasBinaryMessagePayload());
+host.CreateOutbox(ConfigureTransport.HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -75,11 +68,11 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     if (string.IsNullOrWhiteSpace(transport))
         throw new InvalidOperationException("Transport is not set");
 
-    MessagingTransport messagingTransport = GetTransportType(transport);
+    MessagingTransport messagingTransport = ConfigureTransport.GetTransportType(transport);
 
     AddSchemaRegistryMaybe(services, messagingTransport);
 
-    Subscription[] subscriptions = GetSubscriptions(messagingTransport);
+    Subscription[] subscriptions = ConfigureTransport.GetSubscriptions(messagingTransport);
 
     string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
     if (string.IsNullOrWhiteSpace(dbType))
@@ -105,7 +98,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.DefaultChannelFactory = GetChannelFactory(messagingTransport);
+            options.DefaultChannelFactory = ConfigureTransport.GetChannelFactory(messagingTransport);
             options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
@@ -123,7 +116,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
         })
         .UseExternalBus(config =>
         {
-            config.ProducerRegistry = ConfigureProducerRegistry(messagingTransport);
+            config.ProducerRegistry = ConfigureTransport.MakeProducerRegistry(messagingTransport);
             config.Outbox = makeOutbox.outbox;
             config.ConnectionProvider = makeOutbox.connectionProvider;
             config.TransactionProvider = makeOutbox.transactionProvider;
@@ -190,163 +183,8 @@ static void ConfigureDapperPostgreSql(IServiceCollection services)
     services.AddScoped<IAmATransactionConnectionProvider, PostgreSqlUnitOfWork>();
 }
 
-
-static IAmAProducerRegistry ConfigureProducerRegistry(MessagingTransport messagingTransport)
-{
-    return messagingTransport switch
-    {
-        MessagingTransport.Rmq => GetRmqProducerRegistry(),
-        MessagingTransport.Kafka => GetKafkaProducerRegistry(),
-        _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport), "Messaging transport is not supported")
-    };
-}
-
-static IAmAChannelFactory GetChannelFactory(MessagingTransport messagingTransport)
-{
-    return messagingTransport switch
-    {
-        MessagingTransport.Rmq => GetRmqChannelFactory(),
-        MessagingTransport.Kafka => GetKafkaChannelFactory(),
-        _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport), "Messaging transport is not supported")
-    };
-}
-
 static string? GetEnvironment()
 {
     //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
     return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-}
-
-static IAmAChannelFactory GetKafkaChannelFactory()
-{
-    return new Paramore.Brighter.MessagingGateway.Kafka.ChannelFactory(
-        new KafkaMessageConsumerFactory(
-            new KafkaMessagingGatewayConfiguration
-            {
-                Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" }
-            }
-        )
-    );
-}
-
-static IAmAProducerRegistry GetKafkaProducerRegistry()
-{
-    IAmAProducerRegistry producerRegistry = new KafkaProducerRegistryFactory(
-            new KafkaMessagingGatewayConfiguration
-            {
-                Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
-            },
-            new KafkaPublication[]
-            {
-                new()
-                {
-                    Topic = new RoutingKey("SalutationReceived"),
-                    RequestType = typeof(SalutationReceived),
-                    MessageSendMaxRetries = 3,
-                    MessageTimeoutMs = 1000,
-                    MaxInFlightRequestsPerConnection = 1,
-                    MakeChannels = OnMissingChannel.Create
-                }
-            })
-        .Create();
-
-    return producerRegistry;
-}
-
-static IAmAChannelFactory GetRmqChannelFactory()
-{
-    return new ChannelFactory(new RmqMessageConsumerFactory(new RmqMessagingGatewayConnection
-        {
-            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-            Exchange = new Exchange("paramore.brighter.exchange")
-        })
-    );
-}
-
-static IAmAProducerRegistry GetRmqProducerRegistry()
-{
-    IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
-        new RmqMessagingGatewayConnection
-        {
-            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-            Exchange = new Exchange("paramore.brighter.exchange")
-        },
-        new RmqPublication[]
-        {
-            new()
-            {
-                Topic = new RoutingKey("SalutationReceived"),
-                RequestType = typeof(SalutationReceived),
-                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                MakeChannels = OnMissingChannel.Create
-            }
-        }
-    ).Create();
-    return producerRegistry;
-}
-
-static Subscription[] GetRmqSubscriptions()
-{
-    Subscription[] subscriptions =
-    {
-        new RmqSubscription<GreetingMade>(
-            new SubscriptionName("paramore.sample.salutationanalytics"),
-            new ChannelName("SalutationAnalytics"),
-            new RoutingKey("GreetingMade"),
-            runAsync: true,
-            timeoutInMilliseconds: 200,
-            isDurable: true,
-            makeChannels: OnMissingChannel
-                .Create) //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
-    };
-    return subscriptions;
-}
-
-static Subscription[] GetSubscriptions(MessagingTransport messagingTransport)
-{
-    return messagingTransport switch
-    {
-        MessagingTransport.Rmq => GetRmqSubscriptions(),
-        MessagingTransport.Kafka => GetKafkaSubscriptions(),
-        _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport), "Messaging transport is not supported")
-    };
-}
-
-static Subscription[] GetKafkaSubscriptions()
-{
-    KafkaSubscription[] subscriptions =
-    {
-        new KafkaSubscription<GreetingMade>(
-            new SubscriptionName("paramore.sample.salutationanalytics"),
-            new ChannelName("SalutationAnalytics"),
-            new RoutingKey("GreetingMade"),
-            "kafka-GreetingsReceiverConsole-Sample",
-            timeoutInMilliseconds: 100,
-            offsetDefault: AutoOffsetReset.Earliest,
-            commitBatchSize: 5,
-            sweepUncommittedOffsetsIntervalMs: 10000,
-            runAsync: true,
-            makeChannels: OnMissingChannel.Create)
-    };
-    return subscriptions;
-}
-
-static MessagingTransport GetTransportType(string brighterTransport)
-{
-    return brighterTransport switch
-    {
-        MessagingGlobals.RMQ => MessagingTransport.Rmq,
-        MessagingGlobals.KAFKA => MessagingTransport.Kafka,
-        _ => throw new ArgumentOutOfRangeException(nameof(MessagingGlobals.BRIGHTER_TRANSPORT),
-            "Messaging transport is not supported")
-    };
-}
-
-static bool HasBinaryMessagePayload()
-{
-    string? transport = Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT");
-    if (string.IsNullOrWhiteSpace(transport))
-        throw new InvalidOperationException("Transport is not set");
-
-    return GetTransportType(transport) == MessagingTransport.Kafka;
 }

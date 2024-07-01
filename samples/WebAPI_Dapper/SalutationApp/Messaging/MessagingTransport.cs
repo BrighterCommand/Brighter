@@ -1,4 +1,4 @@
-﻿namespace SalutationAnalytics.Messaging;
+﻿namespace SalutationApp.Messaging;
 
 public static class MessagingGlobals
 {
