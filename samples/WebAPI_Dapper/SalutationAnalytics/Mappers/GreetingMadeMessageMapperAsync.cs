@@ -10,7 +10,7 @@ namespace SalutationAnalytics.Mappers;
 
 public class GreetingMadeMessageMapperAsync : IAmAMessageMapperAsync<GreetingMade>
 {
-    public IRequestContext Context { get; set; }
+    public IRequestContext? Context { get; set; }
 
     public Task<Message> MapToMessageAsync(GreetingMade request, Publication publication,
         CancellationToken cancellationToken = default)
@@ -24,6 +24,6 @@ public class GreetingMadeMessageMapperAsync : IAmAMessageMapperAsync<GreetingMad
         //TaskCompletionSource for a Task over sync instead
         using MemoryStream ms = new(message.Body.Bytes);
         return await JsonSerializer.DeserializeAsync<GreetingMade>(ms, JsonSerialisationOptions.Options,
-            cancellationToken);
+            cancellationToken) ?? throw new InvalidOperationException("Failed to deserialize message");
     }
 }

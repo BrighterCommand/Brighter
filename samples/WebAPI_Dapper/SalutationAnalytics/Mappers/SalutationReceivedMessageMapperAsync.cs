@@ -11,7 +11,7 @@ namespace SalutationAnalytics.Mappers;
 
 public class SalutationReceivedMessageMapperAsync : IAmAMessageMapperAsync<SalutationReceived>
 {
-    public IRequestContext Context { get; set; }
+    public IRequestContext? Context { get; set; }
 
     public async Task<Message> MapToMessageAsync(SalutationReceived request, Publication publication,
         CancellationToken cancellationToken = default)
