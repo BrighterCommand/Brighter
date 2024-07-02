@@ -332,21 +332,21 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
                    @event.GetType(), @event.Id);
 
-                var exceptions = new List<Exception>();
-                foreach (var handleRequests in handlerChain)
+                var exceptions = new ConcurrentBag<Exception>();
+                Parallel.ForEach(handlerChain, (handleRequests) =>
                 {
                     try
                     {
-                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
-                         context.Span =handlerSpans[handleRequests.Name.ToString()];
-                         handleRequests.Handle(@event);
-                         context.Span = span;
+                        handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
+                        context.Span = handlerSpans[handleRequests.Name.ToString()];
+                        handleRequests.Handle(@event);
+                        context.Span = span;
                     }
                     catch (Exception e)
                     {
                         exceptions.Add(e);
                     }
-                }
+                });
                 
                 _tracer?.LinkSpans(handlerSpans);
 
@@ -405,22 +405,26 @@ namespace Paramore.Brighter
                     @event.GetType(), @event.Id
                 );
 
-                var exceptions = new List<Exception>();
+                var tasks = new List<Task>();
+                var exceptions = new ConcurrentBag<Exception>();
+
                 foreach (var handleRequests in handlerChain)
                 {
-                    try
-                    {
-                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
-                         context.Span =handlerSpans[handleRequests.Name.ToString()];
-                         await handleRequests.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-                         context.Span = span;
-                    }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
+                    handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
+                    context.Span =handlerSpans[handleRequests.Name.ToString()];
+                    tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
+                    context.Span = span;
                 }
-                
+
+                try
+                {
+                    await Task.WhenAll(tasks).ConfigureAwait(continueOnCapturedContext);
+                }
+                catch (Exception e)
+                {
+                    exceptions.Add(e);
+                }
+
                 _tracer?.LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
