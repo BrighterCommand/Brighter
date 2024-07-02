@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         Task ClearOutboxAsync(
             IEnumerable<string> posts,
             RequestContext requestContext,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default
         );
@@ -136,7 +136,7 @@ namespace Paramore.Brighter
             TMessage message,
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default,
             string batchId = null);
 

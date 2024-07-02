@@ -27,7 +27,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             Dispatched.TryAdd(command.Id, command);
         }
 
-        public Task SendAsync<T>(T command, RequestContext requestContext = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task SendAsync<T>(T command, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             Dispatched.TryAdd(@event.Id, @event);
         }
 
-        public Task PublishAsync<T>(T @event, RequestContext requestContext = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task PublishAsync<T>(T @event, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where T : class, IRequest
         {
               var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             ClearOutbox([post], requestContext, args);
         }
         
-        public Task PostAsync<T>(T request, RequestContext requestContext = null, Dictionary<string, object> args = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task PostAsync<T>(T request, RequestContext requestContext = null, Dictionary<string, object> args = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where T : class, IRequest
         {
               var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
@@ -115,7 +115,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             T request,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false, 
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default) 
             where T : class, IRequest
         {
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             IAmABoxTransactionProvider<TTransaction> provider, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false, 
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default,
             string batchId = null) 
             where T : class, IRequest
@@ -149,7 +149,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             IEnumerable<T> requests,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var ids = new List<string>();
@@ -166,7 +166,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             IAmABoxTransactionProvider<TTransaction> provider, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
             return await DepositPostAsync(requests, requestContext, args, continueOnCapturedContext, cancellationToken);
@@ -185,7 +185,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             IEnumerable<string> posts, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null, 
-            bool continueOnCapturedContext = false, 
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);

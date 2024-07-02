@@ -55,7 +55,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task SendAsync<TRequest>(TRequest command, RequestContext requestContext = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
+        Task SendAsync<TRequest>(TRequest command, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
 
         /// <summary>
         /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
@@ -76,7 +76,7 @@ namespace Paramore.Brighter
         Task PublishAsync<TRequest>(
             TRequest @event, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false, 
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default
             ) where TRequest : class, IRequest;
 
@@ -103,7 +103,7 @@ namespace Paramore.Brighter
             TRequest request, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false, 
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default
         ) where TRequest : class, IRequest;
 
@@ -197,7 +197,7 @@ namespace Paramore.Brighter
             TRequest request,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             ) where TRequest : class, IRequest;
 
@@ -224,7 +224,7 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default,
             string batchId = null
             ) where T : class, IRequest;
@@ -248,7 +248,7 @@ namespace Paramore.Brighter
             IEnumerable<TRequest> requests,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             ) where TRequest : class, IRequest;
 
@@ -273,7 +273,7 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             ) where T : class, IRequest;
 
@@ -299,7 +299,7 @@ namespace Paramore.Brighter
             IEnumerable<string> posts,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default);
         
         /// <summary>
