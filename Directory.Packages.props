@@ -4,12 +4,12 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.303.22" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.304.1" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.309.4" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.106" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.301.54" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.301.19" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.309.11" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.112" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.301.60" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.301.25" />
     <PackageVersion Include="Azure.Identity" Version="1.12.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.17.5" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.20.0" />
@@ -24,7 +24,7 @@
     <PackageVersion Include="Dapper.Contrib" Version="2.0.78" />
     <PackageVersion Include="DapperExtensions" Version="1.7.0" />
     <PackageVersion Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
-    <PackageVersion Include="FakeItEasy" Version="8.2.0" />
+    <PackageVersion Include="FakeItEasy" Version="8.3.0" />
     <PackageVersion Include="FakeItEasy.Analyzer.CSharp" Version="6.1.1" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="FluentMigrator" Version="5.2.0" />
@@ -46,7 +46,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.6.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
-    <PackageVersion Include="MQTTnet" Version="3.1.2"/>
+    <PackageVersion Include="MQTTnet" Version="3.1.2" />
     <PackageVersion Include="MySqlConnector" Version="2.3.7" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
@@ -69,7 +69,7 @@
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="4.0.1" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="4.0.1" />
     <PackageVersion Include="Paramore.Darker.QueryLogging" Version="4.0.1" />
-    <PackageVersion Include="Polly" Version="8.4.0" />
+    <PackageVersion Include="Polly" Version="8.4.1" />
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
