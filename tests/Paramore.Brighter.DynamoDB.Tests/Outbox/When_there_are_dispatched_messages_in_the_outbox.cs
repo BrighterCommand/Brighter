@@ -187,7 +187,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_all_topics_async()
+    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_multiple_topics_async()
     {
         var context = new RequestContext();
         var messages = new List<Message>();
@@ -231,7 +231,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_all_topics()
+    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_multiple_topics()
     {
         var context = new RequestContext();
         var messages = new List<Message>();

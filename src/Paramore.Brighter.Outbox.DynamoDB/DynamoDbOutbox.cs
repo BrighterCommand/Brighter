@@ -600,20 +600,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             MessageItem messageItem = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();
         }
-        
-        private async Task<IEnumerable<MessageItem>> PageAllMessagesAsync(QueryOperationConfig queryConfig, CancellationToken cancellationToken = default)
-        {
-            var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
-            
-            var messages = new List<MessageItem>();
-            do
-            {
-                var items = await asyncSearch.GetNextSetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                messages.AddRange(items);
-            } while (!asyncSearch.IsDone);
-
-            return messages;
-        }
 
         private async Task<IEnumerable<Message>> DispatchedMessagesForTopicAsync(
             double millisecondsDispatchedSince,
@@ -742,7 +728,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var results = new List<MessageItem>();
 
             var paginationToken = initialPaginationToken;
-
+            var isDone = false;
             var shard = initialShardNumber;
             while (shard < numShards && results.Count < batchSize)
             {
@@ -765,7 +751,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     results.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken));
 
                     paginationToken = asyncSearch.PaginationToken;
-                } while (results.Count < batchSize && paginationToken != null);
+                    isDone = asyncSearch.IsDone;
+                } while (results.Count < batchSize && !isDone);
 
                 // Only move on to the next shard if we still have room to fill up in the batch
                 if (results.Count < batchSize)
@@ -775,20 +762,23 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
 
             var nextShardNumber = 0;
-            if (paginationToken != null)
+            var queryComplete = true;
+            if (!isDone)
             {
                 // We are part way through a shard
                 // continue on the current shard in the next batch
                 nextShardNumber = shard;
+                queryComplete = false;
             }
             else if (shard < numShards)
             {
                 // We are exactly at the end of a shard
                 // continue on the next shard in the next batch
                 nextShardNumber = shard + 1;
+                queryComplete = false;
             }
 
-            return new OutstandingMessagesQueryResult(results, nextShardNumber, numShards, paginationToken);
+            return new OutstandingMessagesQueryResult(results, nextShardNumber, paginationToken, queryComplete);
         }
 
         private async Task<DispatchedMessagesQueryResult> PageDispatchedMessagesToBatchSizeAsync(
@@ -801,6 +791,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var results = new List<MessageItem>();
             var keyExpression = new KeyTopicDeliveredTimeExpression().Generate(topicName, sinceTime);
             var paginationToken = initialPaginationToken;
+            var isDone = false;
             do
             {
                 var queryConfig = new QueryOperationConfig
@@ -815,37 +806,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 results.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken));
 
                 paginationToken = asyncSearch.PaginationToken;
-            } while (results.Count < batchSize && paginationToken != null);
+                isDone = asyncSearch.IsDone;
+            } while (results.Count < batchSize && !isDone);
 
-            return new DispatchedMessagesQueryResult(results, paginationToken);
-        }
-
-        private async Task<IEnumerable<MessageItem>> QueryAllOutstandingAsync(string topic, DateTime olderThan, CancellationToken cancellationToken = default)
-        {
-            var numShards = _configuration.NumberOfShards <= 1 ? 1 : _configuration.NumberOfShards;
-            var tasks = new List<Task<IEnumerable<MessageItem>>>();
-
-            for (int shard = 0; shard < numShards; shard++)
-            {
-                // We get all the messages for topic, added within a time range
-                // There should be few enough of those that we can efficiently filter for those
-                // that don't have a delivery date.
-                var queryConfig = new QueryOperationConfig
-                {
-                    IndexName = _configuration.OutstandingIndexName,
-                    KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, olderThan, shard),
-                    FilterExpression = new NoDispatchTimeExpression().Generate(),
-                    ConsistentRead = false
-                };
-
-                tasks.Add(PageAllMessagesAsync(queryConfig, cancellationToken));
-            }
-
-            await Task.WhenAll(tasks);
-
-            return tasks
-                .SelectMany(x => x.Result)
-                .OrderBy(x => x.CreatedAt);
+            return new DispatchedMessagesQueryResult(results, paginationToken, isDone);
         }
         
         private async Task WriteMessageToOutbox(CancellationToken cancellationToken, MessageItem messageToStore)
