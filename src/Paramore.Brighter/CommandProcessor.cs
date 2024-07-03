@@ -405,19 +405,19 @@ namespace Paramore.Brighter
                     @event.GetType(), @event.Id
                 );
 
-                var tasks = new List<Task>();
                 var exceptions = new ConcurrentBag<Exception>();
-
-                foreach (var handleRequests in handlerChain)
-                {
-                    handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
-                    context.Span =handlerSpans[handleRequests.Name.ToString()];
-                    tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
-                    context.Span = span;
-                }
 
                 try
                 {
+                    var tasks = new List<Task>();
+                    foreach (var handleRequests in handlerChain)
+                    {
+                        handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
+                        context.Span =handlerSpans[handleRequests.Name.ToString()];
+                        tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
+                        context.Span = span;
+                    }
+                    
                     await Task.WhenAll(tasks).ConfigureAwait(continueOnCapturedContext);
                 }
                 catch (Exception e)
