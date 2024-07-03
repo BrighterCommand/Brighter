@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Send
         {
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCancellableCommandHandlerAsync>();
-            var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(_receivedMessages));
+            var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(_receivedMessages));
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyCommand>.ClearPipelineCache();

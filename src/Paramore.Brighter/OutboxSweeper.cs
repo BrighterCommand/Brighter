@@ -72,7 +72,7 @@ namespace Paramore.Brighter
             var context = _requestContextFactory.Create();
             context.Span = span;
             
-            _commandProcessor.ClearOutbox(_batchSize, _millisecondsSinceSent, context, _args);
+            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _millisecondsSinceSent, true, context, _args);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Paramore.Brighter
             var context = _requestContextFactory.Create();
             context.Span = span;
             
-            _commandProcessor.ClearAsyncOutbox(_batchSize, _millisecondsSinceSent, _useBulk, context, _args);
+            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _millisecondsSinceSent, _useBulk, context, _args);
         }
     }
 }

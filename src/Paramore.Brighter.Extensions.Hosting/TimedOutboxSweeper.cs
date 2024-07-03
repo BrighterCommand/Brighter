@@ -45,7 +45,8 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private void OnElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
         {
-            if (_distributedLock.ObtainLock(LockingResourceName))
+            var lockId = _distributedLock.ObtainLock(LockingResourceName); 
+            if (lockId != null)
             {
                 s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
 
@@ -74,7 +75,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 }
                 finally
                 {
-                    _distributedLock.ReleaseLock(LockingResourceName);
+                    _distributedLock.ReleaseLock(LockingResourceName, lockId);
                     scope.Dispose();
                     ((Timer)sender).Enabled = true;
                 }

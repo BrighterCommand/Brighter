@@ -52,46 +52,55 @@ namespace Paramore.Brighter
         /// Awaitable add the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
         Task AddAsync(
             T message,
+            RequestContext requestContext,
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default
+        );
 
         /// <summary>
         /// Awaitable add the specified message.
         /// </summary>
         /// <param name="messages">The message.</param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
         Task AddAsync(
-            IEnumerable<T> messages, 
+            IEnumerable<T> messages,
+            RequestContext requestContext,
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default
+        );
 
         /// <summary>
         /// Delete the specified messages
         /// </summary>
         /// <param name="messageIds">The id of the message to delete</param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
         Task DeleteAsync(
-            string[] messageIds, 
+            string[] messageIds,
+            RequestContext requestContext,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default
-            );
-        
+        );
+
         /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
         /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
         /// <param name="outboxTimeout">Timeout of sql call.</param>
@@ -100,64 +109,75 @@ namespace Paramore.Brighter
         /// <returns>List of messages that need to be dispatched.</returns>
         Task<IEnumerable<Message>> DispatchedMessagesAsync(
             double millisecondsDispatchedSince,
+            RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             int outboxTimeout = -1,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default);
-        
+            CancellationToken cancellationToken = default
+        );
+
         /// <summary>
         /// Awaitable Get the specified message identifier.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
         Task<Message> GetAsync(
-            string messageId, 
+            string messageId,
+            RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default);
-        
+            CancellationToken cancellationToken = default
+        );
+
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
         /// <param name="id">The id of the message to update</param>
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">A dictionary of provider specific arguments</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         Task MarkDispatchedAsync(
-            string id, 
-            DateTime? dispatchedAt = null, 
-            Dictionary<string, object> args = null, 
+            string id,
+            RequestContext requestContext,
+            DateTime? dispatchedAt = null,
+            Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Update messages to show it is dispatched
         /// </summary>
         /// <param name="ids">The ids of the messages to update</param>
+        /// <param name="requestContext"></param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">A dictionary of provider specfic arguments</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         Task MarkDispatchedAsync(
             IEnumerable<string> ids,
+            RequestContext requestContext,
             DateTime? dispatchedAt = null,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default);
- 
+
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="requestContext"></param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
         Task<IEnumerable<Message>> OutstandingMessagesAsync(
-            double millSecondsSinceSent, 
-            int pageSize = 100, 
+            double millSecondsSinceSent,
+            RequestContext requestContext,
+            int pageSize = 100,
             int pageNumber = 1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default);

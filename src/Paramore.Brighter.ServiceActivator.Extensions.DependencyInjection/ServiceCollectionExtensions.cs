@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
@@ -33,6 +34,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
            configure?.Invoke(options);
            services.TryAddSingleton<IBrighterOptions>(options);
            services.TryAddSingleton<IServiceActivatorOptions>(options);
+           services.TryAddSingleton<BrighterTracer>();
            
            services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
                (serviceProvider) => (IDispatcher)BuildDispatcher(serviceProvider),
@@ -77,7 +79,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
-                .DefaultChannelFactory(options.ChannelFactory)
+                .ChannelFactory(options.DefaultChannelFactory)
                 .Subscriptions(options.Subscriptions).Build();
         }
     }

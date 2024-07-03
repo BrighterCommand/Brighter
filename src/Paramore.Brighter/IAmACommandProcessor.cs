@@ -132,6 +132,7 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="batchId">The id of the deposit batch, if this isn't set items will be added to the outbox as they come in and not as a batch</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
@@ -139,7 +140,8 @@ namespace Paramore.Brighter
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext requestContext = null,
-            Dictionary<string, object> args = null
+            Dictionary<string, object> args = null,
+            string batchId = null
             ) where TRequest : class, IRequest;
 
         /// <summary>
@@ -213,6 +215,7 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <param name="batchId">The id of the deposit batch, if this isn't set items will be added to the outbox as they come in and not as a batch</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
@@ -222,7 +225,8 @@ namespace Paramore.Brighter
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default
+            CancellationToken cancellationToken = default,
+            string batchId = null
             ) where T : class, IRequest;
 
         /// <summary>
@@ -283,16 +287,6 @@ namespace Paramore.Brighter
         void ClearOutbox(string[] ids, RequestContext requestContext = null, Dictionary<string, object> args = null);
 
         /// <summary>
-        /// Flushes any outstanding message box message to the broker.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
-        /// </summary>
-        /// <param name="amountToClear">The maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, RequestContext requestContext = null, Dictionary<string, object> args = null);
-
-        /// <summary>
         /// Flushes the message box message given by <param name="posts"/> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
@@ -307,7 +301,7 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default);
-
+        
         /// <summary>
         /// Flushes any outstanding message box message to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
@@ -317,7 +311,7 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        void ClearAsyncOutbox(
+        void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
             int minimumAge = 5000, 
             bool useBulk = false, 

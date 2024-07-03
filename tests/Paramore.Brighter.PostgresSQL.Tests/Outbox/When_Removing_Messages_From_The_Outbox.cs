@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
@@ -39,7 +38,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly Message _firstMessage;
         private readonly Message _secondMessage;
         private readonly Message _thirdMessage;
-        private IEnumerable<Message> _retrievedMessages;
         private readonly PostgreSqlOutbox _sqlOutbox;
 
         public SqlOutboxDeletingMessagesTests()
@@ -63,21 +61,27 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            _sqlOutbox.Add(_firstMessage);
-            _sqlOutbox.Add(_secondMessage);
-            _sqlOutbox.Add(_thirdMessage);
+            //arrange
+            var context = new RequestContext();
             
-            _sqlOutbox.Delete([_firstMessage.Id]);
-
-            var remainingMessages = _sqlOutbox.OutstandingMessages(0);
-
-            remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_secondMessage);
-            remainingMessages.Should().Contain(_thirdMessage);
+            //act
+            _sqlOutbox.Add(_firstMessage, context);
+            _sqlOutbox.Add(_secondMessage, context);
+            _sqlOutbox.Add(_thirdMessage, context);
             
-            _sqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id});
+            _sqlOutbox.Delete([_firstMessage.Id], context);
 
-            var messages = _sqlOutbox.OutstandingMessages(0);
+            //assert
+            var remainingMessages = _sqlOutbox.OutstandingMessages(0, context);
+
+            var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
+            msgs.Should().HaveCount(2);
+            msgs.Should().Contain(_secondMessage);
+            msgs.Should().Contain(_thirdMessage);
+            
+            _sqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id}, context);
+
+            var messages = _sqlOutbox.OutstandingMessages(0, context);
 
             messages.Should().HaveCount(0);
         }

@@ -63,29 +63,31 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             var inbox = new InMemoryInbox(timeProvider)
             {
                 //set some aggressive outbox reclamation times for the test
-                EntryTimeToLive = TimeSpan.FromMilliseconds(500),
+                EntryTimeToLive = TimeSpan.FromMilliseconds(1),
                 ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
             };
 
-            var earlyCommands = new SimpleCommand[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};            
-            
             //Act
+            var earlyCommands = new[] {new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};            
             foreach (var command in earlyCommands)
             {
                 await inbox.AddAsync(command, contextKey);
             }
             
-            //expire these
-            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
+            //allow any sweeper to expire
+            await Task.Delay(1000);
+            
+            //expire these and allow another expiration to run
+            timeProvider.Advance(TimeSpan.FromSeconds(5));
 
-            await Task.Delay(500); //Give the sweep time to run
-
-            var lateCommands = new SimpleCommand[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
-
+            //add live entries
+            var lateCommands = new[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
             foreach (var command in lateCommands) //This will trigger cleanup
             {
                 await inbox.AddAsync(command, contextKey);
             }
+            
+            await Task.Delay(500); //Give the sweep time to run and clear the old entries
             
             //Assert
             inbox.EntryCount.Should().Be(3);

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -35,8 +36,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly SnsPublication _publication;
         private readonly AWSClientFactory _clientFactory;
         
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
         public Publication Publication { get { return _publication; } }
 
+        /// <summary>
+        /// The OTel Span we are writing Producer events too
+        /// </summary>
+        public Activity Span { get; set; }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>

@@ -6,6 +6,7 @@
         <Nullable>enable</Nullable>
         <Title>This is the Azure Distributed Locking Provider.</Title>
         <Authors>Paul Reardon</Authors>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>

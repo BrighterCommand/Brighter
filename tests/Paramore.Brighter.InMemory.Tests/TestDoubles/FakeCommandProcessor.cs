@@ -84,7 +84,8 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             T request, 
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
-            Dictionary<string, object> args = null) where T : class, IRequest
+            Dictionary<string, object> args = null,
+            string batchId = null) where T : class, IRequest
         {
             return DepositPost(request);
         }
@@ -137,7 +138,8 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false, 
-            CancellationToken cancellationToken = default) 
+            CancellationToken cancellationToken = default,
+            string batchId = null) 
             where T : class, IRequest
         {
             return DepositPostAsync(request, requestContext, args, continueOnCapturedContext, cancellationToken);
@@ -179,18 +181,6 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             }
         }
 
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, RequestContext requestContext = null, Dictionary<string, object> args = null)
-        {
-            var depositedMessages = Deposited.Where(m =>
-                m.EnqueuedTime < timeProvider.GetUtcNow().DateTime.AddMilliseconds(-1 * minimumAge) &&
-                !Dispatched.ContainsKey(m.Request.Id))
-                .Take(amountToClear)
-                .Select(m => m.Request.Id)
-                .ToArray();
-
-            ClearOutbox(depositedMessages, requestContext);
-        }
-
         public Task ClearOutboxAsync(
             IEnumerable<string> posts, 
             RequestContext requestContext = null,
@@ -210,23 +200,21 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
         }
 
-        public void ClearAsyncOutbox(
+        public void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
             int minimumAge = 5000, 
             bool useBulk = false, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null)
         {
-            ClearOutbox(amountToClear, minimumAge, requestContext);
-        }
+            var depositedMessages = Deposited.Where(m =>
+                    m.EnqueuedTime < timeProvider.GetUtcNow().DateTime.AddMilliseconds(-1 * minimumAge) &&
+                    !Dispatched.ContainsKey(m.Request.Id))
+                .Take(amountToClear)
+                .Select(m => m.Request.Id)
+                .ToArray();
 
-        public Task BulkClearOutboxAsync(
-            IEnumerable<string> posts, 
-            RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default)
-        {
-            return ClearOutboxAsync(posts, requestContext, null, continueOnCapturedContext, cancellationToken);
+            ClearOutbox(depositedMessages, requestContext);
         }
 
         public TResponse Call<T, TResponse>(T request, RequestContext requestContext = null, int timeOutInMilliseconds = 500) where T : class, ICall where TResponse : class, IResponse

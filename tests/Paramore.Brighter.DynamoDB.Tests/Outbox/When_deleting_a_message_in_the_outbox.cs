@@ -17,14 +17,16 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
             new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
             new MessageBody("message body")
             );
+        
+        var context = new RequestContext();
         var dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
-        dynamoDbOutbox.Add(message);
+        dynamoDbOutbox.Add(message, context);
 
         // act
-        dynamoDbOutbox.Delete([message.Id]);
+        dynamoDbOutbox.Delete([message.Id], context);
 
         // assert
-        var foundMessage = dynamoDbOutbox.Get(message.Id);
+        var foundMessage = dynamoDbOutbox.Get(message.Id, context);
         foundMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
     }
     
@@ -33,14 +35,15 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
     {
         // arrange
         var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+        var context = new RequestContext();
         var dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
-        await dynamoDbOutbox.AddAsync(message);
+        await dynamoDbOutbox.AddAsync(message, context);
 
         // act
-        await dynamoDbOutbox.DeleteAsync([message.Id]);
+        await dynamoDbOutbox.DeleteAsync([message.Id], context);
 
         // assert
-        var foundMessage = await dynamoDbOutbox.GetAsync(message.Id);
+        var foundMessage = await dynamoDbOutbox.GetAsync(message.Id, context);
         foundMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
     }
 }

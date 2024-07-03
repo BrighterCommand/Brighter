@@ -24,8 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
@@ -72,19 +70,20 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            _outbox.Add(_firstMessage);
-            _outbox.Add(_secondMessage);
-            _outbox.Add(_thirdMessage);
+            var context = new RequestContext();
+            _outbox.Add(_firstMessage, context);
+            _outbox.Add(_secondMessage, context);
+            _outbox.Add(_thirdMessage, context);
 
-            _outbox.Delete([_firstMessage.Id, _thirdMessage.Id]);
+            _outbox.Delete([_firstMessage.Id, _thirdMessage.Id], context);
 
-            _outbox.Get(_secondMessage.Id).Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-            _outbox.Get(_firstMessage.Id).Header.MessageType.Should().Be(MessageType.MT_NONE);
-            _outbox.Get(_thirdMessage.Id).Header.MessageType.Should().Be(MessageType.MT_NONE);
+            _outbox.Get(_secondMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+            _outbox.Get(_firstMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_NONE);
+            _outbox.Get(_thirdMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_NONE);
             
-            _outbox.Delete([_secondMessage.Id]);
+            _outbox.Delete([_secondMessage.Id], context);
 
-            var messages = _outbox.Get(_secondMessage.Id).Should().NotBeNull();
+            _outbox.Get(_secondMessage.Id, context).Should().NotBeNull();
         }
 
         public async ValueTask DisposeAsync()

@@ -5,7 +5,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -16,25 +18,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
     [Collection("CommandProcessor")]
     public class CommandProcessorDepositPostTestsAsync: IDisposable
     {
-        
+        private const string Topic = "MyCommand";
+
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly InMemoryOutbox _outbox;
+        private readonly InternalBus _internalBus = new();
 
         public CommandProcessorDepositPostTestsAsync()
         {
-            var topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _producer = new FakeMessageProducerWithPublishConfirmation
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(_internalBus, timeProvider)
             {
-                Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyCommand) }
+                Publication = { Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand) }
             };
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -52,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            PolicyRegistry policyRegistry = new PolicyRegistry
+            var policyRegistry = new PolicyRegistry
             {
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
@@ -60,10 +63,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _producer },
+                { Topic, producer },
             });
-            
-            _fakeOutbox = new FakeOutbox();
+
+            var tracer = new BrighterTracer();
+            _outbox = new InMemoryOutbox(timeProvider) { Tracer = tracer };
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -71,7 +75,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                _fakeOutbox
+                tracer,
+                _outbox
             );
         
             CommandProcessor.ClearServiceBus();
@@ -86,15 +91,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         public async Task When_depositing_a_message_in_the_outbox()
         {
             //act
-            var postedMessageId = await _commandProcessor.DepositPostAsync(_myCommand);
+            await _commandProcessor.DepositPostAsync(_myCommand);
+            var context  = new RequestContext();
             
             //assert
             //message should not be posted
-            _producer.MessageWasSent.Should().BeFalse();
+            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
             
             //message should be in the store
-            var depositedPost = _fakeOutbox
-                .OutstandingMessages(0)
+            var depositedPost = _outbox
+                .OutstandingMessages(0, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 
             depositedPost.Should().NotBeNull();
@@ -106,7 +112,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = await _fakeOutbox.OutstandingMessagesAsync(0);
+            var outstandingMessages = await _outbox.OutstandingMessagesAsync(0, context);
             var outstandingMessage = outstandingMessages.Single();
             outstandingMessage.Id.Should().Be(_message.Id);
         }

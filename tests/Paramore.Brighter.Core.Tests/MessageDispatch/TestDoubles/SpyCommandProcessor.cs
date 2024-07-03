@@ -140,7 +140,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
-            Dictionary<string, object> args = null) 
+            Dictionary<string, object> args = null,
+            string batchId = null) 
             where TRequest : class, IRequest
         {
             return DepositPost(request);
@@ -193,7 +194,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
             bool continueOnCapturedContext = false, 
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            string batchId = null)
             where TRequest : class, IRequest
         {
             _postBox.Add(request.Id, request);
@@ -241,20 +243,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
                 }
             }
         }
-
-        public void ClearOutbox(
-            int amountToClear = 100, 
-            int minimumAge = 5000, 
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null)
-        {
-            Commands.Add(CommandType.Clear);
-            ClearParamsList.Add(new ClearParams
-            {
-                AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args
-            });
-        }
-
+ 
         public async Task ClearOutboxAsync(
             IEnumerable<string> posts, 
             RequestContext requestContext = null,
@@ -262,14 +251,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
             ClearOutbox(posts.ToArray());
 
-            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
 
-        public void ClearAsyncOutbox(
+        public void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
             int minimumAge = 5000, 
             bool useBulk = false,
@@ -281,15 +271,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             {
                 AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args
             });
-        }
-
-        public Task BulkClearOutboxAsync(
-            IEnumerable<string> posts, 
-            RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default)
-        {
-            return ClearOutboxAsync(posts, requestContext, null, continueOnCapturedContext, cancellationToken);
         }
 
         public TResponse Call<T, TResponse>(

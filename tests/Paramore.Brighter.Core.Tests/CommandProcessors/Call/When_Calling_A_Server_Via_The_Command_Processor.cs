@@ -5,7 +5,7 @@ using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -15,28 +15,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
     [Collection("CommandProcessor")]
     public class CommandProcessorCallTests : IDisposable
     {
+        private const string Topic = "MyRequest";
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
         private readonly Message _message;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
-
+        private readonly InternalBus _bus = new() ;
 
         public CommandProcessorCallTests()
         {
-            const string topic = "MyRequest";
             _myRequest.RequestValue = "Hello World";
 
-            _producer = new FakeMessageProducerWithPublishConfirmation();
-            _producer.Publication = new Publication{Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)};
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(_bus, timeProvider);
+            producer.Publication = new Publication{Topic = new RoutingKey(Topic), RequestType = typeof(MyRequest)};
 
             var header = new MessageHeader(
                 messageId: _myRequest.Id, 
-                topic: topic, 
+                topic: Topic, 
                 messageType:MessageType.MT_COMMAND,
                 correlationId: _myRequest.ReplyAddress.CorrelationId,
                 replyTo: _myRequest.ReplyAddress.Topic);
 
-            var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(_myRequest.Id.ToString(), _myRequest.RequestValue), JsonSerialisationOptions.Options));
+            var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(_myRequest.Id, _myRequest.RequestValue), JsonSerialisationOptions.Options));
             _message = new Message(header, body);
  
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
-            var handlerFactory = new TestHandlerFactorySync<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
+            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyResponseHandler());
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -63,9 +63,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            InMemoryChannelFactory inMemoryChannelFactory = new InMemoryChannelFactory();
-            //we need to seed the response as the fake producer does not actually send across the wire
-            inMemoryChannelFactory.SeedChannel(new[] {_message});
+            var internalBus = new InternalBus();
+            InMemoryChannelFactory inMemoryChannelFactory = new(internalBus, TimeProvider.System);
             
             var replySubs = new List<Subscription>
             {
@@ -80,16 +79,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _producer },
+                    { Topic, producer },
                 });
-        
+
+            var tracer = new BrighterTracer();
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry,           
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                new InMemoryOutbox(new FakeTimeProvider()));
+                tracer,
+                new InMemoryOutbox(timeProvider){Tracer = tracer});
         
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
@@ -106,19 +107,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
   
         }
 
-
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor()
         {
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOutInMilliseconds: 500);
             
-            //should send a message via the messaging gateway
-            _producer.MessageWasSent.Should().BeTrue();
+            var message = _bus.Dequeue(new RoutingKey(Topic));
 
-            //should convert the command into a message
-            _producer.SentMessages[0].Should().Be(_message);
+            message.Should().Be(_message);
             
-            //should forward response to a handler
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
 
         }

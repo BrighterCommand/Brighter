@@ -33,6 +33,7 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
@@ -46,6 +47,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly Random _random = new Random();
 
         public bool ContinueOnCapturedContext { get; set; }
+        
+        /// <summary>
+        /// The Tracer that we want to use to capture telemetry
+        /// We inject this so that we can use the same tracer as the calling application
+        /// You do not need to set this property as we will set it when setting up the External Service Bus
+        /// </summary>
+        public IAmABrighterTracer Tracer { private get; set; } 
 
         /// <summary>
         ///  Initialises a new instance of the <see cref="DynamoDbOutbox"/> class.
@@ -90,32 +98,36 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Adds a message to the Outbox
         /// </summary>       
         /// <param name="message">The message to be stored</param>
+        /// <param name="requestContext">What is the context of this request; used to provide Span information to the call</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="transactionProvider">Should we participate in a transaction</param>
         public void Add(
             Message message, 
+            RequestContext requestContext,
             int outBoxTimeout = -1, 
             IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null
             )
         {
-            AddAsync(message, outBoxTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
+            AddAsync(message, requestContext, outBoxTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
-        /// <inheritdoc />
         /// <summary>
         /// Adds messages to the Outbox
         /// </summary>       
         /// <param name="messages">The messages to be stored</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="transactionProvider">Should we participate in a transaction</param>
         public void Add(
-            IEnumerable<Message> messages, int outBoxTimeout = -1, 
+            IEnumerable<Message> messages, 
+            RequestContext requestContext,
+            int outBoxTimeout = -1, 
             IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null
             )
         {
             foreach (var message in messages)
             {
-                Add(message, outBoxTimeout, transactionProvider);
+                Add(message, requestContext, outBoxTimeout, transactionProvider);
             }
         }
 
@@ -123,10 +135,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Adds a message to the Outbox
         /// </summary>
         /// <param name="message">The message to be stored</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="transactionProvider">Should we participate in a transaction</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task AddAsync(Message message,
+        public async Task AddAsync(
+            Message message,
+            RequestContext requestContext,
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null,
             CancellationToken cancellationToken = default)
@@ -149,17 +164,20 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Adds messages to the Outbox
         /// </summary>
         /// <param name="messages">The messages to be stored</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="transactionProvider"></param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task AddAsync(IEnumerable<Message> messages,
+        public async Task AddAsync(
+            IEnumerable<Message> messages,
+            RequestContext requestContext,
             int outBoxTimeout = -1,
             IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
             foreach (var message in messages)
             {
-                await AddAsync(message, outBoxTimeout, transactionProvider, cancellationToken);
+                await AddAsync(message, requestContext, outBoxTimeout, transactionProvider, cancellationToken);
             }
         }
 
@@ -167,31 +185,37 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Delete messages from the Outbox
         /// </summary>
         /// <param name="messageIds">The messages to delete</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="args">Additional parameters required to search if needed</param>
-        public void Delete(string[] messageIds, Dictionary<string, object> args = null)
+        public void Delete(string[] messageIds, RequestContext requestContext, Dictionary<string, object> args = null)
         {
-            DeleteAsync(messageIds).GetAwaiter().GetResult();
+            DeleteAsync(messageIds, requestContext).GetAwaiter().GetResult();
         }
 
         /// <summary>
         /// Delete messages from the Outbox
         /// </summary>
         /// <param name="messageIds">The messages to delete</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="args">Additional parameters required to search if needed</param>
         /// <param name="cancellationToken">Should the operation be cancelled</param>
-        public async Task DeleteAsync(string[] messageIds, Dictionary<string, object> args = null,
+        public async Task DeleteAsync(
+            string[] messageIds, 
+            RequestContext requestContext,
+            Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
             foreach (var messageId in messageIds)
             {
-                await _context.DeleteAsync<MessageItem>(messageId.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
+                await _context.DeleteAsync<MessageItem>(messageId, _dynamoOverwriteTableConfig, cancellationToken);
             }
         }
-        
+
         /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
         /// <param name="outboxTimeout"></param>
@@ -199,6 +223,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
             double millisecondsDispatchedSince, 
+            RequestContext requestContext,
             int pageSize = 100, 
             int pageNumber = 1, 
             int outboxTimeout = -1,
@@ -231,6 +256,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
         /// <param name="outboxTimeout"></param>
@@ -239,13 +265,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns>A list of dispatched messages</returns>
         /// <exception cref="ArgumentException"></exception>
         public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
-            double millisecondsDispatchedSince, 
-            int pageSize = 100, 
+            double millisecondsDispatchedSince,
+            RequestContext requestContext,
+            int pageSize = 100,
             int pageNumber = 1,
-            int outboxTimeout = -1, 
-            Dictionary<string, object> args = null, 
-            CancellationToken cancellationToken = default
-            )
+            int outboxTimeout = -1,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
             if (args == null)
             {
@@ -274,28 +300,30 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Returns messages that have been successfully dispatched. Eventually consistent. 
         /// </summary>
         /// <param name="hoursDispatchedSince">How many hours back to look</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">The number of results to return. Only returns this number of results</param>
         /// <param name="cancellationToken">How to cancel</param>
         /// <returns></returns>
         public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
             int hoursDispatchedSince, 
+            RequestContext requestContext,
             int pageSize = 100,
             CancellationToken cancellationToken = default
             )
         {
             var hoursToMilliseconds = TimeSpan.FromHours(hoursDispatchedSince).Milliseconds;
-            return await DispatchedMessagesAsync(hoursToMilliseconds, pageSize, 1, -1, null, cancellationToken);
+            return await DispatchedMessagesAsync(hoursToMilliseconds, requestContext, pageSize: pageSize, pageNumber: 1, outboxTimeout: -1, args: null, cancellationToken: cancellationToken);
         }
 
-        /// <inheritdoc />
         /// <summary>
         ///  Finds a message with the specified identifier.
         /// </summary>
         /// <param name="messageId">The identifier.</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="args"></param>
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
-        public Message Get(string messageId, int outBoxTimeout = -1, Dictionary<string, object> args = null)
+        public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object> args = null)
         {
             return GetMessage(messageId)
                 .ConfigureAwait(ContinueOnCapturedContext)
@@ -308,12 +336,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Finds a message with the specified identifier.
         /// </summary>
         /// <param name="messageId">The identifier.</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken"></param>
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
         public async Task<Message> GetAsync(
             string messageId,
+            RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
@@ -326,17 +356,18 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Update a message to show it is dispatched
         /// </summary>
         /// <param name="id">The id of the message to update</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args"></param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(
-            string id, 
-            DateTime? dispatchedAt = null, 
-            Dictionary<string, object> args = null, 
-            CancellationToken cancellationToken = default
-            )
+            string id,
+            RequestContext requestContext,
+            DateTime? dispatchedAt = null,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
-            var message = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken)
+            var message = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
             MarkMessageDispatched(dispatchedAt ?? DateTime.UtcNow, message);
 
@@ -346,14 +377,24 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
        }
 
-        public async Task MarkDispatchedAsync(IEnumerable<string> ids,
+        /// <summary>
+        /// Marks a set of messages as dispatched in the Outbox
+        /// </summary>
+        /// <param name="ids">The ides of the messages to mark as dispatched</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="dispatchedAt">What time were the messages dispatched at? Defaults to Utc.Now</param>
+        /// <param name="args">What is the topic of the message</param>
+        /// <param name="cancellationToken">Cancel an ongoing operation</param>
+        public async Task MarkDispatchedAsync(
+            IEnumerable<string> ids,
+            RequestContext requestContext,
             DateTime? dispatchedAt = null,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
             foreach(var messageId in ids)
             {
-                await MarkDispatchedAsync(messageId, dispatchedAt, args, cancellationToken);
+                await MarkDispatchedAsync(messageId, requestContext, dispatchedAt, args, cancellationToken);
             }
         }
 
@@ -361,11 +402,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Update a message to show it is dispatched
         /// </summary>
         /// <param name="id">The id of the message to update</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args"></param>
-        public void MarkDispatched(string id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+        public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            var message = _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig).Result;
+            var message = _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig).Result;
             MarkMessageDispatched(dispatchedAt ?? DateTime.UtcNow, message);
 
             _context.SaveAsync(
@@ -385,12 +427,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Returns messages that have yet to be dispatched
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago as the message sent?</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
         /// <param name="args"></param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public IEnumerable<Message> OutstandingMessages(
          double millisecondsDispatchedSince, 
+         RequestContext requestContext,
          int pageSize = 100, 
          int pageNumber = 1, 
          Dictionary<string, object> args = null)
@@ -419,15 +463,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Returns messages that have yet to be dispatched
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago as the message sent?</param>
+        /// <param name="requestContext"></param>
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
         /// <param name="args"></param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
-            double millisecondsDispatchedSince, 
-            int pageSize = 100, 
-            int pageNumber = 1, 
+            double millisecondsDispatchedSince,
+            RequestContext requestContext,
+            int pageSize = 100,
+            int pageNumber = 1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
@@ -461,7 +507,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
        
         private async Task<Message> GetMessage(string id, CancellationToken cancellationToken = default)
         {
-            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
+            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();
         }
         

@@ -46,7 +46,8 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private async Task Archive(object state, CancellationToken cancellationToken)
         {
-            if (await distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken))
+            var lockId = await distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
+            if (lockId != null)
             {
                 var scope = serviceScopeFactory.CreateScope();
                 s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
@@ -54,7 +55,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 {
                     IAmAnExternalBusService externalBusService = scope.ServiceProvider.GetService<IAmAnExternalBusService>();
                     
-                    await externalBusService.ArchiveAsync(options.MinimumAge, cancellationToken);
+                    await externalBusService.ArchiveAsync(options.MinimumAge,  new RequestContext(), cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -62,7 +63,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 }
                 finally
                 {
-                    await distributedLock.ReleaseLockAsync(LockingResourceName, cancellationToken);
+                    await distributedLock.ReleaseLockAsync(LockingResourceName, lockId, cancellationToken);
                 }
 
                 s_logger.LogInformation("Outbox Sweeper sleeping");

@@ -24,12 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -39,22 +41,27 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class CommandProcessorWithInMemoryOutboxAscyncTests : IDisposable
     {
+        private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly InMemoryOutbox _outbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly InternalBus _internalBus = new();
 
         public CommandProcessorWithInMemoryOutboxAscyncTests()
         {
-            const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            _outbox = new InMemoryOutbox(new FakeTimeProvider());
-            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            var timeProvider = new FakeTimeProvider();
+            var tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
+            InMemoryProducer producer = new(_internalBus, timeProvider)
+            {
+                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+            };
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -73,13 +80,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _producer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{Topic, producer},});
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
+                tracer,
                 _outbox
             );
 
@@ -96,11 +104,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             await _commandProcessor.PostAsync(_myCommand);
 
-            var message = await _outbox.GetAsync(_myCommand.Id);
+            var message = await _outbox.GetAsync(_myCommand.Id, new RequestContext());
             //_should_store_the_message_in_the_sent_command_message_repository
             message.Should().NotBeNull();
             //_should_send_a_message_via_the_messaging_gateway
-            _producer.MessageWasSent.Should().BeTrue();
+            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
             //_should_convert_the_command_into_a_message
             message.Should().Be(_message);
         }

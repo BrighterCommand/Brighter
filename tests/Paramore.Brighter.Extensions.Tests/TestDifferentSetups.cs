@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly;
@@ -37,7 +38,10 @@ namespace Tests
             var producerRegistry = new ProducerRegistry(
                 new Dictionary<string, IAmAMessageProducer>
                 {
-                    { mytopic, new FakeProducer{ Publication = { Topic = new RoutingKey(mytopic)}} },
+                    { mytopic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+                    {
+                        Publication = { Topic = new RoutingKey(mytopic)}
+                    } },
                 });
             
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -109,36 +113,5 @@ namespace Tests
             Assert.NotNull(commandProcessor);
         }
 
-    }
-
-    internal class FakeProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
-    {
-        public List<Message> SentMessages { get; } = new();
-        
-        public Publication Publication { get; } = new();
-
-        public void Dispose()
-        {
-            SentMessages.Clear();
-        }
-
-        public Task SendAsync(Message message)
-        {
-            var tcs = new TaskCompletionSource();
-            Send(message);
-            tcs.SetResult();
-            return tcs.Task;
-        }
-
-        public void Send(Message message)
-        {
-            SentMessages.Add(message); 
-        }
-
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
-        {
-            Task.Delay(TimeSpan.FromMilliseconds(delayMilliseconds)).Wait();
-            Send(message);
-        }
     }
 }

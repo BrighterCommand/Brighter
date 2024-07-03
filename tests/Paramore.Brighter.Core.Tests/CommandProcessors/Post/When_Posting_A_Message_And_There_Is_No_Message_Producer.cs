@@ -23,11 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Registry;
@@ -40,23 +41,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     public class CommandProcessorPostMissingMessageProducerTests : IDisposable
     {
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly InMemoryOutbox _outbox;
         private Exception _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
         private readonly RetryPolicy _retryPolicy;
         private readonly CircuitBreakerPolicy _circuitBreakerPolicy;
+        private readonly IAmABrighterTracer _tracer;
 
         public CommandProcessorPostMissingMessageProducerTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
-
-            _message = new Message(
-                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-                );
+            var timeProvider = new FakeTimeProvider();
+            _tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = _tracer};
 
             _messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -83,7 +81,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 _messageMapperRegistry,
                  new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                _fakeOutbox)
+                _tracer,
+                _outbox)
             );               
 
             _exception.Should().BeOfType<ConfigurationException>();

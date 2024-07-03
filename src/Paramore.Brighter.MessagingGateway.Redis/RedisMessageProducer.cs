@@ -24,9 +24,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
@@ -57,7 +59,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
         public Publication Publication { get { return _publication; } }
+        
+        /// <summary>
+        /// The OTel Span we are writing Producer events too
+        /// </summary>
+        public Activity Span { get; set; }
 
         public RedisMessageProducer(
              RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 

@@ -64,7 +64,7 @@ builder.Services.AddServiceActivator(options =>
                 requeueCount: 5
             )
         };
-        options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+        options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
     })
     .MapperRegistry(r =>
     {

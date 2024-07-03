@@ -32,7 +32,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public MyEvent() : base(Guid.NewGuid())
         {
-            Data = 7;
         }
 
         public bool Equals(MyEvent other)

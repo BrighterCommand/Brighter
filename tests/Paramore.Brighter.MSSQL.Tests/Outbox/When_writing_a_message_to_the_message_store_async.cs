@@ -47,6 +47,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly MsSqlTestHelper _msSqlTestHelper;
+        private readonly RequestContext _requestContext = new();
 
         public SqlOutboxWritingMessageAsyncTests ()
         {
@@ -71,15 +72,15 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _message = new Message(messageHeader, new MessageBody("message body"));
-            _sqlOutbox.Add(_message);
+            _sqlOutbox.Add(_message, _requestContext);
         }
 
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_message);
+            await _sqlOutbox.AddAsync(_message, _requestContext);
 
-            _storedMessage = await _sqlOutbox.GetAsync(_message.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_message.Id, _requestContext);
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);
             //should read the header from the sql outbox
