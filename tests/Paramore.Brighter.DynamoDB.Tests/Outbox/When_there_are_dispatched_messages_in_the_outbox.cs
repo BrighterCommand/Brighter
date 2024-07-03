@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -13,11 +14,13 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 {
     private readonly Message _message;
     private readonly DynamoDbOutbox _dynamoDbOutbox;
+    private readonly FakeTimeProvider _fakeTimeProvider;
 
     public DynamoDbOutboxDispatchedMessageTests()
     {
         _message = CreateMessage("test_topic");
-        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+        _fakeTimeProvider = new FakeTimeProvider();
+        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), _fakeTimeProvider);
     }
 
     [Fact]
@@ -27,7 +30,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         await _dynamoDbOutbox.AddAsync(_message, context);
         await _dynamoDbOutbox.MarkDispatchedAsync(_message.Id, context);
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
@@ -46,7 +49,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
         _dynamoDbOutbox.Add(_message, context);
         _dynamoDbOutbox.MarkDispatched(_message.Id, context);
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
@@ -72,7 +75,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
             await _dynamoDbOutbox.MarkDispatchedAsync(message.Id, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var dispatchedMessages = await _dynamoDbOutbox.DispatchedMessagesAsync(0, context, 100, 1);
 
@@ -100,7 +103,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
             _dynamoDbOutbox.MarkDispatched(message.Id, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var dispatchedMessages = _dynamoDbOutbox.DispatchedMessages(0, context, 100, 1);
 
@@ -131,7 +134,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
             await _dynamoDbOutbox.MarkDispatchedAsync(message.Id, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
@@ -167,7 +170,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
             _dynamoDbOutbox.MarkDispatched(message.Id, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
@@ -209,7 +212,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
             await _dynamoDbOutbox.MarkDispatchedAsync(message.Id, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         // Get the messages over 4 pages
         var dispatchedMessages = new List<Message>();
@@ -253,7 +256,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
             _dynamoDbOutbox.MarkDispatched(message.Id, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         // Get the messages over 4 pages
         var dispatchedMessages = new List<Message>();

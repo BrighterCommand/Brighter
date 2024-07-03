@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -13,11 +14,13 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 {
     private readonly Message _message;
     private readonly DynamoDbOutbox _dynamoDbOutbox;
+    private readonly FakeTimeProvider _fakeTimeProvider;
 
     public DynamoDbOutboxOutstandingMessageTests()
     {
+        _fakeTimeProvider = new FakeTimeProvider();
         _message = CreateMessage("test_topic");
-        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), _fakeTimeProvider);
     }
 
     [Fact]
@@ -26,7 +29,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var context = new RequestContext();
         await _dynamoDbOutbox.AddAsync(_message, context);
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
@@ -44,7 +47,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var context = new RequestContext();
         _dynamoDbOutbox.Add(_message, context);
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
@@ -69,7 +72,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
             await _dynamoDbOutbox.AddAsync(message, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var outstandingMessages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 1);
 
@@ -96,7 +99,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
             _dynamoDbOutbox.Add(message, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(0, context, 100, 1);
 
@@ -126,7 +129,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
             await _dynamoDbOutbox.AddAsync(message, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
@@ -161,7 +164,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
             _dynamoDbOutbox.Add(message, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
@@ -202,7 +205,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
             await _dynamoDbOutbox.AddAsync(message, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         // Get the messages over 4 pages
         var outstandingMessages = new List<Message>();
@@ -245,7 +248,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
             _dynamoDbOutbox.Add(message, context);
         }
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         // Get the messages over 4 pages
         var outstandingMessages = new List<Message>();
@@ -269,7 +272,8 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     private Message CreateMessage(string topic)
     {
         return new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_DOCUMENT),
+            new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_DOCUMENT, 
+                timeStamp: _fakeTimeProvider.GetUtcNow().DateTime),
             new MessageBody("message body")
         );
     }

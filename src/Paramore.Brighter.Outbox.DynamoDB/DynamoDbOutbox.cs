@@ -26,11 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -50,16 +46,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly DynamoDBContext _context;
         private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
         private readonly Random _random = new Random();
+        private readonly TimeProvider _timeProvider;
 
-        // Stores context of the current progress of any paged queries for outstanding or dispatched messages to particular topics
         private readonly ConcurrentDictionary<string, OutstandingTopicQueryContext> _outstandingTopicQueryContexts;
         private readonly ConcurrentDictionary<string, DispatchedTopicQueryContext> _dispatchedTopicQueryContexts;
 
-        // Stores the names of topics to which this outbox publishes messages. ConcurrentDictionary is used to provide thread safety but
-        // guarantee uniqueness of topic names
         private readonly ConcurrentDictionary<string, byte> _topicNames;
 
-        // Stores context of the current progress of paged queries to get outstanding or dispatched messages for all topics
         private OutstandingAllTopicsQueryContext _outstandingAllTopicsQueryContext;
         private DispatchedAllTopicsQueryContext _dispatchedAllTopicsQueryContext;
 
@@ -77,10 +70,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="client">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration)
+        public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration, 
+            TimeProvider timeProvider)
         {
             _configuration = configuration;
             _context = new DynamoDBContext(client);
+            _timeProvider = timeProvider;
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
             {
                 OverrideTableName = _configuration.TableName,
@@ -102,16 +97,21 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="context">An existing Dynamo Db Context</param>
         /// <param name="configuration">The Configuration from the context - the config is internal, so we can't grab the settings from it.</param>
-        public DynamoDbOutbox(DynamoDBContext context, DynamoDbConfiguration configuration)
+        public DynamoDbOutbox(DynamoDBContext context, DynamoDbConfiguration configuration, TimeProvider timeProvider)
         {
             _context = context;
             _configuration = configuration;
+            _timeProvider = timeProvider;
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
             
             if (_configuration.NumberOfShards > 20)
             {
                 throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
             }
+
+            _outstandingTopicQueryContexts = new ConcurrentDictionary<string, OutstandingTopicQueryContext>();
+            _dispatchedTopicQueryContexts = new ConcurrentDictionary<string, DispatchedTopicQueryContext>();
+            _topicNames = new ConcurrentDictionary<string, byte>();
         }
 
         /// <inheritdoc />
@@ -171,6 +171,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var expiresAt = GetExpirationTime();
             var messageToStore = new MessageItem(message, shard, expiresAt);
 
+            // Store the name of the topic as a key in a concurrent dictionary to ensure uniqueness & thread safety
             _topicNames.TryAdd(message.Header.Topic, 0);
 
             if (transactionProvider != null)
@@ -359,7 +360,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var message = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
-            MarkMessageDispatched(dispatchedAt ?? DateTime.UtcNow, message);
+            MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
 
             await _context.SaveAsync(
                 message, 
@@ -398,7 +399,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             var message = _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig).Result;
-            MarkMessageDispatched(dispatchedAt ?? DateTime.UtcNow, message);
+            MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
 
             _context.SaveAsync(
                 message, 
@@ -407,7 +408,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         }
 
-        private static void MarkMessageDispatched(DateTime dispatchedAt, MessageItem message)
+        private static void MarkMessageDispatched(DateTimeOffset dispatchedAt, MessageItem message)
         {
             message.DeliveryTime = dispatchedAt.Ticks;
             message.DeliveredAt = dispatchedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
@@ -464,7 +465,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(double millisecondsDispatchedSince, int pageSize, int pageNumber, 
             CancellationToken cancellationToken)
         {
-            var olderThan = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var olderThan = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
 
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1 && _outstandingAllTopicsQueryContext?.NextPage != pageNumber)
@@ -539,7 +540,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private async Task<IEnumerable<Message>> OutstandingMessagesForTopicAsync(double millisecondsDispatchedSince, int pageSize, int pageNumber,
             string topicName, CancellationToken cancellationToken)
         {
-            var olderThan = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var olderThan = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
 
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1)
@@ -608,7 +609,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             string topicName,
             CancellationToken cancellationToken)
         {
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var sinceTime = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
 
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1)
@@ -652,13 +653,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             int pageNumber,
             CancellationToken cancellationToken)
         {
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var sinceTime = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
 
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1 && _dispatchedAllTopicsQueryContext?.NextPage != pageNumber)
             {
                 var nextPageNumber = _dispatchedAllTopicsQueryContext?.NextPage ?? 1;
-                var errorMessage = $"Unable to query page {pageNumber} or dispatched messages for all topics - next available page is page {nextPageNumber}";
+                var errorMessage = $"Unable to query page {pageNumber} of dispatched messages for all topics - next available page is page {nextPageNumber}";
                 throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
             }
 
@@ -718,7 +719,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         private async Task<OutstandingMessagesQueryResult> PageOutstandingMessagesToBatchSizeAsync(
             string topicName, 
-            DateTime olderThan, 
+            DateTimeOffset olderThan, 
             int batchSize,
             int initialShardNumber, 
             string initialPaginationToken,
@@ -783,7 +784,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         private async Task<DispatchedMessagesQueryResult> PageDispatchedMessagesToBatchSizeAsync(
             string topicName,
-            DateTime sinceTime,
+            DateTimeOffset sinceTime,
             int batchSize,
             string initialPaginationToken,
             CancellationToken cancellationToken)
@@ -834,7 +835,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             if (_configuration.TimeToLive.HasValue)
             {
-                return DateTimeOffset.UtcNow.Add(_configuration.TimeToLive.Value).ToUnixTimeSeconds();
+                return _timeProvider.GetUtcNow().Add(_configuration.TimeToLive.Value).ToUnixTimeSeconds();
             }
 
             return null;

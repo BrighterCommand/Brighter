@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
@@ -185,7 +185,7 @@ namespace GreetingsWeb
              .UseExternalBus((configure) =>
              {
                  configure.ProducerRegistry = producerRegistry;
-                 configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration());
+                 configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration(), TimeProvider.System);
                  configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                  configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
                  configure.MaxOutStandingMessages = 5;
