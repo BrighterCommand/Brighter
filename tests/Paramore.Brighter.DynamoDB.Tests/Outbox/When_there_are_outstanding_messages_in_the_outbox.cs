@@ -54,4 +54,64 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         message.Should().NotBeNull();
         message.Body.Should().Be(_message.Body);
     }
+
+    [Fact]
+    public async Task When_there_are_outstanding_messages_for_multiple_topics_async()
+    {
+        var messages = new List<Message>();
+        messages.Add(CreateMessage("one_topic"));
+        messages.Add(CreateMessage("another_topic"));
+
+        foreach (var message in messages)
+        {
+            await _dynamoDbOutbox.AddAsync(message);
+        }
+
+        await Task.Delay(1000);
+
+        var outstandingMessages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, 100, 1);
+
+        //Other tests may leave messages, so make sure that we grab ours
+        foreach (var message in messages)
+        {
+            var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
+            outstandingMessage.Should().NotBeNull();
+            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
+            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+        }
+    }
+
+    [Fact]
+    public async Task When_there_are_outstanding_messages_for_multiple_topics()
+    {
+        var messages = new List<Message>();
+        messages.Add(CreateMessage("one_topic"));
+        messages.Add(CreateMessage("another_topic"));
+
+        foreach (var message in messages)
+        {
+            _dynamoDbOutbox.Add(message);
+        }
+
+        await Task.Delay(1000);
+
+        var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(0, 100, 1);
+
+        //Other tests may leave messages, so make sure that we grab ours
+        foreach (var message in messages)
+        {
+            var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
+            outstandingMessage.Should().NotBeNull();
+            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
+            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+        }
+    }
+
+    private Message CreateMessage(string topic)
+    {
+        return new Message(
+            new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_DOCUMENT),
+            new MessageBody("message body")
+        );
+    }
 }
