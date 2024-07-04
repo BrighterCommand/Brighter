@@ -265,7 +265,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             var message = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
-            MarkMessageDispatched(dispatchedAt, message);
+            MarkMessageDispatched(dispatchedAt ?? DateTime.UtcNow, message);
 
             await _context.SaveAsync(
                 message, 
@@ -290,7 +290,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             var message = _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig).Result;
-            MarkMessageDispatched(dispatchedAt, message);
+            MarkMessageDispatched(dispatchedAt ?? DateTime.UtcNow, message);
 
             _context.SaveAsync(
                 message, 
