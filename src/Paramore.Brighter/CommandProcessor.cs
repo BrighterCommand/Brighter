@@ -267,7 +267,7 @@ namespace Paramore.Brighter
         public async Task SendAsync<T>(
             T command, 
             RequestContext requestContext = null, 
-            bool continueOnCapturedContext = false, 
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default
         )
             where T : class, IRequest
@@ -381,7 +381,7 @@ namespace Paramore.Brighter
         public async Task PublishAsync<T>(
             T @event,
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
@@ -486,7 +486,7 @@ namespace Paramore.Brighter
             TRequest request,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             )
             where TRequest : class, IRequest
@@ -683,7 +683,7 @@ namespace Paramore.Brighter
             TRequest request,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await DepositPostAsync<TRequest, CommittableTransaction>(
@@ -718,7 +718,7 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default,
             string batchId = null) where TRequest : class, IRequest
         {
@@ -765,7 +765,7 @@ namespace Paramore.Brighter
             IEnumerable<TRequest> requests,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await DepositPostAsync<TRequest, CommittableTransaction>(
@@ -798,7 +798,7 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             
@@ -901,7 +901,7 @@ namespace Paramore.Brighter
             IEnumerable<string> posts,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
             var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
