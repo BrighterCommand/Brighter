@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Linq;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
@@ -85,20 +84,17 @@ namespace Paramore.Brighter.Outbox.MsSql
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = transactionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
             catch (SqlException sqlException)
             {
-                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                    sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                {
-                    loggingAction.Invoke();
-                    return;
-                }
+                if (sqlException.Number != MsSqlDuplicateKeyError_UniqueIndexViolation &&
+                    sqlException.Number != MsSqlDuplicateKeyError_UniqueConstraintViolation) throw;
+                loggingAction.Invoke();
+                return;
 
-                throw;
             }
             finally
             {

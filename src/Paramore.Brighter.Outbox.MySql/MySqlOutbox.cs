@@ -88,24 +88,24 @@ namespace Paramore.Brighter.Outbox.MySql
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = transactionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
             catch (MySqlException sqlException)
             {
-                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate was detected in the batch");
-                    return;
-                }
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                s_logger.LogWarning(
+                    "MsSqlOutbox: A duplicate was detected in the batch");
+                return;
 
-                throw;
             }
             finally
             {
-                transactionProvider?.Close();
+                if (transactionProvider != null)
+                    transactionProvider.Close();
+                else
+                    connection.Close();
             }
         }
 
