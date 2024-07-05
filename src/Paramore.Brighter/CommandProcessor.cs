@@ -337,8 +337,9 @@ namespace Paramore.Brighter
                 {
                     try
                     {
-                        handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
-                        context.Span = handlerSpans[handleRequests.Name.ToString()];
+                        var handlerName = handleRequests.Name.ToString();
+                        handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
+                        context.Span = handlerSpans[handlerName];
                         handleRequests.Handle(@event);
                         context.Span = span;
                     }
