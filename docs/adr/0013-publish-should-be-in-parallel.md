@@ -24,6 +24,6 @@ This will make the `Publish` method faster and more efficient. It will also mean
 
 Our `RequestContext` class was not thread-safe and we need to make it thread-safe. We could provide a copy, but as a caller may choose to inspect the `RequestContext` after the `IHandleRequests` have been called we will need to make the `RequestContext` thread-safe. This is a small change that is mostly hidden behind the property accessors of the `RequestContext` class. 
 
-We use a `ConcurrentDictionary` to store the `RequestContext Span` data against the current thread, thus meaning each thread has its own span. This does mean that the caller will not have access to that thread-specific data, but this is not a problem as the caller should not be inspecting the thread-specific `RequestContext` `Span` after the `IHandleRequests` have been called.
+We use a `ConcurrentDictionary` to store the `RequestContext Span` data against the current thread, thus meaning each thread has its own span. This does mean that the caller will not have access to that thread-specific data, but this is not a problem as the caller should not be inspecting the thread-specific `RequestContext` `Span` through the property after the `IHandleRequests` have been called (most likely it provided the `Span`).
 
 We use a `ConcurrentDictionary` for the `RequestContext` `Bag` property, which is a dictionary of key-value pairs. This is thread-safe and so we do not need to make any changes to this property.
