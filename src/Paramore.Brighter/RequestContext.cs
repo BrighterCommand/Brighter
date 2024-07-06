@@ -39,7 +39,6 @@ namespace Paramore.Brighter
     /// </summary>
     public class RequestContext : IRequestContext
     {
-        private readonly ConcurrentDictionary<int, Message> _messages = new();
         private readonly ConcurrentDictionary<int, Activity> _spans = new();
 
         /// <summary>
@@ -57,23 +56,12 @@ namespace Paramore.Brighter
         /// When we pass a requestContext through a receiver pipeline, we may want to pass the original message that started the pipeline.
         /// This is primarily useful for debugging - how did we get to this request?. But it is also useful for some request metadata that we
         /// do not want to transfer to the Request.
-        /// This is thread-safe, so that you can access the context from multiple threads
-        /// This is mainly required for Publish, which uses the same context across multiple Publish handlers
+        /// This is not thread-safe; the assumption is that you set this from a single thread and access the message from multiple threads. It is
+        /// not intended to be set from multiple threads.
         ///</summary>
         /// <value>The originating message</value> 
-        public Message OriginatingMessage
-        {
-            get
-            {
-                _messages.TryGetValue(System.Threading.Thread.CurrentThread.ManagedThreadId, out var message);
-                return message;
-            }
-            set
-            {
-                _messages.AddOrUpdate(System.Threading.Thread.CurrentThread.ManagedThreadId, value, (key, oldValue) => value);
-            }
-        }
-        
+        public Message OriginatingMessage { get; set; }
+
         /// <summary>
         /// Gets the policies.
         /// </summary>
