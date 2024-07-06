@@ -342,7 +342,7 @@ namespace Paramore.Brighter
             {
                 foreach (var messageId in posts)
                 {
-                    var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);
+                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);
                     childSpans.Add(messageId, span);
                     requestContext.Span = span;
 
@@ -353,12 +353,11 @@ namespace Paramore.Brighter
                     BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, span, false, false, _instrumentationOptions);
 
                     Dispatch(new[] { message }, requestContext, args);
-                    requestContext.Span = parentSpan;
                 }
             }
             finally
             {
-                _tracer.EndSpans(childSpans);
+                _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
                 s_clearSemaphoreToken.Release();
             }
@@ -395,23 +394,23 @@ namespace Paramore.Brighter
             {
                 foreach (var messageId in posts)
                 {
-                    var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);                   
-                    childSpans.Add(messageId, span);
+                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
+                        messageId, _instrumentationOptions);
+                    if (span != null) childSpans.Add(messageId, span);
                     requestContext.Span = span;
-                    
+
                     var message = await _asyncOutbox.GetAsync(messageId, requestContext, _outboxTimeout, args, cancellationToken);
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
                     
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, span, false, true, _instrumentationOptions);
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, requestContext.Span, false, true, _instrumentationOptions);
 
                     await DispatchAsync(new[] { message }, requestContext, continueOnCapturedContext, cancellationToken);
-                    requestContext.Span = parentSpan;
                 }
             }
             finally
             {
-                _tracer.EndSpans(childSpans);
+                _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
                 s_clearSemaphoreToken.Release();
             }
@@ -606,7 +605,7 @@ namespace Paramore.Brighter
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
                 var parentSpan = requestContext.Span;
-                var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
+                var span= _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
 
                 try
                 {
@@ -634,7 +633,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -663,7 +662,7 @@ namespace Paramore.Brighter
             {
                 
                 var parentSpan = requestContext.Span;
-                var span= _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
+                var span= _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
                  try
                 {
                    requestContext.Span = span;
@@ -697,7 +696,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -837,9 +836,9 @@ namespace Paramore.Brighter
                     );
 
                     var producer = _producerRegistry.LookupBy(message.Header.Topic);
-                    var span = _tracer.CreateProducerSpan(producer.Publication, message, requestContext.Span, _instrumentationOptions);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span, _instrumentationOptions);
                     producer.Span = span;
-                    producerSpans.Add(message.Id, span);
+                    if (span != null) producerSpans.Add(message.Id, span);
 
                     if (producer is IAmAMessageProducerSync producerSync)
                     {
@@ -872,7 +871,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                _tracer.EndSpans(producerSpans);
+                _tracer?.EndSpans(producerSpans);
             }
         }
         
@@ -889,7 +888,7 @@ namespace Paramore.Brighter
                 foreach (var topicBatch in messagesByTopic)
                 {
                     var producer = _producerRegistry.LookupBy(topicBatch.Key);
-                    var span = _tracer.CreateProducerSpan(producer.Publication, null, requestContext.Span, _instrumentationOptions);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span, _instrumentationOptions);
                     producer.Span = span;
                     producerSpans.Add(topicBatch.Key, span);
 
@@ -926,7 +925,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                _tracer.EndSpans(producerSpans);
+                _tracer?.EndSpans(producerSpans);
                 requestContext.Span = parentSpan;
             }
         }
@@ -950,9 +949,9 @@ namespace Paramore.Brighter
                     ); 
                 
                     var producer = _producerRegistry.LookupBy(message.Header.Topic);
-                    var span = _tracer.CreateProducerSpan(producer.Publication, message, parentSpan, _instrumentationOptions);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan, _instrumentationOptions);
                     producer.Span = span;
-                    producerSpans.Add(message.Id, span);
+                    if (span != null) producerSpans.Add(message.Id, span);
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {
@@ -994,7 +993,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                _tracer.EndSpans(producerSpans); 
+                _tracer?.EndSpans(producerSpans); 
                 requestContext.Span = parentSpan;
             }
         }
