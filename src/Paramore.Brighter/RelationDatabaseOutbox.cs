@@ -445,6 +445,45 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken
             );
 
+        protected DbConnection GetOpenConnection(IAmARelationalDbConnectionProvider defaultConnectionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider)
+        {
+            var connectionProvider = defaultConnectionProvider;
+            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
+                connectionProvider = transConnectionProvider;
+
+            var connection = connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+
+            return connection;
+        }
+
+        protected void FinishWrite(DbConnection connection,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider)
+        {
+            if (transactionProvider != null)
+                transactionProvider.Close();
+            else
+                connection.Close();
+        }
+        
+        protected async Task<DbConnection> GetOpenConnectionAsync(IAmARelationalDbConnectionProvider defaultConnectionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider, CancellationToken cancellationToken)
+        {
+            var connectionProvider = defaultConnectionProvider;
+            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
+                connectionProvider = transConnectionProvider;
+
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
+
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
+
+            return connection;
+        }
+
         private DbCommand CreatePagedDispatchedCommand(
             DbConnection connection, 
             double millisecondsDispatchedSince,
