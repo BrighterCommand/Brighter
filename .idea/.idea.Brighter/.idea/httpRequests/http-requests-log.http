@@ -1,3 +1,16 @@
+POST http://localhost:5000/People/new
+Content-Type: application/json
+Content-Length: 23
+User-Agent: IntelliJ HTTP Client/JetBrains Rider 2024.1.4
+Accept-Encoding: br, deflate, gzip, x-gzip
+Accept: */*
+
+{
+  "Name" : "Tyrion"
+}
+
+###
+
 DELETE http://localhost:5000/People/Tyrion
 Connection: Keep-Alive
 User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.10)
@@ -636,21 +649,6 @@ User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
 Accept-Encoding: br,deflate,gzip,x-gzip
 
 <> 2023-07-07T190355.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-07-07T190352.200.json
 
 ###
 

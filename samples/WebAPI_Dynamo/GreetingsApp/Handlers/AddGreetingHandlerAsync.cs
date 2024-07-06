@@ -6,13 +6,13 @@ using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter;
 using GreetingsEntities;
-using GreetingsPorts.Requests;
+using GreetingsApp.Requests;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 
-namespace GreetingsPorts.Handlers
+namespace GreetingsApp.Handlers
 {
     public class AddGreetingHandlerAsync : RequestHandlerAsync<AddGreeting>
     {
