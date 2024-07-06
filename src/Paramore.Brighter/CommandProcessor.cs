@@ -529,6 +529,8 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="batchId">The id of any batch of deposits we are called within; this will be set by the call to DepositPost with
+        /// a collection of requests and there is no need to set this yourself</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of Db transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
