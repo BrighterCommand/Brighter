@@ -77,14 +77,7 @@ namespace Paramore.Brighter.Outbox.MySql
             Action loggingAction
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
             try
             {
@@ -97,15 +90,11 @@ namespace Paramore.Brighter.Outbox.MySql
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
                 s_logger.LogWarning(
                     "MsSqlOutbox: A duplicate was detected in the batch");
-                return;
 
             }
             finally
             {
-                if (transactionProvider != null)
-                    transactionProvider.Close();
-                else
-                    connection.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -116,19 +105,11 @@ namespace Paramore.Brighter.Outbox.MySql
             CancellationToken cancellationToken
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
                 await command.ExecuteNonQueryAsync(cancellationToken);
             }
@@ -145,7 +126,7 @@ namespace Paramore.Brighter.Outbox.MySql
             }
             finally
             {
-                transactionProvider?.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
