@@ -82,7 +82,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (Exception exception)
             {
-                Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, exception);
+                Context.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, exception, (s, o) => exception);
             }
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (BrokenCircuitException brokenCircuitExceptionexception)
             {
-                Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception);
+                Context.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception, (s, o) => brokenCircuitExceptionexception);
             }
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }

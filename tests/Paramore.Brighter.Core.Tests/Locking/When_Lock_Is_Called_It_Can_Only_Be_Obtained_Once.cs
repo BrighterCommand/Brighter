@@ -11,7 +11,7 @@ public class InMemoryLockingProviderTests
 
 
     [Fact]
-    public async Task GivenAnInMemoryLockingProvider_WhenLockIsCalled_ItCanOnlyBeObtainedOnce()
+    public async Task WhenLockIsCalled_ItCanOnlyBeObtainedOnce()
     {
         var resourceName = $"TestLock-{Guid.NewGuid()}";
 

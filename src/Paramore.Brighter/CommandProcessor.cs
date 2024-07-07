@@ -332,21 +332,22 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
                    @event.GetType(), @event.Id);
 
-                var exceptions = new List<Exception>();
-                foreach (var handleRequests in handlerChain)
+                var exceptions = new ConcurrentBag<Exception>();
+                Parallel.ForEach(handlerChain, (handleRequests) =>
                 {
                     try
                     {
-                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
-                         context.Span =handlerSpans[handleRequests.Name.ToString()];
-                         handleRequests.Handle(@event);
-                         context.Span = span;
+                        var handlerName = handleRequests.Name.ToString();
+                        handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
+                        context.Span = handlerSpans[handlerName];
+                        handleRequests.Handle(@event);
+                        context.Span = span;
                     }
                     catch (Exception e)
                     {
                         exceptions.Add(e);
                     }
-                }
+                });
                 
                 _tracer?.LinkSpans(handlerSpans);
 
@@ -405,22 +406,26 @@ namespace Paramore.Brighter
                     @event.GetType(), @event.Id
                 );
 
-                var exceptions = new List<Exception>();
-                foreach (var handleRequests in handlerChain)
+                var exceptions = new ConcurrentBag<Exception>();
+
+                try
                 {
-                    try
+                    var tasks = new List<Task>();
+                    foreach (var handleRequests in handlerChain)
                     {
-                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
-                         context.Span =handlerSpans[handleRequests.Name.ToString()];
-                         await handleRequests.HandleAsync(@event, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-                         context.Span = span;
+                        handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions);
+                        context.Span =handlerSpans[handleRequests.Name.ToString()];
+                        tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
+                        context.Span = span;
                     }
-                    catch (Exception e)
-                    {
-                        exceptions.Add(e);
-                    }
+                    
+                    await Task.WhenAll(tasks).ConfigureAwait(continueOnCapturedContext);
                 }
-                
+                catch (Exception e)
+                {
+                    exceptions.Add(e);
+                }
+
                 _tracer?.LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
@@ -524,6 +529,8 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="batchId">The id of any batch of deposits we are called within; this will be set by the call to DepositPost with
+        /// a collection of requests and there is no need to set this yourself</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of Db transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
