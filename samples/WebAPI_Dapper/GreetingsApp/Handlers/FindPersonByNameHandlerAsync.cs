@@ -4,16 +4,16 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using GreetingsPorts.Entities;
-using GreetingsPorts.Policies;
-using GreetingsPorts.Requests;
-using GreetingsPorts.Responses;
+using GreetingsApp.Entities;
+using GreetingsApp.Policies;
+using GreetingsApp.Requests;
+using GreetingsApp.Responses;
 using Paramore.Brighter;
 using Paramore.Darker;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
 
-namespace GreetingsPorts.Handlers;
+namespace GreetingsApp.Handlers;
 
 public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
 {

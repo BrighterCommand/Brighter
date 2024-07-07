@@ -6,6 +6,7 @@ using Amazon.Runtime;
 using DbMaker;
 using GreetingsEntities;
 using GreetingsApp.Handlers;
+using GreetingsApp.Messaging;
 using GreetingsApp.Policies;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Builder;
@@ -85,21 +86,7 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            var producerRegistry = new RmqProducerRegistryFactory(
-                new RmqMessagingGatewayConnection
-                {
-                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                    Exchange = new Exchange("paramore.brighter.exchange"),
-                },
-                new RmqPublication[]{
-                    new RmqPublication
-                    {
-                        Topic = new RoutingKey("GreetingMade"),
-                        RequestType = typeof(GreetingMade),
-                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        MakeChannels = OnMissingChannel.Create
-                    }}
-            ).Create();
+            var producerRegistry = ConfigureTransport.MakeProducerRegistry(MessagingTransport.Rmq); 
             
             services.AddBrighter(options =>
              {

@@ -17,6 +17,7 @@ using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using SalutationApp.Entities;
+using SalutationApp.Messaging;
 using SalutationApp.Policies;
 using SalutationApp.Requests;
 
@@ -79,19 +80,7 @@ static void ConfigureBrighter(
 
     var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
-    var producerRegistry = new RmqProducerRegistryFactory(
-        rmqConnection,
-        new[]
-        {
-            new RmqPublication
-            {
-                Topic = new RoutingKey("SalutationReceived"),
-                RequestType = typeof(SalutationReceived),
-                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                MakeChannels = OnMissingChannel.Create
-            }
-        }
-    ).Create();
+    var producerRegistry = ConfigureTransport.MakeProducerRegistry(MessagingTransport.Rmq);
 
     services.AddServiceActivator(options =>
         {

@@ -1,8 +1,8 @@
 using System;
 using DbMaker;
-using GreetingsPorts.Handlers;
-using GreetingsPorts.Messaging;
-using GreetingsPorts.Policies;
+using GreetingsApp.Handlers;
+using GreetingsApp.Messaging;
+using GreetingsApp.Policies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;

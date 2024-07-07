@@ -1,4 +1,4 @@
-﻿namespace GreetingsPorts.Entities;
+﻿namespace GreetingsApp.Entities;
 
 public class Greeting
 {

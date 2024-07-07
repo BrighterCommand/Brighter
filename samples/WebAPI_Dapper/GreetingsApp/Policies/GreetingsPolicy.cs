@@ -1,7 +1,7 @@
 ﻿using Paramore.Brighter;
 using Paramore.Darker.Policies;
 
-namespace GreetingsPorts.Policies;
+namespace GreetingsApp.Policies;
 
 public class GreetingsPolicy : DefaultPolicy
 {

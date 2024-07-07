@@ -5,15 +5,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using GreetingsPorts.Entities;
-using GreetingsPorts.Policies;
-using GreetingsPorts.Requests;
+using GreetingsApp.Entities;
+using GreetingsApp.Policies;
+using GreetingsApp.Requests;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 
-namespace GreetingsPorts.Handlers;
+namespace GreetingsApp.Handlers;
 
 public class AddGreetingHandlerAsync : RequestHandlerAsync<AddGreeting>
 {

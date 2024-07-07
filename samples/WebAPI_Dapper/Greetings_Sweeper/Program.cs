@@ -1,6 +1,6 @@
 using System.Text.Json;
 using DbMaker;
-using GreetingsPorts.Messaging;
+using GreetingsApp.Messaging;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;

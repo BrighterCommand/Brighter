@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using FluentMigrator.Runner;
 using DbMaker;
-using GreetingsPorts.Messaging;
+using GreetingsApp.Messaging;
 using GreetingsWeb;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;

@@ -1,7 +1,7 @@
 ﻿using System;
 using Paramore.Brighter;
 
-namespace GreetingsPorts.Requests;
+namespace GreetingsApp.Requests;
 
 public class GreetingMade : Event
 {

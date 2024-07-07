@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
-using GreetingsPorts.Requests;
-using GreetingsPorts.Responses;
+using GreetingsApp.Requests;
+using GreetingsApp.Responses;
 using GreetingsWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 using Paramore.Brighter;

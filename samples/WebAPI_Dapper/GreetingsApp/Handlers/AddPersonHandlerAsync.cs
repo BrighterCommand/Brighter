@@ -2,13 +2,13 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using GreetingsPorts.Policies;
-using GreetingsPorts.Requests;
+using GreetingsApp.Policies;
+using GreetingsApp.Requests;
 using Paramore.Brighter;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 
-namespace GreetingsPorts.Handlers;
+namespace GreetingsApp.Handlers;
 
 public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
 {

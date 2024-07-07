@@ -1,4 +1,4 @@
-﻿namespace GreetingsApp.Messaging;
+﻿namespace SalutationApp.Messaging;
 
 public static class MessagingGlobals
 {
@@ -7,7 +7,6 @@ public static class MessagingGlobals
 
     public const string RMQ = "RabbitMQ";
     public const string KAFKA = "Kafka";
-    public const string ASB = "AzureServiceBus";
 }
 
 /// <summary>
@@ -15,7 +14,6 @@ public static class MessagingGlobals
 /// </summary>
 public enum MessagingTransport
 {
-    Asb,
     Rmq,
     Kafka
 }
