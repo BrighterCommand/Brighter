@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
+using DbMaker;
 using GreetingsEntities;
 using GreetingsApp.Handlers;
 using GreetingsApp.Policies;
@@ -77,83 +78,9 @@ namespace GreetingsWeb
 
         private void ConfigureDynamo(IServiceCollection services)
         {
-            _client = CreateAndRegisterClient(services);
-            CreateEntityStore();
-            CreateOutbox(services);
-        }
-
-       private IAmazonDynamoDB CreateAndRegisterClient(IServiceCollection services)
-        {
-            if (_env.IsDevelopment())
-            {
-                return CreateAndRegisterLocalClient(services);
-            }
-
-            return CreateAndRegisterRemoteClient(services);
-        }
-        private IAmazonDynamoDB CreateAndRegisterLocalClient(IServiceCollection services)
-        {
-            var credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
-            
-            var clientConfig = new AmazonDynamoDBConfig
-            {
-                ServiceURL = "http://localhost:8000"
-
-            };
-
-            var dynamoDb = new AmazonDynamoDBClient(credentials, clientConfig);
-            services.Add(new ServiceDescriptor(typeof(IAmazonDynamoDB), dynamoDb));
-
-            return dynamoDb;
-        }     
-        
-        private IAmazonDynamoDB CreateAndRegisterRemoteClient(IServiceCollection services)
-        {
-            throw new NotImplementedException();
-        }
-
-         private void CreateEntityStore()
-        {
-            var tableRequestFactory = new DynamoDbTableFactory();
-            var dbTableBuilder = new DynamoDbTableBuilder(_client);
-    
-            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<Person>(
-                new DynamoDbCreateProvisionedThroughput
-                (
-                    new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 }
-                )
-            );
-    
-            var entityTableName = tableRequest.TableName;
-            (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] { entityTableName }).Result;
-            if (!hasTables.exist)
-            {
-                var buildTable = dbTableBuilder.Build(tableRequest).Result;
-                dbTableBuilder.EnsureTablesReady(new[] { tableRequest.TableName }, TableStatus.ACTIVE).Wait();
-            }
-        }
-            
-        private void CreateOutbox(IServiceCollection services)
-        {
-            var tableRequestFactory = new DynamoDbTableFactory();
-            var dbTableBuilder = new DynamoDbTableBuilder(_client);
-            
-            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
-                    new DynamoDbCreateProvisionedThroughput(
-                    new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                    new Dictionary<string, ProvisionedThroughput>
-                    {
-                        {"Outstanding", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
-                        {"Delivered", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}}
-                    }
-                ));
-            var outboxTableName = createTableRequest.TableName;
-            (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] {outboxTableName}).Result;
-            if (!hasTables.exist)
-            {
-                var buildTable = dbTableBuilder.Build(createTableRequest).Result;
-                dbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
-            }
+            _client = ConnectionResolver.CreateAndRegisterClient(services, _env.IsDevelopment());
+            DbFactory.CreateEntityStore<Person>(_client);
+            OutboxFactory.CreateOutbox(_client, services);
         }
 
         private void ConfigureBrighter(IServiceCollection services)

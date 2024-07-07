@@ -3,7 +3,7 @@ using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
 
-namespace SalutationPorts.Policies
+namespace SalutationApp.Policies
 {
     public static class Retry
     {

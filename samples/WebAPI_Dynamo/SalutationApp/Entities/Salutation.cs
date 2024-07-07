@@ -1,6 +1,6 @@
 ﻿using Amazon.DynamoDBv2.DataModel;
 
-namespace SalutationEntities
+namespace SalutationApp.Entities
 {
     [DynamoDBTable("Salutations")]
     public class Salutation

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using Amazon;
 using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
+using DbMaker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,9 +16,9 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-using SalutationEntities;
-using SalutationPorts.Policies;
-using SalutationPorts.Requests;
+using SalutationApp.Entities;
+using SalutationApp.Policies;
+using SalutationApp.Requests;
 
 
 await CreateHostBuilder(args).Build().RunAsync();
@@ -39,7 +37,7 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
             configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
             configurationBuilder.AddCommandLine(args);
         })
-        .ConfigureLogging((context, builder) =>
+        .ConfigureLogging((_, builder) =>
         {
             builder.AddConsole();
             builder.AddDebug();
@@ -48,13 +46,12 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
         {
             var credentials = CreateCredentials();
             IAmazonDynamoDB client = CreateAndRegisterClient(credentials, hostContext, services);
-            ConfigureDynamo(client, hostContext, services);
-            ConfigureBrighter(credentials, client, hostContext, services);
+            ConfigureDynamo(client, services);
+            ConfigureBrighter(client, hostContext, services);
         })
         .UseConsoleLifetime();
 
 static void ConfigureBrighter(
-    AWSCredentials awsCredentials,
     IAmazonDynamoDB dynamoDb,
     HostBuilderContext hostContext,
     IServiceCollection services)
@@ -84,7 +81,7 @@ static void ConfigureBrighter(
 
     var producerRegistry = new RmqProducerRegistryFactory(
         rmqConnection,
-        new RmqPublication[]
+        new[]
         {
             new RmqPublication
             {
@@ -106,7 +103,7 @@ static void ConfigureBrighter(
             options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
-                ConfigureInbox(awsCredentials, dynamoDb),
+                ConfigureInbox(dynamoDb),
                 scope: InboxScope.Commands,
                 onceOnly: true,
                 actionOnExists: OnceOnlyAction.Throw
@@ -120,7 +117,7 @@ static void ConfigureBrighter(
         .UseExternalBus((configure) =>
             {
                 configure.ProducerRegistry = producerRegistry;
-                configure.Outbox = ConfigureOutbox(awsCredentials, dynamoDb);
+                configure.Outbox = ConfigureOutbox(dynamoDb);
                 configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                 configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
                 configure.MaxOutStandingMessages = 5;
@@ -132,13 +129,11 @@ static void ConfigureBrighter(
     services.AddHostedService<ServiceActivatorHostedService>();
 }
 
-
-static void ConfigureDynamo(IAmazonDynamoDB dynamoDb, HostBuilderContext hostBuilderContext,
-    IServiceCollection services)
+static void ConfigureDynamo(IAmazonDynamoDB dynamoDb, IServiceCollection services)
 {
-    CreateEntityStore(dynamoDb);
-    CreateOutbox(dynamoDb, services);
-    CreateInbox(dynamoDb, services);
+    DbFactory.CreateEntityStore<Salutation>(dynamoDb);
+    OutboxFactory.CreateOutbox(dynamoDb, services);
+    InboxFactory.CreateInbox<GreetingMade>(dynamoDb, services);
 }
 
 static IAmazonDynamoDB CreateAndRegisterClient(AWSCredentials credentials, HostBuilderContext hostBuilderContext,
@@ -175,82 +170,15 @@ static IAmazonDynamoDB CreateAndRegisterRemoteClient(IServiceCollection services
     throw new NotImplementedException();
 }
 
-static void CreateEntityStore(IAmazonDynamoDB client)
-{
-    var tableRequestFactory = new DynamoDbTableFactory();
-    var dbTableBuilder = new DynamoDbTableBuilder(client);
-
-    CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<Salutation>(
-        new DynamoDbCreateProvisionedThroughput
-        (
-            new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 }
-        )
-    );
-
-    var entityTableName = tableRequest.TableName;
-    (bool exist, IEnumerable<string> tables) hasTables =
-        dbTableBuilder.HasTables(new string[] { entityTableName }).Result;
-    if (!hasTables.exist)
-    {
-        var buildTable = dbTableBuilder.Build(tableRequest).Result;
-        dbTableBuilder.EnsureTablesReady(new[] { tableRequest.TableName }, TableStatus.ACTIVE).Wait();
-    }
-}
-
-static void CreateOutbox(IAmazonDynamoDB client, IServiceCollection services)
-{
-    var tableRequestFactory = new DynamoDbTableFactory();
-    var dbTableBuilder = new DynamoDbTableBuilder(client);
-
-    var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
-        new DynamoDbCreateProvisionedThroughput(
-            new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 },
-            new Dictionary<string, ProvisionedThroughput>
-            {
-                { "Outstanding", new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 } },
-                { "Delivered", new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 } }
-            }
-        ));
-    var outboxTableName = createTableRequest.TableName;
-    (bool exist, IEnumerable<string> tables) hasTables =
-        dbTableBuilder.HasTables(new string[] { outboxTableName }).Result;
-    if (!hasTables.exist)
-    {
-        var buildTable = dbTableBuilder.Build(createTableRequest).Result;
-        dbTableBuilder.EnsureTablesReady(new[] { createTableRequest.TableName }, TableStatus.ACTIVE).Wait();
-    }
-}
-
-static void CreateInbox(IAmazonDynamoDB client, IServiceCollection services)
-{
-    var tableRequestFactory = new DynamoDbTableFactory();
-    var dbTableBuilder = new DynamoDbTableBuilder(client);
-
-    var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<CommandItem<GreetingMade>>(
-        new DynamoDbCreateProvisionedThroughput(
-            new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 },
-            new Dictionary<string, ProvisionedThroughput>()
-        ));
-
-    var tableName = createTableRequest.TableName;
-    (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] { tableName }).Result;
-    if (!hasTables.exist)
-    {
-        var buildTable = dbTableBuilder.Build(createTableRequest).Result;
-        dbTableBuilder.EnsureTablesReady(new[] { createTableRequest.TableName }, TableStatus.ACTIVE).Wait();
-    }
-}
-
-static IAmAnInbox ConfigureInbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
+static IAmAnInbox ConfigureInbox(IAmazonDynamoDB dynamoDb)
 {
     return new DynamoDbInbox(dynamoDb, new DynamoDbInboxConfiguration());
 }
 
-static IAmAnOutbox ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
+static IAmAnOutbox ConfigureOutbox(IAmazonDynamoDB dynamoDb)
 {
     return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration());
 }
-
 
 static string GetEnvironment()
 {

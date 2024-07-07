@@ -8,7 +8,6 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-      <ProjectReference Include="..\SalutationEntities\SalutationEntities.csproj" />
     </ItemGroup>
 
   <ItemGroup>

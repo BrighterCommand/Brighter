@@ -1,0 +1,32 @@
+﻿using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.Model;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter;
+using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.Inbox.DynamoDB;
+using Paramore.Brighter.Outbox.DynamoDB;
+
+namespace DbMaker;
+
+public class InboxFactory
+{
+    public static void CreateInbox<T>(IAmazonDynamoDB client, IServiceCollection services) where T : class, IRequest
+    {
+        var tableRequestFactory = new DynamoDbTableFactory();
+        var dbTableBuilder = new DynamoDbTableBuilder(client);
+
+        var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<CommandItem<T>>(
+            new DynamoDbCreateProvisionedThroughput(
+                new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 },
+                new Dictionary<string, ProvisionedThroughput>()
+            ));
+
+        var tableName = createTableRequest.TableName;
+        (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] { tableName }).Result;
+        if (!hasTables.exist)
+        {
+            var buildTable = dbTableBuilder.Build(createTableRequest).Result;
+            dbTableBuilder.EnsureTablesReady(new[] { createTableRequest.TableName }, TableStatus.ACTIVE).Wait();
+        }
+    }
+}

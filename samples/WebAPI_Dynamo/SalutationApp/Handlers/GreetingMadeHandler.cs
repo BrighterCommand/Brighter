@@ -10,10 +10,10 @@ using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
-using SalutationEntities;
-using SalutationPorts.Requests;
+using SalutationApp.Entities;
+using SalutationApp.Requests;
 
-namespace SalutationPorts.Handlers
+namespace SalutationApp.Handlers
 {
     public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
     {
