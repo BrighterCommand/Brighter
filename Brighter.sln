@@ -166,57 +166,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MsSql.EntityFrameworkCore", "src\Paramore.Brighter.MsSql.EntityFrameworkCore\Paramore.Brighter.MsSql.EntityFrameworkCore.csproj", "{B1814E3B-E980-4797-BFFD-9C7347653C1B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI_EFCore", "WebAPI_EFCore", "{C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}"
-	ProjectSection(SolutionItems) = preProject
-		samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.dgspec.json = samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.dgspec.json
-		samples\WebAPI_EFCore\GreetingsApp\obj\rider.project.restore.info = samples\WebAPI_EFCore\GreetingsApp\obj\rider.project.restore.info
-		samples\WebAPI_EFCore\GreetingsApp\obj\project.nuget.cache = samples\WebAPI_EFCore\GreetingsApp\obj\project.nuget.cache
-		samples\WebAPI_EFCore\GreetingsApp\obj\rider.project.model.nuget.info = samples\WebAPI_EFCore\GreetingsApp\obj\rider.project.model.nuget.info
-		samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.g.props = samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.g.props
-		samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.g.targets = samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.g.targets
-		samples\WebAPI_EFCore\GreetingsApp\obj\project.packagespec.json = samples\WebAPI_EFCore\GreetingsApp\obj\project.packagespec.json
-		samples\WebAPI_EFCore\GreetingsApp\obj\project.assets.json = samples\WebAPI_EFCore\GreetingsApp\obj\project.assets.json
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.AssemblyInfoInputs.cache = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.AssemblyInfoInputs.cache
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\ref\GreetingsPorts.dll = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\ref\GreetingsPorts.dll
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.dll = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.dll
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.assets.cache = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.assets.cache
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\refint\GreetingsPorts.dll = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\refint\GreetingsPorts.dll
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.AssemblyInfo.cs = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.AssemblyInfo.cs
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.GeneratedMSBuildEditorConfig.editorconfig = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.GeneratedMSBuildEditorConfig.editorconfig
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.sourcelink.json = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.sourcelink.json
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.CoreCompileInputs.cache = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.CoreCompileInputs.cache
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.pdb = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.pdb
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.AssemblyReference.cache = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.AssemblyReference.cache
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.CopyComplete = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.CopyComplete
-		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.FileListAbsolute.txt = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.FileListAbsolute.txt
-		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsEntities.pdb = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsEntities.pdb
-		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.dll = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.dll
-		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsEntities.dll = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsEntities.dll
-		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.pdb = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.pdb
-		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.deps.json = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.deps.json
-		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\Paramore.Brighter.dll = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\Paramore.Brighter.dll
-		samples\WebAPI_EFCore\GreetingsApp\Responses\FindPersonsGreetings.cs = samples\WebAPI_EFCore\GreetingsApp\Responses\FindPersonsGreetings.cs
-		samples\WebAPI_EFCore\GreetingsApp\Responses\FindPersonResult.cs = samples\WebAPI_EFCore\GreetingsApp\Responses\FindPersonResult.cs
-		samples\WebAPI_EFCore\GreetingsApp\Policies\GreetingsPolicy.cs = samples\WebAPI_EFCore\GreetingsApp\Policies\GreetingsPolicy.cs
-		samples\WebAPI_EFCore\GreetingsApp\Policies\Retry.cs = samples\WebAPI_EFCore\GreetingsApp\Policies\Retry.cs
-		samples\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj = samples\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj
-		samples\WebAPI_EFCore\GreetingsApp\Requests\GreetingMade.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\GreetingMade.cs
-		samples\WebAPI_EFCore\GreetingsApp\Requests\AddPerson.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\AddPerson.cs
-		samples\WebAPI_EFCore\GreetingsApp\Requests\DeletePerson.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\DeletePerson.cs
-		samples\WebAPI_EFCore\GreetingsApp\Requests\FindPersonByName.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\FindPersonByName.cs
-		samples\WebAPI_EFCore\GreetingsApp\Requests\AddGreeting.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\AddGreeting.cs
-		samples\WebAPI_EFCore\GreetingsApp\Requests\FindGreetingsForPerson.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\FindGreetingsForPerson.cs
-		samples\WebAPI_EFCore\GreetingsApp\Handlers\AddPersonHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\AddPersonHandlerAsync.cs
-		samples\WebAPI_EFCore\GreetingsApp\Handlers\AddGreetingHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\AddGreetingHandlerAsync.cs
-		samples\WebAPI_EFCore\GreetingsApp\Handlers\DeletePersonHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\DeletePersonHandlerAsync.cs
-		samples\WebAPI_EFCore\GreetingsApp\Handlers\FindPersonByNameHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\FindPersonByNameHandlerAsync.cs
-		samples\WebAPI_EFCore\GreetingsApp\Handlers\FIndGreetingsForPersonHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\FIndGreetingsForPersonHandlerAsync.cs
-		samples\WebAPI_EFCore\GreetingsApp\Entities\Greeting.cs = samples\WebAPI_EFCore\GreetingsApp\Entities\Greeting.cs
-		samples\WebAPI_EFCore\GreetingsApp\Entities\Person.cs = samples\WebAPI_EFCore\GreetingsApp\Entities\Person.cs
-		samples\WebAPI_EFCore\GreetingsApp\EntityGateway\PersonEntityTypeConfiguration.cs = samples\WebAPI_EFCore\GreetingsApp\EntityGateway\PersonEntityTypeConfiguration.cs
-		samples\WebAPI_EFCore\GreetingsApp\EntityGateway\GreetingsEntityGateway.cs = samples\WebAPI_EFCore\GreetingsApp\EntityGateway\GreetingsEntityGateway.cs
-		samples\WebAPI_EFCore\GreetingsApp\EntityGateway\GreetingsEntityTypeConfiguration.cs = samples\WebAPI_EFCore\GreetingsApp\EntityGateway\GreetingsEntityTypeConfiguration.cs
-	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationAnalytics", "samples\WebAPI_EFCore\SalutationAnalytics\SalutationAnalytics.csproj", "{4AE1021A-753C-4C42-B5E1-D70228643AE0}"
 EndProject
