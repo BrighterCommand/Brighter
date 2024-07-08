@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Data;
-using GreetingsPorts.EntityGateway;
+using GreetingsApp.EntityGateway;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

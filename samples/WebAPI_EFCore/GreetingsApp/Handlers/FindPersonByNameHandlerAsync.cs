@@ -1,16 +1,16 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using GreetingsPorts.EntityGateway;
-using GreetingsPorts.Policies;
-using GreetingsPorts.Requests;
-using GreetingsPorts.Responses;
+using GreetingsApp.EntityGateway;
+using GreetingsApp.Policies;
+using GreetingsApp.Requests;
+using GreetingsApp.Responses;
 using Microsoft.EntityFrameworkCore;
 using Paramore.Darker;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
 
-namespace GreetingsPorts.Handlers
+namespace GreetingsApp.Handlers
 {
     public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
     {

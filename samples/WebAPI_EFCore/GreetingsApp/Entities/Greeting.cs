@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GreetingsEntities
+namespace GreetingsApp.Entities
 {
     public class Greeting
     {

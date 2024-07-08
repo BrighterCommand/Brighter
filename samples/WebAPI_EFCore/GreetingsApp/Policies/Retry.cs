@@ -4,7 +4,7 @@ using Polly.CircuitBreaker;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
 
-namespace GreetingsPorts.Policies
+namespace GreetingsApp.Policies
 {
     public static class Retry
     {

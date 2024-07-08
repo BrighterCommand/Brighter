@@ -166,10 +166,57 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MsSql.EntityFrameworkCore", "src\Paramore.Brighter.MsSql.EntityFrameworkCore\Paramore.Brighter.MsSql.EntityFrameworkCore.csproj", "{B1814E3B-E980-4797-BFFD-9C7347653C1B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI_EFCore", "WebAPI_EFCore", "{C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPorts", "samples\WebAPI_EFCore\GreetingsPorts\GreetingsPorts.csproj", "{0D762A47-65BB-4D0A-A854-BA10F87DDA95}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsEntities", "samples\WebAPI_EFCore\GreetingsEntities\GreetingsEntities.csproj", "{12DFB0C5-AD17-407C-84B5-418C94EBEA18}"
+	ProjectSection(SolutionItems) = preProject
+		samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.dgspec.json = samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.dgspec.json
+		samples\WebAPI_EFCore\GreetingsApp\obj\rider.project.restore.info = samples\WebAPI_EFCore\GreetingsApp\obj\rider.project.restore.info
+		samples\WebAPI_EFCore\GreetingsApp\obj\project.nuget.cache = samples\WebAPI_EFCore\GreetingsApp\obj\project.nuget.cache
+		samples\WebAPI_EFCore\GreetingsApp\obj\rider.project.model.nuget.info = samples\WebAPI_EFCore\GreetingsApp\obj\rider.project.model.nuget.info
+		samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.g.props = samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.g.props
+		samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.g.targets = samples\WebAPI_EFCore\GreetingsApp\obj\GreetingsPorts.csproj.nuget.g.targets
+		samples\WebAPI_EFCore\GreetingsApp\obj\project.packagespec.json = samples\WebAPI_EFCore\GreetingsApp\obj\project.packagespec.json
+		samples\WebAPI_EFCore\GreetingsApp\obj\project.assets.json = samples\WebAPI_EFCore\GreetingsApp\obj\project.assets.json
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.AssemblyInfoInputs.cache = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.AssemblyInfoInputs.cache
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\ref\GreetingsPorts.dll = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\ref\GreetingsPorts.dll
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.dll = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.dll
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.assets.cache = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.assets.cache
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\refint\GreetingsPorts.dll = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\refint\GreetingsPorts.dll
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.AssemblyInfo.cs = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.AssemblyInfo.cs
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.GeneratedMSBuildEditorConfig.editorconfig = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.GeneratedMSBuildEditorConfig.editorconfig
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.sourcelink.json = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.sourcelink.json
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.CoreCompileInputs.cache = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.CoreCompileInputs.cache
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.pdb = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.pdb
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.AssemblyReference.cache = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.AssemblyReference.cache
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.CopyComplete = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.CopyComplete
+		samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.FileListAbsolute.txt = samples\WebAPI_EFCore\GreetingsApp\obj\Debug\net8.0\GreetingsPorts.csproj.FileListAbsolute.txt
+		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsEntities.pdb = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsEntities.pdb
+		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.dll = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.dll
+		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsEntities.dll = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsEntities.dll
+		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.pdb = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.pdb
+		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.deps.json = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\GreetingsPorts.deps.json
+		samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\Paramore.Brighter.dll = samples\WebAPI_EFCore\GreetingsApp\bin\Debug\net8.0\Paramore.Brighter.dll
+		samples\WebAPI_EFCore\GreetingsApp\Responses\FindPersonsGreetings.cs = samples\WebAPI_EFCore\GreetingsApp\Responses\FindPersonsGreetings.cs
+		samples\WebAPI_EFCore\GreetingsApp\Responses\FindPersonResult.cs = samples\WebAPI_EFCore\GreetingsApp\Responses\FindPersonResult.cs
+		samples\WebAPI_EFCore\GreetingsApp\Policies\GreetingsPolicy.cs = samples\WebAPI_EFCore\GreetingsApp\Policies\GreetingsPolicy.cs
+		samples\WebAPI_EFCore\GreetingsApp\Policies\Retry.cs = samples\WebAPI_EFCore\GreetingsApp\Policies\Retry.cs
+		samples\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj = samples\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj
+		samples\WebAPI_EFCore\GreetingsApp\Requests\GreetingMade.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\GreetingMade.cs
+		samples\WebAPI_EFCore\GreetingsApp\Requests\AddPerson.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\AddPerson.cs
+		samples\WebAPI_EFCore\GreetingsApp\Requests\DeletePerson.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\DeletePerson.cs
+		samples\WebAPI_EFCore\GreetingsApp\Requests\FindPersonByName.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\FindPersonByName.cs
+		samples\WebAPI_EFCore\GreetingsApp\Requests\AddGreeting.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\AddGreeting.cs
+		samples\WebAPI_EFCore\GreetingsApp\Requests\FindGreetingsForPerson.cs = samples\WebAPI_EFCore\GreetingsApp\Requests\FindGreetingsForPerson.cs
+		samples\WebAPI_EFCore\GreetingsApp\Handlers\AddPersonHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\AddPersonHandlerAsync.cs
+		samples\WebAPI_EFCore\GreetingsApp\Handlers\AddGreetingHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\AddGreetingHandlerAsync.cs
+		samples\WebAPI_EFCore\GreetingsApp\Handlers\DeletePersonHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\DeletePersonHandlerAsync.cs
+		samples\WebAPI_EFCore\GreetingsApp\Handlers\FindPersonByNameHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\FindPersonByNameHandlerAsync.cs
+		samples\WebAPI_EFCore\GreetingsApp\Handlers\FIndGreetingsForPersonHandlerAsync.cs = samples\WebAPI_EFCore\GreetingsApp\Handlers\FIndGreetingsForPersonHandlerAsync.cs
+		samples\WebAPI_EFCore\GreetingsApp\Entities\Greeting.cs = samples\WebAPI_EFCore\GreetingsApp\Entities\Greeting.cs
+		samples\WebAPI_EFCore\GreetingsApp\Entities\Person.cs = samples\WebAPI_EFCore\GreetingsApp\Entities\Person.cs
+		samples\WebAPI_EFCore\GreetingsApp\EntityGateway\PersonEntityTypeConfiguration.cs = samples\WebAPI_EFCore\GreetingsApp\EntityGateway\PersonEntityTypeConfiguration.cs
+		samples\WebAPI_EFCore\GreetingsApp\EntityGateway\GreetingsEntityGateway.cs = samples\WebAPI_EFCore\GreetingsApp\EntityGateway\GreetingsEntityGateway.cs
+		samples\WebAPI_EFCore\GreetingsApp\EntityGateway\GreetingsEntityTypeConfiguration.cs = samples\WebAPI_EFCore\GreetingsApp\EntityGateway\GreetingsEntityTypeConfiguration.cs
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationAnalytics", "samples\WebAPI_EFCore\SalutationAnalytics\SalutationAnalytics.csproj", "{4AE1021A-753C-4C42-B5E1-D70228643AE0}"
 EndProject
@@ -288,6 +335,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMaker", "samples\WebAPI_Dynamo\DbMaker\DbMaker.csproj", "{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationApp", "samples\WebAPI_Dynamo\SalutationApp\SalutationApp.csproj", "{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsApp", "samples\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj", "{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1079,30 +1128,6 @@ Global
 		{B1814E3B-E980-4797-BFFD-9C7347653C1B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{B1814E3B-E980-4797-BFFD-9C7347653C1B}.Release|x86.ActiveCfg = Release|Any CPU
 		{B1814E3B-E980-4797-BFFD-9C7347653C1B}.Release|x86.Build.0 = Release|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|x86.Build.0 = Debug|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|x86.ActiveCfg = Release|Any CPU
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|x86.Build.0 = Release|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|x86.Build.0 = Debug|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|Any CPU.Build.0 = Release|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|x86.ActiveCfg = Release|Any CPU
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|x86.Build.0 = Release|Any CPU
 		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -1719,6 +1744,18 @@ Global
 		{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08}.Release|x86.ActiveCfg = Release|Any CPU
 		{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08}.Release|x86.Build.0 = Release|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Debug|x86.Build.0 = Debug|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Release|x86.ActiveCfg = Release|Any CPU
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1772,8 +1809,6 @@ Global
 		{EC5A3E68-F59F-4631-A7AF-D23F02F7F2C8} = {48D0EECA-B928-4B80-BE46-2C08CF3A946B}
 		{5916BB3F-BBBC-40E4-A597-866B1E38C040} = {48D0EECA-B928-4B80-BE46-2C08CF3A946B}
 		{C6B17EFD-4F05-4D45-AF3E-C4F3F790B994} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
-		{0D762A47-65BB-4D0A-A854-BA10F87DDA95} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
-		{12DFB0C5-AD17-407C-84B5-418C94EBEA18} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{4AE1021A-753C-4C42-B5E1-D70228643AE0} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{1D692C54-8063-4AE2-AB26-0BCD0EA03528} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
@@ -1815,6 +1850,7 @@ Global
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709} = {11935469-A062-4CFF-9F72-F4F41E14C2B4}
 		{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08} = {11935469-A062-4CFF-9F72-F4F41E14C2B4}
+		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

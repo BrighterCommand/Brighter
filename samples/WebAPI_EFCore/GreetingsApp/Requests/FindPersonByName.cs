@@ -1,7 +1,7 @@
-using GreetingsPorts.Responses;
+using GreetingsApp.Responses;
 using Paramore.Darker;
 
-namespace GreetingsPorts.Requests
+namespace GreetingsApp.Requests
 {
     public class FindPersonByName : IQuery<FindPersonResult>
     {

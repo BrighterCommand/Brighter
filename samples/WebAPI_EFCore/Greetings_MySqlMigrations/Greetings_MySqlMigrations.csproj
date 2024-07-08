@@ -5,7 +5,7 @@
     </PropertyGroup>
   
     <ItemGroup>
-      <ProjectReference Include="..\GreetingsPorts\GreetingsPorts.csproj" />
+      <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj" />
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
     </ItemGroup>
 

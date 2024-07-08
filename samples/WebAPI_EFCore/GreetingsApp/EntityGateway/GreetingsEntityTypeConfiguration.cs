@@ -1,8 +1,8 @@
-﻿using GreetingsEntities;
+﻿using GreetingsApp.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace GreetingsPorts.EntityGateway
+namespace GreetingsApp.EntityGateway
 {
     public class GreetingsEntityTypeConfiguration : IEntityTypeConfiguration<Greeting>
     {

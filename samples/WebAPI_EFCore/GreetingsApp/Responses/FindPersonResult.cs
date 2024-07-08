@@ -1,6 +1,6 @@
-using GreetingsEntities;
+using GreetingsApp.Entities;
 
-namespace GreetingsPorts.Responses
+namespace GreetingsApp.Responses
 {
     public class FindPersonResult
     {

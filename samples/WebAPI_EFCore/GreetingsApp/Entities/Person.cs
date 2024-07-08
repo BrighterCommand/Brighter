@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace GreetingsEntities
+namespace GreetingsApp.Entities
 {
     public class Person
     {

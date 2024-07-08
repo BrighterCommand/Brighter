@@ -1,8 +1,8 @@
 using System;
-using GreetingsPorts.EntityGateway;
-using GreetingsPorts.Handlers;
-using GreetingsPorts.Policies;
-using GreetingsPorts.Requests;
+using GreetingsApp.EntityGateway;
+using GreetingsApp.Handlers;
+using GreetingsApp.Policies;
+using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
