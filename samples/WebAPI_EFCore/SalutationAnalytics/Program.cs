@@ -20,9 +20,9 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Sqlite;
 using Paramore.Brighter.Sqlite.EntityFrameworkCore;
 using SalutationAnalytics.Database;
-using SalutationPorts.EntityGateway;
-using SalutationPorts.Policies;
-using SalutationPorts.Requests;
+using SalutationApp.EntityGateway;
+using SalutationApp.Policies;
+using SalutationApp.Requests;
 
 var host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp();

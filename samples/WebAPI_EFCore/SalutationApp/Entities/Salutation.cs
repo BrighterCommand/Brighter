@@ -1,4 +1,4 @@
-﻿namespace SalutationEntities
+﻿namespace SalutationApp.Entities
 {
     public class Salutation
     {

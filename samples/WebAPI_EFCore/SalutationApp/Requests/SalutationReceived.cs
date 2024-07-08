@@ -1,7 +1,7 @@
 ﻿using System;
 using Paramore.Brighter;
 
-namespace SalutationPorts.Requests
+namespace SalutationApp.Requests
 {
     public class SalutationReceived : Event
     {

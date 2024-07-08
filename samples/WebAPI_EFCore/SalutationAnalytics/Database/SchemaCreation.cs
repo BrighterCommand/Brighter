@@ -12,7 +12,7 @@ using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
-using SalutationPorts.EntityGateway;
+using SalutationApp.EntityGateway;
 
 namespace SalutationAnalytics.Database
 {

@@ -6,7 +6,7 @@
 
 
     <ItemGroup>
-      <ProjectReference Include="..\SalutationPorts\SalutationPorts.csproj" />
+      <ProjectReference Include="..\SalutationApp\SalutationApp.csproj" />
        <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
      </ItemGroup>
 

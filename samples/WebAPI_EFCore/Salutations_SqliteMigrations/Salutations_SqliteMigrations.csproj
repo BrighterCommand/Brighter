@@ -9,7 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\SalutationPorts\SalutationPorts.csproj" />
+      <ProjectReference Include="..\SalutationApp\SalutationApp.csproj" />
     </ItemGroup>
 
 </Project>

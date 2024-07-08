@@ -3,7 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using SalutationPorts.EntityGateway;
+using SalutationApp.EntityGateway;
 
 namespace Salutations_SqliteMigrations.Migrations
 {

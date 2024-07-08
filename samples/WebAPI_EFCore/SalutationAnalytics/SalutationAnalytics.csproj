@@ -17,7 +17,7 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-      <ProjectReference Include="..\SalutationPorts\SalutationPorts.csproj" />
+      <ProjectReference Include="..\SalutationApp\SalutationApp.csproj" />
       <ProjectReference Include="..\Salutations_MySqlMigrations\Salutations_MySqlMigrations.csproj" />
       <ProjectReference Include="..\Salutations_SqliteMigrations\Salutations_SqliteMigrations.csproj" />
     </ItemGroup>

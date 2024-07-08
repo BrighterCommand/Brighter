@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using SalutationEntities;
+using SalutationApp.Entities;
 
-namespace SalutationPorts.EntityGateway
+namespace SalutationApp.EntityGateway
 {
     public class SalutationsEntityGateway : DbContext
     {
