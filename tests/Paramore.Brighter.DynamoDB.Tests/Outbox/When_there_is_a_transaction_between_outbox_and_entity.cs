@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
@@ -23,6 +23,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
     {
         _testOutputHelper = testOutputHelper;
         var tableRequestFactory = new DynamoDbTableFactory();
+        var fakeTimeProvider = new FakeTimeProvider();
 
         //act
         CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<MyEntity>(
@@ -44,7 +45,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             DbTableBuilder.EnsureTablesReady(new[] { tableRequest.TableName }, TableStatus.ACTIVE).Wait();
         }
 
-        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -45,6 +46,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly DynamoDBContext _context;
         private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
         private readonly Random _random = new Random();
+        private readonly TimeProvider _timeProvider;
+
+        private readonly ConcurrentDictionary<string, OutstandingTopicQueryContext> _outstandingTopicQueryContexts;
+        private readonly ConcurrentDictionary<string, DispatchedTopicQueryContext> _dispatchedTopicQueryContexts;
+
+        private readonly ConcurrentDictionary<string, byte> _topicNames;
+
+        private OutstandingAllTopicsQueryContext _outstandingAllTopicsQueryContext;
+        private DispatchedAllTopicsQueryContext _dispatchedAllTopicsQueryContext;
 
         public bool ContinueOnCapturedContext { get; set; }
         
@@ -60,10 +70,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="client">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration)
+        public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration, 
+            TimeProvider timeProvider)
         {
             _configuration = configuration;
             _context = new DynamoDBContext(client);
+            _timeProvider = timeProvider;
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
             {
                 OverrideTableName = _configuration.TableName,
@@ -74,6 +86,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
             }
+
+            _outstandingTopicQueryContexts = new ConcurrentDictionary<string, OutstandingTopicQueryContext>();
+            _dispatchedTopicQueryContexts = new ConcurrentDictionary<string, DispatchedTopicQueryContext>();
+            _topicNames = new ConcurrentDictionary<string, byte>();
         }
 
         /// <summary>
@@ -81,16 +97,21 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="context">An existing Dynamo Db Context</param>
         /// <param name="configuration">The Configuration from the context - the config is internal, so we can't grab the settings from it.</param>
-        public DynamoDbOutbox(DynamoDBContext context, DynamoDbConfiguration configuration)
+        public DynamoDbOutbox(DynamoDBContext context, DynamoDbConfiguration configuration, TimeProvider timeProvider)
         {
             _context = context;
             _configuration = configuration;
+            _timeProvider = timeProvider;
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
             
             if (_configuration.NumberOfShards > 20)
             {
                 throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
             }
+
+            _outstandingTopicQueryContexts = new ConcurrentDictionary<string, OutstandingTopicQueryContext>();
+            _dispatchedTopicQueryContexts = new ConcurrentDictionary<string, DispatchedTopicQueryContext>();
+            _topicNames = new ConcurrentDictionary<string, byte>();
         }
 
         /// <inheritdoc />
@@ -149,6 +170,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var shard = GetShardNumber();
             var expiresAt = GetExpirationTime();
             var messageToStore = new MessageItem(message, shard, expiresAt);
+
+            // Store the name of the topic as a key in a concurrent dictionary to ensure uniqueness & thread safety
+            _topicNames.TryAdd(message.Header.Topic, 0);
 
             if (transactionProvider != null)
             {
@@ -229,27 +253,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
-            if (args == null)
-            {
-                throw new ArgumentException("Missing required argument", nameof(args));
-            }
-            
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
-            var topic = (string)args["Topic"];
-
-            //in theory this is all values on that index that have a Delivered data (sparse index)
-            //we just need to filter for ones in the right date range
-            //As it is a GSI it can't use a consistent read
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.DeliveredIndexName,
-                KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime),
-                ConsistentRead = false
-            };
-           
-            //block async to make this sync
-            var messages = PageAllMessagesAsync(queryConfig).Result.ToList();
-            return messages.Select(msg => msg.ConvertToMessage());
+            return DispatchedMessagesAsync(millisecondsDispatchedSince, requestContext, pageSize, pageNumber, outboxTimeout, args, CancellationToken.None)
+                .GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -273,27 +278,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            if (args == null)
+            if (args == null || !args.ContainsKey("Topic"))
             {
-                throw new ArgumentException("Missing required argument", nameof(args));
+                return await DispatchedMessagesForAllTopicsAsync(millisecondsDispatchedSince, pageSize, pageNumber, cancellationToken);
             }
-            
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
-            var topic = (string)args["Topic"];
 
-            //in theory this is all values on that index that have a Delivered data (sparse index)
-            //we just need to filter for ones in the right date range
-            //As it is a GSI it can't use a consistent read
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.DeliveredIndexName,
-                KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime),
-                ConsistentRead = false
-            };
-           
-            //block async to make this sync
-            var messages = await PageAllMessagesAsync(queryConfig, cancellationToken);
-            return messages.Select(msg => msg.ConvertToMessage());
+            var topic = (string)args["Topic"];
+            return await DispatchedMessagesForTopicAsync(millisecondsDispatchedSince, pageSize, pageNumber, topic, cancellationToken);
         }
         
         /// <summary>
@@ -369,7 +360,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var message = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
-            MarkMessageDispatched(dispatchedAt ?? DateTime.UtcNow, message);
+            MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
 
             await _context.SaveAsync(
                 message, 
@@ -408,7 +399,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             var message = _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig).Result;
-            MarkMessageDispatched(dispatchedAt ?? DateTime.UtcNow, message);
+            MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
 
             _context.SaveAsync(
                 message, 
@@ -417,7 +408,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         }
 
-        private static void MarkMessageDispatched(DateTime dispatchedAt, MessageItem message)
+        private static void MarkMessageDispatched(DateTimeOffset dispatchedAt, MessageItem message)
         {
             message.DeliveryTime = dispatchedAt.Ticks;
             message.DeliveredAt = dispatchedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
@@ -439,24 +430,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
          int pageNumber = 1, 
          Dictionary<string, object> args = null)
         {
-            var now = DateTime.UtcNow;
-            
-            if (args == null)
-            {
-                throw new ArgumentException("Missing required argument", nameof(args));
-            }
-
-            var dispatchedTime = now.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
-            var topic = (string)args["Topic"];
-
-            //block async to make this sync
-            IEnumerable<MessageItem> messages;
-            if(_configuration.NumberOfShards <= 1)
-               messages = QueryAllOutstandingAsync(topic, dispatchedTime).Result.ToList();
-            else
-                messages = QueryAllOutstandingShardsAsync(topic, dispatchedTime).Result.ToList();
-            
-            return messages.Select(msg => msg.ConvertToMessage());
+            return OutstandingMessagesAsync(millisecondsDispatchedSince, requestContext, pageSize, pageNumber, args)
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <summary>
@@ -477,21 +453,136 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            if (args == null)
+            if (args == null || !args.ContainsKey("Topic"))
             {
-                throw new ArgumentException("Missing required argument", nameof(args));
+                return await OutstandingMessagesForAllTopicsAsync(millisecondsDispatchedSince, pageSize, pageNumber, cancellationToken);
             }
 
-            var minimumAge = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
-            var topic = (string)args["Topic"];
+            var topic = args["Topic"].ToString();
+            return await OutstandingMessagesForTopicAsync(millisecondsDispatchedSince, pageSize, pageNumber, topic, cancellationToken);
+        }
 
-            IEnumerable<MessageItem> messages; 
-            if(_configuration.NumberOfShards <= 1)
-                messages = (await QueryAllOutstandingAsync(topic, minimumAge, cancellationToken)).ToList();
+        private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(double millisecondsDispatchedSince, int pageSize, int pageNumber, 
+            CancellationToken cancellationToken)
+        {
+            var olderThan = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            // Validate that this is a query for a page we can actually retrieve
+            if (pageNumber != 1 && _outstandingAllTopicsQueryContext?.NextPage != pageNumber)
+            {
+                var nextPageNumber = _outstandingAllTopicsQueryContext?.NextPage ?? 1;
+                var errorMessage = $"Unable to query page {pageNumber} of outstanding messages for all topics - next available page is page {nextPageNumber}";
+                throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
+            }
+
+            // Get the list of topic names we need to query over,
+            // the current paging token if there is one & this isn't the first page,
+            // and the current shard to be paged over for the current topic
+            List<string> topics;
+            string paginationToken;
+            int currentShard;
+            if (pageNumber == 1)
+            {
+                topics = _topicNames.Keys.ToList();
+                paginationToken = null;
+                currentShard = 0;
+            }
             else
-                messages = (await QueryAllOutstandingShardsAsync(topic, minimumAge, cancellationToken)).ToList();
-            
-            return messages.Select(msg => msg.ConvertToMessage());
+            {
+                topics = _outstandingAllTopicsQueryContext.RemainingTopics;
+                paginationToken = _outstandingAllTopicsQueryContext.LastEvaluatedKey;
+                currentShard = _outstandingAllTopicsQueryContext.ShardNumber;
+            }
+
+            // Iterate over topics and their associated shards until we reach the batch size
+            var results = new List<MessageItem>();
+            var currentTopicIndex = 0;
+            while (results.Count < pageSize && currentTopicIndex < topics.Count)
+            {
+                var remainingBatchSize = pageSize - results.Count;
+                var queryResult = await PageOutstandingMessagesToBatchSizeAsync(
+                    topics[currentTopicIndex], 
+                    olderThan, 
+                    remainingBatchSize, 
+                    currentShard, 
+                    paginationToken, 
+                    cancellationToken);
+
+                results.AddRange(queryResult.Messages);
+
+                if (queryResult.QueryComplete)
+                {
+                    currentTopicIndex++;
+                    paginationToken = null;
+                    currentShard = 0;
+                }
+                else
+                {
+                    paginationToken = queryResult.PaginationToken;
+                    currentShard = queryResult.ShardNumber;
+                }
+            }
+
+            // Store the progress for the "all topics" query if there are further pages
+            if (currentTopicIndex < topics.Count)
+            {
+                var remainingTopics = topics.GetRange(currentTopicIndex, topics.Count - currentTopicIndex);
+                _outstandingAllTopicsQueryContext = new OutstandingAllTopicsQueryContext(pageNumber + 1, paginationToken, currentShard, remainingTopics);
+            }
+            else
+            {
+                _outstandingAllTopicsQueryContext = null;
+            }
+
+            return results.Select(msg => msg.ConvertToMessage());
+        }
+
+        private async Task<IEnumerable<Message>> OutstandingMessagesForTopicAsync(double millisecondsDispatchedSince, int pageSize, int pageNumber,
+            string topicName, CancellationToken cancellationToken)
+        {
+            var olderThan = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            // Validate that this is a query for a page we can actually retrieve
+            if (pageNumber != 1)
+            {
+                if (!_outstandingTopicQueryContexts.ContainsKey(topicName))
+                {
+                    var errorMessage = $"Unable to query page {pageNumber} of outstanding messages for topic {topicName} - next available page is page 1";
+                    throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
+                }
+
+                if (_outstandingTopicQueryContexts[topicName]?.NextPage != pageNumber)
+                {
+                    var nextPageNumber = _dispatchedTopicQueryContexts[topicName]?.NextPage ?? 1;
+                    var errorMessage = $"Unable to query page {pageNumber} of outstanding messages for topic {topicName} - next available page is page {nextPageNumber}";
+                    throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
+                }
+            }
+
+            // Query as much as possible up to the max page (batch) size
+            string paginationToken = null;
+            int initialShardNumber = 0;
+            if (pageNumber != 1)
+            {
+                paginationToken = _outstandingTopicQueryContexts[topicName].LastEvaluatedKey;
+                initialShardNumber = _outstandingTopicQueryContexts[topicName].ShardNumber;
+            }
+
+            var queryResult = await PageOutstandingMessagesToBatchSizeAsync(topicName, olderThan, pageSize, initialShardNumber, paginationToken, cancellationToken);
+
+            // Store the progress for this topic if there are further pages
+            if (!queryResult.QueryComplete)
+            {
+                _outstandingTopicQueryContexts.AddOrUpdate(topicName,
+                    new OutstandingTopicQueryContext(pageNumber + 1, queryResult.ShardNumber, queryResult.PaginationToken),
+                    (_, _) => new OutstandingTopicQueryContext(pageNumber + 1, queryResult.ShardNumber, queryResult.PaginationToken));
+            }
+            else
+            {
+                _outstandingTopicQueryContexts.TryRemove(topicName, out _);
+            }
+
+            return queryResult.Messages.Select(msg => msg.ConvertToMessage());
         }
 
        private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
@@ -510,60 +601,216 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             MessageItem messageItem = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();
         }
-        
-        private async Task<IEnumerable<MessageItem>> PageAllMessagesAsync(QueryOperationConfig queryConfig, CancellationToken cancellationToken = default)
+
+        private async Task<IEnumerable<Message>> DispatchedMessagesForTopicAsync(
+            double millisecondsDispatchedSince,
+            int pageSize,
+            int pageNumber,
+            string topicName,
+            CancellationToken cancellationToken)
         {
-            var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
-            
-            var messages = new List<MessageItem>();
-            do
+            var sinceTime = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            // Validate that this is a query for a page we can actually retrieve
+            if (pageNumber != 1)
             {
-                var items = await asyncSearch.GetNextSetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                messages.AddRange(items);
-            } while (!asyncSearch.IsDone);
-
-            return messages;
-        }
-        
-        private async Task<IEnumerable<MessageItem>> QueryAllOutstandingAsync(string topic, DateTime dispatchedTime, CancellationToken cancellationToken = default)
-        {
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, dispatchedTime, 0),
-                FilterExpression = new NoDispatchTimeExpression().Generate(),
-                ConsistentRead = false
-            };
-
-            return await PageAllMessagesAsync(queryConfig, cancellationToken);
-        }
-
-        
-        private async Task<IEnumerable<MessageItem>> QueryAllOutstandingShardsAsync(string topic, DateTime minimumAge, CancellationToken cancellationToken = default)
-        {
-            var tasks = new List<Task<IEnumerable<MessageItem>>>();
-
-            for (int shard = 0; shard < _configuration.NumberOfShards; shard++)
-            {
-                // We get all the messages for topic, added within a time range
-                // There should be few enough of those that we can efficiently filter for those
-                // that don't have a delivery date.
-                var queryConfig = new QueryOperationConfig
+                if (!_dispatchedTopicQueryContexts.ContainsKey(topicName))
                 {
-                    IndexName = _configuration.OutstandingIndexName,
-                    KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, minimumAge, shard),
-                    FilterExpression = new NoDispatchTimeExpression().Generate(),
-                    ConsistentRead = false
-                };
+                    var errorMessage = $"Unable to query page {pageNumber} of dispatched messages for topic {topicName} - next available page is page 1";
+                    throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
+                }
 
-                tasks.Add(PageAllMessagesAsync(queryConfig, cancellationToken));
+                if (_dispatchedTopicQueryContexts[topicName]?.NextPage != pageNumber)
+                {
+                    var nextPageNumber = _dispatchedTopicQueryContexts[topicName]?.NextPage ?? 1;
+                    var errorMessage = $"Unable to query page {pageNumber} of dispatched messages for topic {topicName} - next available page is page {nextPageNumber}";
+                    throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
+                }
             }
 
-            await Task.WhenAll(tasks);
+            // Query as much as possible up to the max page (batch) size
+            var paginationToken = pageNumber == 1 ? null : _dispatchedTopicQueryContexts[topicName].LastEvaluatedKey;
+            var queryResult = await PageDispatchedMessagesToBatchSizeAsync(topicName, sinceTime, pageSize, paginationToken, cancellationToken);
 
-            return tasks
-                .SelectMany(x => x.Result)
-                .OrderBy(x => x.CreatedAt);
+            // Store the progress for this topic if there are further pages
+            if (!queryResult.QueryComplete)
+            {
+                _dispatchedTopicQueryContexts.AddOrUpdate(topicName,
+                    new DispatchedTopicQueryContext(pageNumber + 1, queryResult.PaginationToken),
+                    (_, _) => new DispatchedTopicQueryContext(pageNumber + 1, queryResult.PaginationToken));
+            }
+            else
+            {
+                _dispatchedTopicQueryContexts.TryRemove(topicName, out _);
+            }
+
+            return queryResult.Messages.Select(msg => msg.ConvertToMessage());
+        }
+
+        private async Task<IEnumerable<Message>> DispatchedMessagesForAllTopicsAsync(
+            double millisecondsDispatchedSince,
+            int pageSize,
+            int pageNumber,
+            CancellationToken cancellationToken)
+        {
+            var sinceTime = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            // Validate that this is a query for a page we can actually retrieve
+            if (pageNumber != 1 && _dispatchedAllTopicsQueryContext?.NextPage != pageNumber)
+            {
+                var nextPageNumber = _dispatchedAllTopicsQueryContext?.NextPage ?? 1;
+                var errorMessage = $"Unable to query page {pageNumber} of dispatched messages for all topics - next available page is page {nextPageNumber}";
+                throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
+            }
+
+            // Get the list of topic names we need to query over, and the current paging token if there is one & this isn't the first page
+            List<string> topics;
+            string paginationToken;
+            if (pageNumber == 1)
+            {
+                topics = _topicNames.Keys.ToList();
+                paginationToken = null;
+            }
+            else
+            {
+                topics = _dispatchedAllTopicsQueryContext.RemainingTopics;
+                paginationToken = _dispatchedAllTopicsQueryContext.LastEvaluatedKey;
+            }
+
+            // Iterate over topic until we reach the batch size
+            var results = new List<MessageItem>();
+            var currentTopicIndex = 0;
+            while (results.Count < pageSize && currentTopicIndex < topics.Count)
+            {
+                var remainingBatchSize = pageSize - results.Count;
+                var queryResult = await PageDispatchedMessagesToBatchSizeAsync(
+                    topics[currentTopicIndex],
+                    sinceTime,
+                    remainingBatchSize,
+                    paginationToken,
+                    cancellationToken);
+
+                results.AddRange(queryResult.Messages);
+
+                if (queryResult.QueryComplete)
+                {
+                    currentTopicIndex++;
+                    paginationToken = null;
+                }
+                else
+                {
+                    paginationToken = queryResult.PaginationToken;
+                }
+            }
+
+            // Store the progress for the "all topics" query if there are further pages
+            if (currentTopicIndex < topics.Count)
+            {
+                var outstandingTopics = topics.GetRange(currentTopicIndex, topics.Count - currentTopicIndex);
+                _dispatchedAllTopicsQueryContext = new DispatchedAllTopicsQueryContext(pageNumber + 1, paginationToken, outstandingTopics);
+            }
+            else
+            {
+                _dispatchedAllTopicsQueryContext = null;
+            }
+
+            return results.Select(msg => msg.ConvertToMessage());
+        }
+
+        private async Task<OutstandingMessagesQueryResult> PageOutstandingMessagesToBatchSizeAsync(
+            string topicName, 
+            DateTimeOffset olderThan, 
+            int batchSize,
+            int initialShardNumber, 
+            string initialPaginationToken,
+            CancellationToken cancellationToken)
+        {
+            var numShards = _configuration.NumberOfShards <= 1 ? 1 : _configuration.NumberOfShards;
+            var results = new List<MessageItem>();
+
+            var paginationToken = initialPaginationToken;
+            var isDone = false;
+            var shard = initialShardNumber;
+            while (shard < numShards && results.Count < batchSize)
+            {
+                do
+                {
+                    // We get all the messages for topic, added within a time range
+                    // There should be few enough of those that we can efficiently filter for those
+                    // that don't have a delivery date.
+                    var queryConfig = new QueryOperationConfig
+                    {
+                        IndexName = _configuration.OutstandingIndexName,
+                        KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topicName, olderThan, shard),
+                        FilterExpression = new NoDispatchTimeExpression().Generate(),
+                        Limit = batchSize - results.Count,
+                        PaginationToken = paginationToken,
+                        ConsistentRead = false
+                    };
+
+                    var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
+                    results.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken));
+
+                    paginationToken = asyncSearch.PaginationToken;
+                    isDone = asyncSearch.IsDone;
+                } while (results.Count < batchSize && !isDone);
+
+                // Only move on to the next shard if we still have room to fill up in the batch
+                if (results.Count < batchSize)
+                {
+                    shard++;
+                }
+            }
+
+            var nextShardNumber = 0;
+            var queryComplete = true;
+            if (!isDone)
+            {
+                // We are part way through a shard
+                // continue on the current shard in the next batch
+                nextShardNumber = shard;
+                queryComplete = false;
+            }
+            else if (shard < numShards)
+            {
+                // We are exactly at the end of a shard
+                // continue on the next shard in the next batch
+                nextShardNumber = shard + 1;
+                queryComplete = false;
+            }
+
+            return new OutstandingMessagesQueryResult(results, nextShardNumber, paginationToken, queryComplete);
+        }
+
+        private async Task<DispatchedMessagesQueryResult> PageDispatchedMessagesToBatchSizeAsync(
+            string topicName,
+            DateTimeOffset sinceTime,
+            int batchSize,
+            string initialPaginationToken,
+            CancellationToken cancellationToken)
+        {
+            var results = new List<MessageItem>();
+            var keyExpression = new KeyTopicDeliveredTimeExpression().Generate(topicName, sinceTime);
+            var paginationToken = initialPaginationToken;
+            var isDone = false;
+            do
+            {
+                var queryConfig = new QueryOperationConfig
+                {
+                    IndexName = _configuration.DeliveredIndexName,
+                    KeyExpression = keyExpression,
+                    Limit = batchSize - results.Count,
+                    PaginationToken = paginationToken
+                };
+
+                var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
+                results.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken));
+
+                paginationToken = asyncSearch.PaginationToken;
+                isDone = asyncSearch.IsDone;
+            } while (results.Count < batchSize && !isDone);
+
+            return new DispatchedMessagesQueryResult(results, paginationToken, isDone);
         }
         
         private async Task WriteMessageToOutbox(CancellationToken cancellationToken, MessageItem messageToStore)
@@ -580,7 +827,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             if (_configuration.NumberOfShards <= 1)
                 return 0;
 
-            //The rance is inclusive of 0 but exclusive of NumberOfShards i.e. 0, 4 produces values in range 0-3
+            //The range is inclusive of 0 but exclusive of NumberOfShards i.e. 0, 4 produces values in range 0-3
             return _random.Next(0, _configuration.NumberOfShards);
         }
 
@@ -588,7 +835,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             if (_configuration.TimeToLive.HasValue)
             {
-                return DateTimeOffset.UtcNow.Add(_configuration.TimeToLive.Value).ToUnixTimeSeconds();
+                return _timeProvider.GetUtcNow().Add(_configuration.TimeToLive.Value).ToUnixTimeSeconds();
             }
 
             return null;

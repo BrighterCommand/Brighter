@@ -248,7 +248,7 @@ static IAmAnInbox ConfigureInbox(AWSCredentials credentials, IAmazonDynamoDB dyn
 
 static IAmAnOutbox ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
 {
-    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration());
+    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(), TimeProvider.System);
 }
 
 
