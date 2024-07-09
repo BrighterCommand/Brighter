@@ -29,7 +29,7 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="FluentMigrator" Version="5.2.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="5.2.0" />
-    <PackageVersion Include="MessagePack" Version="2.5.168" />
+    <PackageVersion Include="MessagePack" Version="2.5.171" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.1" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.6" />
