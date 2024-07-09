@@ -6,11 +6,10 @@ using Azure.Messaging.ServiceBus.Administration;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
 {
-    public class ServiceBusChainedClientProvider : IServiceBusClientProvider
+    public class ServiceBusChainedClientProvider : ServiceBusClientProvider
     {
-        private readonly string _fullyQualifiedNameSpace;
-
-        private readonly ChainedTokenCredential _tokenCredential;
+        protected override ServiceBusClient Client { get; }
+        protected override ServiceBusAdministrationClient AdminClient { get; }
 
         /// <summary>
         /// Initializes an implementation is <see cref="IServiceBusClientProvider"/> using Default Azure Credentials for Authentication.
@@ -31,26 +30,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
                     "Credential Sources is null or empty, ensure this is set in the constructor.");
             }
 
-            _tokenCredential = new ChainedTokenCredential(credentialSources);
-            _fullyQualifiedNameSpace = fullyQualifiedNameSpace;
-        }
-
-        /// <summary>
-        /// Provides an Azure Service Bus Client
-        /// </summary>
-        /// <returns>Azure Service Bus Client</returns>
-        public ServiceBusClient GetServiceBusClient()
-        {
-            return new ServiceBusClient(_fullyQualifiedNameSpace, _tokenCredential);
-        }
-
-        /// <summary>
-        /// Provides an Azure Service Bus Administration Client
-        /// </summary>
-        /// <returns>Azure Service Bus Administration Client</returns>
-        public ServiceBusAdministrationClient GetServiceBusAdministrationClient()
-        {
-            return new ServiceBusAdministrationClient(_fullyQualifiedNameSpace, _tokenCredential);
+            Client = new ServiceBusClient(fullyQualifiedNameSpace, new ChainedTokenCredential(credentialSources));
+            AdminClient = new ServiceBusAdministrationClient(fullyQualifiedNameSpace,
+                new ChainedTokenCredential(credentialSources));
         }
     }
 }
