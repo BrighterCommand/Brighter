@@ -10,30 +10,31 @@ using Xunit;
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
 [Trait("Category", "DynamoDB")]
-public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
+public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
 {
     private readonly Message _message;
     private readonly DynamoDbOutbox _dynamoDbOutbox;
     private readonly FakeTimeProvider _fakeTimeProvider;
 
-    public DynamoDbOutboxOutstandingMessageTests()
+    public DynamoDbOutboxDispatchedMessageTests()
     {
-        _fakeTimeProvider = new FakeTimeProvider();
         _message = CreateMessage("test_topic");
+        _fakeTimeProvider = new FakeTimeProvider();
         _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), _fakeTimeProvider);
     }
 
     [Fact]
-    public async Task When_there_are_outstanding_messages_in_the_outbox_async()
+    public async Task When_there_are_dispatched_messages_in_the_outbox_async()
     {
         var context = new RequestContext();
         await _dynamoDbOutbox.AddAsync(_message, context);
+        await _dynamoDbOutbox.MarkDispatchedAsync(_message.Id, context);
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
-        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 1, args);
+        var messages = await _dynamoDbOutbox.DispatchedMessagesAsync(0, context, 100, 1, args: args);
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
@@ -42,16 +43,17 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_outstanding_messages_in_the_outbox()
+    public async Task When_there_are_dispatched_messages_in_the_outbox()
     {
         var context = new RequestContext();
         _dynamoDbOutbox.Add(_message, context);
+        _dynamoDbOutbox.MarkDispatched(_message.Id, context);
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
-        var messages =_dynamoDbOutbox.OutstandingMessages(0, context, 100, 1, args);
+        var messages = _dynamoDbOutbox.DispatchedMessages(0, context, 100, 1, args: args);
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
@@ -60,7 +62,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_outstanding_messages_for_multiple_topics_async()
+    public async Task When_there_are_dispatched_messages_for_multiple_topics_async()
     {
         var messages = new List<Message>();
         var context = new RequestContext();
@@ -70,24 +72,25 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             await _dynamoDbOutbox.AddAsync(message, context);
+            await _dynamoDbOutbox.MarkDispatchedAsync(message.Id, context);
         }
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
-        var outstandingMessages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 1);
+        var dispatchedMessages = await _dynamoDbOutbox.DispatchedMessagesAsync(0, context, 100, 1);
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
         {
-            var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
-            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+            var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
+            dispatchedMessage.Should().NotBeNull();
+            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
+            dispatchedMessage.Header.Topic.Should().Be(message.Header.Topic);
         }
     }
 
     [Fact]
-    public async Task When_there_are_outstanding_messages_for_multiple_topics()
+    public async Task When_there_are_dispatched_messages_for_multiple_topics()
     {
         var messages = new List<Message>();
         var context = new RequestContext();
@@ -97,24 +100,25 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             _dynamoDbOutbox.Add(message, context);
+            _dynamoDbOutbox.MarkDispatched(message.Id, context);
         }
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
-        var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(0, context, 100, 1);
+        var dispatchedMessages = _dynamoDbOutbox.DispatchedMessages(0, context, 100, 1);
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
         {
-            var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
-            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+            var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
+            dispatchedMessage.Should().NotBeNull();
+            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
+            dispatchedMessage.Header.Topic.Should().Be(message.Header.Topic);
         }
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_outstanding_messages_for_a_topic_async()
+    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_a_topic_async()
     {
         var context = new RequestContext();
         var messages = new List<Message>();
@@ -127,6 +131,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             await _dynamoDbOutbox.AddAsync(message, context);
+            await _dynamoDbOutbox.MarkDispatchedAsync(message.Id, context);
         }
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
@@ -134,22 +139,22 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
         // Get the first page
-        var outstandingMessages = (await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 5, 1, args)).ToList();
-        outstandingMessages.Count.Should().Be(5);
+        var dispatchedMessages = (await _dynamoDbOutbox.DispatchedMessagesAsync(0, context, 5, 1, args: args)).ToList();
+        dispatchedMessages.Count.Should().Be(5);
         // Get the remainder
-        outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 2, args));
+        dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(0, context, 100, 2, args: args));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
         {
-            var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
+            var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
+            dispatchedMessage.Should().NotBeNull();
+            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
         }
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_outstanding_messages_for_a_topic()
+    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_a_topic()
     {
         var context = new RequestContext();
         var messages = new List<Message>();
@@ -162,6 +167,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             _dynamoDbOutbox.Add(message, context);
+            _dynamoDbOutbox.MarkDispatched(message.Id, context);
         }
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
@@ -169,22 +175,22 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
         // Get the first page
-        var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(0, context, 5, 1, args).ToList();
-        outstandingMessages.Count.Should().Be(5);
+        var dispatchedMessages = (_dynamoDbOutbox.DispatchedMessages(0, context, 5, 1, args: args)).ToList();
+        dispatchedMessages.Count.Should().Be(5);
         // Get the remainder
-        outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(0, context, 100, 2, args));
+        dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(0, context, 100, 2, args: args));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
         {
-            var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
+            var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
+            dispatchedMessage.Should().NotBeNull();
+            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
         }
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_outstanding_messages_for_all_topics_async()
+    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_multiple_topics_async()
     {
         var context = new RequestContext();
         var messages = new List<Message>();
@@ -203,31 +209,32 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             await _dynamoDbOutbox.AddAsync(message, context);
+            await _dynamoDbOutbox.MarkDispatchedAsync(message.Id, context);
         }
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         // Get the messages over 4 pages
-        var outstandingMessages = new List<Message>();
+        var dispatchedMessages = new List<Message>();
         for (var i = 1; i < 5; i++)
         {
-            outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 5, i));
+            dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(0, context, 5, i));
         }
         // Do a last page in case other tests have added more messages
-        outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 5));
+        dispatchedMessages.AddRange(await _dynamoDbOutbox.DispatchedMessagesAsync(0, context, 100, 5));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
         {
-            var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
-            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+            var dispatchedMessage = dispatchedMessages.Single(m => m.Id == message.Id);
+            dispatchedMessage.Should().NotBeNull();
+            dispatchedMessage.Body.Value.Should().Be(message.Body.Value);
+            dispatchedMessage.Header.Topic.Should().Be(message.Header.Topic);
         }
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_outstanding_messages_for_all_topics()
+    public async Task When_there_are_multiple_pages_of_dispatched_messages_for_multiple_topics()
     {
         var context = new RequestContext();
         var messages = new List<Message>();
@@ -246,34 +253,34 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         foreach (var message in messages)
         {
             _dynamoDbOutbox.Add(message, context);
+            _dynamoDbOutbox.MarkDispatched(message.Id, context);
         }
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         // Get the messages over 4 pages
-        var outstandingMessages = new List<Message>();
+        var dispatchedMessages = new List<Message>();
         for (var i = 1; i < 5; i++)
         {
-            outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(0, context, 5, i));
+            dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(0, context, 5, i));
         }
         // Do a last page in case other tests have added more messages
-        outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(0, context, 100, 5));
+        dispatchedMessages.AddRange(_dynamoDbOutbox.DispatchedMessages(0, context, 100, 5));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
         {
-            var outstandingMessage = outstandingMessages.Single(m => m.Id == message.Id);
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage.Body.Value.Should().Be(message.Body.Value);
-            outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
+            var dispatchesMessage = dispatchedMessages.Single(m => m.Id == message.Id);
+            dispatchesMessage.Should().NotBeNull();
+            dispatchesMessage.Body.Value.Should().Be(message.Body.Value);
+            dispatchesMessage.Header.Topic.Should().Be(message.Header.Topic);
         }
     }
 
     private Message CreateMessage(string topic)
     {
         return new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_DOCUMENT, 
-                timeStamp: _fakeTimeProvider.GetUtcNow().DateTime),
+            new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_DOCUMENT),
             new MessageBody("message body")
         );
     }
