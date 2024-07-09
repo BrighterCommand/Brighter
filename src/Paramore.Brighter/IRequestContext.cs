@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
@@ -45,7 +46,7 @@ namespace Paramore.Brighter
         /// Gets the bag.
         /// </summary>
         /// <value>The bag.</value>
-        Dictionary<string, object> Bag { get; }
+        ConcurrentDictionary<string, object> Bag { get; }
         
         /// <summary>
         /// Gets the policies.
