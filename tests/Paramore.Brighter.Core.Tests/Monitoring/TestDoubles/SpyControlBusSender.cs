@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring.TestDoubles
             return (T) _requests.Dequeue();
         }
 
-        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             await Task.Delay(5, cancellationToken); 
             Post(request);

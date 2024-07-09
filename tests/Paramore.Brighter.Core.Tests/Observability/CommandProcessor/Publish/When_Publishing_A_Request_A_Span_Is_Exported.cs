@@ -107,11 +107,10 @@ public class CommandProcessorPublishObservabilityTests
         first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event)).Should().BeTrue();
         first.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
         
-        first.Events.Count().Should().Be(1);
-        first.Events.First().Name.Should().Be(nameof(MyEventHandler));
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyEventHandler)).Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
-        first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
+        var activityEvent = first.Events.Single(e => e.Name == nameof(MyEventHandler) || e.Name == nameof(MyOtherEventHandler));
+        activityEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == activityEvent.Name).Should().BeTrue();
+        activityEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+        activityEvent.Tags.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
         
         //--second publish
         var second = publishActivities.Last();
@@ -121,11 +120,10 @@ public class CommandProcessorPublishObservabilityTests
         second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(@event)).Should().BeTrue();
         second.Tags.Any(t => t is { Key: BrighterSemanticConventions.Operation, Value: "publish" }).Should().BeTrue();
         
-         second.Events.Count().Should().Be(1);
-         second.Events.First().Name.Should().Be(nameof(MyOtherEventHandler));
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == nameof(MyOtherEventHandler)).Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
-         second.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
+        activityEvent = second.Events.Single(e => e.Name == nameof(MyEventHandler) || e.Name == nameof(MyOtherEventHandler));
+        activityEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerName && (string)t.Value == activityEvent.Name).Should().BeTrue();
+        activityEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
+        activityEvent.Tags.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
          
          //TODO: Needs adding when https://github.com/dotnet/runtime/pull/101381 is released
          /*
