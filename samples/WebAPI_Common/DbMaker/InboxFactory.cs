@@ -1,16 +1,26 @@
-﻿using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
-using Microsoft.Extensions.DependencyInjection;
-using Paramore.Brighter;
-using Paramore.Brighter.DynamoDb;
-using Paramore.Brighter.Inbox.DynamoDB;
-using Paramore.Brighter.Outbox.DynamoDB;
+﻿using Paramore.Brighter;
+using Paramore.Brighter.Inbox.MsSql;
+using Paramore.Brighter.Inbox.MySql;
+using Paramore.Brighter.Inbox.Postgres;
+using Paramore.Brighter.Inbox.Sqlite;
 
 namespace DbMaker;
 
-public class InboxFactory
+public static class InboxFactory
 {
-    public static void CreateInbox<T>(IAmazonDynamoDB client, IServiceCollection services) where T : class, IRequest
+    public static IAmAnInbox MakeInbox(DatabaseType databaseType, IAmARelationalDatabaseConfiguration configuration)
+    {
+        return databaseType switch
+        {
+            DatabaseType.Sqlite => new SqliteInbox(configuration),
+            DatabaseType.MySql => new MySqlInbox(configuration),
+            DatabaseType.MsSql => new MsSqlInbox(configuration),
+            DatabaseType.Postgres => new PostgreSqlInbox(configuration),
+            _ => throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported")
+        };
+    }
+
+       public static void CreateInbox<T>(IAmazonDynamoDB client, IServiceCollection services) where T : class, IRequest
     {
         var tableRequestFactory = new DynamoDbTableFactory();
         var dbTableBuilder = new DynamoDbTableBuilder(client);

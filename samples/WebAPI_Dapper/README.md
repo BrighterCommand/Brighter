@@ -39,66 +39,90 @@ In case you are using Command Line Interface for running the project, consider a
 dotnet run --launch-profile XXXXXX -d
 ```
 
-## Architecture
+# Architecture
 
-### GreetingsAPI
+### Outbox
+Brighter does have an [Outbox pattern support](https://paramore.readthedocs.io/en/latest/OutboxPattern.html). In case you are new to it, consider reading it before diving deeper.
+
+### GreetingsWeb
 
 We follow a _ports and adapters_ architectural style, dividing the app into the following modules:
 
-* **GreetingsAdapters**: The adapters' module, handles the primary adapter of HTTP requests and responses to the app
+* **GreetingsWeb**: The adapters' module, handles the primary adapter of HTTP requests and responses to the app
 
-* **GreetingsPorts**: the ports' module, handles requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. 
-In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. The secondary port uses either an IAmARelationalDbConnectionProvider or an IAmATransactionConnectionProvider. 
-Both of these are required for Brighter's Outbox. If you register the former with ServiceCollection, you can use it use it for your own queries; we use Dapper with that connection. 
-The latter is used by the Outbox to ensure that the message is sent within the same transaction as your writes to the entity and you should use its transaction support for transactional messaging. 
+* **GreetingsApp**: The application module, handles the ports and domain model
 
-* **GreetingsEntities**: the domain model (or application in ports & adapters). In a fuller app, this would contain the logic that has a dependency on entity state.
+- ports: handle requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. 
+    - The secondary port of the EntityGateway handles access to the DB via EF Core. We choose to treat EF Core as a port, not an adapter itself, here, as it wraps our underlying adapters for Sqlite or MySql.
+- domain: in a fuller app, this would contain the logic that has a dependency on entity state.
 
-We 'depend on inwards' i.e. **GreetingsAdapters -> GreetingsPorts -> GreetingsEntities**
+We 'depend on inwards' i.e. **GreetingsWeb -> GreetingsApp**
 
-The assemblies migrations: **Greetings_Migrations** hold code to configure the Db. 
-
-GreetingsAPI uses an Outbox for Transactional Messaging - the write to the entity and the message store are within the same transaction and the message is posted from the message store.
+The assemblies migrations: **Greetings_MySqlMigrations** and **Greetings_SqliteMigrations** hold generated code to configure the Db. Consider this adapter layer code - the use of separate modules allows us to switch migration per environment.
 
 ### SalutationAnalytics
 
-* **SalutationAnalytics** The adapter subscribes to GreetingMade messages. It demonstrates listening to a queue. It also demonstrates the use of scopes provided by Brighter's ServiceActivator, which work with Dapper. These support writing to an Outbox when this component raises a message in turn.
-   
-* **SalutationPorts** The ports' module, handles requests from the primary adapter to the domain, and requests to secondary adapters. It writes to the entity store and sends another message. We don't listen to that message. Note that without any listeners RabbitMQ will drop the message we send, as it has no queues to give it to. 
-If you want to see the messages produced, use the RMQ Management Console (localhost:15672) or Kafka Console (localhost:9021). (You will need to create a subscribing queue in RabbitMQ)
+This listens for a GreetingMade message and stores it. It demonstrates listening to a queue. It also demonstrates the use of scopes provided by Brighter's ServiceActivator. These support writing to an Outbox when this component raises a message in turn.
 
-* **SalutationEntities** The domain model (or application in ports & adapters). In a fuller app, this would contain the logic that has a dependency on entity state.
+We follow a _ports and adapters_ architectural style, dividing the app into the following modules:
 
-We add an Inbox as well as the Outbox here. The Inbox can be used to de-duplicate messages. In messaging, the guarantee is 'at least once' if you use a technique such as an Outbox to ensure sending. This means we may receive a message twice. We either need, as in this case, to use an Inbox to de-duplicate, or we need to be idempotent such that receiving the message multiple times would result in the same outcome.
+* **SalutationAnalytics**: The adapters' module, handles the primary adapter of HTTP requests and responses to the app
 
-The assemblies migrations: **Salutations_Migrations** hold code to configure the Db.
+* **SalutationsApp**: The application module, handles the ports and domain model
 
-## Acceptance Tests
+- ports: handle requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. 
+- domain: in a fuller app, this would contain the logic that has a dependency on entity state.
 
-We provide a tests.http file (supported by both JetBrains Rider and VS Code with the REST Client plugin) to allow you to test operations on the API.
+We 'depend on inwards' i.e. **SalutationsAnalytics -> GreetingsApp**
 
-## Possible issues
+We also add an Inbox here. The Inbox can be used to de-duplicate messages. In messaging, the guarantee is 'at least once' if you use a technique such as an Outbox to ensure sending. This means we may receive a message twice. We either need, as in this case, to use an Inbox to de-duplicate, or we need to be idempotent such that receiving the message multiple times would result in the same outcome.
 
-#### Sqlite Database Read-Only Errors
+The assemblies migrations: **Salutations_MySqlMigrations** and **Salutations_SqliteMigrations** hold generated code to configure the Db. Consider this adapter layer code - the use of separate modules allows us to switch migration per environment.
+
+### Possible issues
+#### Sqlite
+**Sqlite Database Read-Only Errors**
 
 A Sqlite database will only have permissions for the process that created it. This can result in you receiving read-only errors between invocations of the sample. You either need to alter the permissions on your Db, or delete it between runs.
 
 Maintainers, please don't check the Sqlite files into source control.
 
-#### RabbitMQ Queue Creation and Dropped Messages
+**Sqlite Database Read-Only Errors**
 
-For Rabbit MQ, queues are created by consumers. This is because publishers don't know who consumes them, and thus don't create their queues. This means that if you run a producer, such as GreetingsWeb, and use tests.http to push in greetings, although a message will be published to RabbitMQ, it won't have a queue to be delivered to and will be dropped, unless you have first run the SalutationAnalytics worker to create the queue.
+A Sqlite database will only have permissions for the process that created it. This can result in you receiving read-only errors between invocations of the sample. You either need to alter the permissions on your Db, or delete it between runs.
+
+Maintainers, please don't check the Sqlite files into source control.
+
+#### RabbitMQ
+
+**Queue Creation and Dropped Messages**
+
+Queues are created by consumers. This is because publishers don't know who consumes them, and thus don't create their queues. This means that if you run a producer, such as GreetingsWeb, and use tests.http to push in greetings, although a message will be published to RabbitMQ, it won't have a queue to be delivered to and will be dropped, unless you have first run the SalutationAnalytics worker to create the queue.
 
 Generally, the rule of thumb is: start the consumer and *then* start the producer.
 
-You can spot this by looking in the [RabbitMQ Management console](http://localhost:15672) and noting that no queue is bound to the routing key in the exchange.
+You can spot this by looking in the [RabbitMQ Management console](http://localhost:1567) and noting that no queue is bound to the routing key in the exchange.
 You can use default credentials for the RabbitMQ Management console:
 ```sh
 user :guest
 passowrd: guest
 ```
+**Connection issue with the RabbitMQ**
+When running RabbitMQ from the docker compose file (without any additional network setup, etc.) your RabbitMQ instance in docker will still be accessible by **localhost** as a host name. Consider this when running your application in the Production environment.
+In Production, the application by default will have:
+```sh
+amqp://guest:guest@rabbitmq:5672
+```
+
+as an Advanced Message Queuing Protocol (AMQP) connection string.  
+So one of the options will be replacing AMQP connection string with:
+```sh
+amqp://guest:guest@localhost:5672
+```
+In case you still struggle, consider following these steps: [RabbitMQ Troubleshooting Networking](https://www.rabbitmq.com/troubleshooting-networking.html)
+
+
 #### Helpful documentation links
 * [Brighter technical documentation](https://paramore.readthedocs.io/en/latest/index.html)
 * [Rabbit Message Queue (RMQ) documentation](https://www.rabbitmq.com/documentation.html)
 * [Kafka documentation](https://kafka.apache.org/documentation/)
-

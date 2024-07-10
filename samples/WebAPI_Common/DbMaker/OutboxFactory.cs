@@ -30,6 +30,29 @@ public static class OutboxFactory
         return outbox;
     }
 
+    public static void CreateOutbox(IAmazonDynamoDB client, IServiceCollection services)
+    {
+        var tableRequestFactory = new DynamoDbTableFactory();
+        var dbTableBuilder = new DynamoDbTableBuilder(client);
+            
+        var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
+            new DynamoDbCreateProvisionedThroughput(
+                new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                new Dictionary<string, ProvisionedThroughput>
+                {
+                    {"Outstanding", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
+                    {"Delivered", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}}
+                }
+            ));
+        var outboxTableName = createTableRequest.TableName;
+        (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] {outboxTableName}).Result;
+        if (!hasTables.exist)
+        {
+            _ = dbTableBuilder.Build(createTableRequest).Result;
+            dbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
+        }
+    }
+
     private static (IAmAnOutbox, Type, Type) MakePostgresSqlOutbox(
         RelationalDatabaseConfiguration configuration)
     {
