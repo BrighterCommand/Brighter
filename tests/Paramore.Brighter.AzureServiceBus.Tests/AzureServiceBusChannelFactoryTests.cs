@@ -10,7 +10,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_the_timeout_is_below_400_ms_it_should_throw_an_exception()
         {
-            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(new AzureServiceBusConfiguration("someString")));
+            var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(new AzureServiceBusConfiguration("Endpoint=sb://namespacename.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=yZOy10HAJTNkyaKOqwjSricOEud7QLK7R62KyVfjCt4=")));
 
             var subscription = new AzureServiceBusSubscription(typeof(object), new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
                 1, 1, timeoutInMilliseconds: 399);
