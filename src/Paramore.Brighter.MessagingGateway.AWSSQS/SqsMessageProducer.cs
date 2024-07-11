@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Amazon.SimpleNotificationService;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -56,6 +55,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private readonly AWSMessagingGatewayConnection _connection;
         private readonly SnsPublication _publication;
+        private readonly AWSClientFactory _clientFactory;
+        
+        public Publication Publication { get { return _publication; } }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
@@ -67,6 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             _connection = connection;
             _publication = publication;
+            _clientFactory = new AWSClientFactory(connection);
 
             if (publication.TopicArn != null)
                 ChannelTopicArn = publication.TopicArn;
@@ -101,7 +104,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             ConfirmTopicExists(message.Header.Topic);
 
-            using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
+            using (var client = _clientFactory.CreateSnsClient())
             {
                 var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
                 var messageId = publisher.Publish(message);
@@ -112,10 +115,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         message.Header.Topic, message.Id, messageId);
                     return;
                 }
-
-                throw new InvalidOperationException(
-                    string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
             }
+
+            throw new InvalidOperationException(
+                string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
         }
 
         /// <summary>
@@ -137,6 +140,5 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             
         }
-       
-   }
+    }
 }

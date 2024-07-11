@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Net;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Microsoft.Extensions.Logging;
@@ -38,9 +37,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         protected AWSMessagingGatewayConnection _awsConnection;
         protected string ChannelTopicArn;
 
+        private AWSClientFactory _awsClientFactory;
+
         public AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         {
             _awsConnection = awsConnection;
+            _awsClientFactory = new AWSClientFactory(awsConnection);
         }
 
         protected string EnsureTopic(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
@@ -54,24 +56,26 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
         {
-            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
+            using (var snsClient = _awsClientFactory.CreateSnsClient())
             {
                 var attributes = new Dictionary<string, string>();
                 if (snsAttributes != null)
                 {
-                    if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy)) attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
-                    if (!string.IsNullOrEmpty(snsAttributes.Policy)) attributes.Add("Policy", snsAttributes.Policy);
+                    if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy))
+                        attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
+                    if (!string.IsNullOrEmpty(snsAttributes.Policy))
+                        attributes.Add("Policy", snsAttributes.Policy);
                 }
 
                 var createTopicRequest = new CreateTopicRequest(topicName)
                 {
                     Attributes = attributes,
-                    Tags = new List<Tag> {new Tag {Key = "Source", Value = "Brighter"}}
+                    Tags = new List<Tag> { new Tag { Key = "Source", Value = "Brighter" } }
                 };
-                
+
                 //create topic is idempotent, so safe to call even if topic already exists
                 var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
-                
+
                 if (!string.IsNullOrEmpty(createTopic.TopicArn))
                     ChannelTopicArn = createTopic.TopicArn;
                 else
@@ -95,11 +99,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             switch (findTopicBy)
             {
                 case TopicFindBy.Arn:
-                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 case TopicFindBy.Convention:
-                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 case TopicFindBy.Name:
-                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 default:
                     throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey");
             }
