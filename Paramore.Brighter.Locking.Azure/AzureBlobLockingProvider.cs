@@ -1,3 +1,23 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
@@ -11,9 +31,7 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
     private readonly BlobContainerClient _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
     private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobLockingProviderOptions>();
 
-    private readonly Dictionary<string, string> _leases = new Dictionary<string, string>();
-
-    public async Task<bool> ObtainLockAsync(string resource, CancellationToken cancellationToken)
+    public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
         var client = GetBlobClient(resource);
 
@@ -31,69 +49,29 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
         try
         {
             var response = await client.GetBlobLeaseClient().AcquireAsync(options.LeaseValidity, cancellationToken: cancellationToken);
-            _leases.Add(NormaliseResourceName(resource), response.Value.LeaseId);
-            return true;
+            return response.Value.LeaseId;
         }
         catch (RequestFailedException e)
         {
             _logger.LogInformation("Could not Acquire Lease on Blob {LockResourceName}", resource);
-            return false;
+            return null;
         }
     }
 
-    public bool ObtainLock(string resource)
+    public async Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
     {
-        var client = GetBlobClient(resource);
-        
-        // Write if does not exist
-        if (!client.Exists())
-        {
-            using var emptyStream = new MemoryStream();
-            using var writer = new StreamWriter(emptyStream);
-            writer.Write(string.Empty);
-            writer.Flush();
-            emptyStream.Position = 0;
-            client.Upload(emptyStream);
-        }
-
-        try
-        {
-            var response = client.GetBlobLeaseClient().Acquire(options.LeaseValidity);
-            _leases.Add(NormaliseResourceName(resource), response.Value.LeaseId);
-            return true;
-        }
-        catch (RequestFailedException e)
-        {
-            _logger.LogInformation("Could not Acquire Lease on Blob {LockResourceName}", resource);
-            return false;
-        }
-    }
-
-    public async Task ReleaseLockAsync(string resource, CancellationToken cancellationToken)
-    {
-        var client = GetBlobLeaseClientForResource(resource);
+        var client = GetBlobLeaseClientForResource(resource, lockId);
         if(client == null)
             return;
         await client.ReleaseAsync(cancellationToken: cancellationToken);
-        _leases.Remove(NormaliseResourceName(resource));
     }
 
-    public void ReleaseLock(string resource)
+    private BlobLeaseClient? GetBlobLeaseClientForResource(string resource, string lockId)
     {
-        var client = GetBlobLeaseClientForResource(resource);
-        if(client == null)
-            return;
-        client.Release();
-        _leases.Remove(NormaliseResourceName(resource));
-    }
-
-    private BlobLeaseClient? GetBlobLeaseClientForResource(string resource)
-    {
-        if (_leases.ContainsKey(NormaliseResourceName(resource)))
-            return GetBlobClient(resource).GetBlobLeaseClient(_leases[NormaliseResourceName(resource)]);
+        return GetBlobClient(resource).GetBlobLeaseClient(lockId);
         
-        _logger.LogInformation("No lock found for {LockResourceName}", resource);
-        return null;
+        // _logger.LogInformation("No lock found for {LockResourceName}", resource);
+        // return null;
     }
     
     private BlobClient GetBlobClient(string resource)
