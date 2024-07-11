@@ -1,8 +1,14 @@
-﻿using Paramore.Brighter;
+﻿using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.Model;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter;
+using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.Inbox.Sqlite;
+using Paramore.Brighter.Outbox.DynamoDB;
 
 namespace DbMaker;
 

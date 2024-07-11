@@ -1,7 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.Model;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.PostgreSql;

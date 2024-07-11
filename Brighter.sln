@@ -4,6 +4,82 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
+	ProjectSection(SolutionItems) = preProject
+		samples\WebAPI_Common\DbMaker\DbMaker.csproj = samples\WebAPI_Common\DbMaker\DbMaker.csproj
+		samples\WebAPI_Common\DbMaker\obj\DbMaker.csproj.nuget.dgspec.json = samples\WebAPI_Common\DbMaker\obj\DbMaker.csproj.nuget.dgspec.json
+		samples\WebAPI_Common\DbMaker\obj\GreetingsDb.csproj.nuget.g.props = samples\WebAPI_Common\DbMaker\obj\GreetingsDb.csproj.nuget.g.props
+		samples\WebAPI_Common\DbMaker\obj\GreetingsDb.csproj.nuget.g.targets = samples\WebAPI_Common\DbMaker\obj\GreetingsDb.csproj.nuget.g.targets
+		samples\WebAPI_Common\DbMaker\obj\rider.project.restore.info = samples\WebAPI_Common\DbMaker\obj\rider.project.restore.info
+		samples\WebAPI_Common\DbMaker\obj\project.nuget.cache = samples\WebAPI_Common\DbMaker\obj\project.nuget.cache
+		samples\WebAPI_Common\DbMaker\obj\rider.project.model.nuget.info = samples\WebAPI_Common\DbMaker\obj\rider.project.model.nuget.info
+		samples\WebAPI_Common\DbMaker\obj\DbMaker.csproj.nuget.g.targets = samples\WebAPI_Common\DbMaker\obj\DbMaker.csproj.nuget.g.targets
+		samples\WebAPI_Common\DbMaker\obj\project.packagespec.json = samples\WebAPI_Common\DbMaker\obj\project.packagespec.json
+		samples\WebAPI_Common\DbMaker\obj\DbMaker.csproj.nuget.g.props = samples\WebAPI_Common\DbMaker\obj\DbMaker.csproj.nuget.g.props
+		samples\WebAPI_Common\DbMaker\obj\project.assets.json = samples\WebAPI_Common\DbMaker\obj\project.assets.json
+		samples\WebAPI_Common\DbMaker\obj\GreetingsDb.csproj.nuget.dgspec.json = samples\WebAPI_Common\DbMaker\obj\GreetingsDb.csproj.nuget.dgspec.json
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.pdb = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.pdb
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.csproj.CopyComplete = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.csproj.CopyComplete
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\ref\GreetingsDb.dll = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\ref\GreetingsDb.dll
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\ref\DbMaker.dll = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\ref\DbMaker.dll
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.csproj.AssemblyReference.cache = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.csproj.AssemblyReference.cache
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.csproj.AssemblyReference.cache = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.csproj.AssemblyReference.cache
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\refint\GreetingsDb.dll = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\refint\GreetingsDb.dll
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\refint\DbMaker.dll = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\refint\DbMaker.dll
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.GeneratedMSBuildEditorConfig.editorconfig = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.GeneratedMSBuildEditorConfig.editorconfig
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.GlobalUsings.g.cs = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.GlobalUsings.g.cs
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.AssemblyInfoInputs.cache = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.AssemblyInfoInputs.cache
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.assets.cache = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.assets.cache
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.dll = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.dll
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.pdb = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.pdb
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.csproj.CoreCompileInputs.cache = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.csproj.CoreCompileInputs.cache
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.AssemblyInfoInputs.cache = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.AssemblyInfoInputs.cache
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.AssemblyInfo.cs = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.AssemblyInfo.cs
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.GeneratedMSBuildEditorConfig.editorconfig = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.GeneratedMSBuildEditorConfig.editorconfig
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.dll = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.dll
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.csproj.CopyComplete = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.csproj.CopyComplete
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.AssemblyInfo.cs = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.AssemblyInfo.cs
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.csproj.FileListAbsolute.txt = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.csproj.FileListAbsolute.txt
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.csproj.CoreCompileInputs.cache = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.csproj.CoreCompileInputs.cache
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.csproj.FileListAbsolute.txt = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.csproj.FileListAbsolute.txt
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.GlobalUsings.g.cs = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.GlobalUsings.g.cs
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.assets.cache = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.assets.cache
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.sourcelink.json = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\GreetingsDb.sourcelink.json
+		samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.sourcelink.json = samples\WebAPI_Common\DbMaker\obj\Debug\net8.0\DbMaker.sourcelink.json
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Extensions.DependencyInjection.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Extensions.DependencyInjection.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.DynamoDb.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.DynamoDb.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Inbox.Sqlite.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Inbox.Sqlite.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Sqlite.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Sqlite.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Outbox.PostgreSql.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Outbox.PostgreSql.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\DbMaker.deps.json = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\DbMaker.deps.json
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Salutations_Migrations.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Salutations_Migrations.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.PostgreSql.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.PostgreSql.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Salutations_Migrations.pdb = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Salutations_Migrations.pdb
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\GreetingsDb.deps.json = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\GreetingsDb.deps.json
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Outbox.Sqlite.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Outbox.Sqlite.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Inbox.Postgres.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Inbox.Postgres.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Outbox.MySql.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Outbox.MySql.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\DbMaker.pdb = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\DbMaker.pdb
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Inbox.MsSql.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Inbox.MsSql.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Greetings_Migrations.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Greetings_Migrations.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.MsSql.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.MsSql.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\DbMaker.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\DbMaker.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Outbox.MsSql.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Outbox.MsSql.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.MySql.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.MySql.dll
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Greetings_Migrations.pdb = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Greetings_Migrations.pdb
+		samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Inbox.MySql.dll = samples\WebAPI_Common\DbMaker\bin\Debug\net8.0\Paramore.Brighter.Inbox.MySql.dll
+		samples\WebAPI_Common\DbMaker\SchemaCreation.cs = samples\WebAPI_Common\DbMaker\SchemaCreation.cs
+		samples\WebAPI_Common\DbMaker\DbFactory.cs = samples\WebAPI_Common\DbMaker\DbFactory.cs
+		samples\WebAPI_Common\DbMaker\DatabaseType.cs = samples\WebAPI_Common\DbMaker\DatabaseType.cs
+		samples\WebAPI_Common\DbMaker\OutboxFactory.cs = samples\WebAPI_Common\DbMaker\OutboxFactory.cs
+		samples\WebAPI_Common\DbMaker\DbConnectionFactory.cs = samples\WebAPI_Common\DbMaker\DbConnectionFactory.cs
+		samples\WebAPI_Common\DbMaker\GreetingsDbFactory.cs = samples\WebAPI_Common\DbMaker\GreetingsDbFactory.cs
+		samples\WebAPI_Common\DbMaker\InboxFactory.cs = samples\WebAPI_Common\DbMaker\InboxFactory.cs
+		samples\WebAPI_Common\DbMaker\ConnectionResolver.cs = samples\WebAPI_Common\DbMaker\ConnectionResolver.cs
+		samples\WebAPI_Common\DbMaker\DatabaseGlobals.cs = samples\WebAPI_Common\DbMaker\DatabaseGlobals.cs
+		samples\WebAPI_Common\DbMaker\SalutationsDbFactory.cs = samples\WebAPI_Common\DbMaker\SalutationsDbFactory.cs
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{329736D2-BF92-4D06-A7BF-19F4B6B64EDD}"
 	ProjectSection(SolutionItems) = preProject
@@ -275,15 +351,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorldInternalBus", "sa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_Sweeper", "samples\WebAPI_Dapper\Greetings_Sweeper\Greetings_Sweeper.csproj", "{D96B97E7-EABA-4224-A861-CF249CF55031}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMaker", "samples\WebAPI_Dapper\DbMaker\DbMaker.csproj", "{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMaker", "samples\WebAPI_Dynamo\DbMaker\DbMaker.csproj", "{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationApp", "samples\WebAPI_Dynamo\SalutationApp\SalutationApp.csproj", "{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsApp", "samples\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj", "{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationApp", "samples\WebAPI_EFCore\SalutationApp\SalutationApp.csproj", "{47B3EA78-1BB9-462F-B1A3-5839DB0E8D41}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI_Common", "WebAPI_Common", "{B0BD4716-F22E-4B9E-B7E0-3122829A3F4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMaker", "samples\WebAPI_Common\DbMaker\DbMaker.csproj", "{48E0B50E-FCBE-4991-B94E-8386C0110088}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1641,20 +1717,6 @@ Global
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8}.Release|x86.Build.0 = Release|Any CPU
 		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D96B97E7-EABA-4224-A861-CF249CF55031}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Debug|x86.Build.0 = Debug|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Release|x86.ActiveCfg = Release|Any CPU
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709}.Release|x86.Build.0 = Release|Any CPU
 		{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -1691,6 +1753,18 @@ Global
 		{47B3EA78-1BB9-462F-B1A3-5839DB0E8D41}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{47B3EA78-1BB9-462F-B1A3-5839DB0E8D41}.Release|x86.ActiveCfg = Release|Any CPU
 		{47B3EA78-1BB9-462F-B1A3-5839DB0E8D41}.Release|x86.Build.0 = Release|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Debug|x86.Build.0 = Debug|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Release|x86.ActiveCfg = Release|Any CPU
+		{48E0B50E-FCBE-4991-B94E-8386C0110088}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1779,12 +1853,12 @@ Global
 		{AA2AA086-9B8A-4910-A793-E92B1E352351} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{F5B8D15A-22CC-4A73-A941-6AD34D0BDEA3} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{D96B97E7-EABA-4224-A861-CF249CF55031} = {202BA107-89D5-4868-AC5A-3527114C0109}
-		{30A56D87-4DD5-4C13-95CB-EBF84E0FAB63} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
-		{1820B2C3-84B1-40B4-8443-DAFEFBFF8709} = {11935469-A062-4CFF-9F72-F4F41E14C2B4}
 		{C4EAC0A4-1E71-4411-BC3E-931E9FB8AC08} = {11935469-A062-4CFF-9F72-F4F41E14C2B4}
 		{A75DDAAF-FE98-44B6-BB9C-26C9B5F6ACE5} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{47B3EA78-1BB9-462F-B1A3-5839DB0E8D41} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
+		{B0BD4716-F22E-4B9E-B7E0-3122829A3F4C} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{48E0B50E-FCBE-4991-B94E-8386C0110088} = {B0BD4716-F22E-4B9E-B7E0-3122829A3F4C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

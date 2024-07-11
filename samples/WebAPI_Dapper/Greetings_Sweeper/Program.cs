@@ -6,7 +6,6 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.Observability;
-using ConnectionResolver = Greetings_Sweeper.Database.ConnectionResolver;
 
 JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
@@ -16,7 +15,7 @@ MessagingTransport messagingTransport =
     ConfigureTransport.TransportType(builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
 
 RelationalDatabaseConfiguration outboxConfiguration = new(
-    ConnectionResolver.DbConnectionString(builder.Configuration),
+    ConnectionResolver.GreetingsDbConnectionString(builder.Configuration),
     binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
 );
 
