@@ -147,12 +147,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                using var client = _clientFactory.CreateSqsClient();
-                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle)).Wait();
+                using (var client = _clientFactory.CreateSqsClient())
+                {
+                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
+                    client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle)).Wait();
 
-                s_logger.LogInformation("SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}", message.Id, receiptHandle,
-                    urlResponse.QueueUrl);
+                    s_logger.LogInformation("SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}", message.Id, receiptHandle,
+                        urlResponse.QueueUrl);
+                }
             }
             catch (Exception exception)
             {
@@ -179,15 +181,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     message.Id, receiptHandle, _queueName
                     );
 
-                using var client = _clientFactory.CreateSqsClient();
-                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                if (_hasDlq)
+                using (var client = _clientFactory.CreateSqsClient())
                 {
-                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
-                }
-                else
-                {
-                    client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle).Wait();
+                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
+                    if (_hasDlq)
+                    {
+                        client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
+                    }
+                    else
+                    {
+                        client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle).Wait();
+                    }
                 }
             }
             catch (Exception exception)
@@ -204,13 +208,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             try
             {
-                using var client = _clientFactory.CreateSqsClient();
-                s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
-                
-                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                client.PurgeQueueAsync(urlResponse.QueueUrl).Wait();
+                using (var client = _clientFactory.CreateSqsClient())
+                {
+                    s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
 
-                s_logger.LogInformation("SqsMessageConsumer: Purged the queue {ChannelName}", _queueName);
+                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
+                    client.PurgeQueueAsync(urlResponse.QueueUrl).Wait();
+
+                    s_logger.LogInformation("SqsMessageConsumer: Purged the queue {ChannelName}", _queueName);
+                }
             }
             catch (Exception exception)
             {
@@ -255,11 +261,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private string FindTopicArnByName(RoutingKey topicName)
         {
-            using var snsClient = _clientFactory.CreateSnsClient();
-            var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
-            if (topic == null)
-                throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");
-            return topic.TopicArn;
+            using (var snsClient = _clientFactory.CreateSnsClient())
+            {
+                var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
+                if (topic == null)
+                    throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");
+                return topic.TopicArn;
+            }
         }
 
         /// <summary>

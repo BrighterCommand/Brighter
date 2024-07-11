@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -103,15 +104,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             ConfirmTopicExists(message.Header.Topic);
 
-            using var client = _clientFactory.CreateSnsClient();
-            var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
-            var messageId = publisher.Publish(message);
-            if (messageId != null)
+            using (var client = _clientFactory.CreateSnsClient())
             {
-                s_logger.LogDebug(
-                    "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-                    message.Header.Topic, message.Id, messageId);
-                return;
+                var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
+                var messageId = publisher.Publish(message);
+                if (messageId != null)
+                {
+                    s_logger.LogDebug(
+                        "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+                        message.Header.Topic, message.Id, messageId);
+                    return;
+                }
             }
 
             throw new InvalidOperationException(
