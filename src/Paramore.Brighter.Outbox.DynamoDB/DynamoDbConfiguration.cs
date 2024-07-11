@@ -1,6 +1,4 @@
-using System;
-using Amazon;
-using Amazon.Runtime;
+﻿using System;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {

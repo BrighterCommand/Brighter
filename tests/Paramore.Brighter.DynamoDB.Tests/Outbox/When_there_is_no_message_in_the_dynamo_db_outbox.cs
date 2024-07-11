@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -43,7 +44,8 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
-            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+            var fakeTimeProvider = new FakeTimeProvider();
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
         }
 
         [Fact]
