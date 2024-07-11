@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +37,8 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private void DoWork(object state)
         {
-            if (_distributedLock.ObtainLock(LockingResourceName))
+            var lockId = _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None).Result; 
+            if (lockId != null)
             {
                 s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
 
@@ -65,7 +66,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 }
                 finally
                 {
-                    _distributedLock.ReleaseLock(LockingResourceName);
+                    _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None).Wait();
                     scope.Dispose();
                 }
             }
