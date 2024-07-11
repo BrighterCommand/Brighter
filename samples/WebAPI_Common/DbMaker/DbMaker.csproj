@@ -20,9 +20,7 @@
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.Inbox.DynamoDB\Paramore.Brighter.Inbox.DynamoDB.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.DynamoDB\Paramore.Brighter.Outbox.DynamoDB.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj"/>
-    <ProjectReference Include="..\..\WebAPI_Dapper\Greetings_Migrations\Greetings_Migrations.csproj" />
-    <ProjectReference Include="..\..\WebAPI_Dapper\Salutations_Migrations\Salutations_Migrations.csproj" />
-    <ProjectReference Include="..\Greetings_Migrations\Greetings_Migrations.csproj"/>
+    <ProjectReference Include="..\Greetings_Migrations\Greetings_Migrations.csproj" />
     <ProjectReference Include="..\Salutations_Migrations\Salutations_Migrations.csproj" />
   </ItemGroup>
 

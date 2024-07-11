@@ -19,7 +19,6 @@
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj"/>
     <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
     <ProjectReference Include="..\SalutationApp\SalutationApp.csproj"/>
-    <ProjectReference Include="..\Salutations_Migrations\Salutations_Migrations.csproj"/>
   </ItemGroup>
 
   <ItemGroup>

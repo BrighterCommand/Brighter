@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using DbMaker;
 using GreetingsApp.EntityGateway;
 using GreetingsApp.Handlers;
@@ -135,17 +136,23 @@ namespace GreetingsWeb
         private void ConfigureEfCore(IServiceCollection services)
         {
             string connectionString = ConnectionResolver.GreetingsDbConnectionString(_configuration);
-            string dbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+            string configDbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
             
-            switch ()
+            if (string.IsNullOrWhiteSpace(configDbType))
+                throw new InvalidOperationException("DbType is not set");
+            
+            var dbType = DbResolver.GetDatabaseType(configDbType);
 
-            if (_env.IsDevelopment())
+            switch (dbType)
             {
-                ConfigureSqlite(services, connectionString);
-            }
-            else //TODO: Add other Db types here??
-            {
-                ConfigureMySql(services, connectionString);
+                case DatabaseType.Sqlite:
+                    ConfigureSqlite(services, connectionString);
+                    break;
+                case DatabaseType.MySql:
+                    ConfigureMySql(services, connectionString);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Database type {dbType} is not supported");
             }
         }
 
