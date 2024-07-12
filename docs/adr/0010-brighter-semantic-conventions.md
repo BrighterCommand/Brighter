@@ -48,7 +48,7 @@ When Brighter operates as a Dispatcher, each individual Performer would tend to 
 * The Performer also triggers message translation of an incoming request via a transform pipeline and a message mapper. Because the Command Processor is a child span, message translation would also likely be a child of the Performer's receive span; as well and a sibling of the Command Processor span.
   * With a transform that calls out-of-process, such as to a schema registry or object storage, it would create a child span to cover the external call.
   * *For example, a call to check an Inbox would create a child span for the database operation*
-    
+
 ### Controlling the Number of Attributes
 
 We should make it possible to set the types of attributes that users of the framework want from the library and provide options for them to control this. See [this blog](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/) for an example.
@@ -62,7 +62,7 @@ Brighter should define its own Tracer, via the Activity Source class in .NET (se
 source name: `paramore.brighter` 
 
 We would also add the `<version number>` to the Activity Source.
-          
+
 We do not want to initialize this for both usage as a Command Processor and a Dispatcher implying that the source needs to be created by a stand-alone static class. 
 
 The approach outlined here forms a useful design for the usage of [Activity Source](https://www.jimmybogard.com/building-end-to-end-diagnostics-activitysource-and-open/) in .NET:
@@ -93,7 +93,7 @@ The span kind will always be Internal. This is because the command processor is 
 |-----------|-------------------------------------------------------------------------------------|
 | `send`    | A command is routed to a single handler.                                            |
 | `publish` | An event is routed to multiple handlers.                                            |
-| `deposit` | A request is transfomed into a message and stored in an Outbox                      |
+| `deposit` | A request is transformed into a message and stored in an Outbox                      |
 | `clear`     | Requests in the Outbox are dispatched to a messaging broker via a messaging gateway |
 
 Note that we Publish, Deposit and Clear may be batch operations which result in multiple invocations of our pipeline. In a batch we will create a parent `create` span (itself probably a child of another span that triggered it) and add each item within the batch as an activity via an activity link on the parent span. 
@@ -163,7 +163,7 @@ We record the following attributes on a Command Processor span:
 | `paramore.brighter.request_body`  | string | The contents of the request as JSON                                | "{"greeting": "Hello World"}"                |
 | `paramore.brighter.operation`     | string | The operation being performed                                      | "send"                                      |
 | `paramore.brighter.spancontext.*` | varies | User supplied attributes for the span via the request context bag  | paramore.brighter.spancontext.userid "1234" |
-                     
+
 Because we allow you to inject RequestContext on a call to the Command Processor you can use this to add additional attributes to the span. Any RequestContext.Bag entries that start with "paramore.brighter.spancontext." will be added to the span as attributes. Baggage is an alternative here, but we won't automatically add baggage as attributes to your span. 
 
 We should check Activity.IsAllDataRequested and only add the attributes if it is. We should enable granular control of which attributes if all data is requested. This is because adding attributes to a span can be expensive, see [this doc](https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/docs/trace/README.md). Likely options we would need:
@@ -229,7 +229,7 @@ Standards may exist for the attributes used by events, and we should follow thos
 
 ### Performer Spans
 
-The Peformer (message pump) acts as a Consumer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
+The Performer (message pump) acts as a Consumer. There are existing [Messaging](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-spans/) Semantic Conventions for a Consumer.
 
 A Performer should create a span for each message that it processes.
 
@@ -273,11 +273,11 @@ We should check Activity.IsAllDataRequested and only add the attributes if it is
 * `MessageHeaders` => (`message.headers`) what is the metadata of the message?
 * `ServerInformation` => (`server.*`) what is the server information?
 
-### Propogating Context from a Producer
+### Propagating Context from a Producer
 
-Because we may be participating in a distributed trace, we will need to set the traceparent and tracecontext headers on the outgoing message. Because we might be an intermediary we need to preserve any remote context by setting the traceparent to the originator of the flow, not reset it to ourselves. 
+Because we may be participating in a distributed trace, we will need to set the `traceparent` and `tracecontext` headers on the outgoing message. Because we might be an intermediary we need to preserve any remote context by setting the `traceparent` to the originator of the flow, not reset it to ourselves. 
 
-We will use `traceparent` and `tracestate` as message headers as defined in the [Cloud Events Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md) to allow context propogation.
+We will use `traceparent` and `tracestate` as message headers as defined in the [Cloud Events Distributed Tracing Extension](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md) to allow context propagation.
 
 ## Consequences
 
@@ -288,6 +288,7 @@ Following standards helps us become a participant of wider ecosystem. In particu
 ### Path Tracing
 
 We have an existing "Trace" operation on a Handler that uses the Visitor pattern to describe the middleware pipeline for a handler.
+
 * This approach has proved useful for diagnostics; we just append the handler name to a string.
 * Under OTel, an event should to be recorded on the span in the RequestContext that flows through the pipeline; we would just name the event after the handler.
-* Thus it might be possible to retire the Trace operation in favour of the span. Tests that rely on the Trace operation would need to be updated to use the span instead.
+* Thus it might be possible to retire the Trace operation in favor of the span. Tests that rely on the Trace operation would need to be updated to use the span instead.
