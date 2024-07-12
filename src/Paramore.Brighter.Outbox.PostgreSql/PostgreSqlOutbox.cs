@@ -81,36 +81,27 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = transactionProvider.GetTransaction();
+                command.ExecuteNonQuery();
+            }
+            catch (PostgresException sqlException)
+            {
+                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
+                    loggingAction.Invoke();
+                    return;
                 }
-                catch (PostgresException sqlException)
-                {
-                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    transactionProvider?.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -120,41 +111,29 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             Action loggingAction,
             CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
+            await connection.OpenAsync(cancellationToken);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (PostgresException sqlException)
+            {
+                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    await command.ExecuteNonQueryAsync(cancellationToken);
+                    s_logger.LogWarning(
+                        "PostgresSqlOutbox: A duplicate was detected in the batch");
+                    return;
                 }
-                catch (PostgresException sqlException)
-                {
-                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                    {
-                        s_logger.LogWarning(
-                            "PostgresSqlOutbox: A duplicate was detected in the batch");
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
-                        connection.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -167,16 +146,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return resultFunc.Invoke(command.ExecuteReader());
-                }
-                finally
-                {
-                    connection.Close();
-                }
+                return resultFunc.Invoke(command.ExecuteReader());
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -190,16 +167,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
-                }
-                finally
-                {
-                    connection.Close();
-                }
+                return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -244,7 +219,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 new NpgsqlParameter
                 {
-                    ParameterName = $"{prefix}MessageId", NpgsqlDbType = NpgsqlDbType.Uuid, Value = message.Id
+                    ParameterName = $"{prefix}MessageId", NpgsqlDbType = NpgsqlDbType.Text, Value = message.Id
                 },
                 new NpgsqlParameter
                 {
@@ -267,7 +242,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 new NpgsqlParameter
                 {
                     ParameterName = $"{prefix}CorrelationId",
-                    NpgsqlDbType = NpgsqlDbType.Uuid,
+                    NpgsqlDbType = NpgsqlDbType.Text,
                     Value = message.Header.CorrelationId
                 },
                 new NpgsqlParameter
@@ -427,13 +402,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return dictionaryBag;
         }
 
-        private Guid? GetCorrelationId(DbDataReader dr)
+        private string GetCorrelationId(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal))
                 return null;
 
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 
@@ -447,9 +422,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static Guid GetMessageId(DbDataReader dr)
+        private static string GetMessageId(DbDataReader dr)
         {
-            return dr.GetGuid(dr.GetOrdinal("MessageId"));
+            return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
         private string GetPartitionKey(DbDataReader dr)

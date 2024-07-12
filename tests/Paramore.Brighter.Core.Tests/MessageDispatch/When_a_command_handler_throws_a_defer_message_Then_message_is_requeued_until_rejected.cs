@@ -24,41 +24,46 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpCommandProcessingDeferMessageActionTests
     {
+        private const string Topic = "MyCommand";
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
-        private readonly SpyRequeueCommandProcessor _commandProcessor;
+        private readonly Channel _channel;
         private readonly int _requeueCount = 5;
+        private readonly InternalBus _bus = new();
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly FakeTimeProvider _timeProvider = new();
 
         public MessagePumpCommandProcessingDeferMessageActionTests()
         {
-            _commandProcessor = new SpyRequeueCommandProcessor();
-            var provider = new CommandProcessorProvider(_commandProcessor);
-            _channel = new FakeChannel();
+            SpyRequeueCommandProcessor commandProcessor = new();
+            var provider = new CommandProcessorProvider(commandProcessor);
+
+            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null)
+            
+            _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
             };
 
             var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyCommand>()
-                .Wrap(new MyCommand());
+                .Wrap(new MyCommand(), new RequestContext(), new Publication{Topic = _routingKey});
 
-            _channel.Enqueue(msg);
+            _bus.Enqueue(msg);
         }
 
         [Fact]
@@ -66,14 +71,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(task);
+            
+            Assert.Empty(_bus.Stream(_routingKey));
 
-            _channel.RequeueCount.Should().Be(_requeueCount-1);
-            _channel.RejectCount.Should().Be(1);
         }
     }
 }

@@ -22,8 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Data;
-
 namespace Paramore.Brighter
 {
     /// <summary>

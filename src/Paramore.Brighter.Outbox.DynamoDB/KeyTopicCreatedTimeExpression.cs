@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Amazon.DynamoDBv2.DocumentModel;
 
@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return _expression.ExpressionStatement;
         }
 
-        public Expression Generate(string topicName, DateTime createdTime, int shard)
+        public Expression Generate(string topicName, DateTimeOffset createdTime, int shard)
         {
             var values = new Dictionary<string, DynamoDBEntry>();
             values.Add(":v_TopicShard", $"{topicName}_{shard}");

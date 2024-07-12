@@ -38,12 +38,14 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private HeartbeatReply _request;
         private const string MESSAGE_BODY = "{\r\n  \"HostName\": \"Test.Hostname\",\r\n  \"Consumers\": [\r\n    {\r\n      \"ConsumerName\": \"Test.Subscription\",\r\n      \"State\": 1\r\n    },\r\n    {\r\n      \"ConsumerName\": \"More.Consumers\",\r\n      \"State\": 0\r\n    }\r\n  ]\r\n}";
         private const string TOPIC = "test.topic";
-        private readonly Guid _correlationId = Guid.NewGuid();
+        private readonly string _correlationId = Guid.NewGuid().ToString();
 
         public HeartbeatMessageToReplyTests()
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
-            var header = new MessageHeader(Guid.NewGuid(), TOPIC, MessageType.MT_COMMAND, DateTime.UtcNow, _correlationId);
+            var header = new MessageHeader(Guid.NewGuid().ToString(), TOPIC, MessageType.MT_COMMAND, 
+                timeStamp: DateTime.UtcNow, correlationId:_correlationId
+            );
             var body = new MessageBody(MESSAGE_BODY);
             _message = new Message(header, body);
         }

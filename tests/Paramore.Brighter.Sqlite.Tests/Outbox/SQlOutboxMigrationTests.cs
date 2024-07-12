@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox  = new SqliteOutbox(new RelationalDatabaseConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.OutboxTableName));
 
-            _message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             AddHistoricMessage(_message);
         }
 
@@ -63,25 +63,23 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
                 new SqliteParameter("Body", message.Body.Value),
             };
 
-            using (var connection = new SqliteConnection(_sqliteTestHelper.ConnectionString))
-            using (var command = connection.CreateCommand())
-            {
-                connection.Open();
+            using var connection = new SqliteConnection(_sqliteTestHelper.ConnectionString);
+            using var command = connection.CreateCommand();
+            connection.Open();
 
-                command.CommandText = sql;
-                //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
-                for (var index = 0; index < parameters.Length; index++)
-                {
-                    command.Parameters.Add(parameters[index]);
-                }
-                command.ExecuteNonQuery();
+            command.CommandText = sql;
+            //command.Parameters.AddRange(parameters); used to work... but can't with current Sqlite lib. Iterator issue
+            for (var index = 0; index < parameters.Length; index++)
+            {
+                command.Parameters.Add(parameters[index]);
             }
+            command.ExecuteNonQuery();
         }
 
         [Fact]
         public void When_writing_a_message_with_minimal_header_information_to_the_outbox()
         {
-            _storedMessage = _sqlOutbox.Get(_message.Id);
+            _storedMessage = _sqlOutbox.Get(_message.Id, new RequestContext());
 
             //_should_read_the_message_from_the__sql_outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);

@@ -6,7 +6,7 @@
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.svg)](https://www.nuget.org/packages/Paramore.Brighter/) |
 | Documentation  |  [Technical Documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/)  |
 | Source  |https://github.com/BrighterCommand/Brighter |
-| Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, sqs, sns, kakfa, redis, c#, command, command dispatcher, command  processor, queue, distributed |
+| Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, sqs, sns, kafka, redis, c#, command, command dispatcher, command  processor, queue, distributed |
 
 ## What Scenarios Can You Use Brighter in?
 * When implementing a clean architecture (ports & adapters), one question is how to implement the interactor or port layer (sometimes called a mediator).
@@ -39,6 +39,7 @@
 | Branch        | Description   |
 | ------------- | ------------- |
 | Master | The tip of active development. Anything in master should ship at the next release. Code here should conform to CI basics: compile, pass tests etc.  |
+| Release [X] | The code for an actively supported release. Created when master needs breaking changes that are not compatible with the current release. We support one 'historical' release. |
 | [Other]  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas. |
 
 ## Using Docker Compose to test ##

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Amazon.DynamoDBv2.DocumentModel;
 
@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return _expression.ExpressionStatement;
         }
 
-        public Expression Generate(string topicName, DateTime sinceTime)
+        public Expression Generate(string topicName, DateTimeOffset sinceTime)
         {
             var values = new Dictionary<string, DynamoDBEntry>();
             values.Add(":v_Topic", topicName);

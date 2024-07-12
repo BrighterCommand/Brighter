@@ -26,8 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -58,13 +58,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
             var messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayedMilliseconds: 5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
@@ -75,17 +75,22 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             _messageEarliest = new Message(messageHeader,
                 new MessageBody(body, "application/json", CharacterEncoding.UTF8));
+            var fakeTimeProvider = new FakeTimeProvider();
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName),
+                fakeTimeProvider);
         }
 
         [Fact]
         public async Task When_writing_a_utf8_message_to_the_dynamo_db_outbox()
         {
+            //arrange
+            var context = new RequestContext();
+            
             //act
-            await _dynamoDbOutbox.AddAsync(_messageEarliest);
+            await _dynamoDbOutbox.AddAsync(_messageEarliest, context);
 
-            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id, context);
 
             //assert
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

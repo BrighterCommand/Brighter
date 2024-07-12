@@ -27,7 +27,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RMQMessageConsumerRetryDLQTests()
         {
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string contentType = "text\\plain";
             var channelName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
             _topicName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
@@ -36,7 +36,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Requeue" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId, "", contentType),
+                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: correlationId, 
+                    contentType: contentType
+                ),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -64,7 +66,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             //how do we send to the queue
-            _sender = new RmqMessageProducer(rmqConnection, new RmqPublication());
+            _sender = new RmqMessageProducer(rmqConnection, new RmqPublication
+            {
+                Topic = routingKey, 
+                RequestType = typeof(MyDeferredCommand)
+            });
 
             //set up our receiver
             _channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
@@ -88,11 +94,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)),
+                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
+                null, new InMemoryRequestContextFactory())
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };
@@ -123,7 +130,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             await Task.Delay(20000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message

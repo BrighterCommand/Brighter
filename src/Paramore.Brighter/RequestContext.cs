@@ -22,41 +22,68 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
 using Polly.Registry;
 
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class RequestContext
+    /// Class RequestContextFactory
     /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
     /// The default in-memory <see cref="RequestContext"/> created by an <see cref="InMemoryRequestContextFactory"/> is suitable for most purposes
     /// and this interface is mainly provided for testing
     /// </summary>
     public class RequestContext : IRequestContext
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RequestContext"/> class.
-        /// </summary>
-        public RequestContext()
-        {
-            Bag = new Dictionary<string, object>();
-        }
+        private readonly ConcurrentDictionary<int, Activity> _spans = new();
 
         /// <summary>
         /// Gets the bag.
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; private set; }
+        public ConcurrentDictionary<string, object> Bag { get; } = new();
+        
+        /// <summary>
+        /// Gets the Feature Switches
+        /// </summary>
+        public IAmAFeatureSwitchRegistry FeatureSwitches { get; set; }
+        
+        /// <summary>
+        /// When we pass a requestContext through a receiver pipeline, we may want to pass the original message that started the pipeline.
+        /// This is primarily useful for debugging - how did we get to this request?. But it is also useful for some request metadata that we
+        /// do not want to transfer to the Request.
+        /// This is not thread-safe; the assumption is that you set this from a single thread and access the message from multiple threads. It is
+        /// not intended to be set from multiple threads.
+        ///</summary>
+        /// <value>The originating message</value> 
+        public Message OriginatingMessage { get; set; }
+
         /// <summary>
         /// Gets the policies.
         /// </summary>
         /// <value>The policies.</value>
         public IPolicyRegistry<string>  Policies { get; set; }
+
         /// <summary>
-        /// Gets the Feature Switches
+        /// Gets the Span [Activity] associated with the request
+        /// This is thread-safe, so that you can access the context from multiple threads
+        /// This is mainly required for Publish, which uses the same context across multiple Publish handlers
         /// </summary>
-        public IAmAFeatureSwitchRegistry FeatureSwitches { get; set; }
+        public Activity Span
+        {
+            get
+            {
+                _spans.TryGetValue(System.Threading.Thread.CurrentThread.ManagedThreadId, out var span);
+                return span;
+            }
+            set
+            {
+                _spans.AddOrUpdate(System.Threading.Thread.CurrentThread.ManagedThreadId, value, (key, oldValue) => value);
+            }
+        }
     }
 }

@@ -55,10 +55,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
  
             var messageHeader = new MessageHeader(
-                Guid.NewGuid(), 
-                "test_topic", 
-                MessageType.MT_DOCUMENT,
-                DateTime.UtcNow.AddDays(-1), 5, 5);
+                Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1), handledCount:5, delayedMilliseconds: 5
+            );
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -71,9 +70,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_messageEarliest);
+            await _sqlOutbox.AddAsync(_messageEarliest, new RequestContext());
 
-            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

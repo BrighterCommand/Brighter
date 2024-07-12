@@ -29,37 +29,44 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpEventRequeueCountThresholdTests
     {
+        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
+        private readonly Channel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
-        private readonly MyEvent _event;
 
         public MessagePumpEventRequeueCountThresholdTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            _channel = new FakeChannel();
+            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null) 
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
-            _event = new MyEvent();
-
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options)));
-            _channel.Enqueue(message1);
-            _channel.Enqueue(message2);
+            var message1 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize((MyEvent)new(), JsonSerialisationOptions.Options))
+            );
+            var message2 = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize((MyEvent)new(), JsonSerialisationOptions.Options))
+            );
+            _bus.Enqueue(message1);
+            _bus.Enqueue(message2);
         }
 
         [Fact]
@@ -67,20 +74,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(task);
 
-            //_should_publish_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Publish);
-            //_should_have_been_handled_6_times_via_publish
             _commandProcessor.PublishCount.Should().Be(6);
-            //_should_requeue_the_messages
-            _channel.Length.Should().Be(0);
-            //_should_dispose_the_input_channel
-            _channel.DisposeHappened.Should().BeTrue();
+            
+            Assert.Empty(_bus.Stream(_routingKey));
+            
+            //TODO: How do we assert that the channel was closed? Observability?
         }
     }
 }

@@ -24,27 +24,30 @@ THE SOFTWARE. */
 
 using System.IO;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyCommandMessageMapperAsync : IAmAMessageMapperAsync<MyCommand>
     {
-        public Task<Message> MapToMessage(MyCommand request)
+        public IRequestContext Context { get; set; }
+
+        public async Task<Message> MapToMessageAsync(MyCommand request, Publication publication, CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<Message>();
-            var header = new MessageHeader(request.Id, "MyCommand", MessageType.MT_COMMAND);
-            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
-            var message = new Message(header, body);
-            tcs.SetResult(message);
-            return tcs.Task;
+            using MemoryStream stream = new MemoryStream();
+            await JsonSerializer.SerializeAsync(stream, request, JsonSerialisationOptions.Options, cancellationToken);
+            var header = new MessageHeader(request.Id, publication.Topic, request.RequestToMessageType());
+            var body = new MessageBody(stream.ToArray());
+            return new Message(header, body);
         }
 
-        public async Task<MyCommand> MapToRequest(Message message)
+        public async Task<MyCommand> MapToRequestAsync(Message message, CancellationToken cancellationToken = default)
         {
             using var stream = new MemoryStream(message.Body.Bytes);
             stream.Position = 0;
-            var command = await JsonSerializer.DeserializeAsync<MyCommand>(stream, JsonSerialisationOptions.Options);
+            var command = await JsonSerializer.DeserializeAsync<MyCommand>(stream, JsonSerialisationOptions.Options, cancellationToken);
             return command;
         }
     }

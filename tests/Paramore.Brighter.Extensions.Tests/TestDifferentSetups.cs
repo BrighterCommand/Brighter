@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly;
@@ -33,7 +32,20 @@ namespace Tests
         public void WithExternalBus()
         {
             var serviceCollection = new ServiceCollection();
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { "MyTopic", new FakeProducer() }, });
+            const string mytopic = "MyTopic";
+            var producerRegistry = new ProducerRegistry(
+                new Dictionary<string, IAmAMessageProducer>
+                {
+                    { mytopic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+                    {
+                        Publication = { Topic = new RoutingKey(mytopic)}
+                    } },
+                });
+            
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(type => new TestEventMessageMapper()), 
+                new SimpleMessageMapperFactoryAsync(type => new TestEventMessageMapperAsync())
+            );
 
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
@@ -42,6 +54,7 @@ namespace Tests
                 .UseExternalBus((config) =>
                 {
                     config.ProducerRegistry = producerRegistry;
+                    config.MessageMapperRegistry = messageMapperRegistry;
                 })
                 .AutoFromAssemblies();
 
@@ -69,7 +82,6 @@ namespace Tests
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
             };
-
             
             serviceCollection
                 .AddBrighter(options => options.PolicyRegistry = policyRegistry)
@@ -99,39 +111,5 @@ namespace Tests
             Assert.NotNull(commandProcessor);
         }
 
-    }
-
-    internal class FakeProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
-    {
-        public List<Message> SentMessages { get; } = new List<Message>();
-        
-        public int MaxOutStandingMessages { get; set; } = -1;
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
-
-        public void Dispose()
-        {
-            SentMessages.Clear();
-        }
-
-        public Task SendAsync(Message message)
-        {
-            var tcs = new TaskCompletionSource();
-            Send(message);
-            tcs.SetResult();
-            return tcs.Task;
-        }
-
-        public void Send(Message message)
-        {
-            SentMessages.Add(message); 
-        }
-
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
-        {
-            Task.Delay(TimeSpan.FromMilliseconds(delayMilliseconds)).Wait();
-            Send(message);
-        }
     }
 }

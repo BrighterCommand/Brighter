@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
@@ -45,7 +46,8 @@ namespace Paramore.Brighter
         public UnwrapPipelineAsync(
             IEnumerable<IAmAMessageTransformAsync> transforms, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactory, 
-            IAmAMessageMapperAsync<TRequest> messageMapperAsync)
+            IAmAMessageMapperAsync<TRequest> messageMapperAsync
+            )
         {
             MessageMapper = messageMapperAsync;
             Transforms = transforms;
@@ -72,13 +74,21 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="message">The message to unwrap</param>
+        /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>a request</returns>
-        public async Task<TRequest> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
+        public async Task<TRequest> UnwrapAsync(Message message,RequestContext requestContext, CancellationToken cancellationToken = default)
         {
+            requestContext.Span ??= Activity.Current;
+            
             var msg = message;
-            await Transforms.EachAsync(async transform => msg = await transform.UnwrapAsync(msg,cancellationToken));
-            return await MessageMapper.MapToRequest(msg);
+            await Transforms.EachAsync(async transform => {
+               transform.Context = requestContext; 
+               msg = await transform.UnwrapAsync(msg, cancellationToken);
+            });
+
+            MessageMapper.Context = requestContext;
+            return await MessageMapper.MapToRequestAsync(msg, cancellationToken);
         }                                                        
     }
 }

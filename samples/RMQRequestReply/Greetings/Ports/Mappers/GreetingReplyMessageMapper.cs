@@ -7,7 +7,9 @@ namespace Greetings.Ports.Mappers
 {
     public class GreetingReplyMessageMapper : IAmAMessageMapper<GreetingReply>
     {
-        public Message MapToMessage(GreetingReply request)
+        public IRequestContext Context { get; set; }
+
+        public Message MapToMessage(GreetingReply request, Publication publication)
         {
             var header = new MessageHeader(
                 messageId: request.Id,
@@ -25,7 +27,7 @@ namespace Greetings.Ports.Mappers
             var replyAddress = new ReplyAddress(topic: message.Header.ReplyTo, correlationId: message.Header.CorrelationId);
             var reply = new GreetingReply(replyAddress);
             var body = JsonSerializer.Deserialize<GreetingsReplyBody>(message.Body.Value);
-            reply.Id = Guid.Parse(body.Id);
+            reply.Id = body.Id;
             reply.Salutation = body.Salutation;
 
             return reply;

@@ -31,8 +31,8 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
@@ -41,14 +41,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessageDispatcherMultipleConnectionTests : IDisposable
     {
         private readonly Dispatcher _dispatcher;
-        private readonly FakeChannel _eventChannel;
-        private readonly FakeChannel _commandChannel;
-        private static int _numberOfConsumers;
+        private int _numberOfConsumers;
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
+        private readonly RoutingKey _commandRoutingKey = new("myCommand");
+        private readonly RoutingKey _eventRoutingKey = new("myEvent");
 
         public MessageDispatcherMultipleConnectionTests()
         {
-            _eventChannel = new FakeChannel();
-            _commandChannel = new FakeChannel();
             var commandProcessor = new SpyCommandProcessor();
 
             var container = new ServiceCollection();
@@ -62,17 +62,25 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
 
-            var myEventConnection = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_eventChannel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            var myCommandConnection = new Subscription<MyCommand>(new SubscriptionName("anothertest"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_commandChannel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            var myEventConnection = new Subscription<MyEvent>(
+                new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: 
+                new InMemoryChannelFactory(_bus, _timeProvider), channelName: new ChannelName("fakeEventChannel"), 
+                routingKey: _eventRoutingKey
+            );
+            var myCommandConnection = new Subscription<MyCommand>(
+                new SubscriptionName("anothertest"), noOfPerformers: 1, timeoutInMilliseconds: 1000, 
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
+                channelName: new ChannelName("fakeCommandChannel"), routingKey: _commandRoutingKey
+                );
             _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { myEventConnection, myCommandConnection }, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
-            _eventChannel.Enqueue(eventMessage);
+            var eventMessage = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = _eventRoutingKey});
+            _bus.Enqueue(eventMessage);
 
             var command = new MyCommand();
-            var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
-            _commandChannel.Enqueue(commandMessage);
+            var commandMessage = new MyCommandMessageMapper().MapToMessage(command, new Publication{Topic = _commandRoutingKey});
+            _bus.Enqueue(commandMessage);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
@@ -85,17 +93,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             Task.Delay(1000).Wait();
             _numberOfConsumers = _dispatcher.Consumers.Count();
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
+            
             _dispatcher.End().Wait();
 
-           //_should_have_consumed_the_messages_in_the_event_channel
-            _eventChannel.Length.Should().Be(0);
-            //_should_have_consumed_the_messages_in_the_command_channel
-            _commandChannel.Length.Should().Be(0);
-            //_should_have_a_stopped_state
+            Assert.Empty(_bus.Stream(_eventRoutingKey));
+            Assert.Empty(_bus.Stream(_commandRoutingKey));
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
-            //_should_have_no_consumers
             _dispatcher.Consumers.Should().BeEmpty();
-            //_should_of_had_2_consumers_when_running
             _numberOfConsumers.Should().Be(2);
         }
 #pragma warning restore xUnit1031

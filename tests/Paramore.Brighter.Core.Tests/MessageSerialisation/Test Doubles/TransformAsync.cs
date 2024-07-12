@@ -10,6 +10,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 public abstract class TransformAsync : IAmAMessageTransformAsync
 {
     /// <summary>
+    /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+    /// </summary>
+    /// <value>The context.</value>
+    public IRequestContext Context { get; set; }
+    
+    /// <summary>
     /// Dispose cleans up unmanaged resources
     /// This base class version is a no-op
     /// </summary>
@@ -29,7 +35,7 @@ public abstract class TransformAsync : IAmAMessageTransformAsync
     /// <param name="initializerList"></param>
     public void InitializeUnwrapFromAttributeParams(params object[] initializerList) { }
 
-    public abstract Task<Message> WrapAsync(Message message, CancellationToken cancellationToken);
+    public abstract Task<Message> WrapAsync(Message message,Publication publication, CancellationToken cancellationToken);
 
     public abstract Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken);
 }

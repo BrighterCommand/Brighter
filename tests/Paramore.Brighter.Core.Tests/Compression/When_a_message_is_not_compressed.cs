@@ -23,7 +23,11 @@ public class UncompressedPayloadTests
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+                timeStamp: DateTime.UtcNow, contentType: mimeType
+            ),
+            body
+        );
 
         //act
         var msg = transformer.Unwrap(message);
@@ -46,7 +50,11 @@ public class UncompressedPayloadTests
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+                timeStamp: DateTime.UtcNow, contentType: mimeType
+            ),
+            body
+        );
         
         //act
         var msg = transformer.Unwrap(message);
@@ -69,7 +77,11 @@ public class UncompressedPayloadTests
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
+            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+                timeStamp: DateTime.UtcNow, contentType: mimeType
+            ),
+            body
+        );
         
         //act
         var msg = transformer.Unwrap(message);

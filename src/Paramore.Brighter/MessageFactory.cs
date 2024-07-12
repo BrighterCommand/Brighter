@@ -37,7 +37,16 @@ namespace Paramore.Brighter
         /// <returns>Message.</returns>
         public static Message CreateQuitMessage()
         {
-            return new Message(new MessageHeader(Guid.Empty, string.Empty, MessageType.MT_QUIT), new MessageBody(string.Empty));
+            return new Message(new MessageHeader(string.Empty, string.Empty, MessageType.MT_QUIT), new MessageBody(string.Empty));
+        }
+        
+        /// <summary>
+        /// Creates an empty message; this sets the message type to MT_NONE
+        /// </summary>
+        /// <returns>An Empty message</returns>
+        public static Message CreateEmptyMessage()
+        {
+            return new Message(new MessageHeader(string.Empty, string.Empty, MessageType.MT_NONE), new MessageBody(string.Empty));
         }
     }
 }

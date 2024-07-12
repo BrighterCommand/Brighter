@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using System.Transactions;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -71,18 +71,17 @@ namespace Paramore.Brighter
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private IAmAMessageMapperRegistry _messageMapperRegistry;
-        private IAmAMessageTransformerFactory _transformerFactory;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
         private IPolicyRegistry<string> _policyRegistry;
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
-        private IAmAnExternalBusService _bus = null;
-        private bool _useRequestReplyQueues = false;
+        private IAmAnExternalBusService _bus;
+        private bool _useRequestReplyQueues;
         private IAmAChannelFactory _responseChannelFactory;
         private IEnumerable<Subscription> _replySubscriptions;
         private InboxConfiguration _inboxConfiguration;
+        private InstrumentationOptions _instrumetationOptions;
 
         private CommandProcessorBuilder()
         {
@@ -152,14 +151,12 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
+        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
         /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The service bus that we need to use to send messages externally</param>
-        /// <param name="messageMapperRegistry">The registry of mappers or messages to requests needed for outgoing messages</param>
-        /// <param name="transformerFactory">A factory for common transforms of messages</param>
         /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
         /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
@@ -167,15 +164,11 @@ namespace Paramore.Brighter
         public INeedARequestContext ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory transformerFactory,
             IAmAChannelFactory responseChannelFactory = null, 
             IEnumerable<Subscription> subscriptions = null,
             InboxConfiguration inboxConfiguration = null
         )
         {
-            _messageMapperRegistry = messageMapperRegistry;
-            _transformerFactory = transformerFactory;
             _inboxConfiguration = inboxConfiguration;
                     
             switch (busType)
@@ -199,41 +192,28 @@ namespace Paramore.Brighter
         }
         
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
-        /// 
-        /// </summary>
-        /// <param name="configuration">The Task Queues configuration.</param>
-        /// <param name="outbox">The Outbox.</param>
-        /// <param name="transactionProvider"></param>
-        /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext ExternalBusCreate<TTransaction>(
-            ExternalBusConfiguration configuration, 
-            IAmAnOutbox outbox,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider)
-        {
-            _messageMapperRegistry = configuration.MessageMapperRegistry;
-            _responseChannelFactory = configuration.ResponseChannelFactory;
-            _transformerFactory = configuration.TransformerFactory;
-            
-            _bus = new ExternalBusServices<Message, TTransaction>(
-                configuration.ProducerRegistry,
-                _policyRegistry,
-                outbox, 
-                configuration.OutboxBulkChunkSize,
-                configuration.OutboxTimeout);
-            
-            return this;
-        }
-
-        /// <summary>
         /// Use to indicate that you are not using Task Queues.
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
         public INeedARequestContext NoExternalBus()
         {
             return this;
+        }
+
+        /// <summary>
+        /// Sets the InstrumentationOptions for the CommandProcessor
+        /// InstrumentationOptions.None - no telemetry
+        /// InstrumentationOptions.RequestInformation - id  and type of request
+        /// InstrumentationOptions.RequestBody -  body of the request
+        /// InstrumentationOptions.RequestContext - what is the context of the request
+        /// InstrumentationOptions.All - all of the above
+        /// </summary>
+        /// <param name="instrumentationOptions"></param>
+        /// <returns></returns>
+        public INeedARequestContext InstrumentationOptions(InstrumentationOptions instrumentationOptions)
+        {
+           _instrumetationOptions = instrumentationOptions;
+           return this;
         }
 
         /// <summary>
@@ -258,23 +238,34 @@ namespace Paramore.Brighter
             {
                 return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory, 
                     requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    featureSwitchRegistry: _featureSwitchRegistry);
+                    featureSwitchRegistry: _featureSwitchRegistry, instrumentationOptions: _instrumetationOptions);
             }
 
             if (!_useRequestReplyQueues)
-                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry, bus: _bus,
-                    featureSwitchRegistry: _featureSwitchRegistry, inboxConfiguration: _inboxConfiguration,
-                    messageTransformerFactory: _transformerFactory);
+                return new CommandProcessor(
+                    subscriberRegistry: _registry, 
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory, 
+                    policyRegistry: _policyRegistry,
+                    bus: _bus,
+                    featureSwitchRegistry: _featureSwitchRegistry, 
+                    inboxConfiguration: _inboxConfiguration,
+                    instrumentationOptions: _instrumetationOptions
+                );
             
             if (_useRequestReplyQueues)
-                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry, bus: _bus,
-                    featureSwitchRegistry: _featureSwitchRegistry, inboxConfiguration: _inboxConfiguration,
-                    messageTransformerFactory: _transformerFactory, replySubscriptions: _replySubscriptions,
-                    responseChannelFactory: _responseChannelFactory);
+                return new CommandProcessor(
+                    subscriberRegistry: _registry, 
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory, 
+                    policyRegistry: _policyRegistry,
+                    bus: _bus,
+                    featureSwitchRegistry: _featureSwitchRegistry, 
+                    inboxConfiguration: _inboxConfiguration,
+                    replySubscriptions: _replySubscriptions,
+                    responseChannelFactory: _responseChannelFactory,
+                    instrumentationOptions: _instrumetationOptions
+                );
 
             throw new ConfigurationException(
                 "The configuration options chosen cannot be used to construct a command processor");
@@ -328,14 +319,12 @@ namespace Paramore.Brighter
     public interface INeedMessaging
     {
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
+        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{TRequest}"/> or <see cref="CommandProcessor.ClearOutbox"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
         /// are handled by adding appropriate <see cref="CommandProcessorBuilder.Policies"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
-        /// <param name="messageMapperRegistry">The register for message mappers that map outgoing requests to messages</param>
-        /// <param name="transformerFactory">A factory for transforms used for common transformations to outgoing messages</param>
         /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
         /// <param name="inboxConfiguration">What is the inbox configuration</param>
@@ -343,8 +332,6 @@ namespace Paramore.Brighter
         INeedARequestContext ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory transformerFactory,
             IAmAChannelFactory responseChannelFactory = null, 
             IEnumerable<Subscription> subscriptions = null,
             InboxConfiguration inboxConfiguration = null
@@ -355,21 +342,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
         INeedARequestContext NoExternalBus();
-
-        /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="CommandProcessorBuilder.Policies"/> when choosing this option.
-        /// 
-        /// </summary>
-        /// <param name="configuration">The Task Queues configuration.</param>
-        /// <param name="outbox">The Outbox.</param>
-        /// <param name="transactionProvider"></param>
-        /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext ExternalBusCreate<TTransaction>(
-            ExternalBusConfiguration configuration, 
-            IAmAnOutbox outbox,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider);
     }
 
     /// <summary>
@@ -377,6 +349,19 @@ namespace Paramore.Brighter
     /// </summary>
     public interface INeedARequestContext
     {
+        
+        /// <summary>
+        /// Sets the InstrumentationOptions for the CommandProcessor
+        /// InstrumentationOptions.None - no telemetry
+        /// InstrumentationOptions.RequestInformation - id  and type of request
+        /// InstrumentationOptions.RequestBody -  body of the request
+        /// InstrumentationOptions.RequestContext - what is the context of the request
+        /// InstrumentationOptions.All - all of the above
+        /// </summary>
+        /// <param name="instrumentationOptions"></param>
+        /// <returns></returns>
+        INeedARequestContext InstrumentationOptions(InstrumentationOptions instrumentationOptions);
+        
         /// <summary>
         /// Requests the context factory.
         /// </summary>

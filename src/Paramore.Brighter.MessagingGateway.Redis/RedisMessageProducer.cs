@@ -24,9 +24,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
@@ -51,41 +53,29 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
     public class RedisMessageProducer : RedisMessageGateway, IAmAMessageProducerSync
     {
-        /// <summary>
-        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
-        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
-        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
-        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
-        /// </summary>
-        public int MaxOutStandingMessages { get; set;  } = -1;
-        /// <summary>
-        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
-        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
-        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
-        /// </summary>
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        /// <summary>
-        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
-        /// This bag provides the args required
-        /// </summary>
-        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageProducer>();
         private readonly Publication _publication; 
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
-         public RedisMessageProducer(
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
+        public Publication Publication { get { return _publication; } }
+        
+        /// <summary>
+        /// The OTel Span we are writing Producer events too
+        /// </summary>
+        public Activity Span { get; set; }
+
+        public RedisMessageProducer(
              RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
              RedisMessagePublication publication)
          
             : base(redisMessagingGatewayConfiguration)
          {
              _publication = publication;
-             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
-             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
-             OutBoxBag = publication.OutBoxBag;
          }
 
         public void Dispose()
@@ -101,25 +91,23 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>Task.</returns>
         public void Send(Message message)
         {
-            using (var client = Pool.Value.GetClient())
-            {
-                Topic = message.Header.Topic;
+            using var client = Pool.Value.GetClient();
+            Topic = message.Header.Topic;
 
-                s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
+            s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
   
-                var redisMessage = CreateRedisMessage(message);
+            var redisMessage = CreateRedisMessage(message);
 
-                s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
-                    message.Header.Topic, message.Id.ToString(), message.Body.Value);
-                //increment a counter to get the next message id
-                var nextMsgId = IncrementMessageCounter(client);
-                //store the message, against that id
-                StoreMessage(client, redisMessage, nextMsgId);
-                //If there are subscriber queues, push the message to the subscriber queues
-                var pushedTo = PushToQueues(client, nextMsgId);
-                s_logger.LogDebug("RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
-                    message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
-            }
+            s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
+                message.Header.Topic, message.Id.ToString(), message.Body.Value);
+            //increment a counter to get the next message id
+            var nextMsgId = IncrementMessageCounter(client);
+            //store the message, against that id
+            StoreMessage(client, redisMessage, nextMsgId);
+            //If there are subscriber queues, push the message to the subscriber queues
+            var pushedTo = PushToQueues(client, nextMsgId);
+            s_logger.LogDebug("RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
+                message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
         }
 
         /// <summary>

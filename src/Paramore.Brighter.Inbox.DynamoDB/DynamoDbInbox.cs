@@ -45,8 +45,6 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <summary>
         ///     Initialises a new instance of the <see cref="DynamoDbInbox"/> class.
         /// </summary>
-        /// <param name="context">The DynamoDBContext</param>
-        /// <param name="configuration">The DynamoDB Operation Configuration</param>
         /// <param name="client">The Amazon Dynamo Db client to use</param>
         public DynamoDbInbox(IAmazonDynamoDB client, DynamoDbInboxConfiguration configuration)
         {
@@ -80,7 +78,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <returns><see cref="T"/></returns>
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             return GetCommandAsync<T>(id, contextKey)
                 .ConfigureAwait(false)
@@ -112,12 +110,12 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task{T}"/></returns>
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {                
             return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
         }
 
-       /// <summary>
+        /// <summary>
         /// Checks if the command exists based on the id
         /// </summary>
         /// <param name="id">The identifier</param>
@@ -125,8 +123,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
-        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        /// <returns><see langword="true"/> if Command exists, otherwise <see langword="false"/></returns>
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
        {
            try
            {
@@ -141,19 +139,19 @@ namespace Paramore.Brighter.Inbox.DynamoDB
 
 
        /// <summary>
-        ///     Checks if the command exists based on the id
-        /// </summary>
-        /// <param name="id">The identifier</param>
-        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>        
-        /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
-        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+       ///     Checks if the command exists based on the id
+       /// </summary>
+       /// <param name="id">The identifier</param>
+       /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+       /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
+       /// <typeparam name="T">Type of command being checked</typeparam>
+       /// <returns><see langword="true"/> if Command exists, otherwise <see langword="false"/></returns>
+       public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             return ExistsAsync<T>(id, contextKey).Result;
         }
 
-        private async Task<T> GetCommandAsync<T>(Guid id, string contextKey, CancellationToken cancellationToken = default) where T : class, IRequest
+        private async Task<T> GetCommandAsync<T>(string id, string contextKey, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var queryConfig = new QueryOperationConfig
             {
@@ -178,8 +176,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             
             var messages = new List<CommandItem<T>>();
             do
-            {
-              messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(false));
+            { 
+                messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(false));
             } while (!asyncSearch.IsDone);
 
             return messages;

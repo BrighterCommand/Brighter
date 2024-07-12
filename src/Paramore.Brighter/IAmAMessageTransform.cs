@@ -38,6 +38,12 @@ namespace Paramore.Brighter
     public interface IAmAMessageTransform : IDisposable
     {
         /// <summary>
+        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+        /// </summary>
+        /// <value>The context.</value>
+        IRequestContext Context { get; set; }
+        
+        /// <summary>
         /// Initializes from the <see cref="TransformAttribute"/> wrap attribute parameters. Use when you need to provide parameter information from the
         /// attribute to the transform. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
         /// the attribute itself can only use primitives.
@@ -58,8 +64,9 @@ namespace Paramore.Brighter
         /// A Wrap always runs after you map the <see cref="IRequest"/> to a <see cref="Message"/>
         /// </summary>
         /// <param name="message">The original message</param>
+        /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>
         /// <returns>The modified message</returns>
-        Message Wrap(Message message);
+        Message Wrap(Message message, Publication publication);
 
         /// <summary>
         /// An Unwrap modifies an incoming message by altering its header or body

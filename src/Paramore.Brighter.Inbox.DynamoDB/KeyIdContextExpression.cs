@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             _expression.ExpressionStatement = "CommandId = :v_CommandId and ContextKey = :v_ContextKey";
         }
 
-        public Expression Generate(Guid id, string contextKey)
+        public Expression Generate(string id, string contextKey)
         {
             var values = new Dictionary<string, DynamoDBEntry>();
             values.Add(":v_CommandId", id);

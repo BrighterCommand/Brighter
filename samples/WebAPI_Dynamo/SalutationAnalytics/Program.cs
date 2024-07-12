@@ -89,8 +89,7 @@ static void ConfigureBrighter(
             new RmqPublication
             {
                 Topic = new RoutingKey("SalutationReceived"),
-                MaxOutStandingMessages = 5,
-                MaxOutStandingCheckIntervalMilliSeconds = 500,
+                RequestType = typeof(SalutationReceived),
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }
@@ -100,7 +99,7 @@ static void ConfigureBrighter(
     services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+            options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
@@ -124,6 +123,8 @@ static void ConfigureBrighter(
                 configure.Outbox = ConfigureOutbox(awsCredentials, dynamoDb);
                 configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                 configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
+                configure.MaxOutStandingMessages = 5;
+                configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
             }
         )
         .AutoFromAssemblies();
@@ -163,7 +164,7 @@ static IAmazonDynamoDB CreateAndRegisterLocalClient(AWSCredentials credentials, 
     var dynamoDb = new AmazonDynamoDBClient(credentials, clientConfig);
     services.Add(new ServiceDescriptor(typeof(IAmazonDynamoDB), dynamoDb));
 
-    var dynamoDbConfiguration = new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1);
+    var dynamoDbConfiguration = new DynamoDbConfiguration();
     services.Add(new ServiceDescriptor(typeof(DynamoDbConfiguration), dynamoDbConfiguration));
 
     return dynamoDb;
@@ -242,12 +243,12 @@ static void CreateInbox(IAmazonDynamoDB client, IServiceCollection services)
 
 static IAmAnInbox ConfigureInbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
 {
-    return new DynamoDbInbox(dynamoDb, new DynamoDbInboxConfiguration(credentials, RegionEndpoint.EUWest1));
+    return new DynamoDbInbox(dynamoDb, new DynamoDbInboxConfiguration());
 }
 
 static IAmAnOutbox ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
 {
-    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1));
+    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(), TimeProvider.System);
 }
 
 

@@ -26,24 +26,26 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     [Collection("CommandProcessor")]
     public class MessageDispatcherRoutingTests : IDisposable
     {
+        private const string ChannelName = "myChannel";
         private readonly Dispatcher _dispatcher;
-        private readonly FakeChannel _channel;
         private readonly SpyCommandProcessor _commandProcessor;
+        private readonly RoutingKey _routingKey = new("myTopic");
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
 
         public MessageDispatcherRoutingTests()
         {
-            _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -55,14 +57,21 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new SubscriptionName("test"), 
                 noOfPerformers: 1, 
                 timeoutInMilliseconds: 1000, 
-                channelFactory: new InMemoryChannelFactory(_channel),
-                channelName: new ChannelName("fakeChannel"), 
-                routingKey: new RoutingKey("fakekey"));
-            _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { connection }, messageMapperRegistry);
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+                channelName: new ChannelName(ChannelName), 
+                routingKey: _routingKey
+            );
+            
+            _dispatcher = new Dispatcher(
+                _commandProcessor, 
+                new List<Subscription> { connection },
+                messageMapperRegistry,
+                requestContextFactory: new InMemoryRequestContextFactory()
+            );
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
-            _channel.Enqueue(message);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKey});
+            _bus.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
@@ -73,15 +82,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public void When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler()
         {
             Task.Delay(1000).Wait();
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
+            
             _dispatcher.End().Wait();
-
-            //_should_have_consumed_the_messages_in_the_channel
-            _channel.Length.Should().Be(0);
-            //_should_have_a_stopped_state
+            
+            Assert.Empty(_bus.Stream(_routingKey));
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
-            //_should_have_dispatched_a_request
             _commandProcessor.Observe<MyEvent>().Should().NotBeNull();
-            //_should_have_published_async
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.Publish);
         }
 #pragma warning restore xUnit1031

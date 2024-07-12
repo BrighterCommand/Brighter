@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             var type = typeof(T).Name;
             
             Time = $"{TimeStamp.Ticks}";
-            CommandId = command.Id.ToString();
+            CommandId = command.Id;
             CommandType = typeof(T).Name;
             CommandBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             ContextKey = contextKey;

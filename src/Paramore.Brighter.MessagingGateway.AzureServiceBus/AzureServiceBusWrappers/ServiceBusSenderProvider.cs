@@ -12,9 +12,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             _client = clientProvider.GetServiceBusClient();
         }
 
-        public IServiceBusSenderWrapper Get(string topic)
+        public IServiceBusSenderWrapper Get(string topicOrQueueName)
         {
-            return new ServiceBusSenderWrapper(_client.CreateSender(topic));
+            return new ServiceBusSenderWrapper(_client.CreateSender(topicOrQueueName));
         }
     }
 }

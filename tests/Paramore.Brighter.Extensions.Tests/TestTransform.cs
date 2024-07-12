@@ -4,10 +4,12 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Extensions.Tests;
 
-public class TestTransform : IAmAMessageTransformAsync
+public class TestTransform : IAmAMessageTransformAsync, IAmAMessageTransform
 {
     public List<object> WrapInitializerList { get; set; } = new List<object>();
     public List<object> UnwrapInitializerList { get; set; } = new List<object>();
+    
+    public IRequestContext Context { get; set; }
     
     public void Dispose()
     {
@@ -24,17 +26,27 @@ public class TestTransform : IAmAMessageTransformAsync
        UnwrapInitializerList.AddRange(initializerList); 
     }
 
-    public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken)
+    public Message Wrap(Message message, Publication publication)
     {
-        var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
-        tcs.SetResult(message);
-        return tcs.Task.Result;
+        return message;
     }
 
-    public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken)
+    public Message Unwrap(Message message)
+    {
+        return message;
+    }
+
+    public Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken)
     {
         var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
         tcs.SetResult(message);
-        return tcs.Task.Result;
+        return tcs.Task;
+    }
+
+    public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken)
+    {
+        var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
+        tcs.SetResult(message);
+        return tcs.Task;
     }
 }

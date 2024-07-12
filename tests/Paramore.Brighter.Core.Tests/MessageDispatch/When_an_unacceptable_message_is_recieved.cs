@@ -25,37 +25,47 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpUnacceptableMessageTests
     {
+        private const string Topic = "MyTopic";
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
+        private readonly Channel _channel;
+        private readonly InternalBus _bus;
+        private readonly RoutingKey _routingKey = new RoutingKey(Topic);
+        private FakeTimeProvider _timeProvider = new FakeTimeProvider();
 
         public MessagePumpUnacceptableMessageTests()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            _channel = new FakeChannel();
+
+            _bus = new InternalBus();
+            
+            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };
 
             var myMessage = JsonSerializer.Serialize(new MyEvent());
-            var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
+            var unacceptableMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
+                new MessageBody(myMessage)
+            );
 
             _channel.Enqueue(unacceptableMessage);
         }
@@ -65,14 +75,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(new[] { task });
 
-            //should_acknowledge_the_message
-            _channel.AcknowledgeHappened.Should().BeTrue();
+            Assert.Empty(_bus.Stream(_routingKey));
         }
     }
 }

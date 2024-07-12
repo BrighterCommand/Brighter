@@ -75,7 +75,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.ChannelFactory = new ChannelFactory(consumerFactory);
+            options.DefaultChannelFactory = new ChannelFactory(consumerFactory);
         }).AutoFromAssemblies();
 
 

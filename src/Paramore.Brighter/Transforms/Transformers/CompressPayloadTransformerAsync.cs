@@ -1,4 +1,29 @@
-﻿using System;
+﻿#region Licence
+
+/* The MIT License (MIT)
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Mime;
@@ -24,9 +49,23 @@ namespace Paramore.Brighter.Transforms.Transformers
         
         /// <summary> Original content type header name</summary>
         public const string ORIGINAL_CONTENTTYPE_HEADER = "originalContentType";
+        
+        /// <summary>
+        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+        /// </summary>
+        /// <value>The context.</value>
+        public IRequestContext Context { get; set; }
 
+        /// <summary>
+        /// Dispose of this transform; a no-op
+        /// </summary>
         public void Dispose() { }
 
+        /// <summary>
+        /// Initializes from the <see cref="TransformAttribute"/> wrap attribute parameters.
+        /// Used to pass the compression algorithm to the transformer and the size over which to compress
+        /// </summary>
+        /// <param name="initializerList"></param>
         public void InitializeWrapFromAttributeParams(params object[] initializerList)
         {
             _compressionMethod = (CompressionMethod)initializerList[0];
@@ -35,12 +74,23 @@ namespace Paramore.Brighter.Transforms.Transformers
 
         }
 
+        /// <summary>
+        /// Initializes from the <see cref="TransformAttribute"/> unwrap attribute parameters.
+        /// Used to pass the decompression algorithm to the transformer 
+        /// </summary>
+        /// <param name="initializerList"></param>
         public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
         {
             _compressionMethod = (CompressionMethod)initializerList[0];
         }
 
-        public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Compress the message given the supplied compression algorithm
+        /// </summary>
+        /// <param name="message">The message to compress</param>
+        /// <param name="publication">The publication for the channel that the message is being published to; useful for metadata</param>       
+        /// <returns>A message with a compressed body</returns>
+        public async Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
         {
             var bytes = message.Body.Bytes;
 
@@ -61,7 +111,11 @@ namespace Paramore.Brighter.Transforms.Transformers
             return message;
         }
 
-
+        /// <summary>
+        /// Decompress a message given the supplied compression algorithm
+        /// </summary>
+        /// <param name="message">The message to decompress</param>
+        /// <returns>An uncompressed message</returns>
         public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
             if (!IsCompressed(message)) return message;

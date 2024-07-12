@@ -26,27 +26,30 @@ using System;
 using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly.Registry;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpDispatchTests
     {
+        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly MyEvent _myEvent = new MyEvent();
-        private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
+        private readonly MyEvent _myEvent = new();
+        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
 
         public MessagePumpDispatchTests()
         {
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyEvent, MyEventHandler>();
 
-            var handlerFactory = new TestHandlerFactorySync<MyEvent, MyEventHandler>(() => new MyEventHandler(_receivedMessages));
+            var handlerFactory = new SimpleHandlerFactorySync(_ => new MyEventHandler(_receivedMessages));
 
             var commandProcessor = new CommandProcessor(
                 subscriberRegistry,
@@ -58,21 +61,25 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var channel = new FakeChannel();
+            var channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
                 Channel = channel, TimeoutInMilliseconds = 5000
             };
 
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options)));
+            var message = new Message(
+                new MessageHeader(_myEvent.Id, Topic, MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
+            );
+            
             channel.Enqueue(message);
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             channel.Enqueue(quitMessage);
         }
 
@@ -80,8 +87,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public void When_A_Message_Is_Dispatched_It_Should_Reach_A_Handler()
         {
             _messagePump.Run();
-
-            //_should_dispatch_the_message_to_a_handler
+            
             _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
         }
     }

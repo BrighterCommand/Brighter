@@ -20,7 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
- 
+
 #endregion
 
 using System;
@@ -32,6 +32,7 @@ using Paramore.Brighter.Logging;
 using System.Text.Json;
 using System.Transactions;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -62,6 +63,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = new BrighterOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
+            services.TryAddSingleton<IAmABrighterTracer>(new BrighterTracer());
 
             return BrighterHandlerBuilder(services, options);
         }
@@ -77,6 +79,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  - Inbox - defaults to InMemoryInbox if none supplied 
         ///  - SubscriberRegistry - what handlers subscribe to what requests
         ///  - MapperRegistry - what mappers translate what messages
+        ///  - Request Context Factory - how do we create a request context for a pipeline
         /// </summary>
         /// <param name="services">The collection of services that we want to add registrations to</param>
         /// <param name="options"></param>
@@ -91,6 +94,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
+            
+            services.TryAddSingleton<IAmARequestContextFactory>(options.RequestContextFactory);
 
             if (options.FeatureSwitchRegistry != null)
                 services.TryAddSingleton(options.FeatureSwitchRegistry);
@@ -144,14 +149,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (brighterBuilder is null)
                 throw new ArgumentNullException($"{nameof(brighterBuilder)} cannot be null.", nameof(brighterBuilder));
-            
+
             var busConfiguration = new ExternalBusConfiguration();
             configure?.Invoke(busConfiguration);
-            brighterBuilder.Services.TryAddSingleton<IAmExternalBusConfiguration>(busConfiguration);
+            
+            if (busConfiguration.ProducerRegistry == null)
+                throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
+            
+            brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
             Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(CommittableTransactionProvider);
-            
+
             //Find the transaction type from the provider
             Type transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
             Type transactionType = null;
@@ -165,40 +174,85 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             //register the generic interface with the transaction type
             var boxProviderType = transactionProviderInterface.MakeGenericType(transactionType);
-            
+
             brighterBuilder.Services.Add(new ServiceDescriptor(boxProviderType, transactionProvider, serviceLifetime));
 
             //NOTE: It is a little unsatisfactory to hard code our types in here
-            RegisterRelationalProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
-            RegisterDynamoProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
-
-            return ExternalBusBuilder(brighterBuilder, busConfiguration, transactionType);
+            RegisterRelationalProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider,
+                transactionProvider, serviceLifetime);
+            RegisterDynamoProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider,
+                transactionProvider, serviceLifetime);
+            
+            //we always need an outbox in case of producer callbacks
+            var outbox = busConfiguration.Outbox;
+            if (outbox == null)
+            {
+                outbox = new InMemoryOutbox(TimeProvider.System);
             }
 
+            //we create the outbox from interfaces from the determined transaction type to prevent the need
+            //to pass generic types as we know the transaction provider type
+            var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
+            var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
+
+            foreach (Type i in outbox.GetType().GetInterfaces())
+            {
+                if (i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType)
+                {
+                    var outboxDescriptor =
+                        new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                    brighterBuilder.Services.Add(outboxDescriptor);
+                }
+
+                if (i.IsGenericType && i.GetGenericTypeDefinition() == asyncOutboxType)
+                {
+                    var asyncOutboxdescriptor =
+                        new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                    brighterBuilder.Services.Add(asyncOutboxdescriptor);
+                }
+            }
+            
+            // If no distributed locking service is added, then add the in memory variant
+            var distributedLock = busConfiguration.DistributedLock ?? new InMemoryLock();
+            brighterBuilder.Services.AddSingleton(distributedLock);
+
+            if (busConfiguration.UseRpc)
+            {
+                brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(busConfiguration.UseRpc, busConfiguration.ReplyQueueSubscriptions));
+            }
+            
+            brighterBuilder.Services.TryAddSingleton<IAmExternalBusConfiguration>(busConfiguration);
+           
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnExternalBusService),
+               (serviceProvider) => BuildExternalBus(
+                   serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
+                   ),
+               ServiceLifetime.Singleton));
+
+            return brighterBuilder;
+        }
+        
+        
         private static INeedARequestContext AddEventBus(
-            IServiceProvider provider, 
+            IServiceProvider provider,
             INeedMessaging messagingBuilder,
             IUseRpc useRequestResponse)
-            {
+        {
             var eventBus = provider.GetService<IAmAnExternalBusService>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
-            var messageMapperRegistry = MessageMapperRegistry(provider);
-            var messageTransformFactory = TransformFactory(provider);
 
             INeedARequestContext ret = null;
             var hasEventBus = eventBus != null;
             bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
-            
+
             if (!hasEventBus) ret = messagingBuilder.NoExternalBus();
-             
+
             if (hasEventBus && !useRpc)
             {
                 ret = messagingBuilder.ExternalBus(
                     ExternalBusType.FireAndForget,
                     eventBus,
-                    messageMapperRegistry,
-                    messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration
@@ -210,8 +264,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 ret = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus,
-                    messageMapperRegistry,
-                    messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration
@@ -219,7 +271,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
 
             return ret;
-            }
+        }
 
         private static IPolicyRegistry<string> AddDefaults(IPolicyRegistry<string> policyRegistry)
         {
@@ -252,7 +304,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (featureSwitchRegistry != null)
                 needHandlers = needHandlers.ConfigureFeatureSwitches(featureSwitchRegistry);
-
+            
             var policyBuilder = needHandlers.Handlers(handlerConfiguration);
 
             var messagingBuilder = options.PolicyRegistry == null
@@ -261,75 +313,44 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             INeedARequestContext ret = AddEventBus(provider, messagingBuilder, useRequestResponse);
 
+            var requestContextFactory = provider.GetService<IAmARequestContextFactory>();
+
             var commandProcessor = ret
-                .RequestContextFactory(options.RequestContextFactory)
+                .RequestContextFactory(requestContextFactory)
                 .Build();
 
             return commandProcessor;
         }
-
-        private static IBrighterBuilder ExternalBusBuilder(
-            IBrighterBuilder brighterBuilder,
-            IAmExternalBusConfiguration externalBusConfiguration, 
-            Type transactionType)
+        
+        private static IAmAnExternalBusService BuildExternalBus(IServiceProvider serviceProvider,
+            Type transactionType,
+            ExternalBusConfiguration busConfiguration,
+            IPolicyRegistry<string> policyRegistry,
+            IAmAnOutbox outbox) 
         {
-            if (externalBusConfiguration.ProducerRegistry == null)
-                throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
-
-            var serviceCollection = brighterBuilder.Services;
-
-            serviceCollection.TryAddSingleton<IAmExternalBusConfiguration>(externalBusConfiguration);
-            serviceCollection.TryAddSingleton<IAmAProducerRegistry>(externalBusConfiguration.ProducerRegistry);
-
-            //we always need an outbox in case of producer callbacks
-            var outbox = externalBusConfiguration.Outbox;
-            if (outbox == null)
-            {
-                outbox = new InMemoryOutbox();
-            }
-
-            //we create the outbox from interfaces from the determined transaction type to prevent the need
-            //to pass generic types as we know the transaction provider type
-            var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
-            var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
-
-            foreach (Type i in outbox.GetType().GetInterfaces())
-            {
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType)
-                {
-                    var outboxDescriptor = new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
-                    serviceCollection.Add(outboxDescriptor);
-                }
-
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == asyncOutboxType)
-                {
-                    var asyncOutboxdescriptor = new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
-                    serviceCollection.Add(asyncOutboxdescriptor);
-                }
-            }
-
-            if (externalBusConfiguration.UseRpc)
-            {
-                serviceCollection.TryAddSingleton<IUseRpc>(new UseRpc(externalBusConfiguration.UseRpc,
-                    externalBusConfiguration.ReplyQueueSubscriptions));
-            }
-            
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
-            var busType = typeof(ExternalBusServices<,>).MakeGenericType(typeof(Message), transactionType);
-            
-            IAmAnExternalBusService bus = (IAmAnExternalBusService)Activator.CreateInstance(busType,
-                externalBusConfiguration.ProducerRegistry,
-                brighterBuilder.PolicyRegistry,
-                outbox,
-                externalBusConfiguration.OutboxBulkChunkSize,
-                externalBusConfiguration.OutboxTimeout);
-            
-            serviceCollection.TryAddSingleton<IAmAnExternalBusService>(bus);
+            var busType = typeof(ExternalBusService<,>).MakeGenericType(typeof(Message), transactionType);
 
-            return brighterBuilder;
+            return (IAmAnExternalBusService)Activator.CreateInstance(
+                busType,
+                busConfiguration.ProducerRegistry,
+                policyRegistry,
+                MessageMapperRegistry(serviceProvider),
+                TransformFactory(serviceProvider),
+                TransformFactoryAsync(serviceProvider),
+                Tracer(serviceProvider),
+                outbox,
+                busConfiguration.ArchiveProvider,
+                RequestContextFactory(serviceProvider),
+                busConfiguration.OutboxTimeout,
+                busConfiguration.MaxOutStandingMessages,
+                busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
+                busConfiguration.OutBoxBag,
+                busConfiguration.ArchiveBatchSize,
+                busConfiguration.InstrumentationOptions);
         }
-        
+
         /// <summary>
         /// Config the Json Serializer that is used inside of Brighter
         /// </summary>
@@ -340,14 +361,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             Action<JsonSerializerOptions> configure)
         {
             var options = new JsonSerializerOptions();
-            
+
             configure.Invoke(options);
 
             JsonSerialisationOptions.Options = options;
-            
+
             return brighterBuilder;
         }
-        
+
         /// <summary>
         /// Registers message mappers with the registry. Normally you don't need to call this, it is called by the builder for Brighter or the Service Activator
         /// Visibility is required for use from both
@@ -361,13 +382,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var messageMapperRegistry = new MessageMapperRegistry(
                 new ServiceProviderMapperFactory(provider),
                 new ServiceProviderMapperFactoryAsync(provider)
-                );
+            );
 
             foreach (var messageMapper in serviceCollectionMessageMapperRegistry.Mappers)
             {
                 messageMapperRegistry.Register(messageMapper.Key, messageMapper.Value);
             }
-            
+
             foreach (var messageMapper in serviceCollectionMessageMapperRegistry.AsyncMappers)
             {
                 messageMapperRegistry.RegisterAsync(messageMapper.Key, messageMapper.Value);
@@ -377,9 +398,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         private static void RegisterDynamoProviderServicesMaybe(
-            IBrighterBuilder brighterBuilder, 
-            Type connectionProvider, 
-            Type transactionProvider, 
+            IBrighterBuilder brighterBuilder,
+            Type connectionProvider,
+            Type transactionProvider,
             ServiceLifetime serviceLifetime)
         {
             //not all box transaction providers are also relational connection providers
@@ -388,7 +409,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbConnectionProvider),
                     connectionProvider, serviceLifetime));
             }
-        
+
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmADynamoDbTransactionProvider).IsAssignableFrom(transactionProvider))
             {
@@ -401,7 +422,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private static void RegisterRelationalProviderServicesMaybe(
             IBrighterBuilder brighterBuilder,
             Type connectionProvider,
-            Type transactionProvider, 
+            Type transactionProvider,
             ServiceLifetime serviceLifetime
         )
         {
@@ -411,7 +432,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmARelationalDbConnectionProvider),
                     connectionProvider, serviceLifetime));
             }
-        
+
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmATransactionConnectionProvider).IsAssignableFrom(transactionProvider))
             {
@@ -422,6 +443,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Grabs the Request Context Factory from DI. Mainly used to create a similar level of
+        /// abstraction to the other providers for building an external service bus
+        /// </summary>
+        /// <param name="provider"></param>
+        public static IAmARequestContextFactory RequestContextFactory(IServiceProvider provider)
+        {
+            return provider.GetService<IAmARequestContextFactory>();
+        }
+        
+        private static IAmABrighterTracer Tracer(IServiceProvider serviceProvider)
+        {
+            return serviceProvider.GetService<BrighterTracer>();
+        }
+
+        /// <summary>                                                            x
         /// Creates transforms. Normally you don't need to call this, it is called by the builder for Brighter or
         /// the Service Activator
         /// Visibility is required for use from both
@@ -432,7 +468,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             return new ServiceProviderTransformerFactory(provider);
         }
-        
+
         /// <summary>
         /// Creates transforms. Normally you don't need to call this, it is called by the builder for Brighter or
         /// the Service Activator

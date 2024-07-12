@@ -51,7 +51,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Get_Async()
         {
-            Guid commandId = Guid.NewGuid();
+            string commandId = Guid.NewGuid().ToString();
             var exception = await Catch.ExceptionAsync(() => _sqlSqlInbox.GetAsync<MyCommand>(commandId, "some-key"));
             AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Check_Exists_Async()
         {
-            Guid commandId = Guid.NewGuid();
+            string commandId = Guid.NewGuid().ToString();
             bool exists = await _sqlSqlInbox.ExistsAsync<MyCommand>(commandId, "some-key");
             exists.Should().BeFalse();
         }

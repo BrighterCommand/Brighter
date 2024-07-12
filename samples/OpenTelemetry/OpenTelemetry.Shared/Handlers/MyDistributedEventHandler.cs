@@ -9,7 +9,7 @@ public class MyDistributedEventHandler : RequestHandler<MyDistributedEvent>
     public override MyDistributedEvent Handle(MyDistributedEvent command)
     {
         Console.WriteLine($"Id: {command.Id} {Environment.NewLine}Messge: {command.Name}{Environment.NewLine}");
-        command.Span.AddEvent(new ActivityEvent("Did a thing"));
+        Context.Span.AddEvent(new ActivityEvent("Did a thing"));
         
         return base.Handle(command);
     }

@@ -64,7 +64,7 @@ builder.Services.AddServiceActivator(options =>
                 requeueCount: 5
             )
         };
-        options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+        options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
     })
     .MapperRegistry(r =>
     {
@@ -88,8 +88,6 @@ builder.Services.AddServiceActivator(options =>
         options.MinimumMessageAge = 500;
     });
 
-
-builder.Services.AddSingleton<TopicDictionary>();
 builder.Services.AddSingleton(typeof(IAmAMessageMapper<>), typeof(MessageMapper<>));
 
 builder.Services.AddHealthChecks()
@@ -100,30 +98,27 @@ builder.Services.AddHostedService<ServiceActivatorHostedService>();
 var  app = builder.Build();
 
 app.UseRouting();
-app.UseEndpoints(endpoints =>
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/detail", new HealthCheckOptions
 {
-    endpoints.MapHealthChecks("/health");
-    endpoints.MapHealthChecks("/health/detail", new HealthCheckOptions
+    ResponseWriter = async (context, report) =>
     {
-        ResponseWriter = async (context, report) =>
+        var content = new
         {
-            var content = new
-            {
-                Status = report.Status.ToString(),
-                Results = report.Entries.ToDictionary(e => e.Key,
-                    e => new
-                    {
-                        Status = e.Value.Status.ToString(),
-                        Description = e.Value.Description,
-                        Duration = e.Value.Duration
-                    }),
-                TotalDuration = report.TotalDuration
-            };
+            Status = report.Status.ToString(),
+            Results = report.Entries.ToDictionary(e => e.Key,
+                e => new
+                {
+                    Status = e.Value.Status.ToString(),
+                    Description = e.Value.Description,
+                    Duration = e.Value.Duration
+                }),
+            TotalDuration = report.TotalDuration
+        };
 
-            context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(content, JsonSerialisationOptions.Options));
-        }
-    });
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(JsonSerializer.Serialize(content, JsonSerialisationOptions.Options));
+    }
 });
 
 app.Run();

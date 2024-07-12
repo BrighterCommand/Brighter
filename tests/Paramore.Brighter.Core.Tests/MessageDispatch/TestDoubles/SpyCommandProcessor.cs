@@ -57,19 +57,23 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
     internal class SpyCommandProcessor : IAmACommandProcessor
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
-        private readonly Dictionary<Guid, IRequest> _postBox = new Dictionary<Guid, IRequest>();
+        private readonly Dictionary<string, IRequest> _postBox = new();
 
         public IList<CommandType> Commands { get; } = new List<CommandType>();
         public List<ClearParams> ClearParamsList { get; } = new List<ClearParams>();
 
-        public virtual void Send<T>(T command) where T : class, IRequest
+        public virtual void Send<T>(T command, RequestContext requestContext = null) where T : class, IRequest
         {
             _requests.Enqueue(command);
             Commands.Add(CommandType.Send);
         }
 
-        public virtual async Task SendAsync<TRequest>(TRequest command, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        public virtual async Task SendAsync<TRequest>(
+            TRequest command, 
+            RequestContext requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default) 
+            where TRequest : class, IRequest
         {
             _requests.Enqueue(command);
             Commands.Add(CommandType.SendAsync);
@@ -78,14 +82,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             await completionSource.Task;
         }
 
-        public virtual void Publish<TRequest>(TRequest @event) where TRequest : class, IRequest
+        public virtual void Publish<TRequest>(TRequest @event, RequestContext requestContext = null) where TRequest : class, IRequest
         {
             _requests.Enqueue(@event);
             Commands.Add(CommandType.Publish);
         }
 
-        public virtual async Task PublishAsync<TRequest>(TRequest @event, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        public virtual async Task PublishAsync<TRequest>(
+            TRequest @event, 
+            RequestContext requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default) 
+            where TRequest : class, IRequest
         {
             _requests.Enqueue(@event);
             Commands.Add(CommandType.PublishAsync);
@@ -95,20 +103,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             await completionSource.Task;
         }
 
-        public virtual void Post<TRequest>(TRequest request) where TRequest : class, IRequest
+        public virtual void Post<TRequest>(TRequest request, RequestContext requestContext = null, Dictionary<string, object> args = null) 
+            where TRequest : class, IRequest
         {
             _requests.Enqueue(request);
             Commands.Add(CommandType.Post);
         }
 
-        public virtual void Post<TRequest, TTransaction>(TRequest request,
-            IAmABoxTransactionProvider<TTransaction> provider) where TRequest : class, IRequest
-        {
-            Post(request);
-        }
-
-        public virtual async Task PostAsync<TRequest>(TRequest request, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        public virtual async Task PostAsync<TRequest>(
+            TRequest request, 
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default) 
+            where TRequest : class, IRequest
         {
             _requests.Enqueue(request);
             Commands.Add(CommandType.PostAsync);
@@ -118,29 +126,35 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             await completionSource.Task;
         }
 
-        public virtual async Task PostAsync<TRequest, TTransaction>(TRequest request,
-            IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : class, IRequest
-        {
-            await PostAsync(request, cancellationToken: cancellationToken);
-        }
-
-        public Guid DepositPost<TRequest>(TRequest request) where TRequest : class, IRequest
+        public string DepositPost<TRequest>(
+            TRequest request, 
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null) 
+            where TRequest : class, IRequest
         {
             _postBox.Add(request.Id, request);
             return request.Id;
         }
 
-        public Guid DepositPost<TRequest, TTransaction>(TRequest request,
-            IAmABoxTransactionProvider<TTransaction> provider) where TRequest : class, IRequest
+        public string DepositPost<TRequest, TTransaction>(
+            TRequest request,
+            IAmABoxTransactionProvider<TTransaction> provider,
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null,
+            string batchId = null) 
+            where TRequest : class, IRequest
         {
             return DepositPost(request);
         }
 
 
-        public Guid[] DepositPost<TRequest>(IEnumerable<TRequest> request) where TRequest : class, IRequest
+        public string[] DepositPost<TRequest>(
+            IEnumerable<TRequest> request, 
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null) 
+            where TRequest : class, IRequest
         {
-            var ids = new List<Guid>();
+            var ids = new List<string>();
             foreach (TRequest r in request)
             {
                 ids.Add(DepositPost(r));
@@ -149,40 +163,57 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return ids.ToArray();
         }
 
-        public Guid[] DepositPost<TRequest, TTransaction>(
-            IEnumerable<TRequest> request, IAmABoxTransactionProvider<TTransaction> provider)
+        public string[] DepositPost<TRequest, TTransaction>(
+            IEnumerable<TRequest> request, 
+            IAmABoxTransactionProvider<TTransaction> provider,
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null)
             where TRequest : class, IRequest
         {
             return DepositPost(request);
         }
 
-        public async Task<Guid> DepositPostAsync<TRequest>(TRequest request, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : class, IRequest
-        {
-            _postBox.Add(request.Id, request);
-
-            var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
-            tcs.SetResult(request.Id);
-            return await tcs.Task;
-        }
-
-        public async Task<Guid> DepositPostAsync<TRequest, TTransaction>(TRequest request,
-            IAmABoxTransactionProvider<TTransaction> provider,
-            bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public async Task<string> DepositPostAsync<TRequest>(
+            TRequest request,
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
             _postBox.Add(request.Id, request);
 
-            var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs.SetResult(request.Id);
             return await tcs.Task;
         }
 
-        public async Task<Guid[]> DepositPostAsync<TRequest>(IEnumerable<TRequest> requests,
-            bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        public async Task<string> DepositPostAsync<TRequest, TTransaction>(
+            TRequest request,
+            IAmABoxTransactionProvider<TTransaction> provider,
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default,
+            string batchId = null)
+            where TRequest : class, IRequest
         {
-            var ids = new List<Guid>();
+            _postBox.Add(request.Id, request);
+
+            var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            tcs.SetResult(request.Id);
+            return await tcs.Task;
+        }
+
+        public async Task<string[]> DepositPostAsync<TRequest>(
+            IEnumerable<TRequest> requests,
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default) 
+            where TRequest : class, IRequest
+        {
+            var ids = new List<string>();
             foreach (TRequest r in requests)
             {
                 ids.Add(await DepositPostAsync(r, cancellationToken: cancellationToken));
@@ -191,15 +222,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return ids.ToArray();
         }
 
-        public async Task<Guid[]> DepositPostAsync<TRequest, TTransaction>(IEnumerable<TRequest> requests,
+        public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(
+            IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> provider,
-            bool continueOnCapturedContext = false,
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await DepositPostAsync(requests, cancellationToken: cancellationToken);
         }
 
-        public void ClearOutbox(params Guid[] posts)
+        public void ClearOutbox(string[] posts, RequestContext requestContext = null, Dictionary<string, object> args = null)
         {
             foreach (var messageId in posts)
             {
@@ -209,27 +243,27 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
                 }
             }
         }
-
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
-        {
-            Commands.Add(CommandType.Clear);
-            ClearParamsList.Add(new ClearParams
-            {
-                AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args
-            });
-        }
-
-        public async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+ 
+        public async Task ClearOutboxAsync(
+            IEnumerable<string> posts, 
+            RequestContext requestContext = null,
+            Dictionary<string, object> args = null,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
             ClearOutbox(posts.ToArray());
 
-            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
 
-        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false,
+        public void ClearOutstandingFromOutbox(
+            int amountToClear = 100, 
+            int minimumAge = 5000, 
+            bool useBulk = false,
+            RequestContext requestContext = null,
             Dictionary<string, object> args = null)
         {
             Commands.Add(CommandType.Clear);
@@ -239,13 +273,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             });
         }
 
-        public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default)
-        {
-            return ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken);
-        }
-
-        public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds)
+        public TResponse Call<T, TResponse>(
+            T request, 
+            RequestContext requestContext = null,
+            int timeOutInMilliseconds = 500)
             where T : class, ICall where TResponse : class, IResponse
         {
             _requests.Enqueue(request);
@@ -275,16 +306,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             PublishCount = 0;
         }
 
-        public override void Send<T>(T command)
+        public override void Send<T>(T command, RequestContext requestContext = null)
         {
-            base.Send(command);
+            base.Send(command, requestContext);
             SendCount++;
             throw new DeferMessageAction();
         }
 
-        public override void Publish<T>(T @event)
+        public override void Publish<T>(T @event, RequestContext requestContext = null)
         {
-            base.Publish(@event);
+            base.Publish(@event, requestContext);
             PublishCount++;
 
             var exceptions = new List<Exception> { new DeferMessageAction() };
@@ -293,18 +324,26 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
                 "Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
 
-        public override async Task SendAsync<T>(T command, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default)
+        public override async Task SendAsync<T>(
+            T command, 
+            RequestContext requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default
+            )
         {
-            await base.SendAsync(command, continueOnCapturedContext, cancellationToken);
+            await base.SendAsync(command, requestContext, continueOnCapturedContext, cancellationToken);
             SendCount++;
             throw new DeferMessageAction();
         }
 
-        public override async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default)
+        public override async Task PublishAsync<T>(
+            T @event, 
+            RequestContext requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default
+            )
         {
-            await base.PublishAsync(@event, continueOnCapturedContext, cancellationToken);
+            await base.PublishAsync(@event, requestContext, continueOnCapturedContext, cancellationToken);
             PublishCount++;
 
             var exceptions = new List<Exception> { new DeferMessageAction() };
@@ -325,32 +364,32 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             PublishCount = 0;
         }
 
-        public override void Send<T>(T command)
+        public override void Send<T>(T command, RequestContext requestContext = null)
         {
-            base.Send(command);
+            base.Send(command, requestContext);
             SendCount++;
             throw new Exception();
         }
 
-        public override void Publish<T>(T @event)
+        public override void Publish<T>(T @event, RequestContext requestContext = null)
         {
-            base.Publish(@event);
+            base.Publish(@event, requestContext);
             PublishCount++;
 
             var exceptions = new List<Exception> { new Exception() };
 
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
-        public override async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public override async Task SendAsync<T>(T command, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
         {
-            await base.SendAsync(command, continueOnCapturedContext, cancellationToken);
+            await base.SendAsync(command, requestContext, continueOnCapturedContext, cancellationToken);
             SendCount++;
             throw new Exception();
         }
 
-        public override async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public override async Task PublishAsync<T>(T @event, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
         {
-            await base.PublishAsync(@event, continueOnCapturedContext, cancellationToken);
+            await base.PublishAsync(@event, requestContext, continueOnCapturedContext, cancellationToken);
             PublishCount++;
 
             var exceptions = new List<Exception> { new Exception() };

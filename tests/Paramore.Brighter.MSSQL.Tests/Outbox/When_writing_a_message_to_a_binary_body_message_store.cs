@@ -6,7 +6,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
-    public class SqlBinaryPayloadOutboxWritingMessageTests
+    public class SqlBinaryPayloadOutboxWritingMessageTests : IDisposable
     {
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
@@ -31,13 +31,13 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             _messageHeader = new MessageHeader(
-                messageId: Guid.NewGuid(),
+                messageId: Guid.NewGuid().ToString(),
                 topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayedMilliseconds: 5,
-                correlationId: Guid.NewGuid(),
+                correlationId: Guid.NewGuid().ToString(),
                 replyTo: "ReplyAddress",
                 contentType: "application/octet-stream",
                 partitionKey: "123456789");
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         {
             _message = new Message(_messageHeader,
                 new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, "application/octet-stream", CharacterEncoding.Raw));
-            _sqlOutbox.Add(_message);
+            _sqlOutbox.Add(_message, new RequestContext());
 
             AssertMessage();
         }
@@ -62,14 +62,14 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         public void When_Writing_A_Message_With_a_Null_To_The_MSSQL_Outbox()
         {
             _message = new Message(_messageHeader, new MessageBody((byte[])null));
-            _sqlOutbox.Add(_message);
+            _sqlOutbox.Add(_message, new RequestContext());
 
             AssertMessage();
         }
 
         private void AssertMessage()
         {
-            _storedMessage = _sqlOutbox.Get(_message.Id);
+            _storedMessage = _sqlOutbox.Get(_message.Id, new RequestContext());
 
             //should read the message from the sql outbox
             _storedMessage.Body.Bytes.Should().Equal(_message.Body.Bytes);

@@ -26,17 +26,19 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
         private readonly AmazonS3Client _client;
         private readonly string _bucketName;
         private string _id;
+        private readonly Publication _publication;
 
         public LargeMessagePayloadWrapTests()
         {
             //arrange
-            TransformPipelineBuilder.ClearPipelineCache();
+            TransformPipelineBuilderAsync.ClearPipelineCache();
 
             var mapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory(
-                    _ => new MyLargeCommandMessageMapper()),
-                    null);
-            mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+                new MessageMapperRegistry(null, new SimpleMessageMapperFactoryAsync(
+                    _ => new MyLargeCommandMessageMapperAsync())
+                    );
+           
+            mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
             
             _myCommand = new MyLargeCommand(6000);
 
@@ -69,9 +71,11 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 .GetAwaiter()
                 .GetResult();
 
-            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+            var transformerFactoryAsync = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
-            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+            _publication = new Publication { Topic = new RoutingKey("MyLargeCommand"), RequestType = typeof(MyLargeCommand) };
+
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, transformerFactoryAsync);
         }
 
         [Fact]
@@ -79,7 +83,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
         {
             //act
             _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-            var message = await _transformPipeline.WrapAsync(_myCommand);
+            var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
             //assert
             message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();

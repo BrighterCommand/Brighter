@@ -68,7 +68,8 @@ namespace GreetingsSender
                 {
                     new RmqPublication
                     {
-                        Topic = new RoutingKey("Greeting.Request")
+                        Topic = new RoutingKey("Greeting.Request"),
+                        RequestType = typeof(GreetingRequest)
                     }
                 }).Create();
             
@@ -90,7 +91,13 @@ namespace GreetingsSender
             Console.WriteLine("Requesting Salutation...");
 
             //blocking call
-            commandProcessor.Call<GreetingRequest, GreetingReply>(new GreetingRequest { Name = "Ian", Language = "en-gb" }, 2000);
+            commandProcessor.Call<GreetingRequest, GreetingReply>(
+                new GreetingRequest
+                {
+                    Name = "Ian", Language = "en-gb"
+                }, 
+                timeOutInMilliseconds: 2000
+            );
 
             Console.WriteLine("Done...");
             Console.ReadLine();

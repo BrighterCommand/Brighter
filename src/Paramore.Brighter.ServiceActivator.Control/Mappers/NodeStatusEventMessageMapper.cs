@@ -6,8 +6,10 @@ namespace Paramore.Brighter.ServiceActivator.Control.Mappers;
 public class NodeStatusEventMessageMapper : IAmAMessageMapper<NodeStatusEvent>
 {
     private readonly string topicName = "control.heartbeat";
-    
-    public Message MapToMessage(NodeStatusEvent request)
+
+    public IRequestContext Context { get; set; }
+
+    public Message MapToMessage(NodeStatusEvent request, Publication publication)
     {
         var header = new MessageHeader(messageId: request.Id, topic: topicName, messageType: MessageType.MT_EVENT);
         header.Bag["NodeName"] = request.NodeName;
@@ -18,6 +20,8 @@ public class NodeStatusEventMessageMapper : IAmAMessageMapper<NodeStatusEvent>
 
     public NodeStatusEvent MapToRequest(Message message)
     {
+#pragma warning disable CS8603 // Possible null reference return.
         return JsonSerializer.Deserialize<NodeStatusEvent>(message.Body.Value, JsonSerialisationOptions.Options);
+#pragma warning restore CS8603 // Possible null reference return.
     }
 }

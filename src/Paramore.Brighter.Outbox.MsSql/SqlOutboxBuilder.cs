@@ -35,11 +35,11 @@ namespace Paramore.Brighter.Outbox.MsSql
         CREATE TABLE {0}
             (
               [Id] [BIGINT] NOT NULL IDENTITY ,
-              [MessageId] UNIQUEIDENTIFIER NOT NULL,
+              [MessageId] NVARCHAR(255) NOT NULL,
               [Topic] NVARCHAR(255) NULL,
               [MessageType] NVARCHAR(32) NULL,
               [Timestamp] DATETIME NULL,
-              [CorrelationId] UNIQUEIDENTIFIER NULL,
+              [CorrelationId] NVARCHAR(255) NULL,
               [ReplyTo] NVARCHAR(255) NULL,
               [ContentType] NVARCHAR(128) NULL,  
               [PartitionKey] NVARCHAR(255) NULL, 
@@ -54,11 +54,11 @@ namespace Paramore.Brighter.Outbox.MsSql
         CREATE TABLE {0}
             (
               [Id] [BIGINT] NOT NULL IDENTITY,
-              [MessageId] UNIQUEIDENTIFIER NOT NULL,
+              [MessageId] NVARCHAR(255) NOT NULL,
               [Topic] NVARCHAR(255) NULL,
               [MessageType] NVARCHAR(32) NULL,
               [Timestamp] DATETIME NULL,
-              [CorrelationId] UNIQUEIDENTIFIER NULL,
+              [CorrelationId] NVARCHAR(255) NULL,
               [ReplyTo] NVARCHAR(255) NULL,
               [ContentType] NVARCHAR(128) NULL,  
               [PartitionKey] NVARCHAR(255) NULL,

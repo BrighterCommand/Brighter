@@ -43,6 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
         private IEnumerable<Subscription> _subscriptions;
         private IAmAMessageTransformerFactory _messageTransformerFactory;
         private IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private IAmARequestContextFactory _requestContextFactory;
 
         private DispatchBuilder() { }
 
@@ -59,10 +60,15 @@ namespace Paramore.Brighter.ServiceActivator
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
         /// <param name="commandProcessorFactory">The command processor Factory.</param>
+        /// <param name="requestContextFactory">The factory used to create a request context for a pipeline</param>
         /// <returns>INeedAMessageMapper.</returns>
-        public INeedAMessageMapper CommandProcessorFactory(Func<IAmACommandProcessorProvider> commandProcessorFactory)
+        public INeedAMessageMapper CommandProcessorFactory(
+            Func<IAmACommandProcessorProvider> commandProcessorFactory,
+            IAmARequestContextFactory requestContextFactory
+            )
         {
             _commandProcessorFactory = commandProcessorFactory;
+            _requestContextFactory = requestContextFactory;
             return this;
         }
 
@@ -97,11 +103,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
-        /// <param name="channelFactory">The channel factory.</param>
+        /// <param name="defaultChannelFactory">The default channel factory that will be used if no Channel Factory is provided for each subscription.</param>
         /// <returns>INeedAListOfSubcriptions.</returns>
-        public INeedAListOfSubcriptions DefaultChannelFactory(IAmAChannelFactory channelFactory)
+        public INeedAListOfSubcriptions ChannelFactory(IAmAChannelFactory defaultChannelFactory)
         {
-            _defaultChannelFactory = channelFactory;
+            _defaultChannelFactory = defaultChannelFactory;
             return this;
         }
 
@@ -122,32 +128,16 @@ namespace Paramore.Brighter.ServiceActivator
             return this;
         }
         
-        
-        /// <summary>
-        /// A list of connections i.e. mappings of channels to commands or events
-        /// </summary>
-        /// <param name="connections">The connections.</param>
-        /// <returns>IAmADispatchBuilder.</returns>
-        [Obsolete("This will be replaced in v10. Please use Subscriptions, which is functionally equivalent")]
-        public IAmADispatchBuilder Connections(IEnumerable<Subscription> connections)
-        {
-            _subscriptions = connections;
-
-            foreach (var connection in _subscriptions.Where(c => c.ChannelFactory == null))
-            {
-                connection.ChannelFactory = _defaultChannelFactory;
-            }
-
-            return this;
-        }
-
         /// <summary>
         /// Builds this instance.
         /// </summary>
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(_commandProcessorFactory, _subscriptions, _messageMapperRegistry, _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync);
+            return new Dispatcher(_commandProcessorFactory, _subscriptions, _messageMapperRegistry, 
+                _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync, 
+                _requestContextFactory
+            );
         }
 
 
@@ -164,8 +154,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
         /// <param name="commandProcessorFactory">The command processor provider Factory.</param>
+        /// <param name="requestContextFactory">The factory used to create a request context for a pipeline</param>
         /// <returns>INeedAMessageMapper.</returns>
-        INeedAMessageMapper CommandProcessorFactory(Func<IAmACommandProcessorProvider> commandProcessorFactory);
+        INeedAMessageMapper CommandProcessorFactory(
+            Func<IAmACommandProcessorProvider> commandProcessorFactory,
+            IAmARequestContextFactory requestContextFactory
+            );
     }
 
     /// <summary>
@@ -197,9 +191,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
-        /// <param name="channelFactory">The channel factory.</param>
+        /// <param name="defaultChannelFactory">The channel factory.</param>
         /// <returns>INeedAListOfSubcriptions.</returns>
-        INeedAListOfSubcriptions DefaultChannelFactory(IAmAChannelFactory channelFactory);
+        INeedAListOfSubcriptions ChannelFactory(IAmAChannelFactory defaultChannelFactory);
     }
 
     /// <summary>
@@ -211,10 +205,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// A list of connections i.e. mappings of channels to commands or events
         /// </summary>
         /// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subsriptions);
-        // TODO: Remove in V10
-        [Obsolete("Will be removed in V10, use Subscriptions instead")]
-        IAmADispatchBuilder Connections(IEnumerable<Subscription> connections);
+        IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subscriptions);
     }
 
     /// <summary>

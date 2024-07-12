@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
@@ -42,16 +43,26 @@ namespace Paramore.Brighter
     public interface IAmAMessageMapperAsync<TRequest> : IAmAMessageMapperAsync where TRequest : class, IRequest
     {
         /// <summary>
+        /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+        /// </summary>
+        /// <value>The context.</value>
+        IRequestContext Context { get; set; }
+        
+        /// <summary>
         /// Maps to message.
         /// </summary>
         /// <param name="request">The request.</param>
+        /// <param name="publication">The Publication for the channel we are writing the message to, for metadata such as Topic/RoutingKey or CloudEvents</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>Message.</returns>
-        Task<Message> MapToMessage(TRequest request);
+        Task<Message> MapToMessageAsync(TRequest request, Publication publication, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Maps to request.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>TRequest.</returns>
-        Task<TRequest> MapToRequest(Message message);
+        Task<TRequest> MapToRequestAsync(Message message, CancellationToken cancellationToken = default);
     }
 }

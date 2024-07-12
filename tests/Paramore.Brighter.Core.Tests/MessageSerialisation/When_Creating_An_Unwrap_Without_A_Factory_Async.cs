@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _myCommand = new MyTransformableCommand();
         
         _message = new Message(
-            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapperAsync");
 
         //wrap should just do message mapper                                          
-        var request = await _transformPipeline.UnwrapAsync(_message);
+        var request = await _transformPipeline.UnwrapAsync(_message, new RequestContext());
         
         //assert
         request.Value = _myCommand.Value;

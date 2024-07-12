@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.Common;
 using System.Transactions;
+using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
@@ -28,15 +29,18 @@ namespace GreetingsSender
                 {
                     new AzureServiceBusPublication
                     {
-                        Topic = new RoutingKey("greeting.event")
+                        Topic = new RoutingKey("greeting.event"),
+                        RequestType = typeof(GreetingEvent)
                     },
                     new AzureServiceBusPublication
                     {
-                        Topic = new RoutingKey("greeting.addGreetingCommand")
+                        Topic = new RoutingKey("greeting.addGreetingCommand"),
+                        RequestType = typeof(AddGreetingCommand)
                     },
                     new AzureServiceBusPublication
                     {
-                        Topic = new RoutingKey("greeting.Asyncevent")
+                        Topic = new RoutingKey("greeting.Asyncevent"),
+                        RequestType = typeof(GreetingAsyncEvent)
                     }
                 }
             ).Create();
@@ -63,7 +67,7 @@ namespace GreetingsSender
                 commandProcessor.Post(new GreetingEvent("Paul"));
                 commandProcessor.Post(new GreetingAsyncEvent("Paul - Async"));
 
-                commandProcessor.ClearOutbox(distroGreeting.Id);
+                commandProcessor.ClearOutbox(new []{distroGreeting.Id});
                 
                 Console.WriteLine("Press q to Quit or any other key to continue");
 

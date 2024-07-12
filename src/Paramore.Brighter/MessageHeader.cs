@@ -25,9 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text.Json.Serialization;
-using Paramore.Brighter.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -77,165 +74,227 @@ namespace Paramore.Brighter
     public class MessageHeader : IEquatable<MessageHeader>
     {
         /// <summary>
-        /// The date the message was created
-        /// </summary>
-        public DateTime TimeStamp { get; set; }
-
-        /// <summary>
-        /// Gets the identifier.
-        /// </summary>
-        /// <value>The identifier.</value>
-        public Guid Id { get; set; }
-
-        /// <summary>
-        /// Gets the topic.
-        /// </summary>
-        /// <value>The topic.</value>
-        public string Topic { get; set; }
-
-        /// <summary>
-        /// Gets the type of the message. Used for routing the message to a handler
-        /// </summary>
-        /// <value>The type of the message.</value>
-        public MessageType MessageType { get; set; }
-
-        /// <summary>
         /// A property bag that can be used for extended header attributes.
         /// Use camelCase for the key names if you intend to read it yourself, as when converted to and from Json serializers will tend convert the property
         /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
+        public Dictionary<string, object> Bag { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        
         /// <summary>
-        /// Gets the number of times this message has been seen 
+        /// OPTIONAL [Cloud Events] REQUIRED [Brighter]
+        /// Content type of data value. This attribute enables data to carry any type of content, whereby format and
+        /// encoding might differ from that of the chosen event format.
+        /// MUST adhere to the format specified in <see href="https://datatracker.ietf.org/doc/html/rfc2046">RFC 2046</see>
+        /// Because of the complexity of serializing if you do not know the type, we regard this as required even
+        /// though Cloud Events does not.
+        /// Default value is "text/plain"
         /// </summary>
-        public int HandledCount { get; set; }
-
-        /// <summary>
-        /// Gets the number of milliseconds the message was instructed to be delayed for
-        /// </summary>
-        public int DelayedMilliseconds { get; set; }
-
+        public string ContentType { get; set; }
+        
         /// <summary>
         /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,
         /// allows the originator to match responses to requests
         /// </summary>
         /// <value>The correlation identifier.</value>
-        public Guid CorrelationId { get; set; }
-
+        public string CorrelationId { get; set; }
+        
         /// <summary>
-        /// Gets or sets the ContentType used to describe how the message payload
-        /// has been serialized.  Default value is text/plain
+        /// OPTIONAL
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
+        /// Identifies the schema that data adheres to. Incompatible changes to the schema SHOULD be reflected by a different URI. 
         /// </summary>
-        public string ContentType { get; set; }
-
+        public Uri DataSchema { get; set; }
+        
         /// <summary>
+        /// OPTIONAL
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/dataref.md">Cloud Events Spec</see>
+        /// A reference to a location where the event payload is stored. The location MAY not be accessible without further information (e.g. a pre-shared secret).
+         ///Known as the "Claim Check Pattern", this attribute MAY be used for a variety of purposes:
+        ///  - If the Data is too large to be included in the message, the data is not present, and the consumer can retrieve it using this attribute.
+        ///  - If the consumer wants to verify that the Data has not been tampered with, it can retrieve it from a trusted source using this attribute.
+        ///  - If the Data MUST only be viewed by trusted consumers (e.g. personally identifiable information), only a trusted consumer can retrieve it using this attribute and a pre-shared secret.
+        /// </summary>
+        public string DataRef { get; set; }
+        
+        /// <summary>
+        /// OPTIONAL
+        /// Internal usage. Gets the number of milliseconds the message was instructed to be delayed for
+        /// </summary>
+        public int DelayedMilliseconds { get; set; }
+        
+        /// <summary>
+        /// OPTIONAL
+        /// Internal usage. Gets the number of times this message has been seen 
+        /// </summary>
+        public int HandledCount { get; set; }
+        
+        /// <summary>
+        /// REQUIRED
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
+        /// Identifies the event. Producers MUST ensure that source + id is unique for each distinct event.
+        /// If a duplicate event is re-sent (e.g. due to a network error) it MAY have the same id.
+        /// Consumers MAY assume that Events with identical source and id are duplicates.
+        /// </summary>
+        /// <value>The identifier.</value>
+        public string Id { get; set; }
+        
+        /// <summary>
+        /// REQUIRED
+        /// Gets the type of the message (command, event). Internal usage, Used when routing the message to a handler
+        /// </summary>
+        /// <value>The type of the message.</value>
+        public MessageType MessageType { get; set; }
+        
+        /// <summary>
+        /// OPTIONAL
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/partitioning.md">Cloud Events Spec</see>       
+        /// If we are working with consistent hashing to distribute writes across multiple channels according to the
+        /// hash value of a partition key then we need to be able to set that key, so that we can distribute writes effectively.
+        /// </summary>
+        public string PartitionKey { get; set; }
+        
+        /// <summary>
+        /// OPTIONAL
         /// Gets or sets the reply to topic. Used when doing Request-Reply instead of Publish-Subscribe to identify
         /// the queue that the sender is listening on. Usually a sender listens on a private queue, so that they
         /// do not have to filter replies intended for other listeners.
         /// </summary>
         /// <value>The reply to.</value>
         public string ReplyTo { get; set; }
+        
+        /// <summary>
+        /// OPTIONAL
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
+        /// This describes the subject of the event in the context of the event producer (identified by source).
+        /// In publish-subscribe scenarios, a subscriber will typically subscribe to events emitted by a source,
+        /// but the source identifier alone might not be sufficient as a qualifier for any specific event if the
+        /// source context has internal sub-structure.
+        /// </summary>
+        public string Subject { get; set; }
 
         /// <summary>
-        /// If we are working with consistent hashing to distribute writes across multiple channels according to the hash value of a partition key
-        /// then we need to be able to set that key, so that we can distribute writes effectively.
+        /// REQUIRED
+        /// The version of the CloudEvents specification which the event uses. This enables the interpretation of the context.
+        /// Defaults tp 1.0
         /// </summary>
-        public string PartitionKey { get; set; }
+        public string SpecVersion { get; set; } = "1.0";
+        
+        /// <summary>
+        /// REQUIRED
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
+        /// Identifies the context in which an event happened. Often this will include information such as the type of
+        /// the event source, the organization publishing the event or the process that produced the event.
+        /// The exact syntax and semantics behind the data encoded in the URI is defined by the event producer.
+        /// Producers MUST ensure that source + id is unique for each distinct event.
+        /// Default: "http://goparamore.io" for backward compatibility as required
+        /// </summary>
+        public Uri Source { get; set; } = new Uri("http://goparamore.io");
+        
+        /// <summary>
+        /// REQUIRED for sending. OPTIONAL for receiving
+        /// Gets the name of the channel that the message is on. Whilst this can be inferred from the message type, it is
+        /// used internally when we send the message to its destination
+        /// </summary>
+        /// <value>The topic.</value>
+        public string Topic { get; set; }
 
         /// <summary>
-        /// Gets the telemetry information for the message
+        /// REQUIRED
+        /// Internal usage. The date the message was created.
+        /// Defaults to now in UTC
         /// </summary>
-        public MessageTelemetry Telemetry { get; private set; }
+        public DateTime TimeStamp { get; set; }
+        
+        /// <summary>
+        /// REQUIRED (for OTel support, OPTIONAL in Cloud Events)
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md">Cloud Events Spec</see>
+        /// See also <see href = "https://w3c.github.io/trace-context/#traceparent-header">W3C Trace Context</see>
+        ///  The traceparent HTTP header field identifies the incoming request in a tracing system. It has four fields:
+        ///     - version
+        ///     - trace-id
+        ///     - parent-id
+        ///     - trace-flags
+        /// In .NET it is set from Activity.Current.Id
+        /// </summary>
+        public string TraceParent { get; set; }
+        
+        /// <summary>
+        /// OPTIONAL
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/distributed-tracing.md">Cloud Events Spec</see>
+        /// See also <see href = "https://w3c.github.io/trace-context/#tracestate-header">W3C Trace Context</see>
+        /// Provides additional vendor-specific trace identification information across different distributed tracing systems
+        /// and is a companion header for the traceparent field. It also conveys information about the request’s position
+        /// in multiple distributed tracing graphs.
+        /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
+        /// </summary>
+        public string TraceState { get; set; }
+        
+        /// <summary>
+        /// REQUIRED
+        /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Clode Events Spec</see>
+        /// This attribute contains a value describing the type of event related to the originating occurrence.
+        /// Often this attribute is used for routing, observability, policy enforcement, etc.
+        /// SHOULD be prefixed with a reverse-DNS name. The prefixed domain dictates the organization which defines the semantics of this event type.
+        /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
+        /// </summary>
+        public string Type { get; set; }
 
-        /// Intended for serialization, prefer a parameterized constructor in application code as a better 'pit of success'
+        /// <summary>
+        /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'
         /// </summary>
         public MessageHeader() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
         /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <param name="topic">The topic.</param>
-        /// <param name="messageType">Type of the message.</param>
-        /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
-        /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
-        /// <param name="contentType">The type of the payload of the message</param>
-        /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
-        public MessageHeader(
-            Guid messageId,
-            string topic,
-            MessageType messageType,
-            Guid? correlationId = null,
-            string replyTo = "",
-            string contentType = "",
-            string partitionKey = "")
-        {
-            Id = messageId;
-            Topic = topic;
-            MessageType = messageType;
-            TimeStamp = DateTime.UtcNow;
-            HandledCount = 0;
-            DelayedMilliseconds = 0;
-            CorrelationId = correlationId ?? Guid.Empty;
-            ReplyTo = replyTo;
-            ContentType = contentType;
-            PartitionKey = partitionKey;
-            ReplyTo = replyTo ?? string.Empty;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageHeader"/> class.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <param name="topic">The topic.</param>
-        /// <param name="messageType">Type of the message.</param>
+        /// <param name="messageId">Identifies the event. Producers MUST ensure that source + id is unique for each distinct event.</param>
+        /// <param name="topic">The name of the channel that the message is on</param>
+        /// <param name="messageType">Type of message: command; event.</param>
+        /// <param name="source">Identifies the context in which an event happened; often a URI identifying the producer</param>
+        /// <param name="type">The type of event; SHOULD be prefixed with a reverse-DNS name </param>
         /// <param name="timeStamp">The time of message creation, will be rounded to seconds</param>
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
-        public MessageHeader(
-            Guid messageId,
-            string topic,
-            MessageType messageType,
-            DateTime timeStamp,
-            Guid? correlationId = null,
-            string replyTo = null,
-            string contentType = "text/plain",
-            string partitionKey = "")
-            : this(messageId, topic, messageType, correlationId, replyTo, contentType, partitionKey)
-        {
-            TimeStamp = timeStamp;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MessageHeader"/> class.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <param name="topic">The topic.</param>
-        /// <param name="messageType">Type of the message.</param>
-        /// <param name="timeStamp">The time of message creation</param>
+        /// <param name="dataSchema">A Uri that identifies the schema that data adheres to</param>
+        /// <param name="subject">Describes the subject of the event in the context of the event producer</param>
         /// <param name="handledCount">The number of attempts to handle this message</param>
         /// <param name="delayedMilliseconds">The delay in milliseconds to this message (usually to retry)</param>
-        /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
-        /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
-        /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
-        /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
         public MessageHeader(
-            Guid messageId,
+            string messageId,
             string topic,
             MessageType messageType,
-            DateTime timeStamp,
-            int handledCount,
-            int delayedMilliseconds,
-            Guid? correlationId = null,
+            Uri source = null,
+            string type = "goparamore.io.Paramore.Brighter.Message",
+            DateTime? timeStamp = null,
+            string correlationId = null,
             string replyTo = null,
             string contentType = "text/plain",
-            string partitionKey = "")
-            : this(messageId, topic, messageType, timeStamp, correlationId, replyTo, contentType, partitionKey)
+            string partitionKey = "",
+            Uri dataSchema = null,
+            string subject = null,
+            int handledCount = 0,
+            int delayedMilliseconds = 0
+            )
         {
+            Id = messageId;
+            Topic = topic;
+            MessageType = messageType;
+            if (source != null) Source = source;
+            Type = type;
+            TimeStamp = timeStamp ?? DateTime.UtcNow;
+            HandledCount = 0;
+            DelayedMilliseconds = 0;
+            CorrelationId = correlationId ?? string.Empty;
+            ReplyTo = replyTo;
+            ContentType = contentType;
+            PartitionKey = partitionKey;
+            ReplyTo = replyTo ?? string.Empty;
+            DataSchema = dataSchema;
+            Subject = subject;
+            
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;
         }
@@ -275,6 +334,7 @@ namespace Paramore.Brighter
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageHeader other)
         {
+            if (ReferenceEquals(null, other)) return false;
             return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType;
         }
 
@@ -334,40 +394,6 @@ namespace Paramore.Brighter
         public void UpdateHandledCount()
         {
             HandledCount++;
-        }
-
-        /// <summary>
-        /// Populate the Telemetry from the HeaderBag
-        /// </summary>
-        [Obsolete(
-            "Looking to remove this in v10 in favour of storing the Cloud Events in their own property in the outbox")]
-        public void UpdateTelemetryFromHeaders()
-        {
-            object eventId;
-            object source;
-            object eventType;
-            object subject;
-
-            if (Bag.TryGetValue(MessageTelemetry.EventIdHeaderName, out eventId) &&
-                Bag.TryGetValue(MessageTelemetry.SourceHeaderName, out source) &&
-                Bag.TryGetValue(MessageTelemetry.EventTypeHeaderName, out eventType))
-            {
-                Bag.TryGetValue(MessageTelemetry.SubjectHeaderName, out subject);
-
-                Telemetry = new MessageTelemetry(eventId.ToString(), source.ToString(), eventType.ToString(),
-                    subject?.ToString());
-            }
-        }
-
-        public void AddTelemetryInformation(Activity activity, string eventType)
-        {
-            Bag[MessageTelemetry.EventIdHeaderName] = activity.Id;
-            Bag[MessageTelemetry.SourceHeaderName] = "Brighter"; //ToDo: Plumb in something better than this
-            Bag[MessageTelemetry.EventTypeHeaderName] = eventType;
-
-#pragma warning disable CS0618
-            UpdateTelemetryFromHeaders();
-#pragma warning restore CS0618
         }
     }
 }

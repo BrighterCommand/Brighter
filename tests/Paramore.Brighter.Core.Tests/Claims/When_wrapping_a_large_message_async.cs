@@ -14,11 +14,12 @@ public class AsyncLargeMessagePayloadWrapTests
     private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
     private InMemoryStorageProviderAsync _inMemoryStorageProviderAsync;
+    private readonly Publication _publication;
 
     public AsyncLargeMessagePayloadWrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();
+        TransformPipelineBuilderAsync.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
             null,
@@ -31,6 +32,8 @@ public class AsyncLargeMessagePayloadWrapTests
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(
             _ => new ClaimCheckTransformerAsync(_inMemoryStorageProviderAsync));
 
+        _publication = new Publication { Topic = new RoutingKey("MyLargeCommand") };
+
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
     
@@ -39,7 +42,7 @@ public class AsyncLargeMessagePayloadWrapTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = await _transformPipeline.WrapAsync(_myCommand);
+        var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
         
         //assert
         message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();

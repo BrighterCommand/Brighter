@@ -13,6 +13,7 @@ public class AsyncCompressLargePayloadTests
     private readonly CompressPayloadTransformerAsync _transformer;
     private readonly string _body;
     private readonly Message _message;
+    private string _topic;
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
     private const byte ZLIB_LEAD_BYTE = 0x78;
 
@@ -21,8 +22,9 @@ public class AsyncCompressLargePayloadTests
         _transformer = new CompressPayloadTransformerAsync();
         
         _body = DataGenerator.CreateString(6000);
+        _topic = "test_topic";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));        
     }
 
@@ -30,7 +32,7 @@ public class AsyncCompressLargePayloadTests
     public async Task When_a_message_gzip_compresses_a_large_payload()
     {
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
-        var compressedMessage = await _transformer.WrapAsync(_message);
+        var compressedMessage = await _transformer.WrapAsync(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
@@ -49,7 +51,7 @@ public class AsyncCompressLargePayloadTests
     public async Task When_a_message_zlib_compresses_a_large_payload()
     {
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.Zlib, CompressionLevel.Optimal, 5);
-        var compressedMessage = await _transformer.WrapAsync(_message);
+        var compressedMessage = await _transformer.WrapAsync(_message, new Publication{Topic = new RoutingKey(_topic)});
     
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
@@ -67,7 +69,7 @@ public class AsyncCompressLargePayloadTests
     public async Task When_a_message_brotli_compresses_a_large_payload()
     {
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.Brotli, CompressionLevel.Optimal, 5);
-        var compressedMessage = await _transformer.WrapAsync(_message);
+        var compressedMessage = await _transformer.WrapAsync(_message, new Publication{Topic = new RoutingKey(_topic)});
     
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();

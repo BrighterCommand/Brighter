@@ -156,7 +156,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000,
-            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky) 
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
                 requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
@@ -170,6 +170,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             NumPartitions = numOfPartitions;
             ReplicationFactor = replicationFactor;
             PartitionAssignmentStrategy = partitionAssignmentStrategy;
+            
+            if (PartitionAssignmentStrategy == PartitionAssignmentStrategy.CooperativeSticky)
+                throw new ArgumentOutOfRangeException("partitionAssignmentStrategy",
+                    "CooperativeSticky is not supported for with manual commits, see https://github.com/confluentinc/librdkafka/issues/4059");
         }
     }
 
@@ -226,7 +230,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000,
-            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky) 
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, 
                 requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
                 sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, runAsync, 

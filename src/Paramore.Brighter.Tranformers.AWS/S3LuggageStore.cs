@@ -292,13 +292,11 @@ namespace Paramore.Brighter.Tranformers.AWS
         {
             var httpClient = httpClientFactory.CreateClient();
             httpClient.BaseAddress = new Uri($"https://{bucketName}.s3.{bucketRegion.Value}.amazonaws.com");
-            using (var headRequest = new HttpRequestMessage(HttpMethod.Head, @"/"))
-            {
-                headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
-                var response = await httpClient.SendAsync(headRequest);
-                //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 
-                return (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden);
-            }
+            using var headRequest = new HttpRequestMessage(HttpMethod.Head, @"/");
+            headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
+            var response = await httpClient.SendAsync(headRequest);
+            //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 
+            return (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden);
         }
 
         private static async Task CreateBucketAsync(

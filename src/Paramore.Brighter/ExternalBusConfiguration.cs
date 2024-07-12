@@ -25,19 +25,36 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
     public interface IAmExternalBusConfiguration
     {
         /// <summary>
-        /// The registry is a collection of producers 
+        /// How big should the batch size be for archiving messages
         /// </summary>
-        /// <value>The registry of producers</value>
-        IAmAProducerRegistry ProducerRegistry { get; set; }
+        public int ArchiveBatchSize { get; set; }
 
         /// <summary>
+        /// If we want to archive messages, abstracts archival storage
+        /// </summary>
+        public IAmAnArchiveProvider ArchiveProvider { get; set; }
+        
+        /// <summary>
+        /// How do obtain a connection to the Outbox that is not part of a shared transaction.
+        /// NOTE: Must implement IAmARelationalDbConnectionProvider
+        /// </summary>
+        Type ConnectionProvider { get; set; }
+ 
+        /// <summary>
+        /// The Distributed Locking Service
+        /// </summary>
+        public IDistributedLock DistributedLock { get; set; }
+        
+        /// <summary>
         /// Gets the message mapper registry.
+        /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
         /// </summary>
         /// <value>The message mapper registry.</value>
         IAmAMessageMapperRegistry MessageMapperRegistry { get; set; }
@@ -59,21 +76,47 @@ namespace Paramore.Brighter
         int OutboxTimeout { get; set; }
         
         /// <summary>
+        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
+        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
+        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
+        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
+        /// </summary>
+        public int MaxOutStandingMessages { get; set; } 
+
+        /// <summary>
+        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
+        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
+        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
+        /// </summary>
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } 
+        
+        /// <summary>
+        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
+        /// This bag provides the args required
+        /// </summary>
+        Dictionary<string, object> OutBoxBag { get; set; }
+        
+        /// <summary>
+        /// The registry is a collection of producers 
+        /// </summary>
+        /// <value>The registry of producers</value>
+        IAmAProducerRegistry ProducerRegistry { get; set; }
+        
+        /// <summary>
         /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
         /// this tends to he handled by a Dispatcher not a Command Processor. 
         /// </summary>
         IAmAChannelFactory ResponseChannelFactory { get; set; }
 
         /// <summary>
-        /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
-        /// of your MessageMappers
-        /// </summary>
-        IAmAMessageTransformerFactory TransformerFactory { get; set; }
-
-        /// <summary>
         /// If we are using Rpc, what are the subscriptions for the reply queue?
         /// </summary>
         IEnumerable<Subscription> ReplyQueueSubscriptions { get; set; }
+        
+        /// <summary>
+        /// Do you want to override the default in memory request context factory? Used for callbacks
+        /// </summary>
+        IAmARequestContextFactory RequestContextFactory { get; set; }
         
         /// <summary>
         /// The transaction provider for the outbox
@@ -84,6 +127,7 @@ namespace Paramore.Brighter
         /// Do we want to support RPC on an external bus?
         /// </summary>
         bool UseRpc { get; set; }
+
     }
 
     /// <summary>
@@ -92,38 +136,85 @@ namespace Paramore.Brighter
     public class ExternalBusConfiguration : IAmExternalBusConfiguration
     {
         /// <summary>
+        /// How big should the batch size be for archiving messages
+        /// </summary>
+        public int ArchiveBatchSize { get; set; }
+
+        /// <summary>
+        /// If we want to archive messages, abstracts archival storage
+        /// </summary>
+        public IAmAnArchiveProvider ArchiveProvider { get; set; }
+        
+        /// <summary>
         /// How do obtain a connection to the Outbox that is not part of a shared transaction.
         /// NOTE: Must implement IAmARelationalDbConnectionProvider
         /// </summary>
         public Type ConnectionProvider { get; set; }
         
         /// <summary>
-        /// The registry is a collection of producers 
+        /// The Distributed Locking Service
         /// </summary>
-        /// <value>The registry of producers</value>
-        public IAmAProducerRegistry ProducerRegistry { get; set; }
-
+        public IDistributedLock DistributedLock { get; set; }
+        
+        /// <summary>
+        /// How verbose should our instrumentation be?
+        /// InstrumentationOptions.None - no instrumentation
+        /// InstrumentationOptions.RequestInformation - just the request id, request type and operation
+        /// InstrumentationOptions.RequestBody - the request body
+        /// InstrumentationOptions.RequestContext - the request context
+        /// InstrumentationOptions.All - all of the above
+        /// </summary>
+        public InstrumentationOptions InstrumentationOptions { get; set; }
+        
         /// <summary>
         /// Gets the message mapper registry.
+        /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
         /// </summary>
         /// <value>The message mapper registry.</value>
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; set; }
 
         /// <summary>
+        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
+        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
+        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
+        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
+        /// </summary>
+        public int MaxOutStandingMessages { get; set; } = -1;
+
+        /// <summary>
+        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
+        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
+        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
+        /// </summary>
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+        
+        /// <summary>
         /// The Outbox we wish to use for messaging
         /// </summary>
         public IAmAnOutbox Outbox { get; set; }
-
+   
         /// <summary>
         /// The maximum amount of messages to deposit into the outbox in one transmissions.
         /// This is to stop insert statements getting too big
         /// </summary>
         public int OutboxBulkChunkSize { get; set; }
+        
+        /// <summary>
+        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
+        /// This bag provides the args required
+        /// </summary>
+        public Dictionary<string, object> OutBoxBag { get; set; }
 
         /// <summary>
         /// When do we timeout writing to the outbox
         /// </summary>
         public int OutboxTimeout { get; set; }
+        
+        /// <summary>
+        /// The registry is a collection of producers 
+        /// </summary>
+        /// <value>The registry of producers</value>
+        public IAmAProducerRegistry ProducerRegistry { get; set; }
         
         /// <summary>
         /// If we are using Rpc, what are the subscriptions for the reply queue?
@@ -137,8 +228,14 @@ namespace Paramore.Brighter
         public IAmAChannelFactory ResponseChannelFactory { get; set; }
         
         /// <summary>
+        /// Do you want to override the default in memory request context factory? Used for callbacks
+        /// </summary>
+        public IAmARequestContextFactory RequestContextFactory { get; set; }
+        
+        /// <summary>
         /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
         /// of your MessageMappers
+        /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
         /// </summary>
         public IAmAMessageTransformerFactory TransformerFactory { get; set; }
         
@@ -152,7 +249,6 @@ namespace Paramore.Brighter
         /// Do we want to support RPC on an external bus?
         /// </summary>
         public bool UseRpc { get; set; }
-
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.

@@ -37,22 +37,27 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private Message _message;
         private readonly HeartbeatReply _request;
         private const string TOPIC = "test.topic";
-        private readonly Guid _correlationId = Guid.NewGuid();
+        private readonly string _correlationId = Guid.NewGuid().ToString();
+        private readonly Publication _publication;
 
         public HeartbeatReplyToMessageMapperTests()
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
             _request = new HeartbeatReply("Test.Hostname", new ReplyAddress(TOPIC, _correlationId));
+            
             var firstConsumer = new RunningConsumer(new ConsumerName("Test.Consumer1"), ConsumerState.Open);
             _request.Consumers.Add(firstConsumer);
+            
             var secondConsumer = new RunningConsumer(new ConsumerName("More.Consumers2"),ConsumerState.Shut );
             _request.Consumers.Add(secondConsumer);
+            
+            _publication = new Publication { Topic = new RoutingKey(TOPIC) };
         }
 
         [Fact]
         public void When_mapping_from_a_heartbeat_reply_to_a_message()
         {
-            _message = _mapper.MapToMessage(_request);
+            _message = _mapper.MapToMessage(_request, _publication);
 
             //_should_put_the_reply_to_as_the_topic
             _message.Header.Topic.Should().Be(TOPIC);

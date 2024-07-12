@@ -22,7 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
 using Polly.Registry;
 
@@ -36,10 +38,15 @@ namespace Paramore.Brighter
     public interface IRequestContext
     {
         /// <summary>
+        /// Gets the Span [Activity] associated with the request
+        /// </summary>
+        Activity Span { get; set; }
+        
+        /// <summary>
         /// Gets the bag.
         /// </summary>
         /// <value>The bag.</value>
-        Dictionary<string, object> Bag { get; }
+        ConcurrentDictionary<string, object> Bag { get; }
         
         /// <summary>
         /// Gets the policies.

@@ -66,10 +66,8 @@ namespace Paramore.Brighter.Inbox.Postgres
             var connection = GetConnection(); 
             try
             {
-                using (var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds))
-                {
-                    sqlcmd.ExecuteNonQuery();
-                }
+                using var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+                sqlcmd.ExecuteNonQuery();
             }
             catch (PostgresException sqlException)
             {
@@ -88,7 +86,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
         }
 
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
             var parameters = new[]
@@ -100,7 +98,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
         }
 
-        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
             var parameters = new[]
@@ -120,10 +118,8 @@ namespace Paramore.Brighter.Inbox.Postgres
 
             try
             {
-                using (var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds))
-                {
-                    await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                }
+                using var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             catch (PostgresException sqlException)
             {
@@ -143,7 +139,8 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
         }
 
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
 
@@ -162,7 +159,8 @@ namespace Paramore.Brighter.Inbox.Postgres
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
             var parameters = new[]
@@ -240,16 +238,14 @@ namespace Paramore.Brighter.Inbox.Postgres
 
             try
             {
-                using (var command = connection.CreateCommand())
-                {
-                    if (timeoutInMilliseconds != -1)
-                        command.CommandTimeout = timeoutInMilliseconds;
+                using var command = connection.CreateCommand();
+                if (timeoutInMilliseconds != -1)
+                    command.CommandTimeout = timeoutInMilliseconds;
 
-                    command.CommandText = sql;
-                    command.Parameters.AddRange(parameters);
+                command.CommandText = sql;
+                command.Parameters.AddRange(parameters);
 
-                    return execute(command);
-                }
+                return execute(command);
             }
             finally
             {
@@ -268,16 +264,14 @@ namespace Paramore.Brighter.Inbox.Postgres
 
             try
             {
-                using (var command = connection.CreateCommand())
-                {
-                    if (timeoutInMilliseconds != -1)
-                        command.CommandTimeout = timeoutInMilliseconds;
+                using var command = connection.CreateCommand();
+                if (timeoutInMilliseconds != -1)
+                    command.CommandTimeout = timeoutInMilliseconds;
 
-                    command.CommandText = sql;
-                    command.Parameters.AddRange(parameters);
+                command.CommandText = sql;
+                command.Parameters.AddRange(parameters);
 
-                    return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                }
+                return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
             }
             finally
             {
@@ -285,7 +279,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr, Guid commandId) where TResult : class, IRequest
+        private TResult ReadCommand<TResult>(IDataReader dr, string commandId) where TResult : class, IRequest
         {
             if (dr.Read())
             {

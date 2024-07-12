@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
@@ -6,6 +6,7 @@ using Amazon.Runtime;
 using GreetingsEntities;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
+using GreetingsPorts.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -167,10 +168,8 @@ namespace GreetingsWeb
                     new RmqPublication
                     {
                         Topic = new RoutingKey("GreetingMade"),
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        RequestType = typeof(GreetingMade),
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        OutBoxBag = new Dictionary<string, object> {{"Topic", "GreetingMade"}},
                         MakeChannels = OnMissingChannel.Create
                     }}
             ).Create();
@@ -186,9 +185,12 @@ namespace GreetingsWeb
              .UseExternalBus((configure) =>
              {
                  configure.ProducerRegistry = producerRegistry;
-                 configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration());
+                 configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration(), TimeProvider.System);
                  configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                  configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
+                 configure.MaxOutStandingMessages = 5;
+                 configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+                 configure.OutBoxBag = new Dictionary<string, object> { { "Topic", "GreetingMade" } };
              })
              .UseOutboxSweeper(options => { options.Args.Add("Topic", "GreetingMade"); })
              .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);

@@ -87,7 +87,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+            options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
@@ -106,6 +106,8 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             configure.Outbox = outbox;
             configure.TransactionProvider = transactionProvider;
             configure.ConnectionProvider = connectionProvider;
+            configure.MaxOutStandingMessages = 5;
+            configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
         })
         .AutoFromAssemblies();
 
@@ -175,8 +177,7 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
             new RmqPublication
             {
                 Topic = new RoutingKey("SalutationReceived"),
-                MaxOutStandingMessages = 5,
-                MaxOutStandingCheckIntervalMilliSeconds = 500,
+                RequestType = typeof(SalutationReceived),
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }

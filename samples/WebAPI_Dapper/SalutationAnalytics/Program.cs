@@ -94,7 +94,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.ChannelFactory = GetChannelFactory(messagingTransport);
+            options.DefaultChannelFactory = GetChannelFactory(messagingTransport);
             options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
@@ -118,6 +118,8 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             config.Outbox = makeOutbox.outbox;
             config.ConnectionProvider = makeOutbox.connectionProvider;
             config.TransactionProvider = makeOutbox.transactionProvider;
+            config.MaxOutStandingMessages = 5;
+            config.MaxOutStandingCheckIntervalMilliSeconds = 500;
         })
         .AutoFromAssemblies();
 
@@ -359,6 +361,7 @@ static IAmAProducerRegistry GetKafkaProducerRegistry()
                 new KafkaPublication
                 {
                     Topic = new RoutingKey("SalutationReceived"),
+                    RequestType = typeof(SalutationReceived),
                     MessageSendMaxRetries = 3,
                     MessageTimeoutMs = 1000,
                     MaxInFlightRequestsPerConnection = 1,
@@ -393,8 +396,7 @@ static IAmAProducerRegistry GetRmqProducerRegistry()
             new RmqPublication
             {
                 Topic = new RoutingKey("SalutationReceived"),
-                MaxOutStandingMessages = 5,
-                MaxOutStandingCheckIntervalMilliSeconds = 500,
+                RequestType = typeof(SalutationReceived),
                 WaitForConfirmsTimeOutInMilliseconds = 1000,
                 MakeChannels = OnMissingChannel.Create
             }

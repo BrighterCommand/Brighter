@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Reflection;
 using FakeItEasy;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -30,30 +31,35 @@ using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.ControlBus
 {
-    public class ControlBusTests
+    [Collection("CommandProcessor")]
+    public class ControlBusTests : IDisposable
     {
         private readonly IDispatcher _dispatcher;
         private readonly Dispatcher _controlBus;
-        private readonly ControlBusReceiverBuilder _busReceiverBuilder;
         private readonly ConfigurationCommand _configurationCommand;
         private Exception _exception;
 
         public ControlBusTests()
         {
+            var topic =  new RoutingKey(Environment.MachineName + Assembly.GetEntryAssembly()?.GetName());
             _dispatcher = A.Fake<IDispatcher>();
-            var messageProducerFactory = A.Fake<IAmAProducerRegistryFactory>();
+            var bus = new InternalBus();
 
-            _busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
+            ControlBusReceiverBuilder busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(_dispatcher)
-                .ProducerRegistryFactory(messageProducerFactory)
-                .ChannelFactory(new InMemoryChannelFactory());
+                .ProducerRegistryFactory(new InMemoryProducerRegistryFactory(
+                    bus, 
+                    new []
+                    {
+                        new Publication{Topic = topic, RequestType = typeof(ConfigurationCommand)}
+                    }))
+                .ChannelFactory(new InMemoryChannelFactory(bus, TimeProvider.System));
 
-            _controlBus = _busReceiverBuilder.Build("tests");
+            _controlBus = busReceiverBuilder.Build("tests");
 
             _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL);
 
@@ -68,6 +74,11 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _exception.Should().BeNull();
             //should_call_the_dispatcher_to_start_it
             A.CallTo(() => _dispatcher.Receive()).MustHaveHappened();
+        }
+        
+        public void Dispose()
+        {
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

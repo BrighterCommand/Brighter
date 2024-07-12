@@ -21,7 +21,11 @@ public static class BrighterExtensions
         public static WebApplicationBuilder AddBrighter(this WebApplicationBuilder builder)
         {
             var asbSettings = builder.Configuration.GetRequiredSection(AzureServiceBusSettings.SettingsKey).Get<AzureServiceBusSettings>();
+            if (asbSettings == null)
+                throw new ConfigurationException("AzureServiceBusSettings is not configured");
             var boxSettings = builder.Configuration.GetRequiredSection(BrighterBoxSettings.SettingsKey).Get<BrighterBoxSettings>();
+            if (boxSettings == null)
+                throw new ConfigurationException("BrighterBoxSettings is not configured");
             
             var environmentName = builder.Configuration[_hostingEnvironment];
 

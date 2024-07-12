@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         /// <param name="requestBody">The request body.</param>
         /// <param name="writeTime">The request arrived at when.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        private InboxItem(Type requestType, string requestBody, DateTime writeTime, string contextKey)
+        public InboxItem(Type requestType, string requestBody, DateTime writeTime, string contextKey)
         {
             RequestType = requestType;
             RequestBody = requestBody;
@@ -52,18 +52,10 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InboxItem"/> class.
-        /// </summary>
-        /// <param name="requestType">Type of the command.</param>
-        /// <param name="requestBody">The command body.</param>
-        public InboxItem(Type requestType, string requestBody, string contextKey)
-            : this(requestType, requestBody, DateTime.UtcNow, contextKey) {}
-
-        /// <summary>
         /// Gets or sets the command body.
         /// </summary>
         /// <value>The command body.</value>
-        public string RequestBody { get; set; }
+        public string RequestBody { get; set; }                                                                           
         
         /// <summary>
         /// Gets the type of the command.
@@ -91,7 +83,7 @@ namespace Paramore.Brighter
         /// <param name="id">The Guid for the request</param>
         /// <param name="contextKey">The handler this is for</param>
         /// <returns></returns>
-        public static string CreateKey(Guid id, string contextKey)
+        public static string CreateKey(string id, string contextKey)
         {
             return $"{id}:{contextKey}";
         }
@@ -108,7 +100,7 @@ namespace Paramore.Brighter
     /// It is possible to use multiple performers within one process as competing consumers, and if you want to use an InMemoryInbox this is the most
     /// viable strategy - otherwise use an out-of-process inbox that provides shared state to all consumers
     /// </summary>
-    public class InMemoryInbox : InMemoryBox<InboxItem>, IAmAnInboxSync, IAmAnInboxAsync
+    public class InMemoryInbox(TimeProvider timeProvider) : InMemoryBox<InboxItem>(timeProvider), IAmAnInboxSync, IAmAnInboxAsync
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -133,13 +125,13 @@ namespace Paramore.Brighter
             string key = InboxItem.CreateKey(command.Id, contextKey);
             if (!Exists<T>(command.Id, contextKey))
             {
-                if (!_requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, contextKey)))
+                if (!Requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, timeProvider.GetUtcNow().DateTime, contextKey)))
                 {
                     throw new Exception($"Could not add command: {command.Id} to the Inbox");
                 }
             }
 
-            _requests[key].RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+            Requests[key].RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
         }
 
         /// <summary>
@@ -177,11 +169,11 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>ICommand.</returns>
         /// <exception cref="System.TypeLoadException"></exception>
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
             
-            if (_requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
+            if (Requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
             {
                 return JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);
             }
@@ -189,11 +181,11 @@ namespace Paramore.Brighter
             throw new RequestNotFoundException<T>(id);
         }
 
-        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
 
-            return _requests.ContainsKey(InboxItem.CreateKey(id, contextKey));
+            return Requests.ContainsKey(InboxItem.CreateKey(id, contextKey));
         }
 
         /// <summary>
@@ -203,8 +195,10 @@ namespace Paramore.Brighter
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -231,7 +225,8 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task{T}" />.</returns>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 

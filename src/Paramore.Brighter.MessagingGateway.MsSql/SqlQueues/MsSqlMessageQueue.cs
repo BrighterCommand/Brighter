@@ -57,11 +57,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitAddDbParameters(topic, message);
 
-            using (var connection = _connectionProvider.GetConnection())
-            {
-                var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
-                sqlCmd.ExecuteNonQuery();
-            }
+            using var connection = _connectionProvider.GetConnection();
+            var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
+            sqlCmd.ExecuteNonQuery();
         }
 
         /// <summary>
@@ -78,11 +76,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitAddDbParameters(topic, message);
 
-            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
-            {
-                var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
-                await sqlCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            }
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
+            await sqlCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
@@ -118,18 +114,16 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitRemoveDbParameters(topic);
 
-            using (var connection = _connectionProvider.GetConnection())
-            {
-                var sqlCmd = InitRemoveDbCommand(connection, parameters);
-                var reader = sqlCmd.ExecuteReader();
-                if (!reader.Read())
-                    return ReceivedResult<T>.Empty;
-                var json = (string) reader[0];
-                var messageType = (string) reader[1];
-                var id = (long) reader[3];
-                var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
-                return new ReceivedResult<T>(true, json, topic, messageType, id, message);
-            }
+            using var connection = _connectionProvider.GetConnection();
+            var sqlCmd = InitRemoveDbCommand(connection, parameters);
+            var reader = sqlCmd.ExecuteReader();
+            if (!reader.Read())
+                return ReceivedResult<T>.Empty;
+            var json = (string) reader[0];
+            var messageType = (string) reader[1];
+            var id = (long) reader[3];
+            var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
+            return new ReceivedResult<T>(true, json, topic, messageType, id, message);
         }
 
         /// <summary>
@@ -145,19 +139,17 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitRemoveDbParameters(topic);
 
-            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
-            {
-                var sqlCmd = InitRemoveDbCommand(connection, parameters);
-                var reader = await sqlCmd.ExecuteReaderAsync(cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-                if (!await reader.ReadAsync(cancellationToken))
-                    return ReceivedResult<T>.Empty;
-                var json = (string) reader[0];
-                var messageType = (string) reader[1];
-                var id = (int) reader[3];
-                var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
-                return new ReceivedResult<T>(true, json, topic, messageType, id, message);
-            }
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var sqlCmd = InitRemoveDbCommand(connection, parameters);
+            var reader = await sqlCmd.ExecuteReaderAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            if (!await reader.ReadAsync(cancellationToken))
+                return ReceivedResult<T>.Empty;
+            var json = (string) reader[0];
+            var messageType = (string) reader[1];
+            var id = (int) reader[3];
+            var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
+            return new ReceivedResult<T>(true, json, topic, messageType, id, message);
         }
 
         public bool IsMessageReady(string topic)
@@ -168,12 +160,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public int NumberOfMessageReady(string topic)
         {
             var sql = $"select COUNT(*) from [{_configuration.QueueStoreTable}] where Topic='{topic}'";
-            using (var connection = _connectionProvider.GetConnection())
-            {
-                var sqlCmd = connection.CreateCommand();
-                sqlCmd.CommandText = sql;
-                return (int) sqlCmd.ExecuteScalar();
-            }
+            using var connection = _connectionProvider.GetConnection();
+            var sqlCmd = connection.CreateCommand();
+            sqlCmd.CommandText = sql;
+            return (int) sqlCmd.ExecuteScalar();
         }
 
         /// <summary>
@@ -183,11 +173,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("Purge()");
 
-            using (var connection = _connectionProvider.GetConnection())
-            {
-                var sqlCmd = InitPurgeDbCommand(connection);
-                sqlCmd.ExecuteNonQuery();
-            }
+            using var connection = _connectionProvider.GetConnection();
+            var sqlCmd = InitPurgeDbCommand(connection);
+            sqlCmd.ExecuteNonQuery();
         }
         
         private static IDbDataParameter CreateDbDataParameter(string parameterName, object value)

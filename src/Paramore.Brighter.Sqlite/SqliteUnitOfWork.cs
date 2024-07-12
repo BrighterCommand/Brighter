@@ -53,19 +53,20 @@ namespace Paramore.Brighter.Sqlite
         /// Commit the transaction
         /// </summary>
         /// <returns>An awaitable Task</returns>
-        public override Task CommitAsync(CancellationToken cancellationToken)
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        public override async Task CommitAsync(CancellationToken cancellationToken)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             if (HasOpenTransaction)
             {
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0        
                 ((SqliteTransaction)Transaction).Commit();
 #else
-                ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
+                await ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
 #endif
                 Transaction = null;
             }
             
-            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -118,9 +119,11 @@ namespace Paramore.Brighter.Sqlite
             if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
             if (!HasOpenTransaction)
 #if NETSTANDARD2_0
-                ((SqliteTransaction)Transaction).Commit();
+               Transaction = Connection.BeginTransaction();
 #else
-                ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                Transaction = await Connection.BeginTransactionAsync(cancellationToken);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 #endif         
             return Transaction;
         }

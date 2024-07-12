@@ -24,8 +24,10 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Transactions;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -37,10 +39,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Creates the specified configuration.
         /// </summary>
-        /// <param name="logger">The logger to use</param>
         /// <param name="outbox">The outbox for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry)
+        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry, BrighterTracer tracer)
             where T : Message
         {
             var mapper = new MessageMapperRegistry(
@@ -48,18 +49,20 @@ namespace Paramore.Brighter
                 null);
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
-            var busConfiguration = new ExternalBusConfiguration();
-            busConfiguration.ProducerRegistry = producerRegistry;
-            busConfiguration.MessageMapperRegistry = mapper;
+            var bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry: producerRegistry,
+                policyRegistry: new DefaultPolicy(),
+                mapperRegistry: mapper,
+                messageTransformerFactory: new EmptyMessageTransformerFactory(),
+                messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), tracer: tracer,
+                outbox: outbox
+                ); 
+            
             return new ControlBusSender(
                 CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .ExternalBusCreate(
-                    busConfiguration,
-                    outbox, 
-                    new CommittableTransactionProvider()
-                    )
+                .ExternalBus(ExternalBusType.FireAndForget, bus)   
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );

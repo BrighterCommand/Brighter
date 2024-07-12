@@ -28,7 +28,9 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
+using Paramore.Brighter.Observability;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
@@ -40,18 +42,19 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_reading_from_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
-            
-            var messageId = Guid.NewGuid();
+            var outbox = new InMemoryOutbox(new FakeTimeProvider()) { Tracer = new BrighterTracer() };
+
+            var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
             
             
             //Act
-            outbox.Add(messageToAdd);
+            var context = new RequestContext();
+            outbox.Add(messageToAdd, context);
 
-            var retrievedMessage = outbox.Get(messageId);
+            var retrievedMessage = outbox.Get(messageId, context);
             
             //Assert
             retrievedMessage.Should().NotBeNull();
@@ -66,20 +69,21 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_marking_dispatched_in_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox(new FakeTimeProvider()){Tracer = new BrighterTracer()};
             
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
             
             
             //Act
-            outbox.Add(messageToAdd);
+            var context = new RequestContext();
+            outbox.Add(messageToAdd, context);
             var dispatchedAt = DateTime.UtcNow;
-            outbox.MarkDispatched(messageId, dispatchedAt);
+            outbox.MarkDispatched(messageId, context, dispatchedAt);
 
-            var dispatchedMessages = outbox.DispatchedMessages(500);
+            var dispatchedMessages = outbox.DispatchedMessages(500, context);
 
             //Assert
             dispatchedMessages.Count().Should().Be(1);
@@ -91,18 +95,22 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_looking_for_undispatched_messages_in_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var timeProvider = new FakeTimeProvider();
+            var outbox = new InMemoryOutbox(timeProvider){Tracer = new BrighterTracer()};
             
-            var messageId = Guid.NewGuid();
+            var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
             
             
             //Act
-            outbox.Add(messageToAdd);
+            var context = new RequestContext();
+            outbox.Add(messageToAdd, context);
+            
+            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
-            var outstandingMessages = outbox.OutstandingMessages(0);
+            var outstandingMessages = outbox.OutstandingMessages(0, context);
             
             //Assert
             outstandingMessages.Count().Should().Be(1);
@@ -114,38 +122,47 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_there_are_multiple_items_retrieve_by_id()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox( new FakeTimeProvider()){Tracer = new BrighterTracer()};
 
-            var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
+            var messageIds = new[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
+            var context = new RequestContext();
             for(int i =0; i <= 4; i++)
-                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
+            {
+                RequestContext requestContext = context;
+                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]), requestContext);
+            }
 
             //Act 
-            var message = outbox.Get(messageIds[2]);
+            var message = outbox.Get(messageIds[2], context);
             
             //Assert
             message.Id.Should().Be(messageIds[2]);
         }
 
         [Fact]
-        public async Task When_there_are_multiple_items_and_some_are_dispatched()
+        public void When_there_are_multiple_items_and_some_are_dispatched()
         {
             //Arrange
-            var outbox = new InMemoryOutbox();
+            var timeProvider = new FakeTimeProvider();
+            var outbox = new InMemoryOutbox(timeProvider){Tracer = new BrighterTracer()};
 
-            var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
+            var messageIds = new string[] { Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), };
+            var context = new RequestContext();
             for(int i =0; i <= 4; i++)
-                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
+            {
+                RequestContext requestContext = context;
+                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]), requestContext);
+            }
 
             //Act 
             var now = DateTime.UtcNow;
-            outbox.MarkDispatched(messageIds[0], now);
-            outbox.MarkDispatched(messageIds[4], now);
+            outbox.MarkDispatched(messageIds[0], context, now);
+            outbox.MarkDispatched(messageIds[4], context, now);
 
-            await Task.Delay(500);
+            timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
-            var sentMessages = outbox.DispatchedMessages(5000);
-            var outstandingMessages = outbox.OutstandingMessages(0);
+            var sentMessages = outbox.DispatchedMessages(5000, context);
+            var outstandingMessages = outbox.OutstandingMessages(0, context);
 
             //Assert
             sentMessages.Count().Should().Be(2);
@@ -155,29 +172,6 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             outstandingMessages.Any(msg => msg.Id == messageIds[1]).Should().BeTrue();
             outstandingMessages.Any(msg => msg.Id == messageIds[2]).Should().BeTrue();
             outstandingMessages.Any(msg => msg.Id == messageIds[3]).Should().BeTrue();
-
-
         }
-
-
-        [Fact]
-        public void When_paging_a_list_of_messages()
-        {
-           //Arrange
-           var outbox = new InMemoryOutbox();
-           
-           for(int i =0; i <= 8; i++) // -- nine items
-               outbox.Add(new MessageTestDataBuilder());
-
-           //Act 
-           var firstPage = outbox.Get(5, 1);
-           var secondPage = outbox.Get(5, 2);
-
-           //Assert
-           firstPage.Count().Should().Be(5);
-           secondPage.Count().Should().Be(4); // -- only 4 on the second page
-
-        }
-        
    }
 }

@@ -33,11 +33,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
        CREATE TABLE {0}
             (
                 Id bigserial PRIMARY KEY,
-                MessageId uuid UNIQUE NOT NULL,
+                MessageId character varying(255) UNIQUE NOT NULL,
                 Topic character varying(255) NULL,
                 MessageType character varying(32) NULL,
                 Timestamp timestamptz NULL,
-                CorrelationId uuid NULL,
+                CorrelationId character varying(255) NULL,
                 ReplyTo character varying(255) NULL,
                 ContentType character varying(128) NULL,
                 PartitionKey character varying(128) NULL,  
@@ -51,11 +51,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
        CREATE TABLE {0}
             (
                 Id bigserial PRIMARY KEY,
-                MessageId uuid UNIQUE NOT NULL,
+                MessageId character varying(255) UNIQUE NOT NULL,
                 Topic character varying(255) NULL,
                 MessageType character varying(32) NULL,
                 Timestamp timestamptz NULL,
-                CorrelationId uuid NULL,
+                CorrelationId character varying(255) NULL,
                 ReplyTo character varying(255) NULL,
                 ContentType character varying(128) NULL,
                 PartitionKey character varying(128) NULL,  

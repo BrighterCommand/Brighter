@@ -38,43 +38,58 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
     public class SqlOutboxDeletingMessagesTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
-        private readonly Message _messageEarliest;
-        private readonly Message _message2;
-        private readonly Message _messageLatest;
-        private IEnumerable<Message> _retrievedMessages;
-        private readonly MsSqlOutbox _sqlOutbox;
+        private readonly Message _firstMessage;
+        private readonly Message _secondMessage;
+        private readonly Message _thirdMessage;
+        private readonly MsSqlOutbox _outbox;
 
         public SqlOutboxDeletingMessagesTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            _outbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             
+            _firstMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, 
+                    timeStamp: DateTime.UtcNow.AddHours(-3)
+                ), 
+                new MessageBody("Body")
+            );
+            _secondMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, 
+                    timeStamp: DateTime.UtcNow.AddHours(-2)
+                ), 
+                new MessageBody("Body2")
+            );
+            _thirdMessage = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, 
+                    timeStamp:DateTime.UtcNow.AddHours(-1)
+                ), 
+                new MessageBody("Body3")
+            );
+
+            var context = new RequestContext();
+            _outbox.Add(_firstMessage, context);
+            _outbox.Add(_secondMessage, context);
+            _outbox.Add(_thirdMessage, context);
         }
 
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            AddMessagesToOutbox();
-            _retrievedMessages = _sqlOutbox.Get();
+            var context = new RequestContext();
+            _outbox.Delete([_firstMessage.Id], context);
 
-            _sqlOutbox.Delete(_retrievedMessages.First().Id);
-
-            var remainingMessages = _sqlOutbox.Get();
+            var remainingMessages = _outbox.OutstandingMessages(0, context);
 
             remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            remainingMessages.Should().Contain(_secondMessage);
+            remainingMessages.Should().Contain(_thirdMessage);
             
-            _sqlOutbox.Delete(remainingMessages.Select(m => m.Id).ToArray());
+            _outbox.Delete(remainingMessages.Select(m => m.Id).ToArray(), context);
 
-            var messages = _sqlOutbox.Get();
+            var messages = _outbox.OutstandingMessages(0, context);
 
             messages.Should().HaveCount(0);
 
@@ -82,30 +97,25 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public async Task When_Removing_Messages_From_The_OutboxAsync()
         {
-            AddMessagesToOutbox();
-            _retrievedMessages = await _sqlOutbox.GetAsync();
+            var context = new RequestContext();
+            await _outbox.DeleteAsync([_firstMessage.Id], context, cancellationToken: CancellationToken.None);
 
-            await _sqlOutbox.DeleteAsync(CancellationToken.None, _retrievedMessages.First().Id);
-
-            var remainingMessages = await _sqlOutbox.GetAsync();
+            var remainingMessages = await _outbox.OutstandingMessagesAsync(0, context);
 
             remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
-            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            remainingMessages.Should().Contain(_secondMessage);
+            remainingMessages.Should().Contain(_thirdMessage);
             
-            await _sqlOutbox.DeleteAsync(CancellationToken.None, remainingMessages.Select(m => m.Id).ToArray());
+            await _outbox.DeleteAsync(
+                remainingMessages.Select(m => m.Id).ToArray(), 
+                context,
+                cancellationToken: CancellationToken.None
+                );
 
-            var messages = await _sqlOutbox.GetAsync();
+            var messages = await _outbox.OutstandingMessagesAsync(0, context);
 
             messages.Should().HaveCount(0);
 
-        }
-
-        private void AddMessagesToOutbox()
-        {
-            _sqlOutbox.Add(_messageEarliest);
-            _sqlOutbox.Add(_message2);
-            _sqlOutbox.Add(_messageLatest);
         }
 
         private void Release()

@@ -40,7 +40,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Class Dispatcher.
     /// The 'core' Service Activator class, the Dispatcher controls and co-ordinates the creation of readers from channels, and dispatching the commands and
     /// events translated from those messages to handlers. It controls the lifetime of the application through <see cref="Receive"/> and <see cref="End"/> and allows
-    /// the stop and start of individual connections through <see cref="Open"/> and <see cref="Shut"/>
+    /// the stop and start of individual connections through <see cref="Open(string)"/> and <see cref="Shut(string)"/>
     /// </summary>
     public class Dispatcher : IDispatcher
     {
@@ -51,6 +51,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
         private readonly IAmAMessageMapperRegistryAsync _messageMapperRegistryAsync;
         private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly ConcurrentDictionary<int, Task> _tasks;
         private readonly ConcurrentDictionary<string, IAmAConsumer> _consumers;
 
@@ -100,13 +101,16 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
+        /// <param name="requestContextFactory">The factory used to make a request context</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
-        public Dispatcher(Func<IAmACommandProcessorProvider> commandProcessorFactory,
+        public Dispatcher(
+             Func<IAmACommandProcessorProvider> commandProcessorFactory,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry messageMapperRegistry = null,
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync = null, 
             IAmAMessageTransformerFactory messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null)
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null,
+            IAmARequestContextFactory requestContextFactory = null)
         {
             CommandProcessorFactory = commandProcessorFactory;
             
@@ -115,6 +119,7 @@ namespace Paramore.Brighter.ServiceActivator
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
             _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _requestContextFactory = requestContextFactory;
 
             if (messageMapperRegistry is null && messageMapperRegistryAsync is null)
                 throw new ConfigurationException("You must provide a message mapper registry or an async message mapper registry");
@@ -136,15 +141,21 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
+        /// <param name="requestContextFactory">The factory used to make a request context</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>        
-        public Dispatcher(IAmACommandProcessor commandProcessor,
+        public Dispatcher(
+            IAmACommandProcessor commandProcessor,
             IEnumerable<Subscription> subscriptions,
             IAmAMessageMapperRegistry messageMapperRegistry = null,
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync = null, 
             IAmAMessageTransformerFactory messageTransformerFactory = null,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null)
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync= null,
+            IAmARequestContextFactory requestContextFactory = null)
             : this(() => 
-                new CommandProcessorProvider(commandProcessor), subscriptions, messageMapperRegistry, messageMapperRegistryAsync, messageTransformerFactory, messageTransformerFactoryAsync)
+                new CommandProcessorProvider(commandProcessor), subscriptions, messageMapperRegistry, 
+                messageMapperRegistryAsync, messageTransformerFactory, messageTransformerFactoryAsync, 
+                requestContextFactory
+            )
         {
         }
 
@@ -252,7 +263,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Connections.Select(s => new DispatcherStateItem()
             {
                 Name = s.Name,
-                ExpectPerformers = s.NoOfPeformers,
+                ExpectPerformers = s.NoOfPerformers,
                 Performers = _consumers.Where(c => c.Value.SubscriptionName == s.Name).Select(c => new PerformerInformation()
                 {
                     Name = c.Value.Name,
@@ -264,7 +275,7 @@ namespace Paramore.Brighter.ServiceActivator
         public void SetActivePerformers(string connectionName, int numberOfPerformers)
         {
             var subscription = Connections.SingleOrDefault(c => c.Name == connectionName);
-            var currentPerformers = subscription.NoOfPeformers;
+            var currentPerformers = subscription.NoOfPerformers;
             if(currentPerformers == numberOfPerformers)
                 return;
 
@@ -360,7 +371,7 @@ namespace Paramore.Brighter.ServiceActivator
             var list = new List<Consumer>();
             subscriptions.Each(subscription =>
             {
-                for (var i = 0; i < subscription.NoOfPeformers; i++)
+                for (var i = 0; i < subscription.NoOfPerformers; i++)
                 {
                     list.Add(CreateConsumer(subscription, i + 1));
                 }
@@ -376,7 +387,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 var types = new Type[]
                 {
-                    typeof(IAmACommandProcessorProvider), typeof(Subscription),  typeof(IAmAMessageMapperRegistry),typeof(IAmAMessageTransformerFactory)
+                    typeof(IAmACommandProcessorProvider), typeof(Subscription),  typeof(IAmAMessageMapperRegistry),typeof(IAmAMessageTransformerFactory), typeof(IAmARequestContextFactory)
                 };
                 
                 var consumerFactoryCtor = consumerFactoryType.GetConstructor(
@@ -384,7 +395,7 @@ namespace Paramore.Brighter.ServiceActivator
                     CallingConventions.HasThis, types, null
                 );
                     
-                var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(), subscription, _messageMapperRegistry,  _messageTransformerFactory });   
+                var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(), subscription, _messageMapperRegistry,  _messageTransformerFactory, _requestContextFactory });   
 
                 return consumerFactory.Create();
             }
@@ -393,7 +404,7 @@ namespace Paramore.Brighter.ServiceActivator
                
                  var types = new Type[]
                  {
-                     typeof(IAmACommandProcessorProvider),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), typeof(IAmAMessageTransformerFactoryAsync)
+                     typeof(IAmACommandProcessorProvider),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), typeof(IAmAMessageTransformerFactoryAsync), typeof(IAmARequestContextFactory)
                  };
                 
                  var consumerFactoryCtor = consumerFactoryType.GetConstructor(
@@ -401,7 +412,7 @@ namespace Paramore.Brighter.ServiceActivator
                          CallingConventions.HasThis, types, null
                      );
                      
-                 var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(),  subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync });  
+                 var consumerFactory = (IConsumerFactory)consumerFactoryCtor?.Invoke(new object[] { CommandProcessorFactory.Invoke(),  subscription, _messageMapperRegistryAsync, _messageTransformerFactoryAsync, _requestContextFactory });  
 
                 return consumerFactory.Create();
             }

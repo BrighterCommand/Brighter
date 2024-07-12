@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(
                 new MessageHeader(
-                    Guid.NewGuid(), 
+                    Guid.NewGuid().ToString(), 
                     "test_topic", 
                     MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
@@ -55,9 +55,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_messageEarliest);
+            await _sqlOutbox.AddAsync(_messageEarliest, new RequestContext());
 
-            _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest));
+            _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest, new RequestContext()));
 
             //should ignore the duplicate key and still succeed
             _exception.Should().BeNull();

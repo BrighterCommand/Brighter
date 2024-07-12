@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Linq;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
@@ -74,40 +73,24 @@ namespace Paramore.Brighter.Outbox.MsSql
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
-                }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = transactionProvider.GetTransaction();
+                command.ExecuteNonQuery();
+            }
+            catch (SqlException sqlException)
+            {
+                if (sqlException.Number != MsSqlDuplicateKeyError_UniqueIndexViolation &&
+                    sqlException.Number != MsSqlDuplicateKeyError_UniqueConstraintViolation) throw;
+                loggingAction.Invoke();
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
-                        connection.Close();
-                }
+            }
+            finally
+            {
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -117,41 +100,28 @@ namespace Paramore.Brighter.Outbox.MsSql
             Action loggingAction, 
             CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (SqlException sqlException)
+            {
+                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                    sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    await command.ExecuteNonQueryAsync(cancellationToken);
+                    loggingAction.Invoke();
+                    return;
                 }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
-                        connection.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -164,16 +134,14 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return resultFunc.Invoke(command.ExecuteReader());
-                }
-                finally
-                {
-                        connection.Close();
-                }
+                return resultFunc.Invoke(command.ExecuteReader());
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -187,16 +155,14 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
-                }
-                finally
-                {
-                        connection.Close();
-                }
+                return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -247,7 +213,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}MessageId", 
-                    DbType = DbType.Guid,
+                    DbType = DbType.String,
                     Value = (object)message.Id ?? DBNull.Value
                 },
                 new SqlParameter
@@ -271,7 +237,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}CorrelationId",
-                    DbType = DbType.Guid,
+                    DbType = DbType.String,
                     Value = (object)message.Header.CorrelationId ?? DBNull.Value
                 },
                 new SqlParameter
@@ -319,7 +285,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         private static MessageType GetMessageType(DbDataReader dr) =>
             (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
 
-        private static Guid GetMessageId(DbDataReader dr) => dr.GetGuid(dr.GetOrdinal("MessageId"));
+        private static string GetMessageId(DbDataReader dr) => dr.GetString(dr.GetOrdinal("MessageId"));
 
         private string GetContentType(DbDataReader dr)
         {
@@ -348,12 +314,12 @@ namespace Paramore.Brighter.Outbox.MsSql
             return dictionaryBag;
         }
 
-        private Guid? GetCorrelationId(DbDataReader dr)
+        private string GetCorrelationId(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null; 
             
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 

@@ -68,26 +68,24 @@ namespace Paramore.Brighter.Inbox.MySql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = GetConnection())
+            using var connection = GetConnection();
+            connection.Open();
+            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+            try
             {
-                connection.Open();
-                var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                try
+                sqlcmd.ExecuteNonQuery();
+            }
+            catch (MySqlException sqlException)
+            {
+                if (sqlException.Number == MySqlDuplicateKeyError)
                 {
-                    sqlcmd.ExecuteNonQuery();
+                    s_logger.LogWarning(
+                        "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
+                        command.Id);
+                    return;
                 }
-                catch (MySqlException sqlException)
-                {
-                    if (sqlException.Number == MySqlDuplicateKeyError)
-                    {
-                        s_logger.LogWarning(
-                            "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                            command.Id);
-                        return;
-                    }
 
-                    throw;
-                }
+                throw;
             }
         }
 
@@ -99,7 +97,7 @@ namespace Paramore.Brighter.Inbox.MySql
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <returns>T.</returns>
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId and ContextKey = @contextKey";
             var parameters = new[]
@@ -120,7 +118,7 @@ namespace Paramore.Brighter.Inbox.MySql
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"SELECT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId and ContextKey = @contextKey LIMIT 1";
             var parameters = new[]
@@ -140,8 +138,10 @@ namespace Paramore.Brighter.Inbox.MySql
         /// <param name="id">The identifier.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="cancellationToken"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
+        public async Task<bool> ExistsAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId and ContextKey = @contextKey LIMIT 1";
             var parameters = new[]
@@ -177,26 +177,24 @@ namespace Paramore.Brighter.Inbox.MySql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = GetConnection())
+            using var connection = GetConnection();
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+            try
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                try
+                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (MySqlException sqlException)
+            {
+                if (sqlException.Number == MySqlDuplicateKeyError)
                 {
-                    await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                    s_logger.LogWarning(
+                        "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
+                        command.Id);
+                    return;
                 }
-                catch (MySqlException sqlException)
-                {
-                    if (sqlException.Number == MySqlDuplicateKeyError)
-                    {
-                        s_logger.LogWarning(
-                            "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                            command.Id);
-                        return;
-                    }
 
-                    throw;
-                }
+                throw;
             }
         }
 
@@ -219,7 +217,8 @@ namespace Paramore.Brighter.Inbox.MySql
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request</param>
         /// <returns><see cref="Task{T}" />.</returns>
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+        public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
+            CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId and ContextKey = @contextKey";
@@ -251,17 +250,15 @@ namespace Paramore.Brighter.Inbox.MySql
         private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+            using var connection = GetConnection();
+            using var command = connection.CreateCommand();
+            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
 
-                connection.Open();
-                var item = execute(command);
-                return item;
-            }
+            connection.Open();
+            var item = execute(command);
+            return item;
         }
 
         private async Task<T> ExecuteCommandAsync<T>(
@@ -271,17 +268,15 @@ namespace Paramore.Brighter.Inbox.MySql
             CancellationToken cancellationToken = default,
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+            using var connection = GetConnection();
+            using var command = connection.CreateCommand();
+            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
 
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                return item;
-            }
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
+            return item;
         }
 
         private DbConnection GetConnection()
@@ -316,7 +311,7 @@ namespace Paramore.Brighter.Inbox.MySql
             return parameters;
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr, Guid id) where TResult : class, IRequest
+        private TResult ReadCommand<TResult>(IDataReader dr, string id) where TResult : class, IRequest
         {
             if (dr.Read())
             {

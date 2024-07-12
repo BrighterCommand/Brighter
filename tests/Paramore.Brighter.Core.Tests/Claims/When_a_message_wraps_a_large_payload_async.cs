@@ -15,6 +15,7 @@ public class AsyncClaimCheckLargePayloadTests
     private readonly Message _message;
     private readonly string _body;
     private readonly InMemoryStorageProviderAsync _store;
+    private string _topic;
 
     public AsyncClaimCheckLargePayloadTests()
     {
@@ -24,8 +25,9 @@ public class AsyncClaimCheckLargePayloadTests
         _transformerAsync.InitializeWrapFromAttributeParams(5);
 
         _body = DataGenerator.CreateString(6000);
+        _topic = "test_topic";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(_body));
     }
     
@@ -33,7 +35,7 @@ public class AsyncClaimCheckLargePayloadTests
     public async Task When_a_message_wraps_a_large_payload()
     {
         //act
-        var luggageCheckedMessage = await _transformerAsync.WrapAsync(_message);
+        var luggageCheckedMessage = await _transformerAsync.WrapAsync(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //assert
         bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object storedData);

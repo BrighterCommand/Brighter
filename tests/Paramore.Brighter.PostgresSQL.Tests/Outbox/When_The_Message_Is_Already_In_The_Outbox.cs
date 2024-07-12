@@ -44,14 +44,17 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _postgresSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _sqlOutbox.Add(_messageEarliest);
+            _messageEarliest = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageBody("message body")
+            );
+            _sqlOutbox.Add(_messageEarliest, new RequestContext());
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Outbox()
         {
-            _exception = Catch.Exception(() => _sqlOutbox.Add(_messageEarliest));
+            _exception = Catch.Exception(() => _sqlOutbox.Add(_messageEarliest, new RequestContext()));
 
             //should ignore the duplicate key and still succeed
             _exception.Should().BeNull();

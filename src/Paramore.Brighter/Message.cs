@@ -59,7 +59,7 @@ namespace Paramore.Brighter
         /// Gets the identifier of the message.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id
+        public string Id
         {
             get { return Header.Id; }
         }
@@ -109,7 +109,7 @@ namespace Paramore.Brighter
         /// </summary>
         public Message()
         {
-            Header = new MessageHeader(messageId: Guid.Empty, topic: string.Empty, messageType: MessageType.MT_NONE);
+            Header = new MessageHeader(messageId: string.Empty, topic: string.Empty, messageType: MessageType.MT_NONE);
             Body = new MessageBody(string.Empty);
         }
 
@@ -124,10 +124,6 @@ namespace Paramore.Brighter
             Header = header;
             Body = body;
             Header.ContentType = string.IsNullOrEmpty(Header.ContentType) ? Body.ContentType: Header.ContentType;
-
-#pragma warning disable CS0618
-            Header.UpdateTelemetryFromHeaders();
-#pragma warning restore CS0618
         }
 
         public bool HandledCountReached(int requeueCount)

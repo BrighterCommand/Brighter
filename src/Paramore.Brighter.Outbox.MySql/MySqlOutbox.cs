@@ -77,37 +77,24 @@ namespace Paramore.Brighter.Outbox.MySql
             Action loggingAction
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
-                }
-                catch (MySqlException sqlException)
-                {
-                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                    {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate was detected in the batch");
-                        return;
-                    }
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = transactionProvider.GetTransaction();
+                command.ExecuteNonQuery();
+            }
+            catch (MySqlException sqlException)
+            {
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                s_logger.LogWarning(
+                    "MsSqlOutbox: A duplicate was detected in the batch");
 
-                    throw;
-                }
-                finally
-                {
-                    transactionProvider?.Close();
-                }
+            }
+            finally
+            {
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -118,38 +105,28 @@ namespace Paramore.Brighter.Outbox.MySql
             CancellationToken cancellationToken
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (MySqlException sqlException)
+            {
+                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                 {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
-                    await command.ExecuteNonQueryAsync(cancellationToken);
+                    s_logger.LogWarning(
+                        "MsSqlOutbox: A duplicate was detected in the batch");
+                    return;
                 }
-                catch (MySqlException sqlException)
-                {
-                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                    {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate was detected in the batch");
-                        return;
-                    }
 
-                    throw;
-                }
-                finally
-                {
-                    transactionProvider?.Close();
-                }
+                throw;
+            }
+            finally
+            {
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -162,16 +139,14 @@ namespace Paramore.Brighter.Outbox.MySql
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return resultFunc.Invoke(command.ExecuteReader());
-                }
-                finally
-                {
-                    connection.Close();
-                }
+                return resultFunc.Invoke(command.ExecuteReader());
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -184,16 +159,14 @@ namespace Paramore.Brighter.Outbox.MySql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
-                }
-                finally
-                {
-                    connection.Close();
-                }
+                return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -226,7 +199,7 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 new MySqlParameter
                 {
-                    ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id.ToString()
+                    ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id
                 },
                 new MySqlParameter
                 {
@@ -248,7 +221,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 {
                     ParameterName = $"@{prefix}CorrelationId",
                     DbType = DbType.String,
-                    Value = message.Header.CorrelationId.ToString()
+                    Value = message.Header.CorrelationId
                 },
                 new MySqlParameter
                 {
@@ -279,8 +252,11 @@ namespace Paramore.Brighter.Outbox.MySql
             };
         }
 
-        protected override IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
-            int pageSize, int pageNumber)
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
+            double milliSecondsSinceAdded,
+            int pageSize, 
+            int pageNumber
+            )
         {
             var offset = (pageNumber - 1) * pageSize;
             var parameters = new IDbDataParameter[3];
@@ -404,22 +380,20 @@ namespace Paramore.Brighter.Outbox.MySql
        private byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
-            using (var ms = new MemoryStream())
+            using var ms = new MemoryStream();
+            var buffer = new byte[1024];
+            int offset = 0;
+            var bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
+            while (bytesRead > 0)
             {
-                var buffer = new byte[1024];
-                int offset = 0;
-                var bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-                while (bytesRead > 0)
-                {
-                    ms.Write(buffer, offset, (int)bytesRead);
-                    offset += (int)bytesRead;
-                    bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
-                }
-
-                ms.Flush();
-                var body = ms.ToArray();
-                return body;
+                ms.Write(buffer, offset, (int)bytesRead);
+                offset += (int)bytesRead;
+                bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
             }
+
+            ms.Flush();
+            var body = ms.ToArray();
+            return body;
         }
 
         private static string GetBodyAsString(IDataReader dr)
@@ -445,12 +419,12 @@ namespace Paramore.Brighter.Outbox.MySql
             return contentType;
         }
 
-        private Guid? GetCorrelationId(IDataReader dr)
+        private string GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 
@@ -459,9 +433,9 @@ namespace Paramore.Brighter.Outbox.MySql
             return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static Guid GetMessageId(IDataReader dr)
+        private static string GetMessageId(IDataReader dr)
         {
-            return dr.GetGuid(0);
+            return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
         private string GetPartitionKey(IDataReader dr)

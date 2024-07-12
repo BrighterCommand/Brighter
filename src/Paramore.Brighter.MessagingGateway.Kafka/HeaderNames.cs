@@ -28,6 +28,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class HeaderNames
     {
         /// <summary>
+        /// A dictionary of user defined values
+        /// </summary>
+        public static string BAG { get; } = "Bag";
+        
+        /// <summary>
         /// What is the content type of the message§
         /// </summary>
         public static string CONTENT_TYPE { get; set; } = "ContentType";
@@ -36,6 +41,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The correlation id
         /// </summary>
         public const string CORRELATION_ID = "CorrelationId";
+
+        /// <summary>
+        /// If the message was deferred, how long for?
+        /// </summary>
+        public static string DELAYED_MILLISECONDS { get; } =  "x-delay";
+
+        /// <summary>
+        /// How many times has the message been retried with a delay
+        /// </summary>
+        public static string HANDLED_COUNT { get; } = "HandledCount" ;
+
 
         /// <summary>
         /// The message type

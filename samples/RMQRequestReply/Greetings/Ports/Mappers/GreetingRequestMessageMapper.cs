@@ -26,17 +26,20 @@ using System;
 using System.Text.Json;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions;
 
 namespace Greetings.Ports.Mappers
 {
     public class GreetingRequestMessageMapper : IAmAMessageMapper<GreetingRequest>
     {
-        public Message MapToMessage(GreetingRequest request)
+        public IRequestContext Context { get; set; }
+
+        public Message MapToMessage(GreetingRequest request, Publication publication)
         {
             var header = new MessageHeader(
                 messageId: request.Id, 
-                topic: "Greeting.Request", 
-                messageType:MessageType.MT_COMMAND,
+                topic: publication.Topic, 
+                messageType: request.RequestToMessageType(),
                 correlationId: request.ReplyAddress.CorrelationId,
                 replyTo: request.ReplyAddress.Topic);
 

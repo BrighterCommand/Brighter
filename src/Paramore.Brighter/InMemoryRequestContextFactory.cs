@@ -26,7 +26,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class InMemoryRequestContextFactory
-    /// Creates a <see cref="RequestContext"/> that can be passed between pipeline stages. The RequestContext created is transient and has a lifetime of the pipeline itself.
+    /// Creates a <see cref="RequestContext"/> that can be passed between pipeline stages. The RequestContextFactory created is transient and has a lifetime of the pipeline itself.
     /// </summary>
     public class InMemoryRequestContextFactory : IAmARequestContextFactory
     {
@@ -34,7 +34,7 @@ namespace Paramore.Brighter
         /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
         /// The default <see cref="InMemoryRequestContextFactory"/> is usable for most cases.
         /// </summary>
-        /// <returns>RequestContext.</returns>
+        /// <returns>RequestContextFactory.</returns>
         public RequestContext Create()
         {
             return new RequestContext();

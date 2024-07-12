@@ -10,11 +10,11 @@ name: CI
 
 on:
   push:
-    branches: [ master, release/9 ]
+    branches: [ master, release/9X ]
     tags:
       - '*.*.*'
   pull_request:
-    branches: [ master, release/9 ]
+    branches: [ master, release/9X ]
   
 env:
  # Stop wasting time caching packages
@@ -55,6 +55,7 @@ jobs:
         run: |
           dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d
           dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --no-build --verbosity d
+          dotnet test tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj  --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d      
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -126,7 +127,31 @@ jobs:
         run: dotnet restore
       - name: Redis Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
-  
+
+  mqtt-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    
+    services:
+      mosquitto:  
+        image: efrecon/mosquitto:latest
+        ports:
+        - 1883:1883
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup dotnet 6
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: |
+            6.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: MQTT Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+
   rabbitmq-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -134,7 +159,7 @@ jobs:
 
     services:
       rabbitmq:
-        image: brightercommand/rabbitmq:3.8-management-delay
+        image: brightercommand/rabbitmq:3.13-management-delay
         ports:
         - 5672:5672 
         # needed because the rabbitmq container does not provide a healthcheck
@@ -250,40 +275,6 @@ jobs:
       - name: Postgres Tests
         run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
-  eventstore-ci:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [build]
-    
-    services:
-      evenstore: 
-       image: eventstore/eventstore:release-5.0.9
-       ports: 
-         - 1113:1113
-         - 2113:2113
-       env:
-         EVENTSTORE_RUN_PROJECTIONS: ALL
-         EVENTSTORE_START_STANDARD_PROJECTIONS: true
-         EVENTSTORE_CLUSTER_SIZE: 1
-         EVENTSTORE_EXT_TCP_PORT: 1113
-         EVENTSTORE_EXT_HTTP_PORT: 2113 
-         EVENTSTORE_INSECURE: true
-         EVENTSTORE_ENABLE_EXTERNAL_TCP: true
-         EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true   
-     
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup dotnet 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            6.0.x
-            8.0.x
-      - name: Install dependencies
-        run: dotnet restore
-      - name: EventStore Tests
-        run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj  --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
-  
   sqlserver-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5

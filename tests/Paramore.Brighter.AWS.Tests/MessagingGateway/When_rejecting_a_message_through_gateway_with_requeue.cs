@@ -24,7 +24,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public SqsMessageConsumerRequeueTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
-            Guid correlationId = Guid.NewGuid();
+            string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
             var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
@@ -38,7 +38,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageHeader(_myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: replyTo, contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
             

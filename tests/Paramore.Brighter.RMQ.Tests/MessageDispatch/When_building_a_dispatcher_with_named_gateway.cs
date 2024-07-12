@@ -79,9 +79,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                 .Build();
 
             _builder = DispatchBuilder.With()
-                .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
+                .CommandProcessorFactory(() => 
+                    new CommandProcessorProvider(commandProcessor),
+                    new InMemoryRequestContextFactory()
+                )
                 .MessageMappers(messageMapperRegistry, null, null, null)
-                .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
+                .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
                 .Subscriptions(new []
                 {
                     new RmqSubscription<MyEvent>(
@@ -108,7 +111,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
         public void Dispose()
         {
-            CommandProcessor.ClearExtServiceBus();
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

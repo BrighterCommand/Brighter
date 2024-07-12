@@ -12,14 +12,20 @@ using Paramore.Darker.QueryLogging;
 
 namespace GreetingsPorts.Handlers
 {
-    public class FIndGreetingsForPersonHandlerAsync(GreetingsEntityGateway uow)
-        : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
+    public class FIndGreetingsForPersonHandlerAsync : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
     {
+        private readonly GreetingsEntityGateway _uow;
+
+        public FIndGreetingsForPersonHandlerAsync(GreetingsEntityGateway uow)
+        {
+            _uow = uow;
+        }
+
         [QueryLogging(0)] 
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
         {
-            var person = await uow.People
+            var person = await _uow.People
                 .Include(p => p.Greetings)
                 .Where(p => p.Name == query.Name)
                 .SingleAsync(cancellationToken);

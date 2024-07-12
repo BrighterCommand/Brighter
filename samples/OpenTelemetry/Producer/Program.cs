@@ -45,7 +45,6 @@ builder.Services.AddBrighter(options =>
         configure.ProducerRegistry = producerRegistry;
     });
 
-builder.Services.AddSingleton<TopicDictionary>();
 builder.Services.AddSingleton(typeof(IAmAMessageMapper<>), typeof(MessageMapper<>));
 
 var app = builder.Build();
@@ -55,7 +54,7 @@ app.MapGet("/Send/{message}", (string message, IAmACommandProcessor commandProce
 {
     var dEvent = new MyDistributedEvent(message);
     var messageId = commandProcessor.DepositPost(dEvent);
-    commandProcessor.ClearOutbox(messageId);
+    commandProcessor.ClearOutbox(new []{messageId});
 
     return $"Sent Message {message} at {DateTime.Now}";
 });
@@ -63,7 +62,7 @@ app.MapGet("/product/{name}", (string name, IAmACommandProcessor commandProcesso
 {
     var dEvent = new UpdateProductCommand(name);
     var messageId = commandProcessor.DepositPost(dEvent);
-    commandProcessor.ClearOutbox(messageId);
+    commandProcessor.ClearOutbox(new []{messageId});
 
     return $"Command Message {name} sent at {DateTime.Now}";
 });

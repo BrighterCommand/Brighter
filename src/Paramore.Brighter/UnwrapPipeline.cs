@@ -22,13 +22,14 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
 {
     /// <summary>
     /// class UnwrapPipeline
-    /// A pipeline with a sink of a <see cref="MessageMapper"/> that:
+    /// A pipeline with a sink of a <see cref="TransformPipeline{TRequest}.MessageMapper"/> that:
     /// Takes a message and maps it to a request
     /// Runs transforms on that message
     /// </summary>
@@ -43,7 +44,8 @@ namespace Paramore.Brighter
         public UnwrapPipeline(
             IEnumerable<IAmAMessageTransform> transforms, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
-            IAmAMessageMapper<TRequest> messageMapper)
+            IAmAMessageMapper<TRequest> messageMapper
+            )
         {
             MessageMapper = messageMapper;
             Transforms = transforms;
@@ -70,11 +72,20 @@ namespace Paramore.Brighter
         /// Applies any required <see cref="IAmAMessageTransform"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="message">The message to unwrap</param>
+        /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <returns>a request</returns>
-        public TRequest Unwrap(Message message)
+        public TRequest Unwrap(Message message, RequestContext requestContext)
         {
+            requestContext.Span ??= Activity.Current;
+            
             var msg = message;
-            Transforms.Each(transform => msg = transform.Unwrap(msg));
+            Transforms.Each(transform =>
+            {
+                transform.Context = requestContext;
+                msg = transform.Unwrap(msg);
+            });
+            
+            MessageMapper.Context = requestContext;
             return MessageMapper.MapToRequest(msg);
         }
     }

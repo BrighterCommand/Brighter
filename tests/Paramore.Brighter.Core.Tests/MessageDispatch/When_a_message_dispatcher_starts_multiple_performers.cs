@@ -22,42 +22,52 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
 
     public class MessageDispatcherMultiplePerformerTests
     {
+        private const string Topic = "myTopic";
         private readonly Dispatcher _dispatcher;
-        private readonly FakeChannel _channel;
-        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly InternalBus _bus;
 
         public MessageDispatcherMultiplePerformerTests()
         {
-            _channel = new FakeChannel();
-            _commandProcessor = new SpyCommandProcessor();
+            var routingKey = new RoutingKey(Topic);
+            _bus = new InternalBus();
+            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, 1000);
+            
+            IAmAChannel channel = new Channel(Topic, consumer, 6);
+            IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var connection = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 3, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _dispatcher = new Dispatcher(_commandProcessor, new List<Subscription> { connection }, messageMapperRegistry);
+            var connection = new Subscription<MyEvent>(
+                new SubscriptionName("test"), 
+                noOfPerformers: 3, 
+                timeoutInMilliseconds: 100, 
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), 
+                channelName: new ChannelName("fakeChannel"), 
+                routingKey: routingKey
+            );
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { connection }, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = connection.RoutingKey});
             for (var i = 0; i < 6; i++)
-                _channel.Enqueue(message);
+                channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
@@ -68,14 +78,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public void WhenAMessageDispatcherStartsMultiplePerformers()
         {
             _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
-            //should_have_multiple_consumers
             _dispatcher.Consumers.Count().Should().Be(3);
 
             _dispatcher.End().Wait();
             
-            //_should_have_consumed_the_messages_in_the_channel
-            _channel.Length.Should().Be(0);
-            //_should_have_a_stopped_state
+            _bus.Stream(new RoutingKey(Topic)).Count().Should().Be(0); 
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
         }
 #pragma warning restore xUnit1031

@@ -23,10 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
 using Polly.CircuitBreaker;
@@ -101,6 +103,11 @@ namespace Paramore.Brighter
         /// <returns>TRequest.</returns>
         public virtual TRequest Handle(TRequest command)
         {
+            if (Context?.Span != null)
+            {
+                BrighterTracer.WriteHandlerEvent(Context.Span, this.GetType().Name, isAsync:false, isSink:_successor == null);
+            }   
+            
             if (_successor != null)
             {
                 s_logger.LogDebug("Passing request from {HandlerName} to {NextHandler}", Name, _successor.Name);
@@ -131,6 +138,11 @@ namespace Paramore.Brighter
         /// <returns>TRequest.</returns>
         public virtual TRequest Fallback(TRequest command)
         {
+            if (Context?.Span != null)
+            {
+                BrighterTracer.WriteHandlerEvent(Context.Span, $"{this.GetType().Name} Fallback", isAsync:false, isSink:_successor == null);
+            }   
+            
             if (_successor != null)
             {
                 s_logger.LogDebug("Falling back from {HandlerName} to {NextHandler}", Name, _successor.Name);

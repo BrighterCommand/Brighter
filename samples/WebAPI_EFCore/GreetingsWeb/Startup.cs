@@ -2,6 +2,7 @@ using System;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
+using GreetingsPorts.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -93,10 +94,8 @@ namespace GreetingsWeb
                 //don't check this for SQlite in development
                 if (!_env.IsDevelopment())
                 {
-                    using (var conn = new MySqlConnection(connectionString))
-                    {
-                        conn.Open();
-                    }
+                    using var conn = new MySqlConnection(connectionString);
+                    conn.Open();
                 }
             });
         }
@@ -123,6 +122,8 @@ namespace GreetingsWeb
                         configure.Outbox = outbox;
                         configure.TransactionProvider = transactionProvider;
                         configure.ConnectionProvider = connectionProvider;
+                        configure.MaxOutStandingMessages = 5;
+                        configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
                     }
                 )
                 .UseOutboxSweeper(options =>
@@ -192,8 +193,7 @@ namespace GreetingsWeb
                     new RmqPublication
                     {
                         Topic = new RoutingKey("GreetingMade"),
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        RequestType = typeof(GreetingMade),
                         WaitForConfirmsTimeOutInMilliseconds = 1000,
                         MakeChannels = OnMissingChannel.Create
                     }

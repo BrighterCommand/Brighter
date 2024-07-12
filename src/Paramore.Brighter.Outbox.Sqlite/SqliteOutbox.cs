@@ -78,39 +78,23 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Action loggingAction
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = transactionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
-                }
-                catch (SqliteException sqlException)
-                {
-                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = transactionProvider.GetTransaction();
+                command.ExecuteNonQuery();
+            }
+            catch (SqliteException sqlException)
+            {
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                loggingAction.Invoke();
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
-                        connection.Close();
-                }
+            }
+            finally
+            {
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -120,43 +104,30 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Action loggingAction, 
             CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                        command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
-                    await command.ExecuteNonQueryAsync(cancellationToken);
-                }
-                catch (SqliteException sqlException)
-                {
-                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                    {
-                        loggingAction.Invoke();
-                        return;
-                    }
+                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                    command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            catch (SqliteException sqlException)
+            {
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                loggingAction.Invoke();
 
-                    throw;
-                }
-                finally
-                {
-                    if (transactionProvider != null)
-                        transactionProvider.Close();
-                    else
+            }
+            finally
+            {
+                if (transactionProvider != null)
+                    transactionProvider.Close();
+                else
 #if NETSTANDARD2_0
                         connection.Close();
 #else
-                        await connection.CloseAsync();
+                    await connection.CloseAsync();
 #endif
-                }
             }
         }
 
@@ -169,16 +140,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return resultFunc.Invoke(command.ExecuteReader());
-                }
-                finally
-                {
-                        connection.Close();
-                }
+                return resultFunc.Invoke(command.ExecuteReader());
+            }
+            finally
+            {
+                connection.Close();
             }
         }
 
@@ -191,20 +160,18 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using (var command = commandFunc.Invoke(connection))
+            using var command = commandFunc.Invoke(connection);
+            try
             {
-                try
-                {
-                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
-                }
-                finally
-                {
+                return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+            }
+            finally
+            {
 #if NETSTANDARD2_0
                         connection.Close();
 #else
-                    await connection.CloseAsync();
+                await connection.CloseAsync();
 #endif
-                }
             }
         }
         
@@ -452,14 +419,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var contentType = dr.GetString(ordinal);
             return contentType;
         }
-
-
-        private Guid? GetCorrelationId(IDataReader dr)
+        
+        private string GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var correlationId = dr.GetGuid(ordinal);
+            var correlationId = dr.GetString(ordinal);
             return correlationId;
         }
 
@@ -468,9 +434,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static Guid GetMessageId(IDataReader dr)
+        private static string GetMessageId(IDataReader dr)
         {
-            return Guid.Parse(dr.GetString(dr.GetOrdinal("MessageId")));
+            return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
         private string GetPartitionKey(IDataReader dr)

@@ -39,5 +39,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// A Sql Filter to apply to the subscription
         /// </summary>
         public string SqlFilter = String.Empty;
+
+        /// <summary>
+        /// Use a Service Bus Queue instead of a Topic
+        /// </summary>
+        public bool UseServiceBusQueue = false;
     }
 }

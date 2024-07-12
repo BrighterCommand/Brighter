@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 
 namespace Paramore.Brighter
 {
@@ -42,30 +41,33 @@ namespace Paramore.Brighter
         /// Adds the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
-        void Add(T message, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
+        void Add(T message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
 
         /// <summary>
-        /// Gets the specified message identifier.
+        /// Awaitable add the specified message.
         /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        Message Get(Guid messageId, int outBoxTimeout = -1);
+        /// <param name="messages">The message.</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        void Add(IEnumerable<T> messages, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
 
         /// <summary>
-        /// Update a message to show it is dispatched
+        /// Delete the specified messages
         /// </summary>
-        /// <param name="id">The id of the message to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
-        void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
-        
+        /// <param name="messageIds">The id of the message to delete</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        void Delete(string[] messageIds, RequestContext requestContext, Dictionary<string, object> args = null);
+
         /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
         /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
         /// <param name="outboxTimeout">Timeout of sql call.</param>
@@ -73,39 +75,45 @@ namespace Paramore.Brighter
         /// <returns>List of messages that need to be dispatched.</returns>
         IEnumerable<Message> DispatchedMessages(
             double millisecondsDispatchedSince, 
+            RequestContext requestContext,
             int pageSize = 100, 
             int pageNumber = 1, 
             int outboxTimeout = -1,
             Dictionary<string, object> args = null);
 
         /// <summary>
-        /// Gets all messages in the OutBox, LIFO
+        /// Gets the specified message identifier.
         /// </summary>
-        /// <param name="pageSize">Number of items on the page, default is 100</param>
-        /// <param name="pageNumber">Page number of results to return, default is first</param>
-        /// <param name="args">Additional parameters required for the search, if any</param>
-        /// <returns></returns>
-        [Obsolete("Removed in v10, Please use OutstandingMessages instead.")]
-        IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null);
-        
+        /// <param name="messageId">The message identifier.</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
+        /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <returns>Task&lt;Message&gt;.</returns>
+        Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object> args = null);
+
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
+        void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
+
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">Number of items on the page, default is 100</param>
         /// <param name="pageNumber">Page number of results to return, default is first</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         IEnumerable<Message> OutstandingMessages(
             double millSecondsSinceSent, 
+            RequestContext requestContext,
             int pageSize = 100, 
             int pageNumber = 1,
             Dictionary<string, object> args = null);
-
-        /// <summary>
-        /// Delete the specified messages
-        /// </summary>
-        /// <param name="messageIds">The id of the message to delete</param>
-        void Delete(params Guid[] messageIds);
     }
 }

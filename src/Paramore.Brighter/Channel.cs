@@ -111,13 +111,13 @@ namespace Paramore.Brighter
         /// <summary>
         ///  Receives the specified timeout in milliseconds.
         /// </summary>
-        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutinMilliseconds)
+        public Message Receive(int timeoutInMilliseconds)
         {
             if (!_queue.TryDequeue(out Message message))
             {
-                Enqueue(_messageConsumer.Receive(timeoutinMilliseconds));
+                Enqueue(_messageConsumer.Receive(timeoutInMilliseconds));
                 if (!_queue.TryDequeue(out message))
                 {
                     message = s_NoneMessage; //Will be MT_NONE

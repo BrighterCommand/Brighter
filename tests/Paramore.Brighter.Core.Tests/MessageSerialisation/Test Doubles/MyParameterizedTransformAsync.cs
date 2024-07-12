@@ -9,6 +9,12 @@ public class MyParameterizedTransformAsync : IAmAMessageTransformAsync
     public static readonly string HEADER_KEY = "MyParameterizedTransformTest";
     private string _template;
     private string _displayFormat;
+    
+    /// <summary>
+    /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
+    /// </summary>
+    /// <value>The context.</value>
+    public IRequestContext Context { get; set; }
 
 
     public void InitializeWrapFromAttributeParams(params object[] initializerList)
@@ -21,7 +27,7 @@ public class MyParameterizedTransformAsync : IAmAMessageTransformAsync
         _displayFormat = (string)initializerList[0];
     }
 
-    public Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
+    public Task<Message> WrapAsync(Message message, Publication publication, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<Message>(cancellationToken);
         message.Header.Bag.Add(HEADER_KEY, _template);
