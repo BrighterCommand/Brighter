@@ -50,20 +50,6 @@ public class InMemoryLock : IDistributedLock
     }
 
     /// <summary>
-    /// Attempt to obtain a lock on a resource
-    /// </summary>
-    /// <param name="resource">The name of the resource to Lock</param>
-    /// <returns>The id of the lock that has been acquired or null if no lock was able to be acquired</returns>
-    public string? ObtainLock(string resource)
-    {
-        var normalisedResourceName = resource.ToLower();
-        if (!_semaphores.ContainsKey(normalisedResourceName))
-            _semaphores.Add(normalisedResourceName, new SemaphoreSlim(1, 1));
-
-        return _semaphores[normalisedResourceName].Wait(TimeSpan.Zero) ? "" : null;
-    }
-
-    /// <summary>
     /// Release a lock
     /// </summary>
     /// <param name="resource">The name of the resource to Lock</param>
@@ -72,20 +58,9 @@ public class InMemoryLock : IDistributedLock
     /// <returns>Awaitable Task</returns>
     public Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
     {
-        ReleaseLock(resource, lockId);
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Release a lock
-    /// </summary>
-    /// <param name="resource">The name of the resource to Lock</param>
-    /// <param name="lockId">The lock Id that was provided when the lock was obtained</param>
-    /// <returns>Awaitable Task</returns>
-    public void ReleaseLock(string resource, string lockId)
-    {
         var normalisedResourceName = resource.ToLower();
         if (_semaphores.TryGetValue(normalisedResourceName, out SemaphoreSlim semaphore))
             semaphore.Release();
+        return Task.CompletedTask;
     }
 }
