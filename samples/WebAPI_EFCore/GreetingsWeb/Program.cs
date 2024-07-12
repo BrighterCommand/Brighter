@@ -1,16 +1,17 @@
 using System.IO;
+using DbMaker;
 using GreetingsWeb;
-using GreetingsWeb.Database;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TransportMaker;
 
 var host = CreateHostBuilder(args).Build();
 
 host.CheckDbIsUp();
 host.MigrateDatabase();
-host.CreateOutbox();
+host.CreateOutbox(ConfigureTransport.HasBinaryMessagePayload());
 
 host.Run();
 return;
@@ -43,3 +44,4 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
             });
             webBuilder.UseStartup<Startup>();
         });
+

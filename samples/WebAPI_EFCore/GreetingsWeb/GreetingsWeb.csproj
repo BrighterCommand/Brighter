@@ -19,13 +19,8 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
       <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
+      <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
       <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj" />
-      <ProjectReference Include="..\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj">
-        <TreatAsUsed>true</TreatAsUsed>
-      </ProjectReference>
-      <ProjectReference Include="..\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj">
-        <TreatAsUsed>true</TreatAsUsed>
-      </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>

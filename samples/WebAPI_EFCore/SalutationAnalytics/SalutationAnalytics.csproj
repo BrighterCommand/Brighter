@@ -17,9 +17,9 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+      <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
+      <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
       <ProjectReference Include="..\SalutationApp\SalutationApp.csproj" />
-      <ProjectReference Include="..\Salutations_MySqlMigrations\Salutations_MySqlMigrations.csproj" />
-      <ProjectReference Include="..\Salutations_SqliteMigrations\Salutations_SqliteMigrations.csproj" />
     </ItemGroup>
 
     <ItemGroup>

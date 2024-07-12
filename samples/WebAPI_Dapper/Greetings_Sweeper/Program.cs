@@ -1,18 +1,24 @@
 using System.Text.Json;
 using DbMaker;
 using GreetingsApp.Messaging;
+using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.Observability;
+using TransportMaker;
 
 JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+var transport = builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
+if (string.IsNullOrEmpty(transport))
+    throw new ArgumentNullException("No transport specified in configuration");
+
 MessagingTransport messagingTransport =
-    ConfigureTransport.TransportType(builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
+    ConfigureTransport.TransportType(transport);
 
 RelationalDatabaseConfiguration outboxConfiguration = new(
     ConnectionResolver.GreetingsDbConnectionString(builder.Configuration),
@@ -33,7 +39,7 @@ builder.Services.AddBrighter(options =>
     options.InstrumentationOptions = InstrumentationOptions.All;
 }).UseExternalBus(configure =>
 {
-    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry(messagingTransport);
+    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
     configure.Outbox = makeOutbox.outbox;
     configure.TransactionProvider = makeOutbox.transactionProvider;
     configure.ConnectionProvider = makeOutbox.connectionProvider;

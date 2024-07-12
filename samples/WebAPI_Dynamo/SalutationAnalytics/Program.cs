@@ -3,6 +3,7 @@ using System.IO;
 using Amazon.DynamoDBv2;
 using Amazon.Runtime;
 using DbMaker;
+using GreetingsApp.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,9 +18,9 @@ using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using SalutationApp.Entities;
-using SalutationApp.Messaging;
 using SalutationApp.Policies;
 using SalutationApp.Requests;
+using TransportMaker;
 
 
 await CreateHostBuilder(args).Build().RunAsync();
@@ -80,7 +81,16 @@ static void ConfigureBrighter(
 
     var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
-    var producerRegistry = ConfigureTransport.MakeProducerRegistry(MessagingTransport.Rmq);
+    var transport = hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
+    if (string.IsNullOrWhiteSpace(transport))
+        throw new InvalidOperationException("Transport is not set");
+        
+    MessagingTransport messagingTransport =
+        ConfigureTransport.TransportType(transport);
+
+    ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
+            
+    var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport); 
 
     services.AddServiceActivator(options =>
         {

@@ -2,6 +2,7 @@
 using System.IO;
 using Confluent.SchemaRegistry;
 using DbMaker;
+using GreetingsApp.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -14,8 +15,9 @@ using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Sqlite;
-using SalutationApp.Messaging;
 using SalutationApp.Policies;
+using SalutationApp.Requests;
+using TransportMaker;
 
 IHost host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp();
@@ -68,11 +70,11 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     if (string.IsNullOrWhiteSpace(transport))
         throw new InvalidOperationException("Transport is not set");
 
-    MessagingTransport messagingTransport = ConfigureTransport.GetTransportType(transport);
+    MessagingTransport messagingTransport = ConfigureTransport.TransportType(transport);
 
     AddSchemaRegistryMaybe(services, messagingTransport);
 
-    Subscription[] subscriptions = ConfigureTransport.GetSubscriptions(messagingTransport);
+    Subscription[] subscriptions = ConfigureTransport.GetSubscriptions<SalutationReceived>(messagingTransport);
 
     string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
     if (string.IsNullOrWhiteSpace(dbType))
@@ -116,7 +118,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
         })
         .UseExternalBus(config =>
         {
-            config.ProducerRegistry = ConfigureTransport.MakeProducerRegistry(messagingTransport);
+            config.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport);
             config.Outbox = makeOutbox.outbox;
             config.ConnectionProvider = makeOutbox.connectionProvider;
             config.TransactionProvider = makeOutbox.transactionProvider;

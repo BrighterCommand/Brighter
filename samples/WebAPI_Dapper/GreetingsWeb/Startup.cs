@@ -3,6 +3,7 @@ using DbMaker;
 using GreetingsApp.Handlers;
 using GreetingsApp.Messaging;
 using GreetingsApp.Policies;
+using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +17,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
+using TransportMaker;
 
 namespace GreetingsWeb;
 
@@ -74,8 +76,12 @@ public class Startup
 
     private void ConfigureBrighter(IServiceCollection services)
     {
+        var transport = _configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
+        if (string.IsNullOrWhiteSpace(transport))
+            throw new InvalidOperationException("Transport is not set");
+        
         MessagingTransport messagingTransport =
-            ConfigureTransport.TransportType(_configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
+            ConfigureTransport.TransportType(transport);
 
         ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
 
@@ -106,7 +112,7 @@ public class Startup
             })
             .UseExternalBus(configure =>
             {
-                configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry(messagingTransport);
+                configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
                 configure.Outbox = makeOutbox.outbox;
                 configure.TransactionProvider = makeOutbox.transactionProvider;
                 configure.ConnectionProvider = makeOutbox.connectionProvider;

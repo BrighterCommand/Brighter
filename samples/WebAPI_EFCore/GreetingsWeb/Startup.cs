@@ -1,10 +1,10 @@
 using System;
-using System.Data;
 using DbMaker;
 using GreetingsApp.EntityGateway;
 using GreetingsApp.Handlers;
 using GreetingsApp.Messaging;
 using GreetingsApp.Policies;
+using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -18,18 +18,17 @@ using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
+using TransportMaker;
 
 namespace GreetingsWeb
 {
     public class Startup
     {
-        private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _configuration; 
 
-        public Startup(IConfiguration configuration, IWebHostEnvironment env)
+        public Startup(IConfiguration configuration)
         {
             _configuration = configuration;
-            _env = env;
         }
 
 
@@ -71,8 +70,12 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
+            var transport = _configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
+            if (string.IsNullOrWhiteSpace(transport))
+                throw new InvalidOperationException("Transport is not set");
+            
             MessagingTransport messagingTransport =
-                ConfigureTransport.TransportType(_configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
+                ConfigureTransport.TransportType(transport);
 
             ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
             
@@ -92,7 +95,7 @@ namespace GreetingsWeb
             
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
             
-            IAmAProducerRegistry producerRegistry = ConfigureTransport.MakeProducerRegistry(messagingTransport);
+            IAmAProducerRegistry producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
 
             services.AddBrighter(options =>
                 {
@@ -161,10 +164,7 @@ namespace GreetingsWeb
             services.AddDbContextPool<GreetingsEntityGateway>(builder =>
             {
                 builder
-                    .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
-                    {
-                        optionsBuilder.MigrationsAssembly("Greetings_MySqlMigrations");
-                    })
+                    .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
                     .EnableDetailedErrors()
                     .EnableSensitiveDataLogging();
             });
@@ -175,11 +175,7 @@ namespace GreetingsWeb
             services.AddDbContext<GreetingsEntityGateway>(
                 builder =>
                 {
-                    builder.UseSqlite(connectionString,
-                            optionsBuilder =>
-                            {
-                                optionsBuilder.MigrationsAssembly("Greetings_SqliteMigrations");
-                            })
+                    builder.UseSqlite(connectionString)
                         .EnableDetailedErrors()
                         .EnableSensitiveDataLogging();
                 });

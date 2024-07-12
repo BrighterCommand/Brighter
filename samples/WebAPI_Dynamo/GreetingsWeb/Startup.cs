@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
-using Amazon.Runtime;
 using DbMaker;
 using GreetingsEntities;
 using GreetingsApp.Handlers;
@@ -15,22 +13,20 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using Paramore.Brighter;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
-using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
+using TransportMaker;
 
 namespace GreetingsWeb
 {
     public class Startup
     {
-        private const string _outBoxTableName = "Outbox";
-        private IWebHostEnvironment _env;
+        private readonly IWebHostEnvironment _env;
         private IAmazonDynamoDB _client;
 
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
@@ -86,7 +82,16 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            var producerRegistry = ConfigureTransport.MakeProducerRegistry(MessagingTransport.Rmq); 
+            var transport = Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
+            if (string.IsNullOrWhiteSpace(transport))
+                throw new InvalidOperationException("Transport is not set");
+        
+            MessagingTransport messagingTransport =
+                ConfigureTransport.TransportType(transport);
+
+            ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
+            
+            var producerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport); 
             
             services.AddBrighter(options =>
              {

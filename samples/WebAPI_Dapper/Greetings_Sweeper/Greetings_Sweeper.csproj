@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj"/>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj"/>
     <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
+    <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
     <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj"/>
     <ProjectReference Include="..\DbMaker\DbMaker.csproj" />
   </ItemGroup>

@@ -19,6 +19,7 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.DynamoDB\Paramore.Brighter.Outbox.DynamoDB.csproj" />
       <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
+      <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
       <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj" />
     </ItemGroup>
 

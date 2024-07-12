@@ -1,5 +1,8 @@
 ﻿using System;
 using System.IO;
+using Confluent.SchemaRegistry;
+using DbMaker;
+using GreetingsApp.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,30 +10,30 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Inbox;
-using Paramore.Brighter.Inbox.MySql;
-using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MySql;
-using Paramore.Brighter.MySql.EntityFrameworkCore;
-using Paramore.Brighter.Outbox.MySql;
-using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-using Paramore.Brighter.Sqlite;
-using Paramore.Brighter.Sqlite.EntityFrameworkCore;
-using SalutationAnalytics.Database;
 using SalutationApp.EntityGateway;
 using SalutationApp.Policies;
 using SalutationApp.Requests;
+using TransportMaker;
 
 var host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp();
 host.MigrateDatabase();
 host.CreateInbox();
-host.CreateOutbox();
+host.CreateOutbox(HasBinaryMessagePayload());
 await host.RunAsync();
 return;
+
+static void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTransport messagingTransport)
+{
+    if (messagingTransport != MessagingTransport.Kafka) return;
+
+    SchemaRegistryConfig schemaRegistryConfig = new() { Url = "http://localhost:8081" };
+    CachedSchemaRegistryClient cachedSchemaRegistryClient = new(schemaRegistryConfig);
+    services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
+}
 
 static IHostBuilder CreateHostBuilder(string[] args) =>
     Host.CreateDefaultBuilder(args)
@@ -59,9 +62,34 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
 
 static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
 {
-    (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) = MakeOutbox(hostContext);
-    var outboxConfiguration = new RelationalDatabaseConfiguration(DbConnectionString(hostContext));
+    string? transport = hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
+    if (string.IsNullOrWhiteSpace(transport))
+        throw new InvalidOperationException("Transport is not set");
+
+    MessagingTransport messagingTransport = ConfigureTransport.TransportType(transport);
+
+    AddSchemaRegistryMaybe(services, messagingTransport);
+    
+    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+    if (string.IsNullOrWhiteSpace(dbType))
+        throw new InvalidOperationException("DbType is not set");
+
+    DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
+    string? connectionString =
+        ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
+            databaseType);
+
+    RelationalDatabaseConfiguration relationalDatabaseConfiguration = new(connectionString);
+    services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
+
+    RelationalDatabaseConfiguration outboxConfiguration = new(
+        connectionString,
+        binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
+    );
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
+
+    (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+        OutboxFactory.MakeOutbox(databaseType, outboxConfiguration, services);
 
     IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
 
@@ -94,18 +122,16 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
-                ConfigureInbox(hostContext),
-                scope: InboxScope.Commands,
-                onceOnly: true,
-                actionOnExists: OnceOnlyAction.Throw
+                InboxFactory.MakeInbox(databaseType, relationalDatabaseConfiguration),
+                InboxScope.Commands
             );
         })
         .UseExternalBus((configure) =>
         {
             configure.ProducerRegistry = producerRegistry;
-            configure.Outbox = outbox;
-            configure.TransactionProvider = transactionProvider;
-            configure.ConnectionProvider = connectionProvider;
+            configure.Outbox = makeOutbox.outbox;
+            configure.TransactionProvider = makeOutbox.transactionProvider;
+            configure.ConnectionProvider = makeOutbox.connectionProvider;
             configure.MaxOutStandingMessages = 5;
             configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
         })
@@ -121,20 +147,28 @@ static string GetEnvironment()
     return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 }
 
+static bool HasBinaryMessagePayload()
+{
+    return ConfigureTransport.TransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) ==
+           MessagingTransport.Kafka;
+}
+
 static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection services)
 {
-    string connectionString = DbConnectionString(hostContext);
+    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
+    if (string.IsNullOrWhiteSpace(dbType))
+        throw new InvalidOperationException("DbType is not set");
+
+    DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
+    string connectionString = ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
+        databaseType);
 
     if (hostContext.HostingEnvironment.IsDevelopment())
     {
         services.AddDbContext<SalutationsEntityGateway>(
             builder =>
             {
-                builder.UseSqlite(connectionString,
-                    optionsBuilder =>
-                    {
-                        optionsBuilder.MigrationsAssembly("Salutations_SqliteMigrations");
-                    });
+                builder.UseSqlite(connectionString);
             });
     }
     else
@@ -142,26 +176,11 @@ static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection s
         services.AddDbContextPool<SalutationsEntityGateway>(builder =>
         {
             builder
-                .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
-                {
-                    optionsBuilder.MigrationsAssembly("Salutations_MySqlMigrations");
-                })
+                .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
                 .EnableDetailedErrors()
                 .EnableSensitiveDataLogging();
         });
     }
-}
-
-static IAmAnInbox ConfigureInbox(HostBuilderContext hostContext)
-{
-    if (hostContext.HostingEnvironment.IsDevelopment())
-    {
-        return new SqliteInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext),
-            SchemaCreation.INBOX_TABLE_NAME));
-    }
-
-    return new MySqlInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext),
-        SchemaCreation.INBOX_TABLE_NAME));
 }
 
 static IAmAProducerRegistry ConfigureProducerRegistry()
@@ -187,30 +206,3 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
     return producerRegistry;
 }
 
-
-static string DbConnectionString(HostBuilderContext hostContext)
-{
-    //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-    return hostContext.HostingEnvironment.IsDevelopment()
-        ? "Filename=Salutations.db;Cache=Shared"
-        : hostContext.Configuration.GetConnectionString("Salutations");
-}
-
-static (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) MakeOutbox(
-    HostBuilderContext hostContext)
-{
-    if (hostContext.HostingEnvironment.IsDevelopment())
-    {
-        var outbox = new SqliteOutbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext)));
-        var transactionProvider = typeof(SqliteEntityFrameworkConnectionProvider<SalutationsEntityGateway>);
-        var connectionProvider = typeof(SqliteConnectionProvider);
-        return (outbox, transactionProvider, connectionProvider);
-    }
-    else
-    {
-        var outbox = new MySqlOutbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext)));
-        var transactionProvider = typeof(MySqlEntityFrameworkConnectionProvider<SalutationsEntityGateway>);
-        var connectionProvider = typeof(MySqlConnectionProvider);
-        return (outbox, transactionProvider, connectionProvider);
-    }
-}
