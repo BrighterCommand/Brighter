@@ -10,7 +10,5 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" />
-    
-
   </ItemGroup>
 </Project>

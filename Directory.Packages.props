@@ -85,28 +85,10 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0"/>
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0"/>
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.3.0"/>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.303.22"/>
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.309.4"/>
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.106"/>
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.301.54"/>
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.301.19"/>
-    <PackageVersion Include="Azure.Identity" Version="1.12.0"/>
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.6"/>
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.6.0"/>
-    <PackageVersion Include="MQTTnet" Version="3.1.2"/>
-    <PackageVersion Include="OpenTelemetry" Version="1.9.0"/>
-    <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.9.0"/>
-    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.9.0"/>
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.9.0"/>
-    <PackageVersion Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0"/>
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0"/>
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0"/>
-    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0"/>
-    <PackageVersion Include="ServiceStack.Redis.Core" Version="8.3.0"/>
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.1"/>
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0"/>
-    <PackageVersion Include="System.Text.Json" Version="8.0.3"/>
+    <PackageVersion Include="System.Text.Json" Version="8.0.4"/>
     <PackageVersion Include="xunit" Version="2.8.1"/>
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.1">
       <PrivateAssets>all</PrivateAssets>
