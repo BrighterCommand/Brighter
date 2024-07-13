@@ -69,7 +69,7 @@ namespace Paramore.Brighter
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task PostAsync<TRequest>(
             TRequest request, 
-            bool continueOnCapturedContext = false, 
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default
             ) where TRequest : class, IRequest;
         

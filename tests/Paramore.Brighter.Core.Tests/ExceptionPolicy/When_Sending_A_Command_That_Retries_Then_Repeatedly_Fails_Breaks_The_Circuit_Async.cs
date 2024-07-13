@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
         private Exception _firstException;
         private Exception _secondException;
         private int _retryCount;
-        private Context _context;
+        private Polly.Context _context;
 
         public CommandProcessorWithBothRetryAndCircuitBreakerAsync()
         {

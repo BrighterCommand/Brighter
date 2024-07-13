@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public virtual async Task SendAsync<TRequest>(
             TRequest command, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public virtual async Task PublishAsync<TRequest>(
             TRequest @event, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             TRequest request, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -177,7 +177,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             TRequest request,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -193,7 +193,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false, 
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default,
             string batchId = null)
             where TRequest : class, IRequest
@@ -209,7 +209,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             IEnumerable<TRequest> requests,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -227,7 +227,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await DepositPostAsync(requests, cancellationToken: cancellationToken);
@@ -248,7 +248,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             IEnumerable<string> posts, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
             var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -327,7 +327,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public override async Task SendAsync<T>(
             T command, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             )
         {
@@ -339,7 +339,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public override async Task PublishAsync<T>(
             T @event, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             )
         {
@@ -380,14 +380,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
-        public override async Task SendAsync<T>(T command, RequestContext requestContext = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public override async Task SendAsync<T>(T command, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
         {
             await base.SendAsync(command, requestContext, continueOnCapturedContext, cancellationToken);
             SendCount++;
             throw new Exception();
         }
 
-        public override async Task PublishAsync<T>(T @event, RequestContext requestContext = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public override async Task PublishAsync<T>(T @event, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
         {
             await base.PublishAsync(@event, requestContext, continueOnCapturedContext, cancellationToken);
             PublishCount++;

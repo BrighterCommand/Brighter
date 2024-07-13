@@ -176,7 +176,7 @@ static IAmAnInbox ConfigureInbox(IAmazonDynamoDB dynamoDb)
 
 static IAmAnOutbox ConfigureOutbox(IAmazonDynamoDB dynamoDb)
 {
-    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration());
+    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(), TimeProvider.System);
 }
 
 static string GetEnvironment()

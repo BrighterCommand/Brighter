@@ -159,7 +159,7 @@ namespace Paramore.Brighter
             TMessage message,
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default,
             string batchId = null) 
         {
@@ -378,7 +378,7 @@ namespace Paramore.Brighter
         public async Task ClearOutboxAsync(
             IEnumerable<string> posts,
             RequestContext requestContext,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default
         )
@@ -1105,7 +1105,7 @@ namespace Paramore.Brighter
         private async Task<bool> RetryAsync(
             Func<CancellationToken, Task> send, 
             RequestContext requestContext,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
             var result = await _policyRegistry.Get<AsyncPolicy>(CommandProcessor.RETRYPOLICYASYNC)

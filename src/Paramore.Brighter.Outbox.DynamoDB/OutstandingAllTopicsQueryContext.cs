@@ -1,6 +1,7 @@
-#region Licence
+﻿#region Licence
+
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,17 +23,22 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 
-namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Outbox.DynamoDB;
+
+internal class OutstandingAllTopicsQueryContext
 {
-    internal class MyOtherEventHandler(IDictionary<string, string> receivedMessages) : RequestHandler<MyEvent>
+    public int NextPage { get; private set; }
+    public string LastEvaluatedKey { get; private set; }
+    public int ShardNumber { get; private set; }
+    public List<string> RemainingTopics { get; private set; }
+
+    public OutstandingAllTopicsQueryContext(int nextPage, string lastEvaluatedKey, int shardNumber, List<string> remainingTopics)
     {
-        public override MyEvent Handle(MyEvent @event)
-        {
-            receivedMessages.Add(nameof(MyOtherEventHandler), @event.Id);
-            return base.Handle(@event);
-        }
-    }
+        NextPage = nextPage;
+        LastEvaluatedKey = lastEvaluatedKey;
+        ShardNumber = shardNumber;
+        RemainingTopics = remainingTopics;
+    }   
 }

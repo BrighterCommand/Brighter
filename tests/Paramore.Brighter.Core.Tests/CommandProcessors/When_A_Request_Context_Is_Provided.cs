@@ -49,7 +49,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue) ;
         commandProcessor.Send(new MyCommand(), context);
 
         //assert
@@ -79,7 +79,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue);
         await commandProcessor.SendAsync(new MyCommand(), context);
 
         //assert
@@ -107,7 +107,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue);
         commandProcessor.Publish(new MyEvent(), context);
 
         //assert
@@ -135,7 +135,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (s, o) => testBagValue);
         await commandProcessor.PublishAsync(new MyEvent(), context);
 
         //assert
@@ -187,7 +187,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue) ;
         commandProcessor.DepositPost(new MyCommand(), context);
 
         //assert
@@ -235,7 +235,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue);
         await commandProcessor.DepositPostAsync(new MyCommand(), context);
 
         //assert
@@ -287,7 +287,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue) ;
         commandProcessor.ClearOutbox(new []{myCommand.Id}, context);
 
         //assert
@@ -339,7 +339,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue) ;
         await commandProcessor.ClearOutboxAsync(new []{myCommand.Id}, context);
 
         //assert
