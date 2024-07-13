@@ -29,7 +29,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -39,20 +41,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
     [Collection("CommandProcessor")]
     public class CommandProcessorPostBoxClearAsyncTests : IDisposable
     {
+        private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
+        private readonly InMemoryOutbox _outbox;
+        private readonly InternalBus _internalBus = new();
 
         public CommandProcessorPostBoxClearAsyncTests()
         {
-            const string topic = "MyCommand";
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            var timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(_internalBus, timeProvider){Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}};
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(myCommand.Id, Topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -72,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var producerRegistry =
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
                 {
-                    { topic, _producer },
+                    { Topic, producer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -80,8 +83,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
             };
-            
-            _fakeOutbox = new FakeOutbox();
+
+            var tracer = new BrighterTracer(timeProvider);
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -89,7 +93,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                _fakeOutbox
+                tracer,
+                _outbox
             );
         
             CommandProcessor.ClearServiceBus();
@@ -105,14 +110,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         [Fact]
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
-            await _fakeOutbox.AddAsync(_message);
+            var context = new RequestContext();
+            await _outbox.AddAsync(_message, context);
             
             await _commandProcessor.ClearOutboxAsync(new []{_message.Id});
 
             //_should_send_a_message_via_the_messaging_gateway
-            _producer.MessageWasSent.Should().BeTrue();
+            var topic = new RoutingKey(Topic);
+            
+            _internalBus.Stream(topic).Any().Should().BeTrue();
 
-            var sentMessage = _producer.SentMessages.FirstOrDefault();
+            var sentMessage = _internalBus.Dequeue(topic);
             sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);

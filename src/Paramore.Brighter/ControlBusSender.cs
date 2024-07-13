@@ -72,7 +72,7 @@ namespace Paramore.Brighter
 
         public async Task PostAsync<TRequest>(
             TRequest request,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
             where TRequest : class, IRequest
         {

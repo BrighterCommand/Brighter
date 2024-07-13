@@ -27,13 +27,8 @@ using Paramore.Brighter;
 
 namespace HelloWorld
 {
-    internal class GreetingCommand : Command
+    public class GreetingCommand(string name) : Command(Guid.NewGuid())
     {
-        public GreetingCommand(string name) :base(Guid.NewGuid())
-        {
-            Name = name;
-        }
-
-        public string Name { get; }
+        public string Name { get; } = name;
     }
 }

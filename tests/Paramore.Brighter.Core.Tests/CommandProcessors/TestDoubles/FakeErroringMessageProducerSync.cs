@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
@@ -7,6 +9,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
     {
         public int SentCalledCount { get; set; }
         public Publication Publication { get; } = new();
+        
+        public Activity Span { get; set; }
+        
         public void Dispose() { }
 
         public void Send(Message message)

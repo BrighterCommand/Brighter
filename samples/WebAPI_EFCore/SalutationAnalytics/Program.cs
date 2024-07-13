@@ -87,7 +87,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+            options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;

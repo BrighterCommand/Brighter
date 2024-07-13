@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -45,15 +45,17 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
                 );
-            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+            var fakeTimeProvider = new FakeTimeProvider();
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
         }
 
         [Fact]
         public async Task When_the_message_is_already_in_the_outbox_async()
         {
-            await _dynamoDbOutbox.AddAsync(_messageEarliest);
+            var context = new RequestContext();
+            await _dynamoDbOutbox.AddAsync(_messageEarliest, context);
 
-            _exception = await Catch.ExceptionAsync(() => _dynamoDbOutbox.AddAsync(_messageEarliest));            
+            _exception = await Catch.ExceptionAsync(() => _dynamoDbOutbox.AddAsync(_messageEarliest, context));            
 
             //_should_ignore_the_duplicate_key_and_still_succeed
             _exception.Should().BeNull();

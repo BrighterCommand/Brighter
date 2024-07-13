@@ -31,7 +31,7 @@ namespace Paramore.Brighter
     /// </summary>
     public interface IAmAMessageConsumer : IDisposable
     {
-       /// <summary>
+        /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -48,16 +48,16 @@ namespace Paramore.Brighter
         /// </summary>
         void Purge();
 
-         /// <summary>
+        /// <summary>
         /// Receives the specified queue name.
         /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
         /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <returns>Message.</returns>
+        /// <returns>An array of Messages from middleware</returns>
         Message[] Receive(int timeoutInMilliseconds);
 
-       /// <summary>
+        /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>

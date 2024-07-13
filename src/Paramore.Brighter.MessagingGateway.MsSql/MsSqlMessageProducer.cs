@@ -22,11 +22,13 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -34,9 +36,16 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageProducer>();
         private readonly MsSqlMessageQueue<Message> _sqlQ;
-        private Publication _publication; // -- placeholder for future use
 
-        public Publication Publication { get { return _publication; } }
+        /// <summary>
+        /// The Publication used to configure the producer
+        /// </summary>
+        public Publication Publication { get; }
+
+        /// <summary>
+        /// The OTel Span we are writing Producer events too
+        /// </summary>
+        public Activity Span { get; set; }
 
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
@@ -45,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         )
         {
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
-            _publication = publication ?? new Publication {MakeChannels = OnMissingChannel.Create};
+            Publication = publication ?? new Publication {MakeChannels = OnMissingChannel.Create};
         }
 
         public MsSqlMessageProducer(

@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
   public class MessagePumpDispatchAsyncTests
     {
+        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
         private readonly MyEvent _myEvent = new MyEvent();
 
@@ -20,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsyncWithContinuation>();
 
-            var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyEventHandlerAsyncWithContinuation>(() => new MyEventHandlerAsyncWithContinuation());
+            var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyEventHandlerAsyncWithContinuation());
             var commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
@@ -31,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var channel = new FakeChannel();
+            var channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
@@ -40,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
              _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
                 { Channel = channel, TimeoutInMilliseconds = 5000 };
 
-            var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
+            var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
             channel.Enqueue(message);
             var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             channel.Enqueue(quitMessage);

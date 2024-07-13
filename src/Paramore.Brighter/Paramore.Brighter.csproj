@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.Bcl.TimeProvider" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="NJsonSchema" />
     <PackageReference Include="Polly" />
   </ItemGroup>
 

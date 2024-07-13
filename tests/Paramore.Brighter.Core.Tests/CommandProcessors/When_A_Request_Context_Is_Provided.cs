@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Xunit;
 
@@ -33,7 +35,7 @@ public class RequestContextPresentTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyContextAwareCommandHandler>();
-        var handlerFactory = new TestHandlerFactorySync<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler());
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler());
         var spyRequestContextFactory = new SpyContextFactory();
         var policyRegistry = new DefaultPolicy();
 
@@ -47,7 +49,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue) ;
         commandProcessor.Send(new MyCommand(), context);
 
         //assert
@@ -63,7 +65,7 @@ public class RequestContextPresentTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyContextAwareCommandHandlerAsync>();
-        var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyContextAwareCommandHandlerAsync>(() => new MyContextAwareCommandHandlerAsync());
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareCommandHandlerAsync());
         var spyRequestContextFactory = new SpyContextFactory();
         var policyRegistry = new DefaultPolicy();
 
@@ -77,7 +79,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue);
         await commandProcessor.SendAsync(new MyCommand(), context);
 
         //assert
@@ -93,7 +95,7 @@ public class RequestContextPresentTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.Register<MyEvent, MyContextAwareEventHandler>();
-        var handlerFactory = new TestHandlerFactorySync<MyEvent, MyContextAwareEventHandler>(() => new MyContextAwareEventHandler());
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareEventHandler());
 
         var commandProcessor = new CommandProcessor(
             registry,
@@ -105,7 +107,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue);
         commandProcessor.Publish(new MyEvent(), context);
 
         //assert
@@ -121,7 +123,7 @@ public class RequestContextPresentTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyEvent, MyContextAwareEventHandlerAsync>();
-        var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyContextAwareEventHandlerAsync>(() => new MyContextAwareEventHandlerAsync());
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareEventHandlerAsync());
 
         var commandProcessor = new CommandProcessor(
             registry,
@@ -133,7 +135,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (s, o) => testBagValue);
         await commandProcessor.PublishAsync(new MyEvent(), context);
 
         //assert
@@ -152,16 +154,19 @@ public class RequestContextPresentTests : IDisposable
             null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
+        var fakeTimeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), fakeTimeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
-            
-        var fakeOutbox = new FakeOutbox();
+
+        var timeProvider = new FakeTimeProvider();
+        var tracer = new BrighterTracer(timeProvider);
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -169,6 +174,7 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -181,7 +187,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue) ;
         commandProcessor.DepositPost(new MyCommand(), context);
 
         //assert
@@ -197,16 +203,18 @@ public class RequestContextPresentTests : IDisposable
             new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
-            
-        var fakeOutbox = new FakeOutbox();
+
+        var tracer = new BrighterTracer(timeProvider);
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -214,6 +222,7 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -226,7 +235,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue);
         await commandProcessor.DepositPostAsync(new MyCommand(), context);
 
         //assert
@@ -242,16 +251,18 @@ public class RequestContextPresentTests : IDisposable
             null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
             
-        var fakeOutbox = new FakeOutbox();
+        var tracer = new BrighterTracer(timeProvider);
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -259,6 +270,7 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -275,7 +287,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue) ;
         commandProcessor.ClearOutbox(new []{myCommand.Id}, context);
 
         //assert
@@ -290,17 +302,19 @@ public class RequestContextPresentTests : IDisposable
             null,
             new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-        
+
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
             
-        var fakeOutbox = new FakeOutbox();
+        var tracer = new BrighterTracer(timeProvider);
+        var fakeOutbox = new InMemoryOutbox(timeProvider);
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -308,6 +322,7 @@ public class RequestContextPresentTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -324,7 +339,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (key, oldValue) => testBagValue) ;
         await commandProcessor.ClearOutboxAsync(new []{myCommand.Id}, context);
 
         //assert

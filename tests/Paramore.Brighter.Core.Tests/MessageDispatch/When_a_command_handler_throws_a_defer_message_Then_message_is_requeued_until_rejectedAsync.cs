@@ -24,27 +24,31 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpCommandProcessingDeferMessageActionTestsAsync
     {
+        private const string Topic = "MyCommand";
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
-        private readonly SpyRequeueCommandProcessor _commandProcessor;
+        private readonly Channel _channel;
         private readonly int _requeueCount = 5;
+        private readonly InternalBus _bus = new();
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly FakeTimeProvider _timeProvider = new();
 
         public MessagePumpCommandProcessingDeferMessageActionTestsAsync()
         {
-            _commandProcessor = new SpyRequeueCommandProcessor();
-            var commandProcessorProvider = new CommandProcessorProvider(_commandProcessor);
-            _channel = new FakeChannel();
+            SpyRequeueCommandProcessor commandProcessor = new();
+            var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
+
+            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
@@ -57,9 +61,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyCommand>()
-                .WrapAsync(new MyCommand(), new RequestContext(), new Publication{Topic = new RoutingKey("MyCommand")})
+                .WrapAsync(new MyCommand(), new RequestContext(), new Publication{Topic = _routingKey})
                 .Result;
-            _channel.Enqueue(msg);
+            _bus.Enqueue(msg);
         }
 
         [Fact]
@@ -67,14 +71,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
             var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(task);
 
-            _channel.RequeueCount.Should().Be(_requeueCount-1);
-            _channel.RejectCount.Should().Be(1);
+            Assert.Empty(_bus.Stream(_routingKey));
         }
     }
 }

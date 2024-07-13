@@ -23,19 +23,33 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
+        /// <summary>
+        /// Action taken when a message is published, following receipt of a confirmation from the broker
+        /// see https://www.rabbitmq.com/blog/2011/02/10/introducing-publisher-confirms#how-confirms-work for more
+        /// </summary>
         public event Action<bool, string> OnMessagePublished;
       
+        /// <summary>
+        /// The publication configuration for this producer
+        /// </summary>
         public Publication Publication { get; set; }
+        
+        /// <summary>
+        /// The OTel Span we are writing Producer events too
+        /// </summary>
+        public Activity Span { get; set; }
 
         private IProducer<string, byte[]> _producer;
         private readonly IKafkaMessageHeaderBuilder _headerBuilder;

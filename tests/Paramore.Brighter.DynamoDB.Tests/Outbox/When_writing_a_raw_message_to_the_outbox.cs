@@ -29,8 +29,8 @@ using System.Net;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
-using Amazon;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -64,17 +64,20 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
 
+            var fakeTimeProvider = new FakeTimeProvider();
             var dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
 
             var messageEarliest = new Message(
                 messageHeader,
                 new MessageBody(serdesBody, MediaTypeNames.Application.Octet, CharacterEncoding.Raw));
+            
+            var context = new RequestContext();
 
             //act
-            dynamoDbOutbox.Add(messageEarliest);
+            dynamoDbOutbox.Add(messageEarliest, context);
 
-            var storedMessage = dynamoDbOutbox.Get(messageEarliest.Id);
+            var storedMessage = dynamoDbOutbox.Get(messageEarliest.Id, context);
             var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(storedMessage.Body.Bytes.Skip(1).Take(4).ToArray()));
 
             //assert

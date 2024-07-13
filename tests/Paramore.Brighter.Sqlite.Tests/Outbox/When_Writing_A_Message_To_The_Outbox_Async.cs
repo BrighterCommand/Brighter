@@ -70,9 +70,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_messageEarliest);
+            await _sqlOutbox.AddAsync(_messageEarliest, new RequestContext());
 
-            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

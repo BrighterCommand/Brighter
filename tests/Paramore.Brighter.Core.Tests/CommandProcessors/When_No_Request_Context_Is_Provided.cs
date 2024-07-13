@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
-using FakeItEasy;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly.Registry;
 using Xunit;
 
@@ -35,7 +36,7 @@ public class RequestContextFromFactoryTests : IDisposable
        //arrange
        var registry = new SubscriberRegistry();
        registry.Register<MyCommand, MyContextAwareCommandHandler>();
-       var handlerFactory = new TestHandlerFactorySync<MyCommand, MyContextAwareCommandHandler>(() => new MyContextAwareCommandHandler());
+       var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler());
        var myCommand = new MyCommand();
 
        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
@@ -57,7 +58,7 @@ public class RequestContextFromFactoryTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyContextAwareCommandHandlerAsync>();
-        var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyContextAwareCommandHandlerAsync>(() => new MyContextAwareCommandHandlerAsync());
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareCommandHandlerAsync());
         var myCommand = new MyCommand();
 
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
@@ -79,7 +80,7 @@ public class RequestContextFromFactoryTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.Register<MyEvent, MyContextAwareEventHandler>();
-        var handlerFactory = new TestHandlerFactorySync<MyEvent, MyContextAwareEventHandler>(() => new MyContextAwareEventHandler());
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareEventHandler());
         var myEvent = new MyEvent();
 
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
@@ -101,7 +102,7 @@ public class RequestContextFromFactoryTests : IDisposable
         //arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyEvent, MyContextAwareEventHandlerAsync>();
-        var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyContextAwareEventHandlerAsync>(() => new MyContextAwareEventHandlerAsync());
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareEventHandlerAsync());
         var myEvent = new MyEvent();
 
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
@@ -125,16 +126,18 @@ public class RequestContextFromFactoryTests : IDisposable
             null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
-            
-        var fakeOutbox = new FakeOutbox();
+
+        var tracer = new BrighterTracer();
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -142,6 +145,7 @@ public class RequestContextFromFactoryTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -166,16 +170,18 @@ public class RequestContextFromFactoryTests : IDisposable
             new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
             
-        var fakeOutbox = new FakeOutbox();
+        var tracer = new BrighterTracer();
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -183,6 +189,7 @@ public class RequestContextFromFactoryTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -208,16 +215,18 @@ public class RequestContextFromFactoryTests : IDisposable
             null);
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
             
-        var fakeOutbox = new FakeOutbox();
+        var tracer = new BrighterTracer();
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -225,6 +234,7 @@ public class RequestContextFromFactoryTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         
@@ -253,17 +263,19 @@ public class RequestContextFromFactoryTests : IDisposable
             null,
             new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-        
+
+        var timeProvider = new FakeTimeProvider();
         var producerRegistry =
             new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { "MyCommand", new FakeMessageProducer
+                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
                 {
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
                 } },
             });
             
-        var fakeOutbox = new FakeOutbox();
+        var tracer = new BrighterTracer();
+        var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
         var bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry, 
@@ -271,6 +283,7 @@ public class RequestContextFromFactoryTests : IDisposable
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
+            tracer,
             fakeOutbox
         );
         

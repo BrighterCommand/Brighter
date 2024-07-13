@@ -374,8 +374,8 @@ namespace Paramore.Brighter.ServiceActivator
             var context = _requestContextFactory.Create();
             context.Span = span;
             context.OriginatingMessage = message;
-            context.Bag.Add("ChannelName", Channel.Name);
-            context.Bag.Add("RequestStart", DateTime.UtcNow);
+            context.Bag.AddOrUpdate("ChannelName", Channel.Name, (s, o) => Channel.Name);
+            context.Bag.AddOrUpdate("RequestStart", DateTime.UtcNow, (s, o) => DateTime.UtcNow);
             return context;
         }
 

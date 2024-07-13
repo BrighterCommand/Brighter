@@ -99,7 +99,7 @@ static void ConfigureBrighter(
     services.AddServiceActivator(options =>
         {
             options.Subscriptions = subscriptions;
-            options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+            options.DefaultChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
             options.UseScoped = true;
             options.HandlerLifetime = ServiceLifetime.Scoped;
             options.MapperLifetime = ServiceLifetime.Singleton;
@@ -248,7 +248,7 @@ static IAmAnInbox ConfigureInbox(AWSCredentials credentials, IAmazonDynamoDB dyn
 
 static IAmAnOutbox ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
 {
-    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration());
+    return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(), TimeProvider.System);
 }
 
 

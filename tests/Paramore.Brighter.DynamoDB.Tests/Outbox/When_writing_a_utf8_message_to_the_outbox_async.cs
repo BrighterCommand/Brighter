@@ -26,8 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -75,17 +75,22 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             _messageEarliest = new Message(messageHeader,
                 new MessageBody(body, "application/json", CharacterEncoding.UTF8));
+            var fakeTimeProvider = new FakeTimeProvider();
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName),
+                fakeTimeProvider);
         }
 
         [Fact]
         public async Task When_writing_a_utf8_message_to_the_dynamo_db_outbox()
         {
+            //arrange
+            var context = new RequestContext();
+            
             //act
-            await _dynamoDbOutbox.AddAsync(_messageEarliest);
+            await _dynamoDbOutbox.AddAsync(_messageEarliest, context);
 
-            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id, context);
 
             //assert
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

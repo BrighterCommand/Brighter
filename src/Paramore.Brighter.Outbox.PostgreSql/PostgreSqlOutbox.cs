@@ -81,18 +81,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = transactionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
@@ -108,7 +101,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                transactionProvider?.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -118,20 +111,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             Action loggingAction,
             CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
+            await connection.OpenAsync(cancellationToken);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                    command.Transaction = transactionProvider.GetTransaction();
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
                 await command.ExecuteNonQueryAsync(cancellationToken);
             }
             catch (PostgresException sqlException)
@@ -147,10 +133,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                if (transactionProvider != null)
-                    transactionProvider.Close();
-                else
-                    connection.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 

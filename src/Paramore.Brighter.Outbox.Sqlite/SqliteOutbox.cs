@@ -78,37 +78,23 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Action loggingAction
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = transactionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
             catch (SqliteException sqlException)
             {
-                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                {
-                    loggingAction.Invoke();
-                    return;
-                }
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                loggingAction.Invoke();
 
-                throw;
             }
             finally
             {
-                if (transactionProvider != null)
-                    transactionProvider.Close();
-                else
-                    connection.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -118,14 +104,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Action loggingAction, 
             CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
             using var command = commandFunc.Invoke(connection);
             try
             {
@@ -135,13 +114,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
             catch (SqliteException sqlException)
             {
-                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                {
-                    loggingAction.Invoke();
-                    return;
-                }
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                loggingAction.Invoke();
 
-                throw;
             }
             finally
             {

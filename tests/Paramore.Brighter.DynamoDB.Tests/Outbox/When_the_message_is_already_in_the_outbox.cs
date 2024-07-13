@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Amazon;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -44,15 +44,16 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
-            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+            var fakeTimeProvider = new FakeTimeProvider();
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
 
-            _dynamoDbOutbox.AddAsync(_messageEarliest).Wait();
+            _dynamoDbOutbox.AddAsync(_messageEarliest, new RequestContext()).Wait();
          }
 
         [Fact]
         public void When_the_message_is_already_in_the_outbox()
         {
-            _exception = Catch.Exception(() => _dynamoDbOutbox.Add(_messageEarliest));
+            _exception = Catch.Exception(() => _dynamoDbOutbox.Add(_messageEarliest, new RequestContext()));
 
             //_should_ignore_the_duplicate_key_and_still_succeed
             _exception.Should().BeNull();

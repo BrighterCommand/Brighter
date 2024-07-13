@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -38,8 +39,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="outbox">The outbox to record outbound messages on the control bus</param>
         /// <param name="producerRegistry">The list of producers to send with</param>
+        /// <param name="tracer">The tracer lets us create open telemetry information</param>
         /// <returns>IAmAControlBusSender.</returns>
-        IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry)
+        IAmAControlBusSender Create<T, TTransaction>(
+            IAmAnOutbox outbox, 
+            IAmAProducerRegistry producerRegistry, 
+            BrighterTracer tracer
+        )
             where T: Message;
     }
 }

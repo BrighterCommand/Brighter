@@ -24,11 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -40,11 +43,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
     public class CommandProcessorPostBoxBulkClearAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly Message _message;
-        private readonly Message _message2;
-        private readonly FakeOutbox _fakeOutbox;
-        private readonly FakeMessageProducerWithPublishConfirmation _producer;
-        private readonly FakeMessageProducerWithPublishConfirmation _producerTwo;
+        private readonly Message _messageOne;
+        private readonly Message _messageTwo;
+        private readonly InMemoryOutbox _outbox;
+        private readonly InternalBus _internalBus = new();
 
         public CommandProcessorPostBoxBulkClearAsyncTests()
         {
@@ -54,15 +56,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var myCommand = new MyCommand{ Value = "Hello World"};
             var myCommand2 = new MyCommand { Value = "Hello World 2" };
 
-            _producer = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
-            _producerTwo = new FakeMessageProducerWithPublishConfirmation{Publication = {Topic = new RoutingKey(topic2), RequestType = typeof(MyCommand)}};
+            var timeProvider = new FakeTimeProvider();
 
-            _message = new Message(
+            InMemoryProducer producer = new(_internalBus, timeProvider)
+            {
+                Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+            };
+            
+            InMemoryProducer producerTwo = new(_internalBus, timeProvider)
+            {
+                Publication = {Topic = new RoutingKey(topic2), RequestType = typeof(MyCommand)}
+            };
+
+            _messageOne = new Message(
                 new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
-            _message2 = new Message(
+            _messageTwo = new Message(
                 new MessageHeader(myCommand.Id, topic2, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand2, JsonSerialisationOptions.Options))
             );
@@ -83,19 +94,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                { topic, _producer },
-                { topic2, _producerTwo }
+                { topic, producer },
+                { topic2, producerTwo }
             });
             
-            _fakeOutbox = new FakeOutbox();
-        
+            var tracer = new BrighterTracer();
+            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
+
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
-                _fakeOutbox
+                tracer,
+                _outbox
             );
         
             CommandProcessor.ClearServiceBus();
@@ -110,27 +123,32 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         [Fact(Skip = "Erratic due to timing")]
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
-            await _fakeOutbox.AddAsync(_message);
-            await _fakeOutbox.AddAsync(_message2);
+            var context = new RequestContext();
+            await _outbox.AddAsync(_messageOne, context);
+            await _outbox.AddAsync(_messageTwo, context);
 
-            _commandProcessor.ClearAsyncOutbox(2, 1, true);
+            _commandProcessor.ClearOutstandingFromOutbox(2, 1);
 
             await Task.Delay(3000);
 
             //_should_send_a_message_via_the_messaging_gateway
-            _producer.MessageWasSent.Should().BeTrue();
+            var routingKeyOne = new RoutingKey(_messageOne.Header.Topic);
+            _internalBus.Stream(routingKeyOne).Any().Should().BeTrue();
 
-            var sentMessage = _producer.SentMessages[0];
+            var sentMessage = _internalBus.Dequeue(routingKeyOne);
             sentMessage.Should().NotBeNull();
-            sentMessage.Id.Should().Be(_message.Id);
-            sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
-            sentMessage.Body.Value.Should().Be(_message.Body.Value);
+            sentMessage.Id.Should().Be(_messageOne.Id);
+            sentMessage.Header.Topic.Should().Be(_messageOne.Header.Topic);
+            sentMessage.Body.Value.Should().Be(_messageOne.Body.Value);
 
-            var sentMessage2 = _producer.SentMessages[1];
+            var routingKeyTwo = new RoutingKey(_messageTwo.Header.Topic);
+            _internalBus.Stream(routingKeyOne).Any().Should().BeTrue();
+            
+            var sentMessage2 = _internalBus.Dequeue(routingKeyTwo); 
             sentMessage2.Should().NotBeNull();
-            sentMessage2.Id.Should().Be(_message2.Id);
-            sentMessage2.Header.Topic.Should().Be(_message2.Header.Topic);
-            sentMessage2.Body.Value.Should().Be(_message2.Body.Value);
+            sentMessage2.Id.Should().Be(_messageTwo.Id);
+            sentMessage2.Header.Topic.Should().Be(_messageTwo.Header.Topic);
+            sentMessage2.Body.Value.Should().Be(_messageTwo.Body.Value);
         }
 
         public void Dispose()

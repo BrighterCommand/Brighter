@@ -10,28 +10,16 @@ public interface IDistributedLock
     /// </summary>
     /// <param name="resource">The name of the resource to Lock</param>
     /// <param name="cancellationToken">The Cancellation Token</param>
-    /// <returns>True if the lock was obtained</returns>
-    Task<bool> ObtainLockAsync(string resource, CancellationToken cancellationToken);
-    
-    /// <summary>
-    /// Attempt to obtain a lock on a resource
-    /// </summary>
-    /// <param name="resource">The name of the resource to Lock</param>
-    /// <returns>True if the lock was obtained</returns>
-    bool ObtainLock(string resource);
+    /// <returns>The id of the lock that has been acquired or null if no lock was able to be acquired</returns>
+    Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken);
 
     /// <summary>
     /// Release a lock
     /// </summary>
-    /// <param name="resource"></param>
+    /// <param name="resource">The name of the resource to Lock</param>
+    /// <param name="lockId">The lock Id that was provided when the lock was obtained</param>
     /// <param name="cancellationToken"></param>
     /// <returns>Awaitable Task</returns>
-    Task ReleaseLockAsync(string resource, CancellationToken cancellationToken);
+    Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken);
     
-    /// <summary>
-    /// Release a lock
-    /// </summary>
-    /// <param name="resource"></param>
-    /// <returns>Awaitable Task</returns>
-    void ReleaseLock(string resource);
 }
