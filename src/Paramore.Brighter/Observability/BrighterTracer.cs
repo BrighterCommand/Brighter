@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -473,7 +474,7 @@ public class BrighterTracer : IAmABrighterTracer
     /// Ends a collection of named spans
     /// </summary>
     /// <param name="handlerSpans"></param>
-    public void EndSpans(Dictionary<string, Activity> handlerSpans)
+    public void EndSpans(ConcurrentDictionary<string, Activity> handlerSpans)
     {
         if (!handlerSpans.Any()) return;
             
@@ -488,7 +489,7 @@ public class BrighterTracer : IAmABrighterTracer
     /// Mainly used with a batch to link siblings to each other
     /// </summary>
     /// <param name="handlerSpans"></param>
-    public void LinkSpans(Dictionary<string, Activity> handlerSpans)
+    public void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans)
     {
         if (!handlerSpans.Any()) return;
           

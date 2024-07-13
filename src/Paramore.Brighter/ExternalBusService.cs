@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -337,13 +338,13 @@ namespace Paramore.Brighter
             s_clearSemaphoreToken.Wait();
             var parentSpan = requestContext.Span;
             
-            var childSpans = new Dictionary<string, Activity>();
+            var childSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
                 foreach (var messageId in posts)
                 {
                     var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);
-                    childSpans.Add(messageId, span);
+                    childSpans.TryAdd(messageId, span);
                     requestContext.Span = span;
 
                     var message = _outBox.Get(messageId, requestContext);
@@ -389,14 +390,14 @@ namespace Paramore.Brighter
             await s_clearSemaphoreToken.WaitAsync(cancellationToken);
             var parentSpan = requestContext.Span;
             
-            var childSpans = new Dictionary<string, Activity>();
+            var childSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
                 foreach (var messageId in posts)
                 {
                     var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
                         messageId, _instrumentationOptions);
-                    if (span != null) childSpans.Add(messageId, span);
+                    if (span != null) childSpans.TryAdd(messageId, span);
                     requestContext.Span = span;
 
                     var message = await _asyncOutbox.GetAsync(messageId, requestContext, _outboxTimeout, args, cancellationToken);
@@ -825,7 +826,7 @@ namespace Paramore.Brighter
         private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object> args = null)
         {
             var parentSpan = requestContext.Span;
-            var producerSpans = new Dictionary<string, Activity>();
+            var producerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
                 foreach (var message in posts)
@@ -838,7 +839,7 @@ namespace Paramore.Brighter
                     var producer = _producerRegistry.LookupBy(message.Header.Topic);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span, _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.Add(message.Id, span);
+                    if (span != null) producerSpans.TryAdd(message.Id, span);
 
                     if (producer is IAmAMessageProducerSync producerSync)
                     {
@@ -878,7 +879,7 @@ namespace Paramore.Brighter
         private async Task BulkDispatchAsync(IEnumerable<Message> posts, RequestContext requestContext, CancellationToken cancellationToken)
         {
             var parentSpan = requestContext.Span;
-            var producerSpans = new Dictionary<string, Activity>();
+            var producerSpans = new ConcurrentDictionary<string, Activity>();
             
             //Chunk into Topics
             try
@@ -890,7 +891,7 @@ namespace Paramore.Brighter
                     var producer = _producerRegistry.LookupBy(topicBatch.Key);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span, _instrumentationOptions);
                     producer.Span = span;
-                    producerSpans.Add(topicBatch.Key, span);
+                    producerSpans.TryAdd(topicBatch.Key, span);
 
                     if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
                     {
@@ -937,7 +938,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken)
         {
             var parentSpan = requestContext.Span;
-            var producerSpans = new Dictionary<string, Activity>();
+            var producerSpans = new ConcurrentDictionary<string, Activity>();
 
             try
             {
@@ -951,7 +952,7 @@ namespace Paramore.Brighter
                     var producer = _producerRegistry.LookupBy(message.Header.Topic);
                     var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan, _instrumentationOptions);
                     producer.Span = span;
-                    if (span != null) producerSpans.Add(message.Id, span);
+                    if (span != null) producerSpans.TryAdd(message.Id, span);
 
                     if (producer is IAmAMessageProducerAsync producerAsync)
                     {

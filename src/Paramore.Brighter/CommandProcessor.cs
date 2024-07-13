@@ -319,7 +319,7 @@ namespace Paramore.Brighter
             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
-            var handlerSpans = new Dictionary<string, Activity>();
+            var handlerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
@@ -393,7 +393,7 @@ namespace Paramore.Brighter
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
-            var handlerSpans = new Dictionary<string, Activity>();
+            var handlerSpans = new ConcurrentDictionary<string, Activity>();
              try
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -113,13 +114,13 @@ public interface IAmABrighterTracer : IDisposable
     /// Ends a collection of named spans
     /// </summary>
     /// <param name="handlerSpans"></param>
-    void EndSpans(Dictionary<string, Activity> handlerSpans);
+    void EndSpans(ConcurrentDictionary<string, Activity> handlerSpans);
 
     /// <summary>
     /// Links together a collection of spans
     /// Mainly used with a batch to link siblings to each other
     /// </summary>
     /// <param name="handlerSpans"></param>
-    void LinkSpans(Dictionary<string, Activity> handlerSpans);
+    void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans);
 
 }
