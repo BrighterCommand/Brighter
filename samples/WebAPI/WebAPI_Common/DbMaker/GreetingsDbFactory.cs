@@ -18,24 +18,24 @@ public static class GreetingsDbFactory
         if (string.IsNullOrWhiteSpace(greetingsDbType))
             throw new InvalidOperationException("DbType is not set");
 
-        DatabaseType databaseType = DbResolver.GetDatabaseType(greetingsDbType);
+        Rdbms rdbms = DbResolver.GetDatabaseType(greetingsDbType);
 
-        switch (databaseType)
+        switch (rdbms)
         {
-            case DatabaseType.MySql:
+            case Rdbms.MySql:
                 ConfigureMySql(configuration, services);
                 break;
-            case DatabaseType.MsSql:
+            case Rdbms.MsSql:
                 ConfigureMsSql(configuration, services);
                 break;
-            case DatabaseType.Postgres:
+            case Rdbms.Postgres:
                 ConfigurePostgreSql(configuration, services);
                 break;
-            case DatabaseType.Sqlite:
+            case Rdbms.Sqlite:
                 ConfigureSqlite(configuration, services);
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
+                throw new ArgumentOutOfRangeException(nameof(rdbms), "Database type is not supported");
         }
     }
 
@@ -49,7 +49,7 @@ public static class GreetingsDbFactory
             )
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
-                DbType = DatabaseType.MsSql.ToString()
+                DbType = Rdbms.MsSql.ToString()
             });
     }
 
@@ -63,7 +63,7 @@ public static class GreetingsDbFactory
             )
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
-                DbType = DatabaseType.MySql.ToString()
+                DbType = Rdbms.MySql.ToString()
             });
     }
 
@@ -78,7 +78,7 @@ public static class GreetingsDbFactory
             )
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
-                DbType = DatabaseType.Postgres.ToString()
+                DbType = Rdbms.Postgres.ToString()
             });
     }
 
@@ -92,7 +92,7 @@ public static class GreetingsDbFactory
             )
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
             {
-                DbType = DatabaseType.Sqlite.ToString()
+                DbType = Rdbms.Sqlite.ToString()
             });
     }
 }

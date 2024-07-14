@@ -94,13 +94,10 @@ public class Startup
         string dbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (string.IsNullOrWhiteSpace(dbType))
             throw new InvalidOperationException("DbType is not set");
-        
+
+        var rdbms = DbResolver.GetDatabaseType(dbType);
         (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-            OutboxFactory.MakeOutbox(
-                DbResolver.GetDatabaseType(dbType),
-                outboxConfiguration,
-                services
-            );
+            OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
         services.AddBrighter(options =>
             {

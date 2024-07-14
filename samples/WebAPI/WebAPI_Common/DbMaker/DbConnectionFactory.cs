@@ -8,15 +8,15 @@ namespace DbMaker;
 
 public static class DbConnectionFactory
 {
-    public static DbConnection GetConnection(DatabaseType databaseType, string connectionString)
+    public static DbConnection GetConnection(Rdbms rdbms, string connectionString)
     {
-        return databaseType switch
+        return rdbms switch
         {
-            DatabaseType.MySql => new MySqlConnection(connectionString),
-            DatabaseType.MsSql => new SqlConnection(connectionString),
-            DatabaseType.Postgres => new NpgsqlConnection(connectionString),
-            DatabaseType.Sqlite => new SqliteConnection(connectionString),
-            _ => throw new ArgumentOutOfRangeException(nameof(databaseType), databaseType, null)
+            Rdbms.MySql => new MySqlConnection(connectionString),
+            Rdbms.MsSql => new SqlConnection(connectionString),
+            Rdbms.Postgres => new NpgsqlConnection(connectionString),
+            Rdbms.Sqlite => new SqliteConnection(connectionString),
+            _ => throw new ArgumentOutOfRangeException(nameof(rdbms), rdbms, null)
         };
     }
 }

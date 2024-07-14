@@ -74,10 +74,10 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     if (string.IsNullOrWhiteSpace(dbType))
         throw new InvalidOperationException("DbType is not set");
 
-    DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
+    Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
     string? connectionString =
         ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-            databaseType);
+            rdbms);
 
     RelationalDatabaseConfiguration relationalDatabaseConfiguration = new(connectionString);
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
@@ -89,7 +89,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
     (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-        OutboxFactory.MakeOutbox(databaseType, outboxConfiguration, services);
+        OutboxFactory.MakeEfOutbox<SalutationsEntityGateway>(rdbms, outboxConfiguration);
 
     IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
 
@@ -122,7 +122,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
-                InboxFactory.MakeInbox(databaseType, relationalDatabaseConfiguration),
+                InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),
                 InboxScope.Commands
             );
         })
@@ -159,9 +159,9 @@ static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection s
     if (string.IsNullOrWhiteSpace(dbType))
         throw new InvalidOperationException("DbType is not set");
 
-    DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
+    Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
     string connectionString = ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-        databaseType);
+        rdbms);
 
     if (hostContext.HostingEnvironment.IsDevelopment())
     {

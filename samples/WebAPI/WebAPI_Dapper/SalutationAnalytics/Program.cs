@@ -80,10 +80,10 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     if (string.IsNullOrWhiteSpace(dbType))
         throw new InvalidOperationException("DbType is not set");
 
-    DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
+    Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
     string? connectionString =
         ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-            databaseType);
+            rdbms);
 
     RelationalDatabaseConfiguration relationalDatabaseConfiguration = new(connectionString);
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
@@ -95,7 +95,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
     (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-        OutboxFactory.MakeOutbox(databaseType, outboxConfiguration, services);
+        OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
     services.AddServiceActivator(options =>
         {
@@ -107,7 +107,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             options.CommandProcessorLifetime = ServiceLifetime.Scoped;
             options.PolicyRegistry = new SalutationPolicy();
             options.InboxConfiguration = new InboxConfiguration(
-                InboxFactory.MakeInbox(databaseType, relationalDatabaseConfiguration),
+                InboxFactory.MakeInbox(rdbms, relationalDatabaseConfiguration),
                 InboxScope.Commands
             );
         })
@@ -140,20 +140,20 @@ static void ConfigureDapper(HostBuilderContext hostContext, IServiceCollection s
     ConfigureDapperByHost(DbResolver.GetDatabaseType(dbType), services);
 }
 
-static void ConfigureDapperByHost(DatabaseType databaseType, IServiceCollection services)
+static void ConfigureDapperByHost(Rdbms databaseType, IServiceCollection services)
 {
     switch (databaseType)
     {
-        case DatabaseType.Sqlite:
+        case Rdbms.Sqlite:
             ConfigureDapperSqlite(services);
             break;
-        case DatabaseType.MySql:
+        case Rdbms.MySql:
             ConfigureDapperMySql(services);
             break;
-        case DatabaseType.MsSql:
+        case Rdbms.MsSql:
             ConfigureDapperMsSql(services);
             break;
-        case DatabaseType.Postgres:
+        case Rdbms.Postgres:
             ConfigureDapperPostgreSql(services);
             break;
         default:

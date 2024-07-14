@@ -86,11 +86,10 @@ namespace GreetingsWeb
             string dbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
             if (string.IsNullOrWhiteSpace(dbType))
                 throw new InvalidOperationException("DbType is not set");
-            
-            (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) = OutboxFactory.MakeOutbox(
-                DbResolver.GetDatabaseType(dbType),
-                outboxConfiguration,
-                services);
+
+            var rdbms = DbResolver.GetDatabaseType(dbType);
+            (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) = 
+                OutboxFactory.MakeEfOutbox<GreetingsEntityGateway>(rdbms, outboxConfiguration);
             
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
             
@@ -141,10 +140,10 @@ namespace GreetingsWeb
 
             switch (dbType)
             {
-                case DatabaseType.Sqlite:
+                case Rdbms.Sqlite:
                     ConfigureSqlite(services, connectionString);
                     break;
-                case DatabaseType.MySql:
+                case Rdbms.MySql:
                     ConfigureMySql(services, connectionString);
                     break;
                 default:

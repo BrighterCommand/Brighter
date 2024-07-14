@@ -76,7 +76,7 @@ namespace GreetingsWeb
         {
             _client = ConnectionResolver.CreateAndRegisterClient(services, _env.IsDevelopment());
             DbFactory.CreateEntityStore<Person>(_client);
-            OutboxFactory.CreateOutbox(_client, services);
+            OutboxFactory.MakeDynamoOutbox(_client);
         }
 
         private void ConfigureBrighter(IServiceCollection services)

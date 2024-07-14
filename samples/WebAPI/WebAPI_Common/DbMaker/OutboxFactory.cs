@@ -1,42 +1,42 @@
 ﻿using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Paramore.Brighter;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.MsSql.EntityFrameworkCore;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.MySql.EntityFrameworkCore;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.PostgreSql;
+using Paramore.Brighter.PostgreSql.EntityFrameworkCore;
 using Paramore.Brighter.Sqlite;
+using Paramore.Brighter.Sqlite.EntityFrameworkCore;
 
 namespace DbMaker;
 
 public static class OutboxFactory
 {
-    public static (IAmAnOutbox, Type, Type) MakeOutbox(
-        DatabaseType databaseType,
-        RelationalDatabaseConfiguration configuration,
-        IServiceCollection services)
+    public static (IAmAnOutbox, Type, Type) MakeDapperOutbox(Rdbms rdbms, RelationalDatabaseConfiguration configuration)
     {
-        (IAmAnOutbox, Type, Type) outbox = databaseType switch
+        (IAmAnOutbox, Type, Type) outbox = rdbms switch
         {
-            DatabaseType.MySql => MakeMySqlOutbox(configuration),
-            DatabaseType.MsSql => MakeMsSqlOutbox(configuration),
-            DatabaseType.Postgres => MakePostgresSqlOutbox(configuration),
-            DatabaseType.Sqlite => MakeSqliteOutBox(configuration),
+            Rdbms.MySql => MakeDapperMySqlOutbox(configuration),
+            Rdbms.MsSql => MakeDapperMsSqlOutbox(configuration),
+            Rdbms.Postgres => MakeDapperPostgresSqlOutbox(configuration),
+            Rdbms.Sqlite => MakeDapperSqliteOutBox(configuration),
             _ => throw new InvalidOperationException("Unknown Db type for Outbox configuration")
         };
 
         return outbox;
     }
 
-    public static void CreateOutbox(IAmazonDynamoDB client, IServiceCollection services)
+    public static void MakeDynamoOutbox(IAmazonDynamoDB client)
     {
-        var tableRequestFactory = new DynamoDbTableFactory();
         var dbTableBuilder = new DynamoDbTableBuilder(client);
             
         var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
@@ -49,34 +49,75 @@ public static class OutboxFactory
                 }
             ));
         var outboxTableName = createTableRequest.TableName;
-        (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] {outboxTableName}).Result;
+        (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new[] {outboxTableName}).Result;
         if (!hasTables.exist)
         {
             _ = dbTableBuilder.Build(createTableRequest).Result;
             dbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
         }
     }
+    
+    public static (IAmAnOutbox, Type, Type) MakeEfOutbox<T>(Rdbms rdbms,  RelationalDatabaseConfiguration configuration)
+        where T : DbContext
+    {
+        (IAmAnOutbox, Type, Type) outbox = rdbms switch
+        {
+            Rdbms.MySql => MakeEfMySqlOutbox<T>(configuration),
+            Rdbms.MsSql => MakeEfMsSqlOutbox<T>(configuration),
+            Rdbms.Postgres => MakeEfPostgreSqlOutbox<T>(configuration),
+            Rdbms.Sqlite => MakeEfSqliteOutBox<T>(configuration),
+            _ => throw new InvalidOperationException("Unknown Db type for Outbox configuration")
+        };
 
-    private static (IAmAnOutbox, Type, Type) MakePostgresSqlOutbox(
-        RelationalDatabaseConfiguration configuration)
+        return outbox;
+    }
+
+    private static (IAmAnOutbox, Type, Type) MakeDapperPostgresSqlOutbox(RelationalDatabaseConfiguration configuration)
     {
         return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlConnectionProvider),
             typeof(PostgreSqlUnitOfWork));
     }
+    
+    private static (IAmAnOutbox, Type, Type) MakeEfPostgreSqlOutbox<T>(RelationalDatabaseConfiguration configuration)
+        where T : DbContext
+    {
+        return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlConnectionProvider), 
+                typeof(PostgreSqlEntityFrameworkConnectionProvider<T>)
+            );
+    }
 
-    private static (IAmAnOutbox, Type, Type) MakeMsSqlOutbox(RelationalDatabaseConfiguration configuration)
+    private static (IAmAnOutbox, Type, Type) MakeDapperMsSqlOutbox(RelationalDatabaseConfiguration configuration)
     {
         return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration), typeof(MsSqlConnectionProvider),
             typeof(MsSqlUnitOfWork));
     }
+    
+    private static (IAmAnOutbox, Type, Type) MakeEfMsSqlOutbox<T>(RelationalDatabaseConfiguration configuration)
+        where T : DbContext
+    {
+        return new ValueTuple<IAmAnOutbox, Type, Type>(new MsSqlOutbox(configuration), typeof(MsSqlConnectionProvider),
+            typeof(MsSqlEntityFrameworkCoreConnectionProvider<T>));
+    }
 
-    private static (IAmAnOutbox, Type, Type) MakeMySqlOutbox(RelationalDatabaseConfiguration configuration)
+    private static (IAmAnOutbox, Type, Type) MakeDapperMySqlOutbox(RelationalDatabaseConfiguration configuration)
     {
         return (new MySqlOutbox(configuration), typeof(MySqlConnectionProvider), typeof(MySqlUnitOfWork));
     }
+    
+    private static (IAmAnOutbox, Type, Type) MakeEfMySqlOutbox<T>(RelationalDatabaseConfiguration configuration)
+        where T : DbContext
+    {
+        return (new MySqlOutbox(configuration), typeof(MySqlConnectionProvider), typeof(MySqlEntityFrameworkConnectionProvider<T>));
+    }
 
-    private static (IAmAnOutbox, Type, Type) MakeSqliteOutBox(RelationalDatabaseConfiguration configuration)
+    private static (IAmAnOutbox, Type, Type) MakeDapperSqliteOutBox(RelationalDatabaseConfiguration configuration)
     {
         return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteUnitOfWork));
+    }
+    
+    private static (IAmAnOutbox, Type, Type) MakeEfSqliteOutBox<T>(RelationalDatabaseConfiguration configuration)
+        where T : DbContext
+    {
+        return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteEntityFrameworkConnectionProvider<T>));
     }
 }

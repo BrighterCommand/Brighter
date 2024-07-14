@@ -13,46 +13,46 @@ public static class ConnectionResolver
         if (string.IsNullOrWhiteSpace(dbType))
             throw new InvalidOperationException("DbType is not set");
 
-        DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
-        return databaseType switch
+        Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
+        return rdbms switch
         {
-            DatabaseType.MySql => configuration.GetConnectionString("GreetingsMySql"),
-            DatabaseType.MsSql => configuration.GetConnectionString("GreetingsMsSql"),
-            DatabaseType.Postgres => configuration.GetConnectionString("GreetingsPostgreSql"),
-            DatabaseType.Sqlite => "Filename=Greetings.db;Cache=Shared",
+            Rdbms.MySql => configuration.GetConnectionString("GreetingsMySql"),
+            Rdbms.MsSql => configuration.GetConnectionString("GreetingsMsSql"),
+            Rdbms.Postgres => configuration.GetConnectionString("GreetingsPostgreSql"),
+            Rdbms.Sqlite => "Filename=Greetings.db;Cache=Shared",
             _ => throw new InvalidOperationException("Could not determine the database type")
         };
     }
 
-    public static string? GetSalutationsDbConnectionString(IConfiguration config, DatabaseType databaseType)
+    public static string? GetSalutationsDbConnectionString(IConfiguration config, Rdbms rdbms)
     {
-        return databaseType switch
+        return rdbms switch
         {
-            DatabaseType.MySql => config.GetConnectionString("SalutationsMySql"),
-            DatabaseType.MsSql => config.GetConnectionString("SalutationsMsSql"),
-            DatabaseType.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
-            DatabaseType.Sqlite => "Filename=Salutations.db;Cache=Shared",
+            Rdbms.MySql => config.GetConnectionString("SalutationsMySql"),
+            Rdbms.MsSql => config.GetConnectionString("SalutationsMsSql"),
+            Rdbms.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
+            Rdbms.Sqlite => "Filename=Salutations.db;Cache=Shared",
             _ => throw new InvalidOperationException("Could not determine the database type")
         };
     }
 
-    public static (DatabaseType databaseType, string? connectionString) ServerConnectionString(
+    public static (Rdbms databaseType, string? connectionString) ServerConnectionString(
         IConfiguration configuration)
     {
         string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (string.IsNullOrWhiteSpace(dbType))
             throw new InvalidOperationException("DbType is not set");
 
-        DatabaseType databaseType = DbResolver.GetDatabaseType(dbType);
-        string? connectionString = databaseType switch
+        Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
+        string? connectionString = rdbms switch
         {
-            DatabaseType.MySql => configuration.GetConnectionString("MySqlDb"),
-            DatabaseType.MsSql => configuration.GetConnectionString("MsSqlDb"),
-            DatabaseType.Postgres => configuration.GetConnectionString("PostgreSqlDb"),
-            DatabaseType.Sqlite => "Filename=Greetings.db;Cache=Shared",
+            Rdbms.MySql => configuration.GetConnectionString("MySqlDb"),
+            Rdbms.MsSql => configuration.GetConnectionString("MsSqlDb"),
+            Rdbms.Postgres => configuration.GetConnectionString("PostgreSqlDb"),
+            Rdbms.Sqlite => "Filename=Greetings.db;Cache=Shared",
             _ => throw new InvalidOperationException("Could not determine the database type")
         };
-        return (databaseType, connectionString);
+        return (rdbms, connectionString);
     }
 
     public static IAmazonDynamoDB CreateAndRegisterClient(IServiceCollection services, bool isLocal)

@@ -35,7 +35,7 @@ public static class SchemaCreation
         IConfiguration? config = services.GetService<IConfiguration>();
         if (config == null)
             throw new InvalidOperationException("Could not resolve IConfiguration");
-        (DatabaseType dbType, string? connectionString) = ConnectionResolver.ServerConnectionString(config);
+        (Rdbms dbType, string? connectionString) = ConnectionResolver.ServerConnectionString(config);
         if (connectionString == null)
             throw new InvalidOperationException("Could not resolve connection string; did you set a DbType?");
 
@@ -93,27 +93,27 @@ public static class SchemaCreation
         return webHost;
     }
 
-    private static void CreateDatabaseIfNotExists(DatabaseType databaseType, DbConnection conn)
+    private static void CreateDatabaseIfNotExists(Rdbms rdbms, DbConnection conn)
     {
-        CreateGreetingsIfNotExists(databaseType, conn);
-        CreateSalutationsIfNotExists(databaseType, conn);
+        CreateGreetingsIfNotExists(rdbms, conn);
+        CreateSalutationsIfNotExists(rdbms, conn);
     }
 
-    private static void CreateGreetingsIfNotExists(DatabaseType databaseType, DbConnection conn)
+    private static void CreateGreetingsIfNotExists(Rdbms rdbms, DbConnection conn)
     {
         //don't use DDL for SQlite
-        if (databaseType == DatabaseType.Sqlite)
+        if (rdbms == Rdbms.Sqlite)
             return;
         
         //The migration does not create the Db, so we need to create it sot that it will add it
         conn.Open();
         using DbCommand command = conn.CreateCommand();
 
-        command.CommandText = databaseType switch
+        command.CommandText = rdbms switch
         {
-            DatabaseType.MySql => "CREATE DATABASE IF NOT EXISTS Greetings",
-            DatabaseType.Postgres => "CREATE DATABASE Greetings",
-            DatabaseType.MsSql =>
+            Rdbms.MySql => "CREATE DATABASE IF NOT EXISTS Greetings",
+            Rdbms.Postgres => "CREATE DATABASE Greetings",
+            Rdbms.MsSql =>
                 "IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'Greetings') CREATE DATABASE Greetings",
             _ => throw new InvalidOperationException("Could not create instance of Greetings for unknown Db type")
         };
@@ -136,21 +136,21 @@ public static class SchemaCreation
         }
     }
 
-    private static void CreateSalutationsIfNotExists(DatabaseType databaseType, DbConnection conn)
+    private static void CreateSalutationsIfNotExists(Rdbms rdbms, DbConnection conn)
     {
         //don't use DDL for SQlite
-        if (databaseType == DatabaseType.Sqlite)
+        if (rdbms == Rdbms.Sqlite)
             return;
         
         //The migration does not create the Db, so we need to create it sot that it will add it
         conn.Open();
         using DbCommand command = conn.CreateCommand();
 
-        command.CommandText = databaseType switch
+        command.CommandText = rdbms switch
         {
-            DatabaseType.MySql => "CREATE DATABASE IF NOT EXISTS Salutations",
-            DatabaseType.Postgres => "CREATE DATABASE Salutations",
-            DatabaseType.MsSql =>
+            Rdbms.MySql => "CREATE DATABASE IF NOT EXISTS Salutations",
+            Rdbms.Postgres => "CREATE DATABASE Salutations",
+            Rdbms.MsSql =>
                 "IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'Salutations') CREATE DATABASE Salutations",
             _ => throw new InvalidOperationException("Could not create instance of Salutations for unknown Db type")
         };
@@ -196,20 +196,20 @@ public static class SchemaCreation
         }
     }
 
-    private static void CreateInboxProduction(DatabaseType databaseType, string connectionString)
+    private static void CreateInboxProduction(Rdbms rdbms, string connectionString)
     {
-        switch (databaseType)
+        switch (rdbms)
         {
-            case DatabaseType.MySql:
+            case Rdbms.MySql:
                 CreateInboxMySql(connectionString);
                 break;
-            case DatabaseType.MsSql:
+            case Rdbms.MsSql:
                 CreateInboxMsSql(connectionString);
                 break;
-            case DatabaseType.Postgres:
+            case Rdbms.Postgres:
                 CreateInboxPostgres(connectionString);
                 break;
-            case DatabaseType.Sqlite:
+            case Rdbms.Sqlite:
                 CreateInboxSqlite(connectionString);
                 break;
             default:
@@ -294,7 +294,7 @@ public static class SchemaCreation
 
         try
         {
-            (DatabaseType databaseType, string? connectionString) connectionString =
+            (Rdbms databaseType, string? connectionString) connectionString =
                 ConnectionResolver.ServerConnectionString(config);
             if (connectionString.connectionString == null)
                 throw new InvalidOperationException(
@@ -324,23 +324,23 @@ public static class SchemaCreation
     }
 
     private static void CreateOutboxProduction(
-        DatabaseType databaseType,
-        (DatabaseType databaseType, string? connectionString) db,
+        Rdbms rdbms,
+        (Rdbms databaseType, string? connectionString) db,
         bool hasBinaryPayload
     )
     {
-        switch (databaseType)
+        switch (rdbms)
         {
-            case DatabaseType.MySql:
+            case Rdbms.MySql:
                 CreateOutboxMySql(db.connectionString, hasBinaryPayload);
                 break;
-            case DatabaseType.MsSql:
+            case Rdbms.MsSql:
                 CreateOutboxMsSql(db.connectionString, hasBinaryPayload);
                 break;
-            case DatabaseType.Postgres:
+            case Rdbms.Postgres:
                 CreateOutboxPostgres(db.connectionString, hasBinaryPayload);
                 break;
-            case DatabaseType.Sqlite:
+            case Rdbms.Sqlite:
                 CreateOutboxSqlite(db.connectionString, hasBinaryPayload);
                 break;
             default:
@@ -415,7 +415,7 @@ public static class SchemaCreation
         command.ExecuteScalar();
     }
 
-    private static void WaitToConnect(DatabaseType dbType, string connectionString)
+    private static void WaitToConnect(Rdbms db, string connectionString)
     {
         RetryPolicy? policy = Policy.Handle<DbException>().WaitAndRetryForever(
             _ => TimeSpan.FromSeconds(2),
@@ -427,7 +427,7 @@ public static class SchemaCreation
 
         policy.Execute(() =>
         {
-            using DbConnection conn = DbConnectionFactory.GetConnection(dbType, connectionString);
+            using DbConnection conn = DbConnectionFactory.GetConnection(db, connectionString);
             conn.Open();
         });
     }

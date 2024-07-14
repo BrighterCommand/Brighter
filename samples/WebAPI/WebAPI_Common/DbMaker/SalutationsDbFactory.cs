@@ -18,25 +18,25 @@ public class SalutationsDbFactory
 
 static void BuildSalutationsDatabase(
     HostBuilderContext hostBuilderContext,
-    DatabaseType databaseType,
+    Rdbms rdbms,
     IServiceCollection services)
 {
-    switch (databaseType)
+    switch (rdbms)
     {
-        case DatabaseType.MySql:
+        case Rdbms.MySql:
             ConfigureMySql(hostBuilderContext, services);
             break;
-        case DatabaseType.MsSql:
+        case Rdbms.MsSql:
             ConfigureMsSql(hostBuilderContext, services);
             break;
-        case DatabaseType.Postgres:
+        case Rdbms.Postgres:
             ConfigurePostgreSql(hostBuilderContext, services);
             break;
-        case DatabaseType.Sqlite:
+        case Rdbms.Sqlite:
             ConfigureSqlite(hostBuilderContext, services);
             break;
         default:
-            throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
+            throw new ArgumentOutOfRangeException(nameof(rdbms), "Database type is not supported");
     }
 }
 

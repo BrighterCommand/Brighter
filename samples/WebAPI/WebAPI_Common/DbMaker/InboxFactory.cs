@@ -14,15 +14,15 @@ namespace DbMaker;
 
 public static class InboxFactory
 {
-    public static IAmAnInbox MakeInbox(DatabaseType databaseType, IAmARelationalDatabaseConfiguration configuration)
+    public static IAmAnInbox MakeInbox(Rdbms rdbms, IAmARelationalDatabaseConfiguration configuration)
     {
-        return databaseType switch
+        return rdbms switch
         {
-            DatabaseType.Sqlite => new SqliteInbox(configuration),
-            DatabaseType.MySql => new MySqlInbox(configuration),
-            DatabaseType.MsSql => new MsSqlInbox(configuration),
-            DatabaseType.Postgres => new PostgreSqlInbox(configuration),
-            _ => throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported")
+            Rdbms.Sqlite => new SqliteInbox(configuration),
+            Rdbms.MySql => new MySqlInbox(configuration),
+            Rdbms.MsSql => new MsSqlInbox(configuration),
+            Rdbms.Postgres => new PostgreSqlInbox(configuration),
+            _ => throw new ArgumentOutOfRangeException(nameof(rdbms), "Database type is not supported")
         };
     }
 

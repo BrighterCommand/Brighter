@@ -131,7 +131,7 @@ static void ConfigureBrighter(
 static void ConfigureDynamo(IAmazonDynamoDB dynamoDb, IServiceCollection services)
 {
     DbFactory.CreateEntityStore<Salutation>(dynamoDb);
-    OutboxFactory.CreateOutbox(dynamoDb, services);
+    OutboxFactory.MakeDynamoOutbox(dynamoDb);
     InboxFactory.CreateInbox<GreetingMade>(dynamoDb, services);
 }
 

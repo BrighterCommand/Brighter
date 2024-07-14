@@ -30,12 +30,9 @@ var dbType = builder.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
 if (string.IsNullOrEmpty(dbType))
     throw new ArgumentNullException("No database type specified in configuration");
 
+var rdbms = DbResolver.GetDatabaseType(dbType);
 (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-    OutboxFactory.MakeOutbox(
-        DbResolver.GetDatabaseType(dbType),
-        outboxConfiguration,
-        builder.Services
-    );
+    OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
 builder.Services.AddBrighter(options =>
 {
