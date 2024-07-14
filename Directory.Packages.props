@@ -7,7 +7,7 @@
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.304.5" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
     <PackageVersion Include="AWSSDK.S3" Version="3.7.310.3" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.116" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.119" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.301.64" />
     <PackageVersion Include="AWSSDK.SQS" Version="3.7.301.29" />
     <PackageVersion Include="Azure.Identity" Version="1.12.0" />
