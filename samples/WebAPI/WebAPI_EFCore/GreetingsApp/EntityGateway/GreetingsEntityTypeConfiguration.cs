@@ -8,8 +8,8 @@ namespace GreetingsApp.EntityGateway
     {
         public void Configure(EntityTypeBuilder<Greeting> builder)
         {
-            builder.HasKey("_id");
-            builder.Property("_id");
+            builder.HasKey("Id");
+            builder.Property("Id");
             builder.Property(g => g.Message).IsRequired();
             builder.HasOne(g => g.Recipient);
         }

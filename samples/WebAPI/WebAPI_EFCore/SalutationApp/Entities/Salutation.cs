@@ -2,9 +2,10 @@
 {
     public class Salutation
     {
-        private int _id;
+        public long Id { get; set; }
+        public string Greeting { get; set; }
         public byte[] TimeStamp { get; set; }
-         public string Greeting { get; }
+        
         public Salutation(string greeting)
         {
             Greeting = greeting;
@@ -12,7 +13,7 @@
 
         public Salutation(int id, string greeting)
         {
-            _id = id;
+            Id = id;
             Greeting = greeting;
         }
 

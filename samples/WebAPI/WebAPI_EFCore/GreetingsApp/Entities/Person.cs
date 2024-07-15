@@ -5,10 +5,11 @@ namespace GreetingsApp.Entities
 {
     public class Person
     {
-        private int _id;
-        private readonly List<Greeting> _greetings = new List<Greeting>();
-        public byte[] TimeStamp { get; set; }
+        private readonly List<Greeting> _greetings = new();
+        
+        public int Id { get; set; }
         public string Name { get; }
+        public byte[] TimeStamp { get; set; }
         public IReadOnlyList<Greeting> Greetings => _greetings;
 
         public Person(string name)
@@ -18,7 +19,7 @@ namespace GreetingsApp.Entities
 
         public Person(int id, string name)
         {
-            _id = id;
+            Id = id;
             Name = name;
         }
 

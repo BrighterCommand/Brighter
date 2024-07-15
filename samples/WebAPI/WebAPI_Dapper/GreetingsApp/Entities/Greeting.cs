@@ -2,6 +2,12 @@
 
 public class Greeting
 {
+    public long Id { get; set; }
+
+    public string Message { get; set; }
+
+    public long RecipientId { get; set; }
+    
     public Greeting()
     {
         /*Required by Dapperextensions*/
@@ -24,13 +30,6 @@ public class Greeting
         Message = message;
         RecipientId = recipient.Id;
     }
-
-    public long Id { get; set; }
-
-    public string Message { get; set; }
-
-    //public Person Recipient { get; set; }
-    public long RecipientId { get; set; }
 
     public string Greet()
     {

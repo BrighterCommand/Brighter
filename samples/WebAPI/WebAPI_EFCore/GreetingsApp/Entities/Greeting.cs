@@ -4,7 +4,7 @@ namespace GreetingsApp.Entities
 {
     public class Greeting
     {
-        private int _id;
+        public long Id { get; set; }
         public string Message { get; set; }
         public Person Recipient { get; set; }
 
@@ -13,9 +13,15 @@ namespace GreetingsApp.Entities
             Message = message;
         }
         
+        public Greeting(string message, Person recipient)
+        {
+            Message = message;
+            Recipient = recipient;
+        }
+        
         public Greeting(int id, string message, Person recipient)
         {
-            _id = id;
+            Id = id;
             Message = message;
             Recipient = recipient;
         }
