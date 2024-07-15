@@ -74,7 +74,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
 
     AddSchemaRegistryMaybe(services, messagingTransport);
 
-    Subscription[] subscriptions = ConfigureTransport.GetSubscriptions<SalutationReceived>(messagingTransport);
+    Subscription[] subscriptions = ConfigureTransport.GetSubscriptions<GreetingMade>(messagingTransport);
 
     string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
     if (string.IsNullOrWhiteSpace(dbType))
