@@ -47,7 +47,10 @@ builder.Services.AddBrighter(options =>
     configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
 });
 
+builder.Services.AddHealthChecks();
+
 WebApplication app = builder.Build();
+
 
 app.MapHealthChecks("/health");
 app.MapHealthChecks("/health/detail", new HealthCheckOptions

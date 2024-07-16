@@ -16,7 +16,9 @@
       "launchUrl": "swagger",
       "applicationUrl": "http://localhost:5256",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "BRIGHTER_GREETINGS_DATABASE": "Sqlite",
+        "BRIGHTER_TRANSPORT": "RabbitMQ"
       }
     },
     "https": {
@@ -26,7 +28,9 @@
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7068;http://localhost:5256",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "BRIGHTER_GREETINGS_DATABASE": "Sqlite",
+        "BRIGHTER_TRANSPORT": "RabbitMQ"
       }
     },
     "IIS Express": {
