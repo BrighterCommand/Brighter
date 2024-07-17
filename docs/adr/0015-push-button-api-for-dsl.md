@@ -1,4 +1,4 @@
-# 15. Push Button API for all DSLs 
+# 15. A Push Button API must underlie any Fluent Interface 
 
 Date: 2024-07-16
 
@@ -12,7 +12,7 @@ It has become a common paradigm for setup code to use a [Fluent Interface](https
 
 A Fluent API is in contrast to a push-button API or command-query API [Fowler] where the methods on an object are likened to buttons that can be pushed to invoke a particular behavior. 
 
->In the early days of objects one of the biggest influences on me, and many others, was Bertrand Meyers book "Object-Oriented Software Construction". One of the analogies he used to talk about objects was to treat them as machines. In this view an object was a black box with its interface as a series of buttons that you could press -effectively offerring a menu of different things you can do with the object. 
+>In the early days of objects one of the biggest influences on me, and many others, was Bertrand Meyers book "Object-Oriented Software Construction". One of the analogies he used to talk about objects was to treat them as machines. In this view an object was a black box with its interface as a series of buttons that you could press-effectively offering a menu of different things you can do with the object. 
 ><div align="right">Fowler, Martin. Domain Specific Languages</div>
 
 A push-button API has more control, buttons may be pushed independently, but is less discoverable and the user may have to rely on documentation if particular sequences of method calls are required to obtain certain behaviors.

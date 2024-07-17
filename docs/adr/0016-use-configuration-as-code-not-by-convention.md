@@ -1,4 +1,4 @@
-# 16. Use Configuration As Code
+# 16. Use Configuration As Code, Not Configuration By Convention
 
 Date: 2024-07-17
 
