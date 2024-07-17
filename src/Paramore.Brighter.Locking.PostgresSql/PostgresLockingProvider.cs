@@ -1,4 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿#nullable enable
+
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -14,7 +16,7 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
     {
         if (_connections.ContainsKey(resource))
         {
-            return resource;
+            return null;
         }
 
         var connection = new NpgsqlConnection(options.ConnectionString);
@@ -35,7 +37,11 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
     }
 
     /// <inheritdoc />
-    public async Task ReleaseLockAsync(string resource, CancellationToken cancellationToken)
+    public async Task ReleaseLockAsync(
+        string resource,
+        string lockId,
+        CancellationToken cancellationToken
+    )
     {
         if (!_connections.TryRemove(resource, out var connection))
         {

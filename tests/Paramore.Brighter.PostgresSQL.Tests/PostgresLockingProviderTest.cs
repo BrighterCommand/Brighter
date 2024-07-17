@@ -12,11 +12,12 @@ public class PostgresLockingProviderTest
 
     public PostgresLockingProviderTest()
     {
-        var helper = new PostgresSqlTestHelper(); 
+        var helper = new PostgresSqlTestHelper();
         helper.SetupDatabase();
-        _locking = new PostgresLockingProvider(new PostgresLockingProviderOptions(helper.Configuration.ConnectionString));
+        _locking = new PostgresLockingProvider(
+            new PostgresLockingProviderOptions(helper.Configuration.ConnectionString)
+        );
     }
-
 
     [Fact]
     public async Task GivenAnPostgresLockingProvider_WhenLockIsCalled_ItCanOnlyBeObtainedOnce()
@@ -26,23 +27,23 @@ public class PostgresLockingProviderTest
         var first = await _locking.ObtainLockAsync(resourceName, CancellationToken.None);
         var second = await _locking.ObtainLockAsync(resourceName, CancellationToken.None);
 
-        Assert.True(first);
-        Assert.False(second, "A Lock should not be able to be acquired");
+        Assert.Equal(first, resourceName);
+        Assert.Null(second);
     }
-    
-    
+
     [Fact]
     public async Task GivenAnPostgresLockingProviderWithALockedBlob_WhenReleaseLockIsCalled_ItCanOnlyBeLockedAgain()
     {
         var resourceName = $"TestLock-{Guid.NewGuid()}";
 
-        var firstLock = await _locking.ObtainLockAsync(resourceName, CancellationToken.None);
-        await _locking.ReleaseLockAsync(resourceName, CancellationToken.None);
-        var secondLock = await _locking.ObtainLockAsync(resourceName, CancellationToken.None); 
-        var thirdLock = await _locking.ObtainLockAsync(resourceName, CancellationToken.None); 
-            
-        Assert.True(firstLock);
-        Assert.True(secondLock, "A Lock should be able to be acquired");
-        Assert.False(thirdLock, "A Lock should not be able to be acquired");
+        var first = await _locking.ObtainLockAsync(resourceName, CancellationToken.None);
+        await _locking.ReleaseLockAsync(resourceName, first, CancellationToken.None);
+
+        var second = await _locking.ObtainLockAsync(resourceName, CancellationToken.None);
+        var third = await _locking.ObtainLockAsync(resourceName, CancellationToken.None);
+
+        Assert.Equal(first, resourceName);
+        Assert.Equal(second, resourceName);
+        Assert.Null(third);
     }
 }
