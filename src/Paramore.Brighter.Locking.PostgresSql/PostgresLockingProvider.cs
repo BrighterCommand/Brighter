@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -10,11 +10,11 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
     private readonly ConcurrentDictionary<string, NpgsqlConnection> _connections = new();
 
     /// <inheritdoc />
-    public async Task<bool> ObtainLockAsync(string resource, CancellationToken cancellationToken)
+    public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
         if (_connections.ContainsKey(resource))
         {
-            return false;
+            return resource;
         }
 
         var connection = new NpgsqlConnection(options.ConnectionString);
@@ -27,36 +27,11 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
         var scalar = await command.ExecuteScalarAsync(cancellationToken);
         if (scalar is not (null or true))
         {
-            return false;
+            return resource;
         }
 
         _connections.TryAdd(resource, connection);
-        return true;
-    }
-
-    /// <inheritdoc />
-    public bool ObtainLock(string resource)
-    {
-        if (_connections.ContainsKey(resource))
-        {
-            return false;
-        }
-
-        var connection = new NpgsqlConnection(options.ConnectionString);
-        connection.Open();
-
-        using var command = connection.CreateCommand();
-        command.CommandText = "SELECT pg_try_advisory_lock(@RESOURCE_HASH_CODE, @RESOURCE_LEN)";
-        command.Parameters.AddWithValue("@RESOURCE_HASH_CODE", resource.GetHashCode());
-        command.Parameters.AddWithValue("@RESOURCE_LEN", resource.Length);
-        var scalar = command.ExecuteScalar();
-        if (scalar is not (null or true))
-        {
-            return false;
-        }
-
-        _connections.TryAdd(resource, connection);
-        return true;
+        return resource;
     }
 
     /// <inheritdoc />
@@ -69,17 +44,5 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
 
         await connection.CloseAsync();
         await connection.DisposeAsync();
-    }
-
-    /// <inheritdoc />
-    public void ReleaseLock(string resource)
-    {
-        if (!_connections.TryRemove(resource, out var connection))
-        {
-            return;
-        }
-
-        connection.Close();
-        connection.Dispose();
     }
 }
