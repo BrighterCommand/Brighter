@@ -1,10 +1,14 @@
+using System.Text;
 using System.Text.Json;
 using DbMaker;
+using Greetings_Sweeper.Extensions;
 using GreetingsApp.Messaging;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.Observability;
 using TransportMaker;
 
@@ -45,12 +49,20 @@ builder.Services.AddBrighter(options =>
     configure.ConnectionProvider = makeOutbox.connectionProvider;
     configure.MaxOutStandingMessages = 5;
     configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+})
+.UseOutboxSweeper(options =>
+{
+    options.TimerInterval = 3000;
+    options.MinimumMessageAge = 1000;
+    options.BatchSize = 10;
+    options.UseBulk = true;
 });
 
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks().BrighterOutboxHealthCheck();
 
 WebApplication app = builder.Build();
 
+app.UseRouting();
 
 app.MapHealthChecks("/health");
 app.MapHealthChecks("/health/detail", new HealthCheckOptions
@@ -69,6 +81,5 @@ app.MapHealthChecks("/health/detail", new HealthCheckOptions
         await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
     }
 });
-
 
 app.Run();

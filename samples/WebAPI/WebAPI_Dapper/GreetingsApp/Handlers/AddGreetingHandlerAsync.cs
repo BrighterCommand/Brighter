@@ -85,7 +85,7 @@ public class AddGreetingHandlerAsync : RequestHandlerAsync<AddGreeting>
 
         //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.
         //Alternatively, you can let the Sweeper do this, but at the cost of increased latency
-        await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
+        //await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
 
         return await base.HandleAsync(addGreeting, cancellationToken);
     }
