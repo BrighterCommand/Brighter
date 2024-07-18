@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Locking.DynamoDb
 {
@@ -30,6 +32,8 @@ namespace Paramore.Brighter.Locking.DynamoDb
         private readonly IAmazonDynamoDB _dynamoDb;
         private readonly DynamoDbLockingProviderOptions _options;
         private readonly TimeProvider _timeProvider;
+
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<DynamoDbLockingProvider>();
 
         public DynamoDbLockingProvider(IAmazonDynamoDB dynamoDb, DynamoDbLockingProviderOptions options)
             :this(dynamoDb, options, TimeProvider.System)
@@ -59,9 +63,11 @@ namespace Paramore.Brighter.Locking.DynamoDb
             }
             catch (ConditionalCheckFailedException)
             {
+                s_logger.LogInformation("Unable to obtain lock for resource {resource}, an existing lock is in place", resource);
                 return null;
             }
 
+            s_logger.LogInformation("Obtained lock {lockId} for resource {resource}", lockId, resource);
             return lockId;
         }
 
@@ -82,7 +88,7 @@ namespace Paramore.Brighter.Locking.DynamoDb
                 }
                 catch (ConditionalCheckFailedException)
                 {
-                    // Log that the lease is no longer valid
+                    s_logger.LogInformation("Unable to release lock {lockId} for resource {resourceId} - lock has expired", lockId, resource);
                 }
             }
         }
