@@ -10,9 +10,9 @@ using TransportMaker;
 
 IHost host = CreateHostBuilder(args).Build();
 
-host.CheckDbIsUp();
+host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
-host.CreateOutbox(ConfigureTransport.HasBinaryMessagePayload());
+host.CreateOutbox(ApplicationType.Greetings, ConfigureTransport.HasBinaryMessagePayload());
 
 host.Run();
 return;

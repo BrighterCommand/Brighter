@@ -3,8 +3,7 @@ This sample shows a typical scenario when using WebAPI and Brighter/Darker. It d
 
 ## Architecture
 
-### Outbox
-Brighter does have an [Outbox pattern support](https://paramore.readthedocs.io/en/latest/OutboxPattern.html). In case you are new to it, consider reading it before diving deeper.
+
 
 ### GreetingsWeb
 
@@ -21,6 +20,14 @@ We follow a _ports and adapters_ architectural style, dividing the app into the 
 We 'depend on inwards' i.e. **GreetingsWeb -> GreetingsApp**
 
 The assemblies migrations: **Greetings_MySqlMigrations** and **Greetings_SqliteMigrations** hold generated code to configure the Db. Consider this adapter layer code - the use of separate modules allows us to switch migration per environment.
+
+### GreetingsSweeoer
+ 
+This reads the Outbox table and sends messages to the broker. By default the `AddGreetingHandlerAsync.cs` will clear the outbox immediately so the Sweeper will only send the message on a failure to talk to the broker. If you comment out the ClearOutbox line from the handler, you will be able to fall back to using the Sweeper to send the message.
+
+Note that you will need to run the Sweeper in a separate terminal window to the rest of the app.
+
+In the Sweeper appsettings.*.json file you will need to set the path to the Outbox database. This is the same database as the main app uses, but the Sweeper needs to know where it is to read the Outbox. Using an absolute path is recommended, but requires you to use values from your machine.
 
 ### SalutationAnalytics
 

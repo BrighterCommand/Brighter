@@ -19,7 +19,7 @@ public static class ConnectionResolver
             Rdbms.MySql => configuration.GetConnectionString("GreetingsMySql"),
             Rdbms.MsSql => configuration.GetConnectionString("GreetingsMsSql"),
             Rdbms.Postgres => configuration.GetConnectionString("GreetingsPostgreSql"),
-            Rdbms.Sqlite => "Filename=Greetings.db;Cache=Shared",
+            Rdbms.Sqlite => configuration.GetConnectionString("GreetingsSqlite"), 
             _ => throw new InvalidOperationException("Could not determine the database type")
         };
     }
@@ -31,13 +31,14 @@ public static class ConnectionResolver
             Rdbms.MySql => config.GetConnectionString("SalutationsMySql"),
             Rdbms.MsSql => config.GetConnectionString("SalutationsMsSql"),
             Rdbms.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
-            Rdbms.Sqlite => "Filename=Salutations.db;Cache=Shared",
+            Rdbms.Sqlite => config.GetConnectionString("SalutationsSqlite"),
             _ => throw new InvalidOperationException("Could not determine the database type")
         };
     }
 
     public static (Rdbms databaseType, string? connectionString) ServerConnectionString(
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ApplicationType applicationType)
     {
         string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (string.IsNullOrWhiteSpace(dbType))
@@ -49,7 +50,9 @@ public static class ConnectionResolver
             Rdbms.MySql => configuration.GetConnectionString("MySqlDb"),
             Rdbms.MsSql => configuration.GetConnectionString("MsSqlDb"),
             Rdbms.Postgres => configuration.GetConnectionString("PostgreSqlDb"),
-            Rdbms.Sqlite => "Filename=Greetings.db;Cache=Shared",
+            Rdbms.Sqlite => applicationType == ApplicationType.Greetings ? 
+                configuration.GetConnectionString("GreetingsSqlite") : 
+                configuration.GetConnectionString("SalutationsSqlite"), 
             _ => throw new InvalidOperationException("Could not determine the database type")
         };
         return (rdbms, connectionString);

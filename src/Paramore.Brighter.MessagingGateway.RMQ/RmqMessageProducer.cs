@@ -141,7 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     }
 
                     s_logger.LogInformation(
-                        "RmqMessageProducer: Published message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}",
+                        "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delayMilliseconds,
                         message.Header.Topic, message.Persist, message.Id,
                         JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);

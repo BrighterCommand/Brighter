@@ -20,10 +20,10 @@ using SalutationApp.Requests;
 using TransportMaker;
 
 IHost host = CreateHostBuilder(args).Build();
-host.CheckDbIsUp();
+host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
 host.CreateInbox();
-host.CreateOutbox(ConfigureTransport.HasBinaryMessagePayload());
+host.CreateOutbox(ApplicationType.Greetings, ConfigureTransport.HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 

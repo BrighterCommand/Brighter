@@ -25,7 +25,7 @@ MessagingTransport messagingTransport =
 
 RelationalDatabaseConfiguration outboxConfiguration = new(
     ConnectionResolver.GreetingsDbConnectionString(builder.Configuration),
-    binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
+    binaryMessagePayload: messagingTransport == MessagingTransport.Rmq
 );
 
 builder.Services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
@@ -52,10 +52,10 @@ builder.Services.AddBrighter(options =>
 })
 .UseOutboxSweeper(options =>
 {
-    options.TimerInterval = 3000;
+    options.TimerInterval = 3;
     options.MinimumMessageAge = 1000;
     options.BatchSize = 10;
-    options.UseBulk = true;
+    options.UseBulk = false;
 });
 
 builder.Services.AddHealthChecks().BrighterOutboxHealthCheck();

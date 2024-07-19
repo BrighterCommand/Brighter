@@ -27,7 +27,7 @@ public static class SchemaCreation
     private const string INBOX_TABLE_NAME = "Inbox";
     private const string OUTBOX_TABLE_NAME = "Outbox";
 
-    public static IHost CheckDbIsUp(this IHost webHost)
+    public static IHost CheckDbIsUp(this IHost webHost, ApplicationType applicationType)
     {
         using IServiceScope scope = webHost.Services.CreateScope();
 
@@ -35,7 +35,7 @@ public static class SchemaCreation
         IConfiguration? config = services.GetService<IConfiguration>();
         if (config == null)
             throw new InvalidOperationException("Could not resolve IConfiguration");
-        (Rdbms dbType, string? connectionString) = ConnectionResolver.ServerConnectionString(config);
+        (Rdbms dbType, string? connectionString) = ConnectionResolver.ServerConnectionString(config, applicationType);
         if (connectionString == null)
             throw new InvalidOperationException("Could not resolve connection string; did you set a DbType?");
 
@@ -58,7 +58,7 @@ public static class SchemaCreation
         return host;
     }
 
-    public static IHost CreateOutbox(this IHost webHost, bool hasBinaryPayload)
+    public static IHost CreateOutbox(this IHost webHost, ApplicationType applicationType, bool hasBinaryPayload)
     {
         using IServiceScope scope = webHost.Services.CreateScope();
         IServiceProvider services = scope.ServiceProvider;
@@ -66,7 +66,7 @@ public static class SchemaCreation
         if (config == null)
             throw new InvalidOperationException("Could not resolve IConfiguration");
 
-        CreateOutbox(config, hasBinaryPayload);
+        CreateOutbox(config, hasBinaryPayload, applicationType);
 
         return webHost;
     }
@@ -286,7 +286,7 @@ public static class SchemaCreation
         command.ExecuteScalar();
     }
 
-    private static void CreateOutbox(IConfiguration config, bool hasBinaryPayload)
+    private static void CreateOutbox(IConfiguration config, bool hasBinaryPayload, ApplicationType applicationType)
     {
         string? dbType = config[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (dbType == null)
@@ -295,7 +295,7 @@ public static class SchemaCreation
         try
         {
             (Rdbms databaseType, string? connectionString) connectionString =
-                ConnectionResolver.ServerConnectionString(config);
+                ConnectionResolver.ServerConnectionString(config, applicationType);
             if (connectionString.connectionString == null)
                 throw new InvalidOperationException(
                     "Could not resolve connection string; did you set a connection string?");
