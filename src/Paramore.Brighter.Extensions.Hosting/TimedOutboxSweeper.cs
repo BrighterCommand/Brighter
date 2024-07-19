@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Extensions.Hosting
         {
             s_logger.LogInformation("Outbox Sweeper Service is starting.");
 
-            _timer = new Timer((e) => Sweep(e, cancellationToken), null, TimeSpan.Zero,
+            _timer = new Timer((e) => Sweep(e), null, TimeSpan.Zero,
                 TimeSpan.FromSeconds(_options.TimerInterval));
 
             return Task.CompletedTask;
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             _timer?.Dispose();
         }
 
-        private void Sweep(object state, CancellationToken cancellationToken)
+        private void Sweep(object state)
         {
             var lockId = _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None).Result;
             if (lockId != null)
@@ -126,10 +126,6 @@ namespace Paramore.Brighter.Extensions.Hosting
                         outBoxSweeper.SweepAsyncOutbox();
                     else
                         outBoxSweeper.Sweep();
-                }
-                catch (Exception e)
-                {
-                    s_logger.LogError(e, "Error while sweeping the outbox.");
                 }
                 finally
                 {

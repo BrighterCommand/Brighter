@@ -433,7 +433,9 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// This is the clear outbox for explicit clearing of messages.
+        /// This is the clear outbox for explicit clearing of messages. It runs a task in the background to clear the outbox.
+        /// This method returns whilst that thread runs, so it is non-blocking but also does not indicate the clear has
+        /// happened by returning control - that happens in parallel. 
         /// </summary>
         /// <param name="amountToClear">Maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
@@ -449,24 +451,15 @@ namespace Paramore.Brighter
             if (HasAsyncOutbox())
             {
                 Task.Run(() =>
-                            BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
-                        CancellationToken.None
-                    )
-                    .ContinueWith((t) =>
-                    {
-                        if (t.Exception != null)
-                            ThrowAsSingleException(t.Exception);
-                    });
+                        BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
+                    CancellationToken.None
+                );
             }
             else if (HasOutbox())
             {
                 Task.Run(() =>
                     BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args)
-                ).ContinueWith((t) =>
-                {
-                    if (t.Exception != null)
-                        ThrowAsSingleException(t.Exception);
-                });
+                );
             }
             else
             {
@@ -663,7 +656,7 @@ namespace Paramore.Brighter
                 {
                     requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                     s_logger.LogError(e, "Error while dispatching from outbox");
-                    throw;
+                    return Task.FromException(e);
                 }
                 finally
                 {
@@ -796,11 +789,7 @@ namespace Paramore.Brighter
             //This is expensive, so use a background thread
             Task.Run(
                 () => OutstandingMessagesCheck(requestContext)
-            ).ContinueWith((t) =>
-            {
-                if (t.Exception != null)
-                    ThrowAsSingleException(t.Exception);
-            });
+            );
         }
 
         /// <summary>
@@ -1183,25 +1172,6 @@ namespace Paramore.Brighter
             }
 
             return true;
-        }
-        
-        private static void ThrowAsSingleException(AggregateException ae)
-        {
-            // Flatten the AggregateException to get the inner exceptions
-            var innerExceptions = ae.Flatten().InnerExceptions;
-
-            // Check if there's only one inner exception and rethrow it directly
-            if (innerExceptions.Count == 1)
-            {
-                throw innerExceptions[0];
-            }
-            else
-            {
-                // If there are multiple inner exceptions, handle accordingly
-                // For example, create a new exception that includes all the messages
-                var combinedMessage = string.Join("; ", innerExceptions.Select(e => e.Message));
-                throw new InvalidOperationException($"Multiple exceptions occurred: {combinedMessage}", ae);
-            }
         }
     }
 }

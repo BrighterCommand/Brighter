@@ -315,12 +315,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     {
                         Task.Run(
                             () => OnMessagePublished?.Invoke(true, val)
-                        ).ContinueWith((t) =>
-                        {
-                            if (!t.IsFaulted) return;
-                            if (t.Exception != null)
-                                throw t.Exception;
-                        });
+                        );
                         return;
                     }
                 }
@@ -328,12 +323,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             Task.Run(
                 () =>OnMessagePublished?.Invoke(false, string.Empty)
-            ).ContinueWith((t) =>
-            {
-                if (!t.IsFaulted) return;
-                if (t.Exception != null)
-                    throw t.Exception;
-            });
+            );
         }
     }
 }
