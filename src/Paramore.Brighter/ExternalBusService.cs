@@ -17,7 +17,8 @@ namespace Paramore.Brighter
     /// Provide services to CommandProcessor that persist across the lifetime of the application. Allows separation from
     /// elements that have a lifetime linked to the scope of a request, or are transient for DI purposes
     /// </summary>
-    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService, IAmAnExternalBusService<TMessage, TTransaction>
+    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService,
+        IAmAnExternalBusService<TMessage, TTransaction>
         where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
@@ -32,17 +33,15 @@ namespace Paramore.Brighter
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly int _archiveBatchSize;
         private readonly InstrumentationOptions _instrumentationOptions;
-        private readonly Dictionary<string, List<TMessage>> _outboxBatches = new Dictionary<string, List<TMessage>>();
+        private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
-        private static readonly SemaphoreSlim s_clearSemaphoreToken = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
 
-        private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new(1, 1);
 
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
         //bool should be made thread-safe by locking the object
-        private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
-
-        private const string BULKDISPATCHMESSAGE = "Bulk dispatching messages";
+        private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
 
@@ -89,14 +88,17 @@ namespace Paramore.Brighter
             int archiveBatchSize = 100,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
-            _producerRegistry = producerRegistry ?? throw new ConfigurationException("Missing Producer Registry for External Bus Services");
-            _policyRegistry = policyRegistry?? throw new ConfigurationException("Missing Policy Registry for External Bus Services");
+            _producerRegistry = producerRegistry ??
+                                throw new ConfigurationException("Missing Producer Registry for External Bus Services");
+            _policyRegistry = policyRegistry ??
+                              throw new ConfigurationException("Missing Policy Registry for External Bus Services");
             _archiveProvider = archiveProvider;
-            
+
             requestContextFactory ??= new InMemoryRequestContextFactory();
-            
-            if (mapperRegistry is null) 
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
+
+            if (mapperRegistry is null)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
             if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
                 throw new ConfigurationException(
                     "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
@@ -111,7 +113,7 @@ namespace Paramore.Brighter
             //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox(TimeProvider.System);
             outbox.Tracer = tracer;
-            
+
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
 
@@ -162,26 +164,28 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default,
-            string batchId = null) 
+            string batchId = null)
         {
             if (batchId != null)
             {
                 _outboxBatches[batchId].Add(message);
                 return;
             }
+
             CheckOutboxOutstandingLimit();
-            
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span, 
-                overridingTransactionProvider != null, true, _instrumentationOptions); 
+
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span,
+                overridingTransactionProvider != null, true, _instrumentationOptions);
 
             var written = await RetryAsync(
                 async ct =>
                 {
-                    await _asyncOutbox.AddAsync(message, requestContext, _outboxTimeout, overridingTransactionProvider, ct)
+                    await _asyncOutbox
+                        .AddAsync(message, requestContext, _outboxTimeout, overridingTransactionProvider, ct)
                         .ConfigureAwait(continueOnCapturedContext);
                 },
                 requestContext,
-                continueOnCapturedContext, 
+                continueOnCapturedContext,
                 cancellationToken
             ).ConfigureAwait(continueOnCapturedContext);
 
@@ -209,19 +213,21 @@ namespace Paramore.Brighter
                 _outboxBatches[batchId].Add(message);
                 return;
             }
+
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span, 
-                overridingTransactionProvider != null, false, _instrumentationOptions); 
- 
-            var written = Retry(() => 
-                { _outBox.Add(message, requestContext, _outboxTimeout, overridingTransactionProvider); }, 
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, message, requestContext.Span,
+                overridingTransactionProvider != null, false, _instrumentationOptions);
+
+            var written = Retry(() =>
+                {
+                    _outBox.Add(message, requestContext, _outboxTimeout, overridingTransactionProvider);
+                },
                 requestContext
             );
 
             if (!written)
                 throw new ChannelFailureException($"Could not write message {message.Id} to the outbox");
-
         }
 
         /// <summary>
@@ -272,22 +278,24 @@ namespace Paramore.Brighter
         /// <param name="millisecondsDispatchedSince"></param>
         /// <param name="requestContext"></param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        public async Task ArchiveAsync(int millisecondsDispatchedSince, RequestContext requestContext, CancellationToken cancellationToken)
+        public async Task ArchiveAsync(int millisecondsDispatchedSince, RequestContext requestContext,
+            CancellationToken cancellationToken)
         {
             try
             {
                 var messages = (await _asyncOutbox.DispatchedMessagesAsync(
-                    millisecondsDispatchedSince, requestContext, pageSize: _archiveBatchSize, cancellationToken: cancellationToken
+                    millisecondsDispatchedSince, requestContext, pageSize: _archiveBatchSize,
+                    cancellationToken: cancellationToken
                 )).ToArray();
 
                 if (messages.Length <= 0) return;
-                
+
                 foreach (var message in messages)
                 {
                     await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
-                } 
+                }
 
-                await _asyncOutbox.DeleteAsync(messages.Select(e => e.Id).ToArray(), requestContext, 
+                await _asyncOutbox.DeleteAsync(messages.Select(e => e.Id).ToArray(), requestContext,
                     cancellationToken: cancellationToken
                 );
             }
@@ -326,8 +334,8 @@ namespace Paramore.Brighter
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
         public void ClearOutbox(
-            string[] posts, 
-            RequestContext requestContext, 
+            string[] posts,
+            RequestContext requestContext,
             Dictionary<string, object> args = null
         )
         {
@@ -337,21 +345,23 @@ namespace Paramore.Brighter
             // Only allow a single Clear to happen at a time
             s_clearSemaphoreToken.Wait();
             var parentSpan = requestContext.Span;
-            
+
             var childSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
                 foreach (var messageId in posts)
                 {
-                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, messageId, _instrumentationOptions);
+                    var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span,
+                        messageId, _instrumentationOptions);
                     childSpans.TryAdd(messageId, span);
                     requestContext.Span = span;
 
                     var message = _outBox.Get(messageId, requestContext);
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
-                    
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, span, false, false, _instrumentationOptions);
+
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, span, false, false,
+                        _instrumentationOptions);
 
                     Dispatch(new[] { message }, requestContext, args);
                 }
@@ -389,7 +399,7 @@ namespace Paramore.Brighter
 
             await s_clearSemaphoreToken.WaitAsync(cancellationToken);
             var parentSpan = requestContext.Span;
-            
+
             var childSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
@@ -400,13 +410,16 @@ namespace Paramore.Brighter
                     if (span != null) childSpans.TryAdd(messageId, span);
                     requestContext.Span = span;
 
-                    var message = await _asyncOutbox.GetAsync(messageId, requestContext, _outboxTimeout, args, cancellationToken);
+                    var message = await _asyncOutbox.GetAsync(messageId, requestContext, _outboxTimeout, args,
+                        cancellationToken);
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
-                    
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, requestContext.Span, false, true, _instrumentationOptions);
 
-                    await DispatchAsync(new[] { message }, requestContext, continueOnCapturedContext, cancellationToken);
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Get, message, requestContext.Span, false, true,
+                        _instrumentationOptions);
+
+                    await DispatchAsync(new[] { message }, requestContext, continueOnCapturedContext,
+                        cancellationToken);
                 }
             }
             finally
@@ -435,20 +448,29 @@ namespace Paramore.Brighter
         {
             if (HasAsyncOutbox())
             {
-                Task.Run(() => 
-                        BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
+                Task.Run(() =>
+                            BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
                         CancellationToken.None
-                );
+                    )
+                    .ContinueWith((t) =>
+                    {
+                        if (t.Exception != null)
+                            ThrowAsSingleException(t.Exception);
+                    });
             }
             else if (HasOutbox())
             {
-                Task.Run(() => 
+                Task.Run(() =>
                     BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args)
-                );
+                ).ContinueWith((t) =>
+                {
+                    if (t.Exception != null)
+                        ThrowAsSingleException(t.Exception);
+                });
             }
             else
             {
-                throw new InvalidOperationException("No outbox defined."); 
+                throw new InvalidOperationException("No outbox defined.");
             }
         }
 
@@ -459,7 +481,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="TRequest">the type of the request</typeparam>
         /// <returns></returns>
-        public Message CreateMessageFromRequest<TRequest>(TRequest request, RequestContext requestContext) 
+        public Message CreateMessageFromRequest<TRequest>(TRequest request, RequestContext requestContext)
             where TRequest : class, IRequest
         {
             var message = MapMessage(request, requestContext);
@@ -492,7 +514,8 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
-        public void CreateRequestFromMessage<TRequest>(Message message, RequestContext requestContext, out TRequest request)
+        public void CreateRequestFromMessage<TRequest>(Message message, RequestContext requestContext,
+            out TRequest request)
             where TRequest : class, IRequest
         {
             if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
@@ -508,10 +531,10 @@ namespace Paramore.Brighter
                 request = _transformPipelineBuilder
                     .BuildUnwrapPipeline<TRequest>()
                     .Unwrap(message, requestContext);
-            } 
+            }
             else
             {
-                throw new ArgumentOutOfRangeException(nameof(request),"No message mapper defined for request");
+                throw new ArgumentOutOfRangeException(nameof(request), "No message mapper defined for request");
             }
         }
 
@@ -531,11 +554,13 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span, 
-                transactionProvider != null, false, _instrumentationOptions); 
- 
-            var written = Retry(() => 
-                { _outBox.Add(_outboxBatches[batchId], requestContext, _outboxTimeout, transactionProvider); }, 
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span,
+                transactionProvider != null, false, _instrumentationOptions);
+
+            var written = Retry(() =>
+                {
+                    _outBox.Add(_outboxBatches[batchId], requestContext, _outboxTimeout, transactionProvider);
+                },
                 requestContext
             );
 
@@ -560,7 +585,7 @@ namespace Paramore.Brighter
                 transactionProvider != null, true, _instrumentationOptions);
 
             var written = await RetryAsync(
-                async ct =>
+                async _ =>
                 {
                     await _asyncOutbox.AddAsync(_outboxBatches[batchId], requestContext, _outboxTimeout,
                         transactionProvider, cancellationToken);
@@ -593,8 +618,8 @@ namespace Paramore.Brighter
             return _outBox != null;
         }
 
-        private async Task BackgroundDispatchUsingSync(
-            int amountToClear, 
+        private Task BackgroundDispatchUsingSync(
+            int amountToClear,
             int millisecondsSinceSent,
             RequestContext requestContext,
             Dictionary<string, object> args
@@ -605,32 +630,40 @@ namespace Paramore.Brighter
             clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
+                //NOTE: The wait handle only signals availability, still need to increment the counter:
+                // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
+                s_backgroundClearSemaphoreToken.Wait();
+                s_clearSemaphoreToken.Wait();
+                
                 var parentSpan = requestContext.Span;
-                var span= _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
+                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                    _instrumentationOptions);
 
                 try
                 {
                     requestContext.Span = span;
-                    
-                    var messages = _outBox.OutstandingMessages(millisecondsSinceSent, 
+
+                    var messages = _outBox.OutstandingMessages(millisecondsSinceSent,
                         requestContext, amountToClear, args: args
                     ).ToArray();
 
                     requestContext.Span = parentSpan;
-                    
+
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
-                    
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, false, _instrumentationOptions);
-                    
+
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, false,
+                        _instrumentationOptions);
+
                     Dispatch(messages, requestContext, args);
-                    
+
                     s_logger.LogInformation("Messages have been cleared");
                 }
                 catch (Exception e)
                 {
                     requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                     s_logger.LogError(e, "Error while dispatching from outbox");
+                    throw;
                 }
                 finally
                 {
@@ -646,11 +679,13 @@ namespace Paramore.Brighter
                 requestContext.Span?.SetStatus(ActivityStatusCode.Error);
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
+
+            return Task.CompletedTask;
         }
-        
+
         private async Task BackgroundDispatchUsingAsync(
-            int amountToClear, 
-            int milliSecondsSinceSent, 
+            int amountToClear,
+            int milliSecondsSinceSent,
             bool useBulk,
             RequestContext requestContext,
             Dictionary<string, object> args
@@ -661,19 +696,25 @@ namespace Paramore.Brighter
             clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
+                //NOTE: The wait handle only signals availability, still need to increment the counter:
+                // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
+                await s_backgroundClearSemaphoreToken.WaitAsync();
+                await s_clearSemaphoreToken.WaitAsync();
                 
                 var parentSpan = requestContext.Span;
-                var span= _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null, _instrumentationOptions);                   
-                 try
+                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                    _instrumentationOptions);
+                try
                 {
-                   requestContext.Span = span;
-                    
+                    requestContext.Span = span;
+
                     var messages =
-                        (await _asyncOutbox.OutstandingMessagesAsync(milliSecondsSinceSent, requestContext, 
+                        (await _asyncOutbox.OutstandingMessagesAsync(milliSecondsSinceSent, requestContext,
                             pageSize: amountToClear, args: args)).ToArray();
-                    
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, true, _instrumentationOptions);
-                    
+
+                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, true,
+                        _instrumentationOptions);
+
                     requestContext.Span = parentSpan;
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
@@ -685,7 +726,7 @@ namespace Paramore.Brighter
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext,false, CancellationToken.None);
+                        await DispatchAsync(messages, requestContext, false, CancellationToken.None);
                     }
 
                     s_logger.LogInformation("Messages have been cleared");
@@ -694,6 +735,7 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogError(e, "Error while dispatching from outbox");
                     requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
+                    throw;
                 }
                 finally
                 {
@@ -710,7 +752,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
-        
+
         private void CheckOutboxOutstandingLimit()
         {
             bool hasOutBox = (_outBox != null || _asyncOutbox != null);
@@ -735,12 +777,12 @@ namespace Paramore.Brighter
 
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
-            
+
             s_logger.LogDebug(
                 "Time since last check is {SecondsSinceLastCheck} seconds",
                 timeSinceLastCheck.TotalSeconds
             );
-            
+
             if (timeSinceLastCheck < checkInterval)
             {
                 s_logger.LogDebug($"Check not ready to run yet");
@@ -752,10 +794,16 @@ namespace Paramore.Brighter
                 DateTime.UtcNow, timeSinceLastCheck.TotalSeconds
             );
             //This is expensive, so use a background thread
-            Task.Run(() => OutstandingMessagesCheck(requestContext));
+            Task.Run(
+                () => OutstandingMessagesCheck(requestContext)
+            ).ContinueWith((t) =>
+            {
+                if (t.Exception != null)
+                    ThrowAsSingleException(t.Exception);
+            });
         }
-        
-               /// <summary>
+
+        /// <summary>
         /// Configure the callbacks for the producers 
         /// </summary>
         private void ConfigureCallbacks(RequestContext requestContext)
@@ -786,10 +834,11 @@ namespace Paramore.Brighter
                         s_logger.LogInformation("Sent message: Id:{Id}", id);
                         if (_asyncOutbox != null)
                             await RetryAsync(
-                                async ct => 
-                                    await _asyncOutbox.MarkDispatchedAsync(id, requestContext, DateTime.UtcNow, cancellationToken: ct),
+                                async ct =>
+                                    await _asyncOutbox.MarkDispatchedAsync(id, requestContext, DateTime.UtcNow,
+                                        cancellationToken: ct),
                                 requestContext
-                        );
+                            );
                     }
                 };
             }
@@ -810,7 +859,7 @@ namespace Paramore.Brighter
                     if (success)
                     {
                         s_logger.LogInformation("Sent message: Id:{Id}", id);
-                        
+
                         if (_outBox != null)
                             Retry(
                                 () => _outBox.MarkDispatched(id, requestContext, DateTime.UtcNow),
@@ -822,8 +871,9 @@ namespace Paramore.Brighter
 
             return false;
         }
-        
-        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object> args = null)
+
+        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext,
+            Dictionary<string, object> args = null)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
@@ -837,7 +887,8 @@ namespace Paramore.Brighter
                     );
 
                     var producer = _producerRegistry.LookupBy(message.Header.Topic);
-                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span, _instrumentationOptions);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, requestContext.Span,
+                        _instrumentationOptions);
                     producer.Span = span;
                     if (span != null) producerSpans.TryAdd(message.Id, span);
 
@@ -865,7 +916,7 @@ namespace Paramore.Brighter
                     }
                     else
                         throw new InvalidOperationException("No sync message producer defined.");
-                    
+
                     Activity.Current = parentSpan;
                     producer.Span = null;
                 }
@@ -875,12 +926,13 @@ namespace Paramore.Brighter
                 _tracer?.EndSpans(producerSpans);
             }
         }
-        
-        private async Task BulkDispatchAsync(IEnumerable<Message> posts, RequestContext requestContext, CancellationToken cancellationToken)
+
+        private async Task BulkDispatchAsync(IEnumerable<Message> posts, RequestContext requestContext,
+            CancellationToken cancellationToken)
         {
             var parentSpan = requestContext.Span;
             var producerSpans = new ConcurrentDictionary<string, Activity>();
-            
+
             //Chunk into Topics
             try
             {
@@ -889,28 +941,30 @@ namespace Paramore.Brighter
                 foreach (var topicBatch in messagesByTopic)
                 {
                     var producer = _producerRegistry.LookupBy(topicBatch.Key);
-                    var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span, _instrumentationOptions);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, null, requestContext.Span,
+                        _instrumentationOptions);
                     producer.Span = span;
                     producerSpans.TryAdd(topicBatch.Key, span);
 
                     if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
                     {
                         var messages = topicBatch.ToArray();
-                    
+
                         s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}",
                             messages.Length, topicBatch.Key
                         );
-                    
-                    
+
+
                         var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
 
                         await foreach (var successfulMessage in dispatchesMessages)
                         {
                             if (!(producer is ISupportPublishConfirmation))
                             {
-                                await RetryAsync(async _ => 
+                                await RetryAsync(async _ =>
                                         await _asyncOutbox.MarkDispatchedAsync(
-                                            successfulMessage, requestContext, DateTime.UtcNow, cancellationToken: cancellationToken
+                                            successfulMessage, requestContext, DateTime.UtcNow,
+                                            cancellationToken: cancellationToken
                                         ),
                                     requestContext,
                                     cancellationToken: cancellationToken
@@ -930,7 +984,7 @@ namespace Paramore.Brighter
                 requestContext.Span = parentSpan;
             }
         }
-        
+
         private async Task DispatchAsync(
             IEnumerable<Message> posts,
             RequestContext requestContext,
@@ -947,10 +1001,11 @@ namespace Paramore.Brighter
                     s_logger.LogInformation(
                         "Decoupled invocation of message: Topic:{Topic} Id:{Id}",
                         message.Header.Topic, message.Id
-                    ); 
-                
+                    );
+
                     var producer = _producerRegistry.LookupBy(message.Header.Topic);
-                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan, _instrumentationOptions);
+                    var span = _tracer?.CreateProducerSpan(producer.Publication, message, parentSpan,
+                        _instrumentationOptions);
                     producer.Span = span;
                     if (span != null) producerSpans.TryAdd(message.Id, span);
 
@@ -961,7 +1016,8 @@ namespace Paramore.Brighter
                             //mark dispatch handled by a callback - set in constructor
                             await RetryAsync(
                                     async _ =>
-                                        await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                                        await producerAsync.SendAsync(message)
+                                            .ConfigureAwait(continueOnCapturedContext),
                                     requestContext,
                                     continueOnCapturedContext,
                                     cancellationToken)
@@ -970,7 +1026,8 @@ namespace Paramore.Brighter
                         else
                         {
                             var sent = await RetryAsync(
-                                    async _ => await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                                    async _ => await producerAsync.SendAsync(message)
+                                        .ConfigureAwait(continueOnCapturedContext),
                                     requestContext,
                                     continueOnCapturedContext,
                                     cancellationToken
@@ -981,7 +1038,8 @@ namespace Paramore.Brighter
                             if (sent)
                                 await RetryAsync(
                                     async _ => await _asyncOutbox.MarkDispatchedAsync(
-                                        message.Id, requestContext, DateTime.UtcNow, cancellationToken: cancellationToken
+                                        message.Id, requestContext, DateTime.UtcNow,
+                                        cancellationToken: cancellationToken
                                     ),
                                     requestContext,
                                     cancellationToken: cancellationToken
@@ -994,11 +1052,11 @@ namespace Paramore.Brighter
             }
             finally
             {
-                _tracer?.EndSpans(producerSpans); 
+                _tracer?.EndSpans(producerSpans);
                 requestContext.Span = parentSpan;
             }
         }
-        
+
         private Message MapMessage<TRequest>(TRequest request, RequestContext requestContext)
             where TRequest : class, IRequest
         {
@@ -1013,7 +1071,7 @@ namespace Paramore.Brighter
                 message = _transformPipelineBuilder
                     .BuildWrapPipeline<TRequest>()
                     .Wrap(request, requestContext, publication);
-            }                                                
+            }
             else
             {
                 throw new ArgumentOutOfRangeException(nameof(request), "No message mapper defined for request");
@@ -1023,8 +1081,8 @@ namespace Paramore.Brighter
         }
 
         private async Task<Message> MapMessageAsync<TRequest>(
-            TRequest request, 
-            RequestContext requestContext, 
+            TRequest request,
+            RequestContext requestContext,
             CancellationToken cancellationToken
         )
             where TRequest : class, IRequest
@@ -1084,7 +1142,7 @@ namespace Paramore.Brighter
                 s_checkOutstandingSemaphoreToken.Release();
             }
         }
-        
+
         private bool Retry(Action action, RequestContext requestContext)
         {
             var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
@@ -1104,7 +1162,7 @@ namespace Paramore.Brighter
         }
 
         private async Task<bool> RetryAsync(
-            Func<CancellationToken, Task> send, 
+            Func<CancellationToken, Task> send,
             RequestContext requestContext,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
@@ -1125,6 +1183,25 @@ namespace Paramore.Brighter
             }
 
             return true;
+        }
+        
+        private static void ThrowAsSingleException(AggregateException ae)
+        {
+            // Flatten the AggregateException to get the inner exceptions
+            var innerExceptions = ae.Flatten().InnerExceptions;
+
+            // Check if there's only one inner exception and rethrow it directly
+            if (innerExceptions.Count == 1)
+            {
+                throw innerExceptions[0];
+            }
+            else
+            {
+                // If there are multiple inner exceptions, handle accordingly
+                // For example, create a new exception that includes all the messages
+                var combinedMessage = string.Join("; ", innerExceptions.Select(e => e.Message));
+                throw new InvalidOperationException($"Multiple exceptions occurred: {combinedMessage}", ae);
+            }
         }
     }
 }

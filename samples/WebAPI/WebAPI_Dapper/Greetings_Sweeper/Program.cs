@@ -1,11 +1,9 @@
-using System.Text;
 using System.Text.Json;
 using DbMaker;
 using Greetings_Sweeper.Extensions;
 using GreetingsApp.Messaging;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
@@ -15,6 +13,8 @@ using TransportMaker;
 JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole().AddDebug();
 
 var transport = builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
 if (string.IsNullOrEmpty(transport))

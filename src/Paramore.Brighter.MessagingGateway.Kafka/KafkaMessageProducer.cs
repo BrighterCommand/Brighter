@@ -313,13 +313,27 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val))
                     {
-                        Task.Run(() => OnMessagePublished?.Invoke(true, val));
+                        Task.Run(
+                            () => OnMessagePublished?.Invoke(true, val)
+                        ).ContinueWith((t) =>
+                        {
+                            if (!t.IsFaulted) return;
+                            if (t.Exception != null)
+                                throw t.Exception;
+                        });
                         return;
                     }
                 }
             }
             
-            Task.Run((() =>OnMessagePublished?.Invoke(false, string.Empty)));
+            Task.Run(
+                () =>OnMessagePublished?.Invoke(false, string.Empty)
+            ).ContinueWith((t) =>
+            {
+                if (!t.IsFaulted) return;
+                if (t.Exception != null)
+                    throw t.Exception;
+            });
         }
     }
 }
