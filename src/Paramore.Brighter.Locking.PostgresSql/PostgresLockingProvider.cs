@@ -29,7 +29,7 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
         var scalar = await command.ExecuteScalarAsync(cancellationToken);
         if (scalar is not (null or true))
         {
-            return resource;
+            return null;
         }
 
         _connections.TryAdd(resource, connection);
@@ -47,6 +47,12 @@ public class PostgresLockingProvider(PostgresLockingProviderOptions options) : I
         {
             return;
         }
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT pg_advisory_unlock(@RESOURCE_HASH_CODE, @RESOURCE_LEN)";
+        command.Parameters.AddWithValue("@RESOURCE_HASH_CODE", resource.GetHashCode());
+        command.Parameters.AddWithValue("@RESOURCE_LEN", resource.Length);
+        await command.ExecuteScalarAsync(cancellationToken);
 
         await connection.CloseAsync();
         await connection.DisposeAsync();
