@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-CSharp is a strongly-typed OO language and as such we want to rely on the type system to eliminate classes of errors caused by using a primitive (frequently a `string` or `int`) instead of a type. Overuse of primitives is a code smell called [Primitive Obsession](https://refactoring.guru/smells/primitive-obsession).
+CSharp is a strongly-typed OOP language and as such we want to rely on the type system to eliminate classes of errors caused by using a primitive (frequently a `string` or `int`) instead of a type. Overuse of primitives is a code smell called [Primitive Obsession](https://refactoring.guru/smells/primitive-obsession).
 
 ## Decision
 
