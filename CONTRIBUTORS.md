@@ -53,6 +53,10 @@ Brighter contributors (sorted alphabeticaly)
   * Build and Packaging
   * Committer
   * Servicer of pull requests
+
+**[Dominic Hickie](https://github.com/dhickie)**
+  * Various fixes
+  * Dynamo Db lock provider 
    
 **[Fred Hoogduin](https://github.com/Red-F)**
   * Various fixes
