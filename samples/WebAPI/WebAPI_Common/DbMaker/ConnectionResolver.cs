@@ -50,11 +50,11 @@ public static class ConnectionResolver
             Rdbms.MySql => configuration.GetConnectionString("MySqlDb"),
             Rdbms.MsSql => configuration.GetConnectionString("MsSqlDb"),
             Rdbms.Postgres => configuration.GetConnectionString("PostgreSqlDb"),
-            Rdbms.Sqlite => applicationType == ApplicationType.Greetings ? 
-                configuration.GetConnectionString("GreetingsSqlite") : 
-                configuration.GetConnectionString("SalutationsSqlite"), 
+            Rdbms.Sqlite => configuration.GetConnectionString(applicationType == ApplicationType.Greetings ? "GreetingsSqlite" : "SalutationsSqlite"), 
             _ => throw new InvalidOperationException("Could not determine the database type")
         };
+
+        
         return (rdbms, connectionString);
     }
 

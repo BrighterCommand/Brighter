@@ -20,7 +20,7 @@ using SalutationApp.Requests;
 using TransportMaker;
 
 IHost host = CreateHostBuilder(args).Build();
-host.CheckDbIsUp(ApplicationType.Greetings);
+host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
 host.CreateInbox();
 host.CreateOutbox(ApplicationType.Greetings, ConfigureTransport.HasBinaryMessagePayload());
