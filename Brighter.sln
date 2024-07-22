@@ -335,7 +335,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MQTT.Test
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessagingGateway.MQTT", "src\Paramore.Brighter.MessagingGateway.MQTT\Paramore.Brighter.MessagingGateway.MQTT.csproj", "{6B2250DD-4123-40D2-87C5-4C29D452C114}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorldInternalBus", "samples\HelloWorldInternalBus\HelloWorldInternalBus.csproj", "{0FD491E8-2DA5-41AA-B940-7BB218E132D8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWorldInternalBus", "samples\HelloWorldInternalBus\HelloWorldInternalBus.csproj", "{0FD491E8-2DA5-41AA-B940-7BB218E132D8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.DynamoDB", "src\Paramore.Brighter.Locking.DynamoDB\Paramore.Brighter.Locking.DynamoDB.csproj", "{CBF99394-E332-439B-8632-ABDE06F6E343}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.PostgresSql", "src\Paramore.Brighter.Locking.PostgresSql\Paramore.Brighter.Locking.PostgresSql.csproj", "{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}"
 EndProject
@@ -1921,6 +1923,18 @@ Global
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8}.Release|x86.ActiveCfg = Release|Any CPU
 		{0FD491E8-2DA5-41AA-B940-7BB218E132D8}.Release|x86.Build.0 = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|x86.Build.0 = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|x86.ActiveCfg = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
