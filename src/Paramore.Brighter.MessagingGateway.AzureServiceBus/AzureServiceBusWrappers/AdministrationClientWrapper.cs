@@ -70,57 +70,91 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             return result;
         }
-
+        
         /// <summary>
-        /// Create a Topic
+        /// Create a Queue
         /// </summary>
-        /// <param name="topicOrQueue"></param>
-        /// <param name="useQueues"></param>
+        /// <param name="queueName">The name of the Queue</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
-        public void CreateChannel(string topicOrQueue, bool useQueues, TimeSpan? autoDeleteOnIdle = null)
+        public void CreateQueue(string queueName, TimeSpan? autoDeleteOnIdle = null)
         {
-            s_logger.LogInformation("Creating topic {Topic}...", topicOrQueue);
+            s_logger.LogInformation("Creating topic {Topic}...", queueName);
 
             try
             {
-                if(useQueues)
-                    _administrationClient.CreateQueueAsync(new CreateQueueOptions(topicOrQueue){
+                _administrationClient
+                    .CreateQueueAsync(new CreateQueueOptions(queueName)
+                    {
                         AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
                     }).GetAwaiter().GetResult();
-                else
-                    _administrationClient.CreateTopicAsync(new CreateTopicOptions(topicOrQueue)
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Failed to create queue {Queue}.", queueName);
+                throw;
+            }
+
+            s_logger.LogInformation("Queue {Queue} created.", queueName);
+        }
+        
+        /// <summary>
+        /// Create a Topic
+        /// </summary>
+        /// <param name="topicName">The name of the Topic</param>
+        /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
+        public void CreateTopic(string topicName, TimeSpan? autoDeleteOnIdle = null)
+        {
+            s_logger.LogInformation("Creating topic {Topic}...", topicName);
+
+            try
+            {
+                _administrationClient.CreateTopicAsync(new CreateTopicOptions(topicName)
                 {
                     AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
                 }).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to create topic {Topic}.", topicOrQueue);
+                s_logger.LogError(e, "Failed to create topic {Topic}.", topicName);
                 throw;
             }
 
-            s_logger.LogInformation("Topic {Topic} created.", topicOrQueue);
+            s_logger.LogInformation("Topic {Topic} created.", topicName);
         }
 
         /// <summary>
-        /// Delete a Topic.
+        /// Delete a Queue
         /// </summary>
-        /// <param name="topicOrQueue"></param>
-        /// <param name="useQueues"></param>
-        public async Task DeleteChannelAsync(string topicOrQueue, bool useQueues)
+        /// <param name="queueName">The name of the Queue</param>
+        public async Task DeleteQueueAsync(string queueName)
         {
-            s_logger.LogInformation("Deleting topic {Topic}...", topicOrQueue);
+            s_logger.LogInformation("Deleting queue {Queue}...", queueName);
             try
             {
-                if(useQueues)
-                    await _administrationClient.DeleteQueueAsync(topicOrQueue);
-                else
-                    await _administrationClient.DeleteTopicAsync(topicOrQueue);
-                s_logger.LogInformation("Topic {Topic} successfully deleted", topicOrQueue);
+                    await _administrationClient.DeleteQueueAsync(queueName);
+                s_logger.LogInformation("Queue {Queue} successfully deleted", queueName);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to delete Topic {Topic}", topicOrQueue);
+                s_logger.LogError(e,"Failed to delete Queue {Queue}", queueName);
+            }
+        }
+
+        /// <summary>
+        /// Delete a Topic
+        /// </summary>
+        /// <param name="topicName">The name of the Topic</param>
+        public async Task DeleteTopicAsync(string topicName)
+        {
+            s_logger.LogInformation("Deleting topic {Topic}...", topicName);
+            try
+            {
+                await _administrationClient.DeleteTopicAsync(topicName);
+                s_logger.LogInformation("Topic {Topic} successfully deleted", topicName);
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Failed to delete Topic {Topic}", topicName);
             }
         }
 
@@ -204,7 +238,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             if (!TopicOrQueueExists(topicName, false))
             {
-                CreateChannel(topicName, false, subscriptionConfiguration.QueueIdleBeforeDelete);
+                CreateTopic(topicName, subscriptionConfiguration.QueueIdleBeforeDelete);
             }
 
             var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)

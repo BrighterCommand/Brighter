@@ -99,7 +99,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
                 new MessageBody(messageBody, "JSON")));
 
-            A.CallTo(() => _nameSpaceManagerWrapper.CreateChannel("topic", useQueues, null)).MustHaveHappenedOnceExactly();
+            if(useQueues)
+                A.CallTo(() => _nameSpaceManagerWrapper.CreateQueue("topic", null)).MustHaveHappenedOnceExactly();
+            else
+                A.CallTo(() => _nameSpaceManagerWrapper.CreateTopic("topic", null)).MustHaveHappenedOnceExactly();
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
         }
 
@@ -188,24 +191,32 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void When_the_topic_does_not_exist_and_sending_a_message_with_a_delay_it_should_send_the_message_to_the_correct_topicclient(bool useQueues)
+        public void
+            When_the_topic_does_not_exist_and_sending_a_message_with_a_delay_it_should_send_the_message_to_the_correct_topicclient(
+                bool useQueues)
         {
             ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             A.CallTo(() => _nameSpaceManagerWrapper.TopicOrQueueExists("topic", useQueues)).Returns(false);
             A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
-            
-                A.CallTo(() => _topicClient.ScheduleMessageAsync(A<ServiceBusMessage>.Ignored, A<DateTimeOffset>.Ignored,
-                    CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, DateTimeOffset t , CancellationToken ct) => Task.FromResult(sentMessage = g));
 
-                var producer = useQueues ? _queueProducer : _producer;
-                
-                producer.SendWithDelay(new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+            A.CallTo(() => _topicClient.ScheduleMessageAsync(A<ServiceBusMessage>.Ignored, A<DateTimeOffset>.Ignored,
+                CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, DateTimeOffset t, CancellationToken ct) =>
+                Task.FromResult(sentMessage = g));
+
+            var producer = useQueues ? _queueProducer : _producer;
+
+            producer.SendWithDelay(new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE),
                 new MessageBody(messageBody, "JSON")), 1);
 
-            A.CallTo(() => _nameSpaceManagerWrapper.CreateChannel("topic", useQueues, null)).MustHaveHappenedOnceExactly();
+            if (useQueues)
+                A.CallTo(() => _nameSpaceManagerWrapper.CreateQueue("topic", null))
+                    .MustHaveHappenedOnceExactly();
+            else
+                A.CallTo(() => _nameSpaceManagerWrapper.CreateTopic("topic", null))
+                    .MustHaveHappenedOnceExactly();
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             A.CallTo(() => _topicClient.CloseAsync()).MustHaveHappenedOnceExactly();
         }
@@ -233,7 +244,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             if (topicExists == false)
             {
-                A.CallTo(() => _nameSpaceManagerWrapper.CreateChannel("topic", useQueues, null)).MustHaveHappenedOnceExactly();
+                if(useQueues)
+                    A.CallTo(() => _nameSpaceManagerWrapper.CreateQueue("topic", null)).MustHaveHappenedOnceExactly();
+                else
+                    A.CallTo(() => _nameSpaceManagerWrapper.CreateTopic("topic", null)).MustHaveHappenedOnceExactly();
             }
 
             A.CallTo(() => _nameSpaceManagerWrapper.TopicOrQueueExists("topic", useQueues)).MustHaveHappenedOnceExactly();
