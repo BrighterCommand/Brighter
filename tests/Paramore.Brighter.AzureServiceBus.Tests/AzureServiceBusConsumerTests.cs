@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using FakeItEasy;
+using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Xunit;
@@ -34,8 +35,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                     _mockMessageReceiver.Get("topic", "subscription", ServiceBusReceiveMode.ReceiveAndDelete, false))
                 .Returns(_messageReceiver);
 
-            _azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer,
-                _nameSpaceManagerWrapper, _mockMessageReceiver, makeChannels: OnMissingChannel.Create, subscriptionConfiguration: _subConfig);
+            var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
+            ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
+            
+            _azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
+                _nameSpaceManagerWrapper, _mockMessageReceiver);
         }
 
         [Fact]
@@ -375,8 +379,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(false);
 
-            var azureServiceBusConsumerValidate = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer,
-                _nameSpaceManagerWrapper, _mockMessageReceiver, makeChannels: OnMissingChannel.Validate);
+            var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
+                ,makeChannels: OnMissingChannel.Validate, subscriptionConfiguration: _subConfig);
+            
+            var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
+                _nameSpaceManagerWrapper, _mockMessageReceiver);
 
             Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(400));
         }
@@ -401,8 +408,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
             A.CallTo(() => _messageReceiver.Complete(lockToken)).Throws(new Exception());
 
-            var azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer,
-                _nameSpaceManagerWrapper, mockMessageReceiver, makeChannels: OnMissingChannel.Create, receiveMode: ServiceBusReceiveMode.PeekLock);
+            var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
+                ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
+            
+            var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
+                _nameSpaceManagerWrapper, mockMessageReceiver, receiveMode: ServiceBusReceiveMode.PeekLock);
 
             Message[] result = azureServiceBusConsumer.Receive(400);
 
@@ -431,8 +441,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
             A.CallTo(() => _messageReceiver.DeadLetter(lockToken)).Throws(new Exception());
 
-            var azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer,
-                _nameSpaceManagerWrapper, mockMessageReceiver, makeChannels: OnMissingChannel.Create, receiveMode: ServiceBusReceiveMode.PeekLock);
+            var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
+                ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
+            
+            var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
+                _nameSpaceManagerWrapper, mockMessageReceiver, receiveMode: ServiceBusReceiveMode.PeekLock);
 
             Message[] result = azureServiceBusConsumer.Receive(400);
 
