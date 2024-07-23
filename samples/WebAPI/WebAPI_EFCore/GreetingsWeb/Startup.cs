@@ -79,7 +79,7 @@ namespace GreetingsWeb
             ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
             
             var outboxConfiguration = new RelationalDatabaseConfiguration(
-                ConnectionResolver.GreetingsDbConnectionString(_configuration),
+                ConnectionResolver.DbConnectionString(_configuration, ApplicationType.Greetings),
                 binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
             );
             
@@ -130,7 +130,7 @@ namespace GreetingsWeb
 
         private void ConfigureEfCore(IServiceCollection services)
         {
-            string connectionString = ConnectionResolver.GreetingsDbConnectionString(_configuration);
+            string connectionString = ConnectionResolver.DbConnectionString(_configuration, ApplicationType.Greetings);
             string configDbType = _configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
             
             if (string.IsNullOrWhiteSpace(configDbType))

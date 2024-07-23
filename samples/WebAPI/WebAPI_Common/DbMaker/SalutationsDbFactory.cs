@@ -42,64 +42,44 @@ static void BuildSalutationsDatabase(
 
 static void ConfigureMySql(HostBuilderContext hostContext, IServiceCollection services)
 {
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
     services
         .AddFluentMigratorCore()
         .ConfigureRunner(c => c.AddMySql5()
-            .WithGlobalConnectionString(ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-                DbResolver.GetDatabaseType(dbType)))
+            .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Salutations))
             .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
         );
 }
 
 static void ConfigureMsSql(HostBuilderContext hostContext, IServiceCollection services)
 {
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
     services
         .AddFluentMigratorCore()
         .ConfigureRunner(c => c.AddSqlServer()
-            .WithGlobalConnectionString(ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-                DbResolver.GetDatabaseType(dbType)))
+            .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Salutations))
             .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
         );
 }
 
 static void ConfigurePostgreSql(HostBuilderContext hostContext, IServiceCollection services)
 {
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
     services
         .AddFluentMigratorCore()
         .ConfigureRunner(c => c.AddPostgres()
             .ConfigureGlobalProcessorOptions(opt => opt.ProviderSwitches = "Force Quote=false")
-            .WithGlobalConnectionString(ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-                DbResolver.GetDatabaseType(dbType)))
+            .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Salutations))
             .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations()
         );
 }
 
 static void ConfigureSqlite(HostBuilderContext hostContext, IServiceCollection services)
 {
-    string? dbType = hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
-    if (string.IsNullOrWhiteSpace(dbType))
-        throw new InvalidOperationException("DbType is not set");
-
     services
         .AddFluentMigratorCore()
         .ConfigureRunner(c =>
         {
             c.AddSQLite()
                 .WithGlobalConnectionString(
-                    ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-                        DbResolver.GetDatabaseType(dbType)))
+                    ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Salutations))
                 .ScanIn(typeof(SqlInitialMigrations).Assembly).For.Migrations();
         });
 }

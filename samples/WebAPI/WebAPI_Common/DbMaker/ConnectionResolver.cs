@@ -7,33 +7,18 @@ namespace DbMaker;
 
 public static class ConnectionResolver
 {
-    public static string? GreetingsDbConnectionString(IConfiguration configuration)
+    public static string? DbConnectionString(IConfiguration configuration, ApplicationType applicationType)
     {
         string? dbType = configuration[DatabaseGlobals.DATABASE_TYPE_ENV];
         if (string.IsNullOrWhiteSpace(dbType))
             throw new InvalidOperationException("DbType is not set");
 
         Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
-        return rdbms switch
-        {
-            Rdbms.MySql => configuration.GetConnectionString("GreetingsMySql"),
-            Rdbms.MsSql => configuration.GetConnectionString("GreetingsMsSql"),
-            Rdbms.Postgres => configuration.GetConnectionString("GreetingsPostgreSql"),
-            Rdbms.Sqlite => configuration.GetConnectionString("GreetingsSqlite"), 
-            _ => throw new InvalidOperationException("Could not determine the database type")
-        };
-    }
-
-    public static string? GetSalutationsDbConnectionString(IConfiguration config, Rdbms rdbms)
-    {
-        return rdbms switch
-        {
-            Rdbms.MySql => config.GetConnectionString("SalutationsMySql"),
-            Rdbms.MsSql => config.GetConnectionString("SalutationsMsSql"),
-            Rdbms.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
-            Rdbms.Sqlite => config.GetConnectionString("SalutationsSqlite"),
-            _ => throw new InvalidOperationException("Could not determine the database type")
-        };
+        
+       if (applicationType == ApplicationType.Greetings)
+           return GreetingsDbConnectionString(configuration, rdbms);
+       else
+           return GetSalutationsDbConnectionString(configuration, rdbms); 
     }
 
     public static (Rdbms databaseType, string? connectionString) ServerConnectionString(
@@ -80,5 +65,29 @@ public static class ConnectionResolver
     {
         //you need to implement this if you want to use this with an AWS account
         throw new NotImplementedException();
+    }
+    
+    private static string? GreetingsDbConnectionString(IConfiguration configuration, Rdbms rdbms)
+    {
+        return rdbms switch
+        {
+            Rdbms.MySql => configuration.GetConnectionString("GreetingsMySql"),
+            Rdbms.MsSql => configuration.GetConnectionString("GreetingsMsSql"),
+            Rdbms.Postgres => configuration.GetConnectionString("GreetingsPostgreSql"),
+            Rdbms.Sqlite => configuration.GetConnectionString("GreetingsSqlite"), 
+            _ => throw new InvalidOperationException("Could not determine the database type")
+        };
+    }
+
+    private static string? GetSalutationsDbConnectionString(IConfiguration config, Rdbms rdbms)
+    {
+        return rdbms switch
+        {
+            Rdbms.MySql => config.GetConnectionString("SalutationsMySql"),
+            Rdbms.MsSql => config.GetConnectionString("SalutationsMsSql"),
+            Rdbms.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
+            Rdbms.Sqlite => config.GetConnectionString("SalutationsSqlite"),
+            _ => throw new InvalidOperationException("Could not determine the database type")
+        };
     }
 }

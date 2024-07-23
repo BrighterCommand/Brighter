@@ -180,7 +180,7 @@ public static class SchemaCreation
             throw new InvalidOperationException("Could not resolve DbType; did you set it in the environment?");
 
         string? connectionString =
-            ConnectionResolver.GetSalutationsDbConnectionString(config, DbResolver.GetDatabaseType(dbType));
+            ConnectionResolver.DbConnectionString(config, ApplicationType.Salutations);
         if (connectionString == null)
             throw new InvalidOperationException(
                 "Could not resolve connection string; did you set a connection string?");

@@ -86,7 +86,7 @@ public class Startup
         ConfigureTransport.AddSchemaRegistryMaybe(services, messagingTransport);
 
         RelationalDatabaseConfiguration outboxConfiguration = new(
-            ConnectionResolver.GreetingsDbConnectionString(_configuration),
+            ConnectionResolver.DbConnectionString(_configuration, ApplicationType.Greetings),
             binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
         );
         services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);

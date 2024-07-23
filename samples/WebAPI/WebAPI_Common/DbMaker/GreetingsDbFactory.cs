@@ -44,7 +44,7 @@ public static class GreetingsDbFactory
         services
             .AddFluentMigratorCore()
             .ConfigureRunner(c => c.AddSqlServer()
-                .WithGlobalConnectionString(ConnectionResolver.GreetingsDbConnectionString(configuration))
+                .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(configuration, ApplicationType.Greetings))
                 .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
             )
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
@@ -58,7 +58,7 @@ public static class GreetingsDbFactory
         services
             .AddFluentMigratorCore()
             .ConfigureRunner(c => c.AddMySql5()
-                .WithGlobalConnectionString(ConnectionResolver.GreetingsDbConnectionString(configuration))
+                .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(configuration, ApplicationType.Greetings))
                 .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
             )
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
@@ -73,7 +73,7 @@ public static class GreetingsDbFactory
             .AddFluentMigratorCore()
             .ConfigureRunner(c => c.AddPostgres()
                 .ConfigureGlobalProcessorOptions(opt => opt.ProviderSwitches = "Force Quote=false")
-                .WithGlobalConnectionString(ConnectionResolver.GreetingsDbConnectionString(configuration))
+                .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(configuration, ApplicationType.Greetings))
                 .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
             )
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration
@@ -87,7 +87,7 @@ public static class GreetingsDbFactory
         services
             .AddFluentMigratorCore()
             .ConfigureRunner(c => c.AddSQLite()
-                .WithGlobalConnectionString(ConnectionResolver.GreetingsDbConnectionString(configuration))
+                .WithGlobalConnectionString(ConnectionResolver.DbConnectionString(configuration, ApplicationType.Greetings))
                 .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
             )
             .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration

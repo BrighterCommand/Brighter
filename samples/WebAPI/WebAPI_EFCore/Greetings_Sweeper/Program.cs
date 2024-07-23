@@ -20,7 +20,7 @@ MessagingTransport messagingTransport =
     ConfigureTransport.TransportType(transport);
 
 RelationalDatabaseConfiguration outboxConfiguration = new(
-    ConnectionResolver.GreetingsDbConnectionString(builder.Configuration),
+    ConnectionResolver.DbConnectionString(builder.Configuration, ApplicationType.Greetings),
     binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
 );
 

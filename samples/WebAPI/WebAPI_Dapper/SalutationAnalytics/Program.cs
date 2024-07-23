@@ -23,7 +23,7 @@ IHost host = CreateHostBuilder(args).Build();
 host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
 host.CreateInbox();
-host.CreateOutbox(ApplicationType.Greetings, ConfigureTransport.HasBinaryMessagePayload());
+host.CreateOutbox(ApplicationType.Salutations, ConfigureTransport.HasBinaryMessagePayload());
 await host.RunAsync();
 return;
 
@@ -80,10 +80,8 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     if (string.IsNullOrWhiteSpace(dbType))
         throw new InvalidOperationException("DbType is not set");
 
-    Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
     string? connectionString =
-        ConnectionResolver.GetSalutationsDbConnectionString(hostContext.Configuration,
-            rdbms);
+        ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Salutations);    
 
     RelationalDatabaseConfiguration relationalDatabaseConfiguration = new(connectionString);
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
@@ -94,6 +92,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     );
     services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
+    Rdbms rdbms = DbResolver.GetDatabaseType(dbType);
     (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
         OutboxFactory.MakeDapperOutbox(rdbms, outboxConfiguration);
 
