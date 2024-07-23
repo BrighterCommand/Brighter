@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj"/>
     <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
     <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj"/>

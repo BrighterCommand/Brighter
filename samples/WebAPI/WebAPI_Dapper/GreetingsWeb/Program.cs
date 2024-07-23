@@ -6,9 +6,25 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Paramore.Brighter.Extensions.Diagnostics;
 using TransportMaker;
 
+const string serviceName = "GreetingsWeb";
+var serviceVersion = "1.0";
+
 IHost host = CreateHostBuilder(args).Build();
+
+var resourceBuilder = ResourceBuilder.CreateDefault().AddService(serviceName: serviceName, serviceVersion: serviceVersion);
+
+using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+    .AddBrighterInstrumentation()
+    .SetResourceBuilder(resourceBuilder)
+    .AddConsoleExporter()
+    .Build();
 
 host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
