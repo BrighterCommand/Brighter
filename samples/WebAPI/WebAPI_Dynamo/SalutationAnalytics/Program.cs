@@ -3,7 +3,6 @@ using System.IO;
 using Amazon.DynamoDBv2;
 using Amazon.Runtime;
 using DbMaker;
-using GreetingsApp.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

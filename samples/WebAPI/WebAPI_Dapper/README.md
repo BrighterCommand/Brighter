@@ -3,27 +3,19 @@ This sample shows a typical scenario when using WebAPI and Brighter/Darker. It d
 
 ## Architecture
 
-
-
 ### GreetingsWeb
 
 We follow a _ports and adapters_ architectural style, dividing the app into the following modules:
 
 * **GreetingsWeb**: The adapters' module, handles the primary adapter of HTTP requests and responses to the app
-
 * **GreetingsApp**: The application module, handles the ports and domain model
-
-- ports: handle requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. 
-    - The secondary port of the EntityGateway handles access to the DB via EF Core. We choose to treat EF Core as a port, not an adapter itself, here, as it wraps our underlying adapters for Sqlite or MySql.
-- domain: in a fuller app, this would contain the logic that has a dependency on entity state.
+    - ports: handle requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries.
+    - domain: in a fuller app, this would contain the logic that has a dependency on entity state.
+* **GreetingsSweeper** : This reads the Outbox table and sends messages to the broker. By default, the `AddGreetingHandlerAsync.cs` will clear the outbox immediately so the Sweeper will only send the message on a failure to talk to the broker. If you comment out the ClearOutbox line from the handler, you will be able to fall back to using the Sweeper to send the message.
 
 We 'depend on inwards' i.e. **GreetingsWeb -> GreetingsApp**
 
 The assemblies migrations: **Greetings_MySqlMigrations** and **Greetings_SqliteMigrations** hold generated code to configure the Db. Consider this adapter layer code - the use of separate modules allows us to switch migration per environment.
-
-### GreetingsSweeoer
- 
-This reads the Outbox table and sends messages to the broker. By default the `AddGreetingHandlerAsync.cs` will clear the outbox immediately so the Sweeper will only send the message on a failure to talk to the broker. If you comment out the ClearOutbox line from the handler, you will be able to fall back to using the Sweeper to send the message.
 
 Note that you will need to run the Sweeper in a separate terminal window to the rest of the app.
 
@@ -36,17 +28,15 @@ This listens for a GreetingMade message and stores it. It demonstrates listening
 We follow a _ports and adapters_ architectural style, dividing the app into the following modules:
 
 * **SalutationAnalytics**: The adapters' module, handles the primary adapter of HTTP requests and responses to the app
-
 * **SalutationsApp**: The application module, handles the ports and domain model
+    - ports: handle requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. 
+    - domain: in a fuller app, this would contain the logic that has a dependency on entity state.
 
-- ports: handle requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. 
-- domain: in a fuller app, this would contain the logic that has a dependency on entity state.
+* **SalutationsSweeper**: This reads the Outbox table and sends messages to the broker. By default, the `GreetingMadeHandlerAsync.cs` will clear the outbox immediately so the Sweeper will only send the message on a failure to talk to the broker. If you comment out the ClearOutbox line from the handler, you will be able to fall back to using the Sweeper to send the message. By default transports that do not store messages when there are no subcribers, such as RabbitMQ will drop the sent message if you do not create a subscriber for it, as this project does not contain a subscriber to SalutationReceived.
 
 We 'depend on inwards' i.e. **SalutationsAnalytics -> GreetingsApp**
 
 We also add an Inbox here. The Inbox can be used to de-duplicate messages. In messaging, the guarantee is 'at least once' if you use a technique such as an Outbox to ensure sending. This means we may receive a message twice. We either need, as in this case, to use an Inbox to de-duplicate, or we need to be idempotent such that receiving the message multiple times would result in the same outcome.
-
-The assemblies migrations: **Salutations_MySqlMigrations** and **Salutations_SqliteMigrations** hold generated code to configure the Db. Consider this adapter layer code - the use of separate modules allows us to switch migration per environment.
 
 ## Environments
 

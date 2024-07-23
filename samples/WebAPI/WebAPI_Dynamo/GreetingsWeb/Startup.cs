@@ -4,7 +4,6 @@ using Amazon.DynamoDBv2;
 using DbMaker;
 using GreetingsEntities;
 using GreetingsApp.Handlers;
-using GreetingsApp.Messaging;
 using GreetingsApp.Policies;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Builder;

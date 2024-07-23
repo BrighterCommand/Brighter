@@ -311,6 +311,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.P
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.DynamoDB", "src\Paramore.Brighter.Locking.DynamoDB\Paramore.Brighter.Locking.DynamoDB.csproj", "{CBF99394-E332-439B-8632-ABDE06F6E343}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Salutation_Sweeper", "samples\WebAPI\WebAPI_Dapper\Salutation_Sweeper\Salutation_Sweeper.csproj", "{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1725,6 +1727,18 @@ Global
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C}.Release|x86.ActiveCfg = Release|Any CPU
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C}.Release|x86.Build.0 = Release|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|x86.Build.0 = Debug|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|x86.ActiveCfg = Release|Any CPU
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1821,6 +1835,7 @@ Global
 		{DFFA5AFC-D6ED-4193-9D86-3DE69B892150} = {E9748DC0-6E72-4634-AF49-428F806E03B0}
 		{915BD9FD-2E29-4E2B-8DA3-A74055F32A20} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C} = {11935469-A062-4CFF-9F72-F4F41E14C2B4}
+		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A} = {202BA107-89D5-4868-AC5A-3527114C0109}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

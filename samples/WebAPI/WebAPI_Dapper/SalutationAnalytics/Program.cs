@@ -2,7 +2,6 @@
 using System.IO;
 using Confluent.SchemaRegistry;
 using DbMaker;
-using GreetingsApp.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

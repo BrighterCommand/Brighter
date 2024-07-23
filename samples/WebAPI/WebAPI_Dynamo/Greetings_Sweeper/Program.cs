@@ -1,6 +1,5 @@
 using System.Text.Json;
 using DbMaker;
-using GreetingsApp.Messaging;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Paramore.Brighter.DynamoDb;

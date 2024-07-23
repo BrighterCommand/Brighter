@@ -2,7 +2,6 @@ using System;
 using DbMaker;
 using GreetingsApp.EntityGateway;
 using GreetingsApp.Handlers;
-using GreetingsApp.Messaging;
 using GreetingsApp.Policies;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Builder;

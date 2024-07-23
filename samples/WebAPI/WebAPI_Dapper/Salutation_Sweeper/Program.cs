@@ -1,7 +1,7 @@
 using System.Text.Json;
 using DbMaker;
-using Greetings_Sweeper.Extensions;
-using GreetingsApp.Requests;
+using Salutation_Sweeper.Extensions;
+using SalutationApp.Requests;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -23,7 +23,7 @@ MessagingTransport messagingTransport =
     ConfigureTransport.TransportType(transport);
 
 RelationalDatabaseConfiguration outboxConfiguration = new(
-    ConnectionResolver.DbConnectionString(builder.Configuration, ApplicationType.Greetings),
+    ConnectionResolver.DbConnectionString(builder.Configuration, ApplicationType.Salutations),
     binaryMessagePayload: messagingTransport == MessagingTransport.Rmq
 );
 
@@ -42,7 +42,7 @@ builder.Services.AddBrighter(options =>
     options.InstrumentationOptions = InstrumentationOptions.All;
 }).UseExternalBus(configure =>
 {
-    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<GreetingMade>(messagingTransport);
+    configure.ProducerRegistry = ConfigureTransport.MakeProducerRegistry<SalutationReceived>(messagingTransport);
     configure.Outbox = makeOutbox.outbox;
     configure.TransactionProvider = makeOutbox.transactionProvider;
     configure.ConnectionProvider = makeOutbox.connectionProvider;

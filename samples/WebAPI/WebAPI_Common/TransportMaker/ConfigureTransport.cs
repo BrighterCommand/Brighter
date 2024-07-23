@@ -1,6 +1,5 @@
 ﻿using Confluent.Kafka;
 using Confluent.SchemaRegistry;
-using GreetingsApp.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;

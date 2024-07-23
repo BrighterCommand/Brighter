@@ -1,4 +1,4 @@
-﻿namespace GreetingsApp.Messaging;
+﻿namespace TransportMaker;
 
 public static class MessagingGlobals
 {
