@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Exporter.Zipkin"/>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Diagnostics\Paramore.Brighter.Extensions.Diagnostics.csproj" />
     <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj"/>
