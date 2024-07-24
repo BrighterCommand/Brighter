@@ -13,10 +13,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <summary>
         /// Check if a Topic exists
         /// </summary>
-        /// <param name="topic">The name of the Topic or Queue.</param>
-        /// <param name="useQueue">Use a Queue instead of a Topic</param>
+        /// <param name="topicName">The name of the Topic.</param>
         /// <returns>True if the Topic exists.</returns>
-        bool TopicOrQueueExists(string topic, bool useQueue);
+        bool TopicExists(string topicName);
+        
+        /// <summary>
+        /// Check if a Queue exists
+        /// </summary>
+        /// <param name="queueName">The name of the Queue.</param>
+        /// <returns>True if the Queue exists.</returns>
+        bool QueueExists(string queueName);
 
         /// <summary>
         /// Create a Queue

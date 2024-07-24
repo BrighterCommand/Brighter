@@ -35,42 +35,73 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             s_logger.LogWarning("Resetting management client wrapper...");
             Initialise();
         }
-
+        
         /// <summary>
         /// Check if a Topic exists
         /// </summary>
-        /// <param name="topicOrQueue">The name of the Topic or Queue.</param>
-        /// <param name="useQueue">Use a Queue instead of a Topic</param>
-        /// <returns>True if the Channel exists.</returns>
-        public bool TopicOrQueueExists(string topicOrQueue, bool useQueue)
+        /// <param name="topicName">The name of the Topic.</param>
+        /// <returns>True if the Topic exists.</returns>
+        public bool TopicExists(string topicName)
         {
-            s_logger.LogDebug("Checking if topic {Topic} exists...", topicOrQueue);
+            s_logger.LogDebug("Checking if topic {Topic} exists...", topicName);
 
             bool result;
 
             try
             {
-                result = useQueue ? _administrationClient.QueueExistsAsync(topicOrQueue).GetAwaiter().GetResult(): 
-                _administrationClient.TopicExistsAsync(topicOrQueue).GetAwaiter().GetResult();
+                result = _administrationClient.TopicExistsAsync(topicName).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to check if topic {Topic} exists.", topicOrQueue);
+                s_logger.LogError(e,"Failed to check if topic {Topic} exists", topicName);
                 throw;
             }
 
             if (result)
             {
-                s_logger.LogDebug("Topic {Topic} exists.", topicOrQueue);
+                s_logger.LogDebug("Topic {Topic} exists", topicName);
             }
             else
             {
-                s_logger.LogWarning("Topic {Topic} does not exist.", topicOrQueue);
+                s_logger.LogWarning("Topic {Topic} does not exist", topicName);
             }
 
             return result;
         }
-        
+
+        /// <summary>
+        /// Check if a Queue exists
+        /// </summary>
+        /// <param name="queueName">The name of the Queue.</param>
+        /// <returns>True if the Queue exists.</returns>
+        public bool QueueExists(string queueName)
+        {
+            s_logger.LogDebug("Checking if queue {Queue} exists...", queueName);
+
+            bool result;
+
+            try
+            {
+                result = _administrationClient.QueueExistsAsync(queueName).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e,"Failed to check if queue {Queue} exists", queueName);
+                throw;
+            }
+
+            if (result)
+            {
+                s_logger.LogDebug("Queue {Queue} exists", queueName);
+            }
+            else
+            {
+                s_logger.LogWarning("Queue {Queue} does not exist", queueName);
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Create a Queue
         /// </summary>
@@ -236,7 +267,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         {
             s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
 
-            if (!TopicOrQueueExists(topicName, false))
+            if (!TopicExists(topicName))
             {
                 CreateTopic(topicName, subscriptionConfiguration.QueueIdleBeforeDelete);
             }

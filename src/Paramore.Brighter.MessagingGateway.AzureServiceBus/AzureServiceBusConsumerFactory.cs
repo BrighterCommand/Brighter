@@ -19,7 +19,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
         public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration)
-        : this (new ServiceBusConnectionStringClientProvider(configuration.ConnectionString), configuration.AckOnRead)
+            : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString),
+                configuration.AckOnRead)
         { }
 
         /// <summary>
@@ -46,14 +47,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 throw new ArgumentException("Subscription is not of type AzureServiceBusSubscription.",
                     nameof(subscription));
 
-            var messageProducer = new AzureServiceBusMessageProducer(
-                nameSpaceManagerWrapper,
-                new ServiceBusSenderProvider(_clientProvider),
-                new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels });
+            var recieverProvider = new ServiceBusReceiverProvider(_clientProvider);
 
-            var recieverProvider = new ServiceBusReceiverProvider(_clientProvider); 
-            
             if (sub.Configuration.UseServiceBusQueue)
+            {
+                var messageProducer = new AzureServiceBusQueueMessageProducer(
+                    nameSpaceManagerWrapper,
+                    new ServiceBusSenderProvider(_clientProvider),
+                    new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels });
+
                 return new AzureServiceBusQueueConsumer(
                     sub,
                     messageProducer,
@@ -62,14 +64,21 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     receiveMode: _ackOnRead
                         ? ServiceBusReceiveMode.ReceiveAndDelete
                         : ServiceBusReceiveMode.PeekLock);
+            }
+            else
+            {
+                var messageProducer = new AzureServiceBusTopicMessageProducer(
+                    nameSpaceManagerWrapper,
+                    new ServiceBusSenderProvider(_clientProvider),
+                    new AzureServiceBusPublication { MakeChannels = subscription.MakeChannels });
 
-            return new AzureServiceBusTopicConsumer(
-                sub,
-                messageProducer,
-                nameSpaceManagerWrapper,
-                recieverProvider,
-                receiveMode: _ackOnRead ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock);
-
+                return new AzureServiceBusTopicConsumer(
+                    sub,
+                    messageProducer,
+                    nameSpaceManagerWrapper,
+                    recieverProvider,
+                    receiveMode: _ackOnRead ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock);
+            }
         }
     }
 }
