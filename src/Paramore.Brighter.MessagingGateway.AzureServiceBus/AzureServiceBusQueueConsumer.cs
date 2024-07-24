@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
