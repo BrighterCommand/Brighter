@@ -10,9 +10,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Observability;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -60,13 +62,32 @@ public class Startup
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
         });
 
+        var brighterTracer = new BrighterTracer(TimeProvider.System);
+        services.AddSingleton<IAmABrighterTracer>(brighterTracer);
+
         services.AddOpenTelemetry()
-            .WithTracing(builder => builder
-                .AddAspNetCoreInstrumentation()
-                .AddConsoleExporter())
+            .ConfigureResource(builder =>
+            {
+                builder.AddService(
+                    serviceName: "GreetingsWeb",
+                    serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+                    serviceInstanceId: Environment.MachineName);
+            }).WithTracing(builder =>
+            {
+                builder
+                    .AddSource(brighterTracer.ActivitySource.Name)
+                    .SetSampler(new AlwaysOnSampler())
+                    .AddAspNetCoreInstrumentation()
+                    .AddConsoleExporter()
+                    .AddZipkinExporter(options =>
+                    {
+
+                    });
+            }) 
             .WithMetrics(builder => builder
                 .AddAspNetCoreInstrumentation()
-                .AddConsoleExporter());
+                .AddConsoleExporter()
+            );
 
         GreetingsDbFactory.ConfigureMigration(_configuration, services);
         ConfigureBrighter(services);

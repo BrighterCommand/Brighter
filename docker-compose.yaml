@@ -85,6 +85,11 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     volumes:
       - ./broker/data:/var/lib/kafka/data
+        
+  zipkin:
+    image: openzipkin/zipkin
+    ports:
+      - "9411:9411"
 
 networks:
   kafka:

@@ -18,14 +18,6 @@ var serviceVersion = "1.0";
 
 IHost host = CreateHostBuilder(args).Build();
 
-var resourceBuilder = ResourceBuilder.CreateDefault().AddService(serviceName: serviceName, serviceVersion: serviceVersion);
-
-using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-    .AddBrighterInstrumentation()
-    .SetResourceBuilder(resourceBuilder)
-    .AddConsoleExporter()
-    .Build();
-
 host.CheckDbIsUp(ApplicationType.Greetings);
 host.MigrateDatabase();
 host.CreateOutbox(ApplicationType.Greetings, ConfigureTransport.HasBinaryMessagePayload());
@@ -61,6 +53,9 @@ static IHostBuilder CreateHostBuilder(string[] args)
                 options.ValidateScopes = isDevelopment;
                 options.ValidateOnBuild = isDevelopment;
             });
+
             webBuilder.UseStartup<Startup>();
         });
+
+
 }
