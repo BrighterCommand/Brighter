@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
-        private readonly BrighterTracer _tracer;
+        private readonly IAmABrighterTracer _tracer;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -124,7 +124,7 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _subscriberRegistry = subscriberRegistry;
@@ -172,7 +172,7 @@ namespace Paramore.Brighter
             InboxConfiguration inboxConfiguration = null,
             IEnumerable<Subscription> replySubscriptions = null,
             IAmAChannelFactory responseChannelFactory = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
         {
@@ -203,7 +203,7 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IEnumerable<Subscription> replySubscriptions = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _requestContextFactory = requestContextFactory;

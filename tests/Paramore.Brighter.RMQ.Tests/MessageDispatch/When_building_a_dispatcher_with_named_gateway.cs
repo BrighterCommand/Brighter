@@ -27,6 +27,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
@@ -71,10 +72,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection);
 
             var container = new ServiceCollection();
-            var commandProcessor = CommandProcessorBuilder.With()
+            var commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
                 .Policies(policyRegistry)
                 .NoExternalBus()
+                .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 

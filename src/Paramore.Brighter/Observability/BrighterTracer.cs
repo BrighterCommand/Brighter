@@ -246,7 +246,7 @@ public class BrighterTracer : IAmABrighterTracer
         Publication publication, 
         Message message, 
         Activity parentActivity,
-        InstrumentationOptions instrumentationOptions
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
     )
     {
         var spanName = $"{publication.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}";

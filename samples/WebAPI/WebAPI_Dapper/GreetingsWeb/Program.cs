@@ -13,9 +13,6 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter.Extensions.Diagnostics;
 using TransportMaker;
 
-const string serviceName = "GreetingsWeb";
-var serviceVersion = "1.0";
-
 IHost host = CreateHostBuilder(args).Build();
 
 host.CheckDbIsUp(ApplicationType.Greetings);

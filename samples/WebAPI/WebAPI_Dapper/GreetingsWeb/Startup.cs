@@ -76,12 +76,13 @@ public class Startup
             {
                 builder
                     .AddSource(brighterTracer.ActivitySource.Name)
+                    .AddSource("RabbitMQ.Client.*")
                     .SetSampler(new AlwaysOnSampler())
                     .AddAspNetCoreInstrumentation()
                     .AddConsoleExporter()
                     .AddZipkinExporter(options =>
                     {
-
+                        options.Endpoint = new Uri($"http://localhost:9411/api/v2/spans");
                     });
             }) 
             .WithMetrics(builder => builder

@@ -167,10 +167,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 outbox: outbox
             );  
             
-            commandProcessor = CommandProcessorBuilder.With()
+            commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
+                .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
             

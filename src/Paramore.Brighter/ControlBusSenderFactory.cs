@@ -59,12 +59,13 @@ namespace Paramore.Brighter
                 ); 
             
             return new ControlBusSender(
-                CommandProcessorBuilder.With()
+                CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
                 .ExternalBus(ExternalBusType.FireAndForget, bus)   
-                    .RequestContextFactory(new InMemoryRequestContextFactory())
-                    .Build()
+                .ConfigureInstrumentation(null, InstrumentationOptions.None)
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build()
                 );
         }
     }

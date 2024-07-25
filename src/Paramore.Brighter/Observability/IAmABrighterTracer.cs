@@ -81,8 +81,9 @@ public interface IAmABrighterTracer : IDisposable
     Activity CreateClearSpan(
         CommandProcessorSpanOperation operation, 
         Activity parentActivity,
-        string messageId,
-        InstrumentationOptions options);
+        string messageId = null,
+        InstrumentationOptions options = InstrumentationOptions.All
+    );
 
     /// <summary>
     /// Create a span for an outbox operation
@@ -91,7 +92,11 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
     /// <param name="options">How deep should the instrumentation go?</param>
     /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
-    Activity CreateDbSpan(OutboxSpanInfo info, Activity parentActivity, InstrumentationOptions options);
+    Activity CreateDbSpan(
+        OutboxSpanInfo info, 
+        Activity parentActivity, 
+        InstrumentationOptions options = InstrumentationOptions.All
+    );
     
     
     /// <summary>
@@ -102,7 +107,11 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="parentActivity">The parent activity, if any, that we should assign to this span</param>
     /// <param name="instrumentationOptions">How deep should the instrumentation go?</param>
     /// <returns>A new span named channel publish</returns>
-    Activity CreateProducerSpan(Publication publication, Message message, Activity parentActivity, InstrumentationOptions instrumentationOptions);
+    Activity CreateProducerSpan(
+        Publication publication, 
+        Message message, 
+        Activity parentActivity, 
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
 
     /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it
