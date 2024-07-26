@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using DbMaker;
 using GreetingsApp.Handlers;
 using GreetingsApp.Policies;
@@ -9,6 +10,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -19,6 +22,7 @@ using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
 using TransportMaker;
+using ExportProcessorType = OpenTelemetry.ExportProcessorType;
 
 namespace GreetingsWeb;
 
@@ -80,14 +84,15 @@ public class Startup
                     .SetSampler(new AlwaysOnSampler())
                     .AddAspNetCoreInstrumentation()
                     .AddConsoleExporter()
-                    .AddZipkinExporter(options =>
+                    .AddOtlpExporter(options =>
                     {
-                        options.Endpoint = new Uri($"http://localhost:9411/api/v2/spans");
+                        options.Protocol = OtlpExportProtocol.Grpc;
                     });
             }) 
             .WithMetrics(builder => builder
                 .AddAspNetCoreInstrumentation()
                 .AddConsoleExporter()
+                .AddOtlpExporter()
             );
 
         GreetingsDbFactory.ConfigureMigration(_configuration, services);
