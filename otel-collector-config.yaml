@@ -5,7 +5,9 @@ receivers:
         endpoint: 0.0.0.0:4317
 processors:
 extensions:
-  health_check: {}
+  health_check:
+  pprof:
+  zpages:
 exporters:
   otlp:
     endpoint: jaeger:4317
@@ -14,6 +16,7 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:9090"
 service:
+  extensions: [health_check, pprof, zpages]
   pipelines:
     traces:
       receivers: [otlp]

@@ -38,18 +38,17 @@ We 'depend on inwards' i.e. **SalutationsAnalytics -> GreetingsApp**
 
 We also add an Inbox here. The Inbox can be used to de-duplicate messages. In messaging, the guarantee is 'at least once' if you use a technique such as an Outbox to ensure sending. This means we may receive a message twice. We either need, as in this case, to use an Inbox to de-duplicate, or we need to be idempotent such that receiving the message multiple times would result in the same outcome.
 
-## Environments
+## Telemetry
 
-*Development*
+The apps use OpenTelemetry to provide observability. This is configured in the `Program.cs` or `Startup.cs` file. Docker files are supported for an Open Telemetry Collector that exports telemetry to Jaeger and metrics to Prometheus. There is a supported config file for the Open Telemetry collector at the root.
 
-- Uses a local Sqlite instance for the data store.
-- We support Docker hosted messaging brokers, either RabbitMQ or Kafka.
-
-*Production*
-- We offer support for a range of common SQL stores (MySQL, PostgreSQL, SQL Server) using Docker.
-- We support Docker hosted messaging brokers, either RabbitMQ or Kafka.
+You can view the telemetry in the [Jaeger UI](http://localhost:16686)
 
 ### Configuration
+
+We offer support for a range of common SQL stores (MySQL, PostgreSQL, SQL Server) using Docker.
+
+We support Docker hosted messaging brokers, either RabbitMQ or Kafka.
 
 Configuration is via Environment variables. The following are supported:
 

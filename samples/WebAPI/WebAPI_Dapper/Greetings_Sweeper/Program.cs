@@ -3,6 +3,10 @@ using DbMaker;
 using Greetings_Sweeper.Extensions;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
@@ -12,8 +16,36 @@ using TransportMaker;
 JsonSerializerOptions jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+var brighterTracer = new BrighterTracer(TimeProvider.System);
+builder.Services.AddSingleton<IAmABrighterTracer>(brighterTracer);
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole().AddDebug();
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(builder =>
+    {
+        builder.AddService(
+            serviceName: "Greetings Sweeper",
+            serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+            serviceInstanceId: Environment.MachineName);
+    }).WithTracing(tracing =>
+    {
+        tracing
+            .AddSource(brighterTracer.ActivitySource.Name)
+            .AddSource("RabbitMQ.Client.*")
+            .SetSampler(new AlwaysOnSampler())
+            .AddAspNetCoreInstrumentation()
+            .AddConsoleExporter()
+            .AddOtlpExporter(options =>
+            {
+                options.Protocol = OtlpExportProtocol.Grpc;
+            });
+    }).WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddConsoleExporter()
+        .AddOtlpExporter()
+    );
 
 var transport = builder.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT];
 if (string.IsNullOrEmpty(transport))
