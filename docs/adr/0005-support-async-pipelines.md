@@ -27,11 +27,13 @@ is the message pump thread. This is important because we want to ensure that the
 ## Decision
 
 ### Synchronization Context
+
 Implement a custom synchronization context that will invoke callbacks on the message pump thread. The synchronization context
 is based on the [Stephen Toub Single Threaded Synchronization Context](https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/),
 and will run callbacks in order on the message pump thread.
 
 ### Asynchronous Handlers
+
 Asynchronous handlers implement IHandleRequestsAsync<T> and return a Task. The message pump will await the task. Any callback after
 the code returns from the handler will be invoked on the thread that invoked the handler.
 
@@ -42,6 +44,7 @@ then we would be forced to either block asynchronous handlers on a synchronous p
 other than the message pump thread.
 
 ### Asynchronous Message Mappers
+
 Asynchronous message mappers implement IAmAMessageMapperAsync<T> and return a Task. The message pump will await the task. Any callback after
 the code returns from the handler will be invoked on the thread that invoked the handler.
 
@@ -59,7 +62,7 @@ other than the message pump thread.
 ### Posting a Message
 
 When posting a message we assume that the async command processor Post methods will be for asynchronous message mappers and we search
-for registered asynchonous message mappers before searching for synchronous message mappers. If the message mapper is synchronous then
+for registered asynchronous message mappers before searching for synchronous message mappers. If the message mapper is synchronous then
 we wrap it in a TaskCompletionSource and return the Task.
 
 When posting a message we assume that the sync command processor Post methods will be for synchronous message mappers and we search
@@ -80,4 +83,3 @@ message mappers before searching for asynchronous message mappers. If the messag
 * We can support asynchronous handlers
 * We can support asynchronous message mappers
 * We provide our own synchronization context so that the thread on which callbacks are invoked is the message pump thread.
-

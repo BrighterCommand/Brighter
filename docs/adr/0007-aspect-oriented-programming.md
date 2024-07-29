@@ -45,21 +45,21 @@ is because the flow passes a request in and out of the pipeline.
 
 For the mapper pipeline, the decorators need to implement IAmAMessageTransformer, which is a different interface to the
 core serializer/deserializer. This is because the flow differs for serialization and deserialization. We need to wrap
-an outgoing message in a pipeline of serializers, but we need to wrap an incoming message in a pipeline of deserializers.
+an outgoing message in a pipeline of serializers, but we need to wrap an incoming message in a pipeline of de-serializers.
 
-The order of execution is a Russian doll model which allows each handler to react to the results of the next call 
-(including any exceptions). This is particularly useful for exception handling and retries; it allows us to use
-Polly to encompass subsequent handler chain steps and provide a Fallback handler.
+The order of execution is a Russian doll model which allows each handler to react to the results of the next call (including any exceptions). This is particularly useful for exception handling and retries; it allows us to use Polly to encompass subsequent handler chain steps and provide a Fallback handler.
 
 We use attributes on the handler or mapper to configure the cross-cutting concerns. This means that the configuration
 context is visible in the handler or mapper code, and that the order of execution is visible in the handler or mapper code. 
 We use .NET attributes because we believe that these are well-understood by .NET developers, due to their usage in 
 ASP.NET MVC and Web API.
 
-The use of attributes for cross-cutting concerns is a form of [Aspect Oriented Programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming). 
-For our <strong>Aspect</strong>: 
-* We use deploy time weaving with the use of attributes as a <strong>Pointcut</strong>.
-* We use IAmARequestHandler and IAmAMessageTransformer for the <strong>Advice</strong>.
+The use of attributes for cross-cutting concerns is a form of [Aspect Oriented Programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming).
+
+For our **Aspect**:
+
+* We use deploy time weaving with the use of attributes as a **Pointcut**.
+* We use IAmARequestHandler and IAmAMessageTransformer for the **Advice**.
 
 ## Consequences
 

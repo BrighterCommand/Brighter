@@ -7,7 +7,7 @@ Date: 2019-08-01
 Proposed
 
 ## Context
-   
+
 To support Transactional Messaging the Command Processor uses an Outbox when producing a message via an external bus. This means that the CommandProcessor has two associated calls:
 
 * A `DepositPost` call to translate the `IRequest` into a `Message` and store it in an `Outbox`
@@ -67,13 +67,13 @@ We have two alternatives here:
 
 * Always use a bulk `Add` method on the `Outbox`; as with `Clear` simply treat the first parameter as a collection of `IRequest`
 * Provide a mechanism to indicate that the `DepositPost` should be considered as part of a batch.
-                                                                                               
+
 Whilst the first seems simpler, two complications arise. The first is the need to do late-binding, the second is the different semantics for a bulk operation in OTel (this might also push us to add a single `Clear` operation and call that repeatedly from a batch parent).
 
 So in this case we intend to opt for the second option.
 
 * In a bulk `DepositPost`, where we have a batch, begin a new batch via `StartBatch` that returns a `BatchId`
-* Pass an optional `BatchId` to a late bound call to the single `IRequest` version of `DepositPost` (which provides late binding) 
+* Pass an optional `BatchId` to a late bound call to the single `IRequest` version of `DepositPost` (which provides late binding)
 * Where we have an optional `BatchId` within the individual `DepositPost` call `AddToBatch` on the `Outbox` instead of `Add`
 * In the batch `DepositPost` call `EndBatch` to write the batch
 
@@ -82,6 +82,6 @@ Both `StartBatch` and `EndBatch` are `Outbox` code. As they will be shared by al
 `EndBatch` may need to group the writes by `RoutingKey` as a batch endpoint might be called for multiple topics.
 
 ## Consequences
-      
+
 * We have a single version of `DepositPost` for the pipeline, but we can call it as part of a batch
 * We should consider having a single message id `Clear` that does not create a batch span

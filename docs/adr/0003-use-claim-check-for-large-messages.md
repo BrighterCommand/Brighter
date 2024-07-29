@@ -58,5 +58,5 @@ send and receive.
 * We will need to support a range of abstractions over storage that could be used for a message. If the initial set
   includes AWS S3, Azure Blob Storage, and Redis we will cover the common choices.
 * When configuring Brighter we will need to know:
-    * If you intend to use our support for a Claim Check
-    * What storage you wish to use for the Data Store. This is effectively a Store and Retrieve Luggage implementation. 
+  * If you intend to use our support for a Claim Check
+  * What storage you wish to use for the Data Store. This is effectively a Store and Retrieve Luggage implementation. 

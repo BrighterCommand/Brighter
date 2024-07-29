@@ -1,4 +1,4 @@
-# 8. Support Cloud Events 
+# 8. Support Cloud Events
 
 Date: 2019-08-01
 
@@ -46,7 +46,7 @@ Our transports will need to be able to interpret metadata where it comes from cl
 In addition we have a number of Brighter metadata fields that are not part of CloudEvents. We will need to decide how to handle these. We could add them as extensions to CloudEvents, or we could add them as custom header values. We will need to decide on a case by case basis, depending on the transport's native headers.
 
 ## Consequences
-                  
+
 Passing the Publication to the Message Mapper has advantages. Our ability to provide a generic message mapper has previously been constrained by the Message Mapper not having access to key fields on the Publication, such as the topic/routing key that the message is to be sent over. Whilst the objective of this change is not to provide a generic message mapper, it will allow us to provide a more generic message mapper in the future.
 
 Moving the Message Mapper to the External Bus will simplify the constructors of the Command Processor. We have a number of Command Processor constructors and that is mainly caused by whether or not you need an external bus.

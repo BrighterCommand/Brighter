@@ -14,9 +14,9 @@ The RequestContext is passed through the pipeline. It is created by the CommandP
 
 Some users sought to try and use the RequestContext to pass information from outside of the CommandProcessor pipeline, such as authentication and authorization for the user carrying out an action, or values from the HTTPContext in which the request was running. This was difficult as the only entry point was to provide your own RequestContextFactory that supported "session" scoped RequestContexts. This was not a good fit for the use case.
 
-A usual alternative was to put this information on a Request derived class instead. We were forced to adopt this strategy ourselves to add Telemetry information to our pipeline. This has the unforunate side effect of serializing these context fields as part of the request (although we gained from this side effect as our telemetry information included Cloud Events headers which means we were distributing some Cloud Events identifiers as a side effect).
+A usual alternative was to put this information on a Request derived class instead. We were forced to adopt this strategy ourselves to add Telemetry information to our pipeline. This has the unfortunate side effect of serializing these context fields as part of the request (although we gained from this side effect as our telemetry information included Cloud Events headers which means we were distributing some Cloud Events identifiers as a side effect).
 
-The alternative to using a field on the Request for this, picking up global data, such as Activity.Current, suffers from all the issues of Common Coupling. We have no gurantee that a developer in implementing their own handler won't create their own activity and thus reset Activity.Current, pushing our telemetry information into the wrong scope.
+The alternative to using a field on the Request for this, picking up global data, such as Activity.Current, suffers from all the issues of Common Coupling. We have no guarantee that a developer in implementing their own handler won't create their own activity and thus reset Activity.Current, pushing our telemetry information into the wrong scope.
 
 With our decision in V10 to support Cloud Events and review how our OTel support works we needed a better solution than just adding more fields to the Request class.
 
@@ -30,7 +30,7 @@ By passing the same RequestContext to the translation pipeline (which has also b
 
 ## Consequences
 
-The API for the our CommandProcessor has increased complexity because an new question becomes "do I need a RequestContext". By making this an optional parameter we can ease the burdern of understanding this - just fall back on the library to do something sensible if you don't provide it (in our case either create it in the Dispatcher or in the CommandProcessor depending on context).
+The API for the our CommandProcessor has increased complexity because an new question becomes "do I need a RequestContext". By making this an optional parameter we can ease the burden of understanding this - just fall back on the library to do something sensible if you don't provide it (in our case either create it in the Dispatcher or in the CommandProcessor depending on context).
 
 For more advanced use cases it does prevent the need to users to overload their Request classes with context information that is not part of the request itself. This is particularly useful for cross cutting concerns such as authentication and authorization.
 
