@@ -29,6 +29,11 @@
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     <PackageVersion Include="FluentMigrator" Version="5.2.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.Core" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.MySql" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="5.2.0" />
     <PackageVersion Include="MessagePack" Version="2.5.171" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.1" />
@@ -38,6 +43,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.6" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="8.0.7" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
@@ -62,6 +68,7 @@
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.9.0"/>
     <PackageVersion Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
@@ -89,7 +96,9 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
+    
   </ItemGroup>
+  
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.1' ">
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="5.0.17" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.17" />

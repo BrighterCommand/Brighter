@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
-        private readonly BrighterTracer _tracer;
+        private readonly IAmABrighterTracer _tracer;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -124,7 +124,7 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _subscriberRegistry = subscriberRegistry;
@@ -172,7 +172,7 @@ namespace Paramore.Brighter
             InboxConfiguration inboxConfiguration = null,
             IEnumerable<Subscription> replySubscriptions = null,
             IAmAChannelFactory responseChannelFactory = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
         {
@@ -203,7 +203,7 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IEnumerable<Subscription> replySubscriptions = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _requestContextFactory = requestContextFactory;
@@ -319,7 +319,7 @@ namespace Paramore.Brighter
             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
-            var handlerSpans = new Dictionary<string, Activity>();
+            var handlerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
@@ -393,7 +393,7 @@ namespace Paramore.Brighter
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
-            var handlerSpans = new Dictionary<string, Activity>();
+            var handlerSpans = new ConcurrentDictionary<string, Activity>();
              try
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),

@@ -72,7 +72,7 @@ namespace Paramore.Brighter
             var context = _requestContextFactory.Create();
             context.Span = span;
             
-            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _millisecondsSinceSent, true, context, _args);
+            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _millisecondsSinceSent, _useBulk, context, _args);
         }
 
         /// <summary>

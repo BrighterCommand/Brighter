@@ -33,6 +33,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 using Paramore.Brighter.FeatureSwitch.Handlers;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
@@ -68,11 +69,12 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             ServiceProviderHandlerFactory handlerFactory = new(_provider);
             
             _commandProcessor = CommandProcessorBuilder
-                .With()
+                .StartNew()
                 .ConfigureFeatureSwitches(featureSwitchRegistry)
                 .Handlers(new HandlerConfiguration(registry, handlerFactory))
                 .DefaultPolicy()
                 .NoExternalBus()
+                .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

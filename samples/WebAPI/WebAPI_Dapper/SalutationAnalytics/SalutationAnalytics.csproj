@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <nullable>enable</nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.Hosting\Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj"/>
+    <ProjectReference Include="..\..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj"/>
+    <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
+    <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
+    <ProjectReference Include="..\SalutationApp\SalutationApp.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentMigrator"/>
+    <PackageReference Include="FluentMigrator.Runner"/>    
+    <PackageReference Include="Microsoft.Data.Sqlite.Core"/>
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
+    <PackageReference Include="OpenTelemetry.Exporter.Console"/>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.Development.json">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="appsettings.Production.json">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Npgsql">
+      <HintPath>..\..\..\libs\Npgsql\net6.0\Npgsql.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
