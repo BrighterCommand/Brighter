@@ -15,22 +15,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             _serviceBusSender = serviceBusSender;
         }
 
-        public void Send(ServiceBusMessage message)
-        {
-            //Azure Service Bus only supports IsolationLevel.Serializable if in a transaction
-            if (Transaction.Current != null && Transaction.Current.IsolationLevel != IsolationLevel.Serializable)
-            {
-                using (new TransactionScope(TransactionScopeOption.Suppress))
-                {
-                    _serviceBusSender.SendMessageAsync(message).Wait();
-                }
-            }
-            else
-            {
-                _serviceBusSender.SendMessageAsync(message).Wait();
-            }
-        }
-
         public async Task SendAsync(ServiceBusMessage message,
             CancellationToken cancellationToken = default)
         {
@@ -53,20 +37,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             return _serviceBusSender.SendMessagesAsync(messages, cancellationToken);
         }
 
-        public void ScheduleMessage(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime)
-        {
-            _serviceBusSender.ScheduleMessageAsync(message, scheduleEnqueueTime).Wait();
-        }
-
         public async Task ScheduleMessageAsync(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime,
             CancellationToken cancellationToken = default)
         {
             await _serviceBusSender.ScheduleMessageAsync(message, scheduleEnqueueTime, cancellationToken);
-        }
-
-        public void Close()
-        {
-            _serviceBusSender.CloseAsync().Wait();
         }
 
         public Task CloseAsync()

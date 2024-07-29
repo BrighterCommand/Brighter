@@ -35,92 +35,157 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             s_logger.LogWarning("Resetting management client wrapper...");
             Initialise();
         }
-
+        
         /// <summary>
         /// Check if a Topic exists
         /// </summary>
-        /// <param name="topicOrQueue">The name of the Topic or Queue.</param>
-        /// <param name="useQueue">Use a Queue instead of a Topic</param>
-        /// <returns>True if the Channel exists.</returns>
-        public bool TopicOrQueueExists(string topicOrQueue, bool useQueue)
+        /// <param name="topicName">The name of the Topic.</param>
+        /// <returns>True if the Topic exists.</returns>
+        public bool TopicExists(string topicName)
         {
-            s_logger.LogDebug("Checking if topic {Topic} exists...", topicOrQueue);
+            s_logger.LogDebug("Checking if topic {Topic} exists...", topicName);
 
             bool result;
 
             try
             {
-                result = useQueue ? _administrationClient.QueueExistsAsync(topicOrQueue).GetAwaiter().GetResult(): 
-                _administrationClient.TopicExistsAsync(topicOrQueue).GetAwaiter().GetResult();
+                result = _administrationClient.TopicExistsAsync(topicName).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to check if topic {Topic} exists.", topicOrQueue);
+                s_logger.LogError(e,"Failed to check if topic {Topic} exists", topicName);
                 throw;
             }
 
             if (result)
             {
-                s_logger.LogDebug("Topic {Topic} exists.", topicOrQueue);
+                s_logger.LogDebug("Topic {Topic} exists", topicName);
             }
             else
             {
-                s_logger.LogWarning("Topic {Topic} does not exist.", topicOrQueue);
+                s_logger.LogWarning("Topic {Topic} does not exist", topicName);
             }
 
             return result;
         }
 
         /// <summary>
-        /// Create a Topic
+        /// Check if a Queue exists
         /// </summary>
-        /// <param name="topicOrQueue"></param>
-        /// <param name="useQueues"></param>
-        /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
-        public void CreateChannel(string topicOrQueue, bool useQueues, TimeSpan? autoDeleteOnIdle = null)
+        /// <param name="queueName">The name of the Queue.</param>
+        /// <returns>True if the Queue exists.</returns>
+        public bool QueueExists(string queueName)
         {
-            s_logger.LogInformation("Creating topic {Topic}...", topicOrQueue);
+            s_logger.LogDebug("Checking if queue {Queue} exists...", queueName);
+
+            bool result;
 
             try
             {
-                if(useQueues)
-                    _administrationClient.CreateQueueAsync(new CreateQueueOptions(topicOrQueue){
+                result = _administrationClient.QueueExistsAsync(queueName).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e,"Failed to check if queue {Queue} exists", queueName);
+                throw;
+            }
+
+            if (result)
+            {
+                s_logger.LogDebug("Queue {Queue} exists", queueName);
+            }
+            else
+            {
+                s_logger.LogWarning("Queue {Queue} does not exist", queueName);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Create a Queue
+        /// </summary>
+        /// <param name="queueName">The name of the Queue</param>
+        /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
+        public void CreateQueue(string queueName, TimeSpan? autoDeleteOnIdle = null)
+        {
+            s_logger.LogInformation("Creating topic {Topic}...", queueName);
+
+            try
+            {
+                _administrationClient
+                    .CreateQueueAsync(new CreateQueueOptions(queueName)
+                    {
                         AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
                     }).GetAwaiter().GetResult();
-                else
-                    _administrationClient.CreateTopicAsync(new CreateTopicOptions(topicOrQueue)
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Failed to create queue {Queue}.", queueName);
+                throw;
+            }
+
+            s_logger.LogInformation("Queue {Queue} created.", queueName);
+        }
+        
+        /// <summary>
+        /// Create a Topic
+        /// </summary>
+        /// <param name="topicName">The name of the Topic</param>
+        /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
+        public void CreateTopic(string topicName, TimeSpan? autoDeleteOnIdle = null)
+        {
+            s_logger.LogInformation("Creating topic {Topic}...", topicName);
+
+            try
+            {
+                _administrationClient.CreateTopicAsync(new CreateTopicOptions(topicName)
                 {
                     AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
                 }).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to create topic {Topic}.", topicOrQueue);
+                s_logger.LogError(e, "Failed to create topic {Topic}.", topicName);
                 throw;
             }
 
-            s_logger.LogInformation("Topic {Topic} created.", topicOrQueue);
+            s_logger.LogInformation("Topic {Topic} created.", topicName);
         }
 
         /// <summary>
-        /// Delete a Topic.
+        /// Delete a Queue
         /// </summary>
-        /// <param name="topicOrQueue"></param>
-        /// <param name="useQueues"></param>
-        public async Task DeleteChannelAsync(string topicOrQueue, bool useQueues)
+        /// <param name="queueName">The name of the Queue</param>
+        public async Task DeleteQueueAsync(string queueName)
         {
-            s_logger.LogInformation("Deleting topic {Topic}...", topicOrQueue);
+            s_logger.LogInformation("Deleting queue {Queue}...", queueName);
             try
             {
-                if(useQueues)
-                    await _administrationClient.DeleteQueueAsync(topicOrQueue);
-                else
-                    await _administrationClient.DeleteTopicAsync(topicOrQueue);
-                s_logger.LogInformation("Topic {Topic} successfully deleted", topicOrQueue);
+                    await _administrationClient.DeleteQueueAsync(queueName);
+                s_logger.LogInformation("Queue {Queue} successfully deleted", queueName);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to delete Topic {Topic}", topicOrQueue);
+                s_logger.LogError(e,"Failed to delete Queue {Queue}", queueName);
+            }
+        }
+
+        /// <summary>
+        /// Delete a Topic
+        /// </summary>
+        /// <param name="topicName">The name of the Topic</param>
+        public async Task DeleteTopicAsync(string topicName)
+        {
+            s_logger.LogInformation("Deleting topic {Topic}...", topicName);
+            try
+            {
+                await _administrationClient.DeleteTopicAsync(topicName);
+                s_logger.LogInformation("Topic {Topic} successfully deleted", topicName);
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Failed to delete Topic {Topic}", topicName);
             }
         }
 
@@ -202,9 +267,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         {
             s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
 
-            if (!TopicOrQueueExists(topicName, false))
+            if (!TopicExists(topicName))
             {
-                CreateChannel(topicName, false, subscriptionConfiguration.QueueIdleBeforeDelete);
+                CreateTopic(topicName, subscriptionConfiguration.QueueIdleBeforeDelete);
             }
 
             var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
