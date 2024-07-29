@@ -17,9 +17,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite.Core"/>
     <PackageReference Include="FluentMigrator"/>
-    <PackageReference Include="FluentMigrator.Runner"/>
+    <PackageReference Include="FluentMigrator.Runner"/>    
+    <PackageReference Include="Microsoft.Data.Sqlite.Core"/>
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
+    <PackageReference Include="OpenTelemetry.Exporter.Console"/>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore"/>
   </ItemGroup>
 
   <ItemGroup>

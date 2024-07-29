@@ -66,34 +66,7 @@ public class Startup
             c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
         });
 
-        var brighterTracer = new BrighterTracer(TimeProvider.System);
-        services.AddSingleton<IAmABrighterTracer>(brighterTracer);
-
-        services.AddOpenTelemetry()
-            .ConfigureResource(builder =>
-            {
-                builder.AddService(
-                    serviceName: "GreetingsWeb",
-                    serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
-                    serviceInstanceId: Environment.MachineName);
-            }).WithTracing(builder =>
-            {
-                builder
-                    .AddSource(brighterTracer.ActivitySource.Name)
-                    .AddSource("RabbitMQ.Client.*")
-                    .SetSampler(new AlwaysOnSampler())
-                    .AddAspNetCoreInstrumentation()
-                    .AddConsoleExporter()
-                    .AddOtlpExporter(options =>
-                    {
-                        options.Protocol = OtlpExportProtocol.Grpc;
-                    });
-            }) 
-            .WithMetrics(builder => builder
-                .AddAspNetCoreInstrumentation()
-                .AddConsoleExporter()
-                .AddOtlpExporter()
-            );
+        ConfigureObservability(services);
 
         GreetingsDbFactory.ConfigureMigration(_configuration, services);
         ConfigureBrighter(services);
@@ -155,5 +128,37 @@ public class Startup
             .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly)
             .AddJsonQueryLogging()
             .AddPolicies(new GreetingsPolicy());
+    }
+
+    private void ConfigureObservability(IServiceCollection services)
+    {
+        var brighterTracer = new BrighterTracer(TimeProvider.System);
+        services.AddSingleton<IAmABrighterTracer>(brighterTracer);
+
+        services.AddOpenTelemetry()
+            .ConfigureResource(builder =>
+            {
+                builder.AddService(
+                    serviceName: "GreetingsWeb",
+                    serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+                    serviceInstanceId: Environment.MachineName);
+            }).WithTracing(builder =>
+            {
+                builder
+                    .AddSource(brighterTracer.ActivitySource.Name)
+                    .AddSource("RabbitMQ.Client.*")
+                    .SetSampler(new AlwaysOnSampler())
+                    .AddAspNetCoreInstrumentation()
+                    .AddConsoleExporter()
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Protocol = OtlpExportProtocol.Grpc;
+                    });
+            }) 
+            .WithMetrics(builder => builder
+                .AddAspNetCoreInstrumentation()
+                .AddConsoleExporter()
+                .AddOtlpExporter()
+            ); 
     }
 }

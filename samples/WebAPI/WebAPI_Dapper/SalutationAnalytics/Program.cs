@@ -6,10 +6,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
@@ -18,7 +23,10 @@ using SalutationApp.Policies;
 using SalutationApp.Requests;
 using TransportMaker;
 
-IHost host = CreateHostBuilder(args).Build();
+var builder = CreateHostBuilder(args);
+
+var host = builder.Build();
+
 host.CheckDbIsUp(ApplicationType.Salutations);
 host.MigrateDatabase();
 host.CreateInbox();
@@ -59,6 +67,7 @@ static IHostBuilder CreateHostBuilder(string[] args)
             SalutationsDbFactory.ConfigureMigration(hostContext, services);
             ConfigureDapper(hostContext, services);
             ConfigureBrighter(hostContext, services);
+            ConfigureObservability(services); 
         })
         .UseConsoleLifetime();
 }
@@ -128,6 +137,38 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
     services.AddHostedService<ServiceActivatorHostedService>();
 }
 
+static void ConfigureObservability(IServiceCollection services)
+{
+    var brighterTracer = new BrighterTracer(TimeProvider.System);
+    services.AddSingleton<IAmABrighterTracer>(brighterTracer);
+
+    services.AddOpenTelemetry()
+        .ConfigureResource(builder =>
+        {
+            builder.AddService(
+                serviceName: "SalutationAnalytics",
+                serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
+                serviceInstanceId: Environment.MachineName);
+        }).WithTracing(builder =>
+        {
+            builder
+                .AddSource(brighterTracer.ActivitySource.Name)
+                .AddSource("RabbitMQ.Client.*")
+                .SetSampler(new AlwaysOnSampler())
+                .AddAspNetCoreInstrumentation()
+                .AddConsoleExporter()
+                .AddOtlpExporter(options =>
+                {
+                    options.Protocol = OtlpExportProtocol.Grpc;
+                });
+        }) 
+        .WithMetrics(builder => builder
+            .AddAspNetCoreInstrumentation()
+            .AddConsoleExporter()
+            .AddOtlpExporter()
+        );
+    
+}
 
 static void ConfigureDapper(HostBuilderContext hostContext, IServiceCollection services)
 {
