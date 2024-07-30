@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Azure.Messaging.ServiceBus;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,8 +35,7 @@ namespace GreetingsReceiverConsole
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: true,
-                            receiveMode: ServiceBusReceiveMode.PeekLock),
+                            isAsync: true),
 
                         new AzureServiceBusSubscription<GreetingEvent>(
                             new SubscriptionName("Event"),
@@ -46,8 +44,7 @@ namespace GreetingsReceiverConsole
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: false,
-                            receiveMode: ServiceBusReceiveMode.PeekLock)
+                            isAsync: false)
                     };
 
                     //TODO: add your ASB qualified name here

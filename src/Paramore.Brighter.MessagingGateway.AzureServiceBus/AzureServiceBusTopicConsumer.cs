@@ -39,12 +39,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         protected override void GetMessageReceiverProvider()
         {
             s_logger.LogInformation(
-                "Getting message receiver provider for topic {Topic} and subscription {ChannelName} with receive Mode {ReceiveMode}...",
-                RoutingKey, _subscriptionName, Subscription.ReceiveMode);
+                "Getting message receiver provider for topic {Topic} and subscription {ChannelName}...",
+                RoutingKey, _subscriptionName);
             try
             {
                 ServiceBusReceiver = _serviceBusReceiverProvider.Get(RoutingKey, _subscriptionName,
-                    Subscription.ReceiveMode,
                     SubscriptionConfiguration.RequireSession);
             }
             catch (Exception e)
