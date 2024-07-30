@@ -12,13 +12,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
     {
         protected override ILogger Logger => s_logger;
-        
+
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusTopicConsumer>();
         private bool _subscriptionCreated;
         private readonly string _subscriptionName;
         private readonly IServiceBusReceiverProvider _serviceBusReceiverProvider;
         protected override string SubscriptionName => _subscriptionName;
-        
+
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusQueueConsumer"/> for Service Bus Topics
         /// </summary>
@@ -26,69 +26,68 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="messageProducerSync">An instance of the Messaging Producer used for Requeue.</param>
         /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
         /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
-        /// <param name="receiveMode">The mode in which to Receive.</param>
         public AzureServiceBusTopicConsumer(AzureServiceBusSubscription subscription,
             IAmAMessageProducerSync messageProducerSync,
             IAdministrationClientWrapper administrationClientWrapper,
-            IServiceBusReceiverProvider serviceBusReceiverProvider,
-            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete) : base(subscription,
-            messageProducerSync, administrationClientWrapper, receiveMode)
+            IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
+            messageProducerSync, administrationClientWrapper)
         {
             _subscriptionName = subscription.ChannelName;
             _serviceBusReceiverProvider = serviceBusReceiverProvider;
-            
-            if (!_subscriptionConfiguration.RequireSession)
-                GetMessageReceiverProvider();
         }
 
         protected override void GetMessageReceiverProvider()
         {
             s_logger.LogInformation(
                 "Getting message receiver provider for topic {Topic} and subscription {ChannelName} with receive Mode {ReceiveMode}...",
-                TopicName, _subscriptionName, _receiveMode);
+                RoutingKey, _subscriptionName, Subscription.ReceiveMode);
             try
             {
-                ServiceBusReceiver = _serviceBusReceiverProvider.Get(TopicName, _subscriptionName, _receiveMode,
-                        _subscriptionConfiguration.RequireSession);
+                ServiceBusReceiver = _serviceBusReceiverProvider.Get(RoutingKey, _subscriptionName,
+                    Subscription.ReceiveMode,
+                    SubscriptionConfiguration.RequireSession);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}.", TopicName, _subscriptionName);
+                s_logger.LogError(e,
+                    "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}",
+                    RoutingKey, _subscriptionName);
             }
         }
-        
+
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
         public override void Purge()
         {
-            Logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}", 
-                SubscriptionName, TopicName);
+            Logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}",
+                SubscriptionName, RoutingKey);
 
-            AdministrationClientWrapper.DeleteTopicAsync(TopicName);
-            EnsureSubscription();
+            AdministrationClientWrapper.DeleteTopicAsync(RoutingKey);
+            EnsureChannel();
         }
 
-        protected override void EnsureSubscription()
+        protected override void EnsureChannel()
         {
-            if (_subscriptionCreated || _subscription.MakeChannels.Equals(OnMissingChannel.Assume))
+            if (_subscriptionCreated || Subscription.MakeChannels.Equals(OnMissingChannel.Assume))
                 return;
 
             try
             {
-                if (AdministrationClientWrapper.SubscriptionExists(TopicName, _subscriptionName))
+                if (AdministrationClientWrapper.SubscriptionExists(RoutingKey, _subscriptionName))
                 {
                     _subscriptionCreated = true;
                     return;
                 }
 
-                if (_subscription.MakeChannels.Equals(OnMissingChannel.Validate))
+                if (Subscription.MakeChannels.Equals(OnMissingChannel.Validate))
                 {
                     throw new ChannelFailureException(
-                        $"Subscription {_subscriptionName} does not exist on topic {TopicName} and missing channel mode set to Validate.");
+                        $"Subscription {_subscriptionName} does not exist on topic {RoutingKey} and missing channel mode set to Validate.");
                 }
 
-                AdministrationClientWrapper.CreateSubscription(TopicName, _subscriptionName, _subscriptionConfiguration);
+                AdministrationClientWrapper.CreateSubscription(RoutingKey, _subscriptionName,
+                    SubscriptionConfiguration);
                 _subscriptionCreated = true;
             }
             catch (ServiceBusException ex)
@@ -96,7 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
                 {
                     s_logger.LogWarning(
-                        "Message entity already exists with topic {Topic} and subscription {ChannelName}.", TopicName,
+                        "Message entity already exists with topic {Topic} and subscription {ChannelName}", RoutingKey,
                         _subscriptionName);
                     _subscriptionCreated = true;
                 }
@@ -107,7 +106,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failing to check or create subscription.");
+                s_logger.LogError(e, "Failing to check or create subscription");
 
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 AdministrationClientWrapper.Reset();

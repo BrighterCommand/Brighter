@@ -1,21 +1,17 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.Messaging.ServiceBus;
 using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
-using Greetings.Ports.Mappers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
-using Paramore.Brighter.MsSql;
-using Paramore.Brighter.MsSql.EntityFrameworkCore;
-using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Control.Api;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -42,7 +38,8 @@ var subscriptions = new Subscription[]
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
-        noOfPerformers: 2, unacceptableMessageLimit: 1),
+        noOfPerformers: 2, unacceptableMessageLimit: 1,
+        receiveMode: ServiceBusReceiveMode.PeekLock),
     new AzureServiceBusSubscription<GreetingEvent>(
         new SubscriptionName("Greeting Async Event"),
         new ChannelName(subscriptionName),
@@ -51,7 +48,8 @@ var subscriptions = new Subscription[]
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: false,
-        noOfPerformers: 2),
+        noOfPerformers: 2,
+        receiveMode: ServiceBusReceiveMode.PeekLock),
     new AzureServiceBusSubscription<AddGreetingCommand>(
         new SubscriptionName("Greeting Command"),
         new ChannelName(subscriptionName),
@@ -60,7 +58,8 @@ var subscriptions = new Subscription[]
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
-        noOfPerformers: 2)
+        noOfPerformers: 2,
+        receiveMode: ServiceBusReceiveMode.PeekLock)
 };
 
 string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
@@ -76,7 +75,7 @@ var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTable
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
 
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
+var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
 builder.Services.AddServiceActivator(options =>
     {
         options.Subscriptions = subscriptions;

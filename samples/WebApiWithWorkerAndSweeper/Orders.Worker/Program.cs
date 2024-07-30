@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Orders.Data;
@@ -38,7 +39,8 @@ var subscriptions = new Subscription[]
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
-        noOfPerformers: 2, unacceptableMessageLimit: 1)
+        noOfPerformers: 2, unacceptableMessageLimit: 1,
+        receiveMode: ServiceBusReceiveMode.PeekLock)
 };
 
 string dbConnString = "Server=127.0.0.1,11433;Database=BrighterOrderTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True;encrypt=false";
@@ -50,7 +52,7 @@ var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTable
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
 
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
+var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
 builder.Services.AddServiceActivator(options =>
     {
         options.Subscriptions = subscriptions;

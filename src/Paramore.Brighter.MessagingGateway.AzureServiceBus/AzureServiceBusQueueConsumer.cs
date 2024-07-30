@@ -15,6 +15,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         protected override ILogger Logger => s_logger;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusQueueConsumer>();
         private readonly IServiceBusReceiverProvider _serviceBusReceiverProvider;
+
+        private bool _queueCreated = false;
         
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusQueueConsumer"/> for Service Bus Queus
@@ -23,33 +25,28 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="messageProducerSync">An instance of the Messaging Producer used for Requeue.</param>
         /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
         /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
-        /// <param name="receiveMode">The mode in which to Receive.</param>
         public AzureServiceBusQueueConsumer(AzureServiceBusSubscription subscription,
             IAmAMessageProducerSync messageProducerSync,
             IAdministrationClientWrapper administrationClientWrapper,
-            IServiceBusReceiverProvider serviceBusReceiverProvider,
-            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete) : base(subscription,
-            messageProducerSync, administrationClientWrapper, receiveMode)
+            IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
+            messageProducerSync, administrationClientWrapper)
         {
             _serviceBusReceiverProvider = serviceBusReceiverProvider;
-
-            if (!_subscriptionConfiguration.RequireSession)
-                GetMessageReceiverProvider();
         }
 
         protected override void GetMessageReceiverProvider()
         {
             s_logger.LogInformation(
-                "Getting message receiver provider for topic {Topic} with receive Mode {ReceiveMode}...",
-                TopicName, _receiveMode);
+                "Getting message receiver provider for queue {Queue} with receive Mode {ReceiveMode}...",
+                RoutingKey, Subscription.ReceiveMode);
             try
             {
-                ServiceBusReceiver = _serviceBusReceiverProvider.Get(TopicName, _receiveMode,
-                        _subscriptionConfiguration.RequireSession);
+                ServiceBusReceiver = _serviceBusReceiverProvider.Get(RoutingKey, Subscription.ReceiveMode,
+                        SubscriptionConfiguration.RequireSession);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failed to get message receiver provider for topic {Topic}.", TopicName);
+                s_logger.LogError(e, "Failed to get message receiver provider for queue {Queue}", RoutingKey);
             }
         }
         
@@ -58,17 +55,57 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         public override void Purge()
         {
-            Logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}", 
-                SubscriptionName, TopicName);
+            Logger.LogInformation("Purging messages from {Subscription} Subscription on queue {Queue}", 
+                SubscriptionName, RoutingKey);
 
-            AdministrationClientWrapper.DeleteQueueAsync(TopicName);
-            EnsureSubscription();
+            AdministrationClientWrapper.DeleteQueueAsync(RoutingKey);
+            EnsureChannel();
         }
 
-        protected override void EnsureSubscription()
+        protected override void EnsureChannel()
         {
-            //No Subscription To Create
-            return;
+            if (_queueCreated || Subscription.MakeChannels.Equals(OnMissingChannel.Assume))
+                return;
+
+            try
+            {
+                if (AdministrationClientWrapper.QueueExists(RoutingKey))
+                {
+                    _queueCreated = true;
+                    return;
+                }
+
+                if (Subscription.MakeChannels.Equals(OnMissingChannel.Validate))
+                {
+                    throw new ChannelFailureException(
+                        $"Queue {RoutingKey} does not exist and missing channel mode set to Validate.");
+                }
+
+                AdministrationClientWrapper.CreateQueue(RoutingKey, SubscriptionConfiguration.QueueIdleBeforeDelete);
+                _queueCreated = true;
+            }
+            catch (ServiceBusException ex)
+            {
+                if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+                {
+                    s_logger.LogWarning(
+                        "Message entity already exists with queue {Queue}", RoutingKey);
+                    _queueCreated = true;
+                }
+                else
+                {
+                    throw new ChannelFailureException("Failing to check or create subscription", ex);
+                }
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Failing to check or create subscription");
+
+                //The connection to Azure Service bus may have failed so we re-establish the connection.
+                AdministrationClientWrapper.Reset();
+
+                throw new ChannelFailureException("Failing to check or create subscription", e);
+            }
         }
     }
 }

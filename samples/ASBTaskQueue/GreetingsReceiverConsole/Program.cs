@@ -1,13 +1,11 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Events;
-using Greetings.Ports.Mappers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -38,7 +36,8 @@ namespace GreetingsReceiverConsole
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: true),
+                            isAsync: true,
+                            receiveMode: ServiceBusReceiveMode.PeekLock),
 
                         new AzureServiceBusSubscription<GreetingEvent>(
                             new SubscriptionName("Event"),
@@ -47,13 +46,14 @@ namespace GreetingsReceiverConsole
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: false)
+                            isAsync: false,
+                            receiveMode: ServiceBusReceiveMode.PeekLock)
                     };
 
                     //TODO: add your ASB qualified name here
                     var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
 
-                    var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
+                    var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
