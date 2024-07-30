@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.Messaging.ServiceBus;
 using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
 using Greetings.Ports.CommandHandlers;
@@ -38,8 +37,7 @@ var subscriptions = new Subscription[]
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
-        noOfPerformers: 2, unacceptableMessageLimit: 1,
-        receiveMode: ServiceBusReceiveMode.PeekLock),
+        noOfPerformers: 2, unacceptableMessageLimit: 1),
     new AzureServiceBusSubscription<GreetingEvent>(
         new SubscriptionName("Greeting Async Event"),
         new ChannelName(subscriptionName),
@@ -48,8 +46,7 @@ var subscriptions = new Subscription[]
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: false,
-        noOfPerformers: 2,
-        receiveMode: ServiceBusReceiveMode.PeekLock),
+        noOfPerformers: 2),
     new AzureServiceBusSubscription<AddGreetingCommand>(
         new SubscriptionName("Greeting Command"),
         new ChannelName(subscriptionName),
@@ -58,8 +55,7 @@ var subscriptions = new Subscription[]
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
-        noOfPerformers: 2,
-        receiveMode: ServiceBusReceiveMode.PeekLock)
+        noOfPerformers: 2)
 };
 
 string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";

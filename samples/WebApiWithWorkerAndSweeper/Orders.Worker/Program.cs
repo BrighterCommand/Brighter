@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Orders.Data;
@@ -39,8 +38,7 @@ var subscriptions = new Subscription[]
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
-        noOfPerformers: 2, unacceptableMessageLimit: 1,
-        receiveMode: ServiceBusReceiveMode.PeekLock)
+        noOfPerformers: 2, unacceptableMessageLimit: 1)
 };
 
 string dbConnString = "Server=127.0.0.1,11433;Database=BrighterOrderTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True;encrypt=false";

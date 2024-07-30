@@ -128,48 +128,38 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            //Only ACK if ReceiveMode is Peek
-            if (Subscription.ReceiveMode.Equals(ServiceBusReceiveMode.PeekLock))
+            try
             {
-                try
-                {
-                    EnsureChannel();
-                    var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
+                EnsureChannel();
+                var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
 
-                    if (string.IsNullOrEmpty(lockToken))
-                        throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                    Logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
-                        lockToken);
+                if (string.IsNullOrEmpty(lockToken))
+                    throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+                Logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
+                    lockToken);
 
-                    ServiceBusReceiver.Complete(lockToken).Wait();
-                    if(SubscriptionConfiguration.RequireSession)
-                        ServiceBusReceiver.Close();
-                }
-                catch (AggregateException ex)
-                {
-                    if (ex.InnerException is ServiceBusException asbException)
-                        HandleAsbException(asbException, message.Id);
-                    else
-                    {
-                        Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
-                        throw;
-                    }
-                }
-                catch (ServiceBusException ex)
-                {
-                    HandleAsbException(ex, message.Id);
-                }
-                catch (Exception ex)
+                ServiceBusReceiver.Complete(lockToken).Wait();
+                if (SubscriptionConfiguration.RequireSession)
+                    ServiceBusReceiver.Close();
+            }
+            catch (AggregateException ex)
+            {
+                if (ex.InnerException is ServiceBusException asbException)
+                    HandleAsbException(asbException, message.Id);
+                else
                 {
                     Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
                     throw;
                 }
             }
-            else
+            catch (ServiceBusException ex)
             {
-                Logger.LogDebug(
-                    "Completing with Id {Id} is not possible due to receive Mode being set to {ReceiveMode}",
-                    message.Id, Subscription.ReceiveMode);
+                HandleAsbException(ex, message.Id);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+                throw;
             }
         }
 
@@ -179,33 +169,23 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
-            //Only Reject if ReceiveMode is Peek
-            if (Subscription.ReceiveMode.Equals(ServiceBusReceiveMode.PeekLock))
+            try
             {
-                try
-                {
-                    EnsureChannel();
-                    var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
+                EnsureChannel();
+                var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
 
-                    if (string.IsNullOrEmpty(lockToken))
-                        throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                    Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+                if (string.IsNullOrEmpty(lockToken))
+                    throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+                Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
-                    ServiceBusReceiver.DeadLetter(lockToken).Wait();
-                    if(SubscriptionConfiguration.RequireSession)
-                        ServiceBusReceiver.Close();
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
-                    throw;
-                }
+                ServiceBusReceiver.DeadLetter(lockToken).Wait();
+                if (SubscriptionConfiguration.RequireSession)
+                    ServiceBusReceiver.Close();
             }
-            else
+            catch (Exception ex)
             {
-                Logger.LogWarning(
-                    "Dead Lettering Message with Id {Id} is not possible due to receive Mode being set to {ReceiveMode}",
-                    message.Id, Subscription.ReceiveMode);
+                Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
+                throw;
             }
         }
 
@@ -262,8 +242,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 delayedMilliseconds: 0
                 );
 
-            if (Subscription.ReceiveMode.Equals(ServiceBusReceiveMode.PeekLock))
-                headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
+            headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
             
             foreach (var property in azureServiceBusMessage.ApplicationProperties)
             {

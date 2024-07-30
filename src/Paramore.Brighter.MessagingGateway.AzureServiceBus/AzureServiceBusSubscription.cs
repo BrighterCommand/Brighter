@@ -1,5 +1,4 @@
 ﻿using System;
-using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -9,12 +8,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     public class AzureServiceBusSubscription : Subscription
     {
         public AzureServiceBusSubscriptionConfiguration Configuration { get; }
-
-        /// <summary>
-        /// The mode in which to receive messages.
-        /// </summary>
-        /// <returns>The mode in which to Receive messages</returns>
-        public ServiceBusReceiveMode ReceiveMode { get; }
 
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
@@ -35,7 +28,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        /// <param name="receiveMode">The mode in which to receive messages.</param>
         public AzureServiceBusSubscription(
             Type dataType,
             SubscriptionName name = null,
@@ -52,13 +44,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000,
-            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete)
+            int channelFailureDelay = 1000)
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
                 makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             Configuration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
-            ReceiveMode = receiveMode;
         }
     }
 
@@ -102,12 +92,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000,
-            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete)
+            int channelFailureDelay = 1000)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
                 timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
-                isAsync, channelFactory, makeChannels, subscriptionConfiguration, emptyChannelDelay, channelFailureDelay,
-                receiveMode)
+                isAsync, channelFactory, makeChannels, subscriptionConfiguration, emptyChannelDelay, channelFailureDelay)
         {
         }
     }
