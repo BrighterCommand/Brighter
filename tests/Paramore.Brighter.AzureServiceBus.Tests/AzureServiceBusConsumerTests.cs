@@ -230,6 +230,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_dispose_is_called_the_close_method_is_called()
         {
+            _azureServiceBusConsumer.Receive(0);
             _azureServiceBusConsumer.Dispose();
 
             A.CallTo(() => _messageReceiver.Close()).MustHaveHappened(1, Times.Exactly);
@@ -409,10 +410,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _messageReceiver.Complete(lockToken)).Throws(new Exception());
 
             var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
-                ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
+                ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig, receiveMode: ServiceBusReceiveMode.PeekLock);
             
             var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
-                _nameSpaceManagerWrapper, mockMessageReceiver, receiveMode: ServiceBusReceiveMode.PeekLock);
+                _nameSpaceManagerWrapper, mockMessageReceiver);
 
             Message[] result = azureServiceBusConsumer.Receive(400);
 
@@ -442,10 +443,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _messageReceiver.DeadLetter(lockToken)).Throws(new Exception());
 
             var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
-                ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
+                ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig, receiveMode: ServiceBusReceiveMode.PeekLock);
             
             var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
-                _nameSpaceManagerWrapper, mockMessageReceiver, receiveMode: ServiceBusReceiveMode.PeekLock);
+                _nameSpaceManagerWrapper, mockMessageReceiver);
 
             Message[] result = azureServiceBusConsumer.Receive(400);
 

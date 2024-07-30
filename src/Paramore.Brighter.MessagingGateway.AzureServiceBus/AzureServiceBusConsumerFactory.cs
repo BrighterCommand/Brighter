@@ -12,25 +12,21 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly IServiceBusClientProvider _clientProvider;
-        private readonly bool _ackOnRead;
 
         /// <summary>
         /// Factory to create an Azure Service Bus Consumer
         /// </summary>
         /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
         public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration)
-            : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString),
-                configuration.AckOnRead)
+            : this(new ServiceBusConnectionStringClientProvider(configuration.ConnectionString))
         { }
 
         /// <summary>
         /// Factory to create an Azure Service Bus Consumer
         /// </summary>
         /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
-        /// <param name="ackOnRead">Acknowledge Message on read (if set to false this will use a Peak Lock)</param>
-        public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, bool ackOnRead = false)
+        public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider)
         {
-            _ackOnRead = ackOnRead;
             _clientProvider = clientProvider;
         }
 
@@ -47,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 throw new ArgumentException("Subscription is not of type AzureServiceBusSubscription.",
                     nameof(subscription));
 
-            var recieverProvider = new ServiceBusReceiverProvider(_clientProvider);
+            var receiverProvider = new ServiceBusReceiverProvider(_clientProvider);
 
             if (sub.Configuration.UseServiceBusQueue)
             {
@@ -60,10 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     sub,
                     messageProducer,
                     nameSpaceManagerWrapper,
-                    recieverProvider,
-                    receiveMode: _ackOnRead
-                        ? ServiceBusReceiveMode.ReceiveAndDelete
-                        : ServiceBusReceiveMode.PeekLock);
+                    receiverProvider);
             }
             else
             {
@@ -76,8 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     sub,
                     messageProducer,
                     nameSpaceManagerWrapper,
-                    recieverProvider,
-                    receiveMode: _ackOnRead ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock);
+                    receiverProvider);
             }
         }
     }

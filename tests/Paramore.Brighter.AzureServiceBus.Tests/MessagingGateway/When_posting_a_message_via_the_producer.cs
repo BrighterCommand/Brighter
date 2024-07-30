@@ -64,7 +64,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _administrationClient.CreateSubscription(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration());
 
             var channelFactory =
-                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, false));
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
             _topicChannel = channelFactory.CreateChannel(subscription);
             _queueChannel = channelFactory.CreateChannel(queueSubscription);
 
