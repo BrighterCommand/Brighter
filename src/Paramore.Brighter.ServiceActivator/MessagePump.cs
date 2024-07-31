@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -57,6 +58,8 @@ namespace Paramore.Brighter.ServiceActivator
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private readonly IAmARequestContextFactory _requestContextFactory;
+        private readonly IAmABrighterTracer _tracer;
+        private readonly InstrumentationOptions _instrumentationOptions;
         private int _unacceptableMessageCount = 0;
 
         /// <summary>
@@ -80,10 +83,18 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a correctly scoped command processor </param>
         /// <param name="requestContextFactory">Provides a request context</param>
-        protected MessagePump(IAmACommandProcessorProvider commandProcessorProvider, IAmARequestContextFactory requestContextFactory)
+        /// <param name="tracer">What is the tracer we will use for telemetry</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        protected MessagePump(
+            IAmACommandProcessorProvider commandProcessorProvider, 
+            IAmARequestContextFactory requestContextFactory,
+            IAmABrighterTracer tracer,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             CommandProcessorProvider = commandProcessorProvider;
             _requestContextFactory = requestContextFactory;
+            _tracer = tracer;
+            _instrumentationOptions = instrumentationOptions;
         }
 
         /// <summary>

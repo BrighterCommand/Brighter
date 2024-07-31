@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -141,6 +142,21 @@ static void ConfigureObservability(IServiceCollection services)
 {
     var brighterTracer = new BrighterTracer(TimeProvider.System);
     services.AddSingleton<IAmABrighterTracer>(brighterTracer);
+    
+    services.AddLogging(loggingBuilder =>
+    {
+        loggingBuilder.AddConsole();
+        loggingBuilder.AddOpenTelemetry(options =>
+        {
+            options.IncludeScopes = true;
+            options.AddOtlpExporter((exporterOptions, processorOptions) =>
+                {
+                    exporterOptions.Protocol = OtlpExportProtocol.Grpc;
+                })
+                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Salutation Analytics"))
+                .IncludeScopes = true;
+        });
+    });
 
     services.AddOpenTelemetry()
         .ConfigureResource(builder =>

@@ -40,9 +40,13 @@ We also add an Inbox here. The Inbox can be used to de-duplicate messages. In me
 
 ## Telemetry
 
-The apps use OpenTelemetry to provide observability. This is configured in the `Program.cs` or `Startup.cs` file. Docker files are supported for an Open Telemetry Collector that exports telemetry to Jaeger and metrics to Prometheus. There is a supported config file for the Open Telemetry collector at the root.
+The apps use OpenTelemetry to provide observability. This is configured in the `Program.cs` or `Startup.cs` file. 
 
-You can view the telemetry in the [Jaeger UI](http://localhost:16686)
+Docker files are supported for an Open Telemetry Collector that exports telemetry to Jaeger and metrics to Prometheus. There is a supported config file for the Open Telemetry collector at the root. You can view the telemetry in the [Jaeger UI](http://localhost:16686)
+
+Alternatively you can use [.NET Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/fundamentals/dashboard/overview?tabs=bash) dashbaord to view the telemetry, which removes the need for running the collector and Jaeger. You can run it using Docker with:
+
+`docker run --rm -it -p 18888:18888 -p 4317:18889 -d --name aspire-dashboard -e DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS='true' mcr.microsoft.com/dotnet/aspire-dashboard:8.0.0`
 
 ### Configuration
 

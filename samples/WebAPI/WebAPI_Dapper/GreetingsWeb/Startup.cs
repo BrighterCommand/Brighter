@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using DbMaker;
 using GreetingsApp.Handlers;
 using GreetingsApp.Policies;
@@ -9,9 +8,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using OpenTelemetry;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -22,7 +22,6 @@ using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
 using TransportMaker;
-using ExportProcessorType = OpenTelemetry.ExportProcessorType;
 
 namespace GreetingsWeb;
 
@@ -134,6 +133,21 @@ public class Startup
     {
         var brighterTracer = new BrighterTracer(TimeProvider.System);
         services.AddSingleton<IAmABrighterTracer>(brighterTracer);
+        
+        services.AddLogging(loggingBuilder =>
+        {
+            loggingBuilder.AddConsole();
+            loggingBuilder.AddOpenTelemetry(options =>
+            {
+                options.IncludeScopes = true;
+                options.AddOtlpExporter((exporterOptions, processorOptions) =>
+                    {
+                        exporterOptions.Protocol = OtlpExportProtocol.Grpc;
+                    })
+                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("GreetingsWeb"))
+                    .IncludeScopes = true;
+            });
+        });
 
         services.AddOpenTelemetry()
             .ConfigureResource(builder =>
