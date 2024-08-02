@@ -23,9 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -54,25 +52,11 @@ namespace Paramore.Brighter.ServiceActivator
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
 
-        private static readonly ActivitySource s_activitySource;
-
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmABrighterTracer _tracer;
         private readonly InstrumentationOptions _instrumentationOptions;
-        private int _unacceptableMessageCount = 0;
-
-        /// <summary>
-        /// Used to initialize static members of the message pump
-        /// </summary>
-        static MessagePump()
-        {
-            var name = Assembly.GetAssembly(typeof(MessagePump<>))?.GetName();
-            var sourceName = name?.Name;
-            var sourceVersion = name?.Version?.ToString();
-
-            s_activitySource = new ActivitySource(sourceName ?? "Paramore.Brighter.ServiceActivator.MessagePump", sourceVersion);
-        }
+        private int _unacceptableMessageCount;
 
         /// <summary>
         /// Constructs a message pump. The message pump is the heart of a consumer. It runs a loop that performs the following:
@@ -337,8 +321,8 @@ namespace Paramore.Brighter.ServiceActivator
             var context = _requestContextFactory.Create();
             context.Span = span;
             context.OriginatingMessage = message;
-            context.Bag.AddOrUpdate("ChannelName", Channel.Name, (s, o) => Channel.Name);
-            context.Bag.AddOrUpdate("RequestStart", DateTime.UtcNow, (s, o) => DateTime.UtcNow);
+            context.Bag.AddOrUpdate("ChannelName", Channel.Name, (_, _) => Channel.Name);
+            context.Bag.AddOrUpdate("RequestStart", DateTime.UtcNow, (_, _) => DateTime.UtcNow);
             return context;
         }
 
