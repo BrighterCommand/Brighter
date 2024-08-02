@@ -106,7 +106,64 @@ public class BrighterTracer : IAmABrighterTracer
 
         return activity;
     }
-    
+
+    /// <summary>
+    /// Create a span when we consume a message from a queue or stream
+    /// </summary>
+    /// <param name="operation">How did we obtain the message. InstrumentationOptions.Receive => pull; InstrumentationOptions.Process => push</param>
+    /// <param name="message">What is the <see cref="Message"/> that we received; if they have a traceparentid we will use that as a parent for this trace</param>
+    /// <param name="messagingSystem">What is the messaging system that we are receiving a message from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <returns></returns>
+    public Activity CreateSpan(
+       MessagePumpSpanOperation operation,
+       Message message,
+       MessagingSystem messagingSystem,
+       InstrumentationOptions options = InstrumentationOptions.All
+    )
+    {
+        var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
+        var kind = ActivityKind.Consumer;
+        var parentId = message.Header.TraceParent;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection()
+        {
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
+            { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
+            { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
+            { BrighterSemanticConventions.MessageId, message.Id },
+            { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
+            { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
+            { BrighterSemanticConventions.MessageBody, message.Body.Value },
+            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) },
+            { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
+            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
+            { BrighterSemanticConventions.CeMessageId, message.Id },
+            { BrighterSemanticConventions.CeSource, message.Header.Source },
+            { BrighterSemanticConventions.CeVersion, "1.0"},
+            { BrighterSemanticConventions.CeSubject, message.Header.Subject },
+            { BrighterSemanticConventions.CeType, message.Header.Type},
+            { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo },
+            { BrighterSemanticConventions.HandledCount, message.Header.HandledCount }
+            
+        };
+        
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+        
+        
+        activity?.AddBaggage("correlationId", message.Header.CorrelationId);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
+
     /// <summary>
     /// Create a span for a request in CommandProcessor
     /// </summary>
@@ -432,7 +489,7 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="messagingSystem">Which <see cref="MessagingSystem"/> is the producer</param>
     /// <param name="message">The <see cref="Message"/> being produced</param>
     /// <param name="isAsync">Is the call async</param>
-    public static void WriteProducerEvent(Activity span, MessagingSystem messagingSystem, Message message, bool isAsync)
+    public static void WriteProducerEvent(Activity span, MessagingSystem messagingSystem, Message message)
     {
         if (span == null) return;
         

@@ -36,6 +36,21 @@ public interface IAmABrighterTracer : IDisposable
     /// The ActivitySource for the tracer
     /// </summary>
     ActivitySource ActivitySource { get; }
+    
+    /// <summary>
+    /// Create a span when we consume a message from a queue or stream
+    /// </summary>
+    /// <param name="operation">How did we obtain the message. InstrumentationOptions.Receive => pull; InstrumentationOptions.Process => push</param>
+    /// <param name="message">What is the <see cref="Message"/> that we received; if they have a traceparentid we will use that as a parent for this trace</param>
+    /// <param name="messagingSystem">What is the messaging system that we are receiving a message from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <returns></returns>
+    Activity CreateSpan(
+        MessagePumpSpanOperation operation,
+        Message message,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All
+    );
 
     /// <summary>
     /// Create a span for a request in CommandProcessor
@@ -132,4 +147,5 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="handlerSpans"></param>
     void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans);
 
+   
 }

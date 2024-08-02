@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -50,6 +51,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
         private readonly List<Activity> _exportedActivities;
         private readonly TracerProvider _traceProvider;
+        private readonly Message _message;
 
         public MessagePumpDispatchObservabilityTests()
         {
@@ -97,13 +99,22 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             {
                 Channel = channel, TimeoutInMilliseconds = 5000
             };
+            
+            var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
 
-            var message = new Message(
-                new MessageHeader(_myEvent.Id, Topic, MessageType.MT_EVENT), 
+            var header = new MessageHeader(_myEvent.Id, Topic, MessageType.MT_EVENT)
+            {
+                TraceParent = externalActivity?.Id, TraceState = externalActivity?.TraceStateString
+            };
+            
+            externalActivity?.Stop();
+
+            _message = new Message(
+                header, 
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
             
-            channel.Enqueue(message);
+            channel.Enqueue(_message);
             var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             channel.Enqueue(quitMessage);
         }
@@ -112,9 +123,34 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
         public void When_a_message_is_dispatched_it_should_begin_a_span()
         {
             _messagePump.Run();
+
+            _traceProvider.ForceFlush();
             
-            _exportedActivities.Count.Should().Be(1);
+            _exportedActivities.Count.Should().Be(4);
             _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+            
+            //there should be a span for each message received by a pump
+            var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}");
+            createActivity.Should().NotBeNull();
+            createActivity.ParentId.Should().Be(_message.Header.TraceParent);
+            createActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" }).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == _message.Id).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageType && t.Value == _message.Header.MessageType.ToString()).Should().BeTrue();
+            createActivity.TagObjects.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.MessageBodySize && Convert.ToInt32(t.Value) == _message.Body.Bytes.Length).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBody && t.Value == _message.Body.Value).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && t.Value == JsonSerializer.Serialize(_message.Header)).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.ConversationId && t.Value == _message.Header.CorrelationId).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingSystem && t.Value == MessagingSystem.InternalBus.ToMessagingSystemName()).Should().BeTrue();
+            createActivity.TagObjects.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.CeSource && ((Uri)(t.Value)) == _message.Header.Source).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.CeSubject && t.Value == _message.Header.Subject).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.CeVersion && t.Value == "1.0").Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.CeType && t.Value == _message.Header.Type).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.CeMessageId && t.Value == _message.Id).Should().BeTrue();
+            createActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.HandledCount && Convert.ToInt32(t.Value) == _message.Header.HandledCount).Should().BeTrue(); 
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.ReplyTo && t.Value == _message.Header.ReplyTo).Should().BeTrue();
+
         }
     }
 }

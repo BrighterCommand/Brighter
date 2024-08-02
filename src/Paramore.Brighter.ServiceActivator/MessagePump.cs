@@ -157,7 +157,7 @@ namespace Paramore.Brighter.ServiceActivator
                 try
                 {
                     message = Channel.Receive(TimeoutInMilliseconds);
-                    span = CreateSpan(message);
+                    span = _tracer.CreateSpan(MessagePumpSpanOperation.Receive, message, MessagingSystem.InternalBus, _instrumentationOptions);
                 }
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                 {
@@ -317,55 +317,6 @@ namespace Paramore.Brighter.ServiceActivator
             Channel.Acknowledge(message);
         }
         
-         // For information on the conventions we are using here <see href="https://github.com/open-telemetry/semantic-conventions/blob/main/docs/cloudevents/cloudevents-spans.md">Cloud Events Spans<see/>
-        private static Activity CreateSpan(Message message)
-        {
-            string parentId = message.Header.TraceParent ?? null;
-            var tags = new Dictionary<string, object>()
-            {
-                //mandatory cloud events tags for tracing
-                { "cloudevents.event_id", message.Id },
-                { "cloudevents.event_source", message.Header.Source },
-                { "cloudevents.event_specversion", "1.0" },
-                { "cloudevents.event_subject", message.Header.Subject },
-                { "cloudevents.event_type", message.Header.Type },
-                //optional cloud events tags for tracing
-                { "cloudevents.event_time", message.Header.TimeStamp },
-                { "cloudevents.event_datacontenttype", message.Header.ContentType },
-                { "cloudevents.event_dataschema", message.Header.DataSchema },
-                //Brighter tags for tracing
-                { "messageType", message.Header.MessageType },
-                { "topic", message.Header.Topic },
-                { "timestamp", message.Header.TimeStamp },
-                { "replyTo", message.Header.ReplyTo },
-                { "handledCount", message.Header.HandledCount },
-            };
-            
-             var activity = s_activitySource.CreateActivity(
-                $"CloudEvents Process {typeof(TRequest)}", 
-                ActivityKind.Consumer, 
-                parentId,
-                tags,
-                idFormat: ActivityIdFormat.W3C 
-                );
-             
-             //Put correlation id in the baggage as it should flow across process boundaries
-             activity?.AddBaggage("correlationId", message.Header.CorrelationId);
-
-             //HACK: Set the current activity to the new activity - this ought to be picked up when we run the command
-             //processor and look at create/start for an activity on the context. This should re-use this activity
-             //so that we do not create a new activity for the command processor or message mapper.
-             //This would allow us to find the tags that have the parent, and set those on any outgoing message.
-             //Mostly, because we have a reactor model we benefit from being single-threaded and can assume that 
-             //another message will not reset this context before we can initialize those pipelines.
-             //Our expectation is that in handlers folks should set events not start new spans.
-             //The risk is that the current activity gets reset before we copy into into the context of a pipeline, and
-             //thus we lose that context of the incoming message when we come to map the outgoing message.
-             Activity.Current = activity ?? Activity.Current;
-
-             return activity;
-        }
-
         private bool DiscardRequeuedMessagesEnabled()
         {
             return RequeueCount != -1;
