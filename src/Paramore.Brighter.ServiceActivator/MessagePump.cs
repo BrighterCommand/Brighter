@@ -67,7 +67,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a correctly scoped command processor </param>
         /// <param name="requestContextFactory">Provides a request context</param>
-        /// <param name="tracer">What is the tracer we will use for telemetry</param>
+        /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         protected MessagePump(
             IAmACommandProcessorProvider commandProcessorProvider, 
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.ServiceActivator
                 try
                 {
                     message = Channel.Receive(TimeoutInMilliseconds);
-                    span = _tracer.CreateSpan(MessagePumpSpanOperation.Receive, message, MessagingSystem.InternalBus, _instrumentationOptions);
+                    span = _tracer?.CreateSpan(MessagePumpSpanOperation.Receive, message, MessagingSystem.InternalBus, _instrumentationOptions);
                 }
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                 {
@@ -279,7 +279,7 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 finally
                 {
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     CommandProcessorProvider.ReleaseScope();
                 }
 

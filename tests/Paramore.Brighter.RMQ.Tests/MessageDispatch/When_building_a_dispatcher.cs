@@ -72,6 +72,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
             var container = new ServiceCollection();
 
+            var tracer = new BrighterTracer(TimeProvider.System);
+            var instrumentationOptions = InstrumentationOptions.All;
+            
             var commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
                 .Policies(new PolicyRegistry
@@ -80,11 +83,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                     { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
                 })
                 .NoExternalBus()
-                .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
+                .ConfigureInstrumentation(tracer, instrumentationOptions)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
-            _builder = DispatchBuilder.With()
+            _builder = DispatchBuilder.StartNew()
                 .CommandProcessorFactory(() => 
                     new CommandProcessorProvider(commandProcessor),
                     new InMemoryRequestContextFactory()
@@ -103,7 +106,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                         new ChannelName("alice"),
                         new RoutingKey("simon"),
                         timeoutInMilliseconds: 200)
-                });
+                })
+                .ConfigureInstrumentation(tracer, instrumentationOptions);
         }
 
         [Fact]

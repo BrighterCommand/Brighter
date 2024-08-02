@@ -70,17 +70,21 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             var requestContextFactory = serviceProvider.GetService<IAmARequestContextFactory>();
             
             var dispatcherBuilder = DispatchBuilder
-                .With()
+                .StartNew()
                 .CommandProcessorFactory(providerFactory, requestContextFactory);
 
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             var messageTransformFactory = ServiceCollectionExtensions.TransformFactory(serviceProvider);
             var messageTransformFactoryAsync = ServiceCollectionExtensions.TransformFactoryAsync(serviceProvider);
             
+            var tracer = serviceProvider.GetService<IAmABrighterTracer>();
+            
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageMapperRegistry, messageTransformFactory, messageTransformFactoryAsync)
                 .ChannelFactory(options.DefaultChannelFactory)
-                .Subscriptions(options.Subscriptions).Build();
+                .Subscriptions(options.Subscriptions)
+                .ConfigureInstrumentation(tracer, options.InstrumentationOptions)
+                .Build();
         }
     }
    
