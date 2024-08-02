@@ -204,6 +204,7 @@ namespace Paramore.Brighter.ServiceActivator
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
                     s_logger.LogInformation("MessagePump: Quit receiving messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    span?.SetStatus(ActivityStatusCode.Ok, $"MessagePump: Quit receiving messages from {Channel.Name} on thread #{Thread.CurrentThread.ManagedThreadId}");
                     Channel.Dispose();
                     break;
                 }
@@ -294,7 +295,7 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 finally
                 {
-                    span?.Dispose();
+                    _tracer.EndSpan(span);
                     CommandProcessorProvider.ReleaseScope();
                 }
 
