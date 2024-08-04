@@ -80,7 +80,7 @@
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
-    <PackageVersion Include="Serilog" Version="4.0.0" />
+    <PackageVersion Include="Serilog" Version="4.0.1" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
