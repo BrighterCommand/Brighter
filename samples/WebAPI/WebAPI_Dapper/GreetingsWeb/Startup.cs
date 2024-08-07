@@ -17,6 +17,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.Observability;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
@@ -131,9 +132,6 @@ public class Startup
 
     private void ConfigureObservability(IServiceCollection services)
     {
-        var brighterTracer = new BrighterTracer(TimeProvider.System);
-        services.AddSingleton<IAmABrighterTracer>(brighterTracer);
-        
         services.AddLogging(loggingBuilder =>
         {
             loggingBuilder.AddConsole();
@@ -159,7 +157,7 @@ public class Startup
             }).WithTracing(builder =>
             {
                 builder
-                    .AddSource(brighterTracer.ActivitySource.Name)
+                    .AddBrighterInstrumentation()
                     .AddSource("RabbitMQ.Client.*")
                     .SetSampler(new AlwaysOnSampler())
                     .AddAspNetCoreInstrumentation()
@@ -175,4 +173,6 @@ public class Startup
                 .AddOtlpExporter()
             ); 
     }
+
+
 }

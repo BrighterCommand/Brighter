@@ -34,7 +34,6 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
            configure?.Invoke(options);
            services.TryAddSingleton<IBrighterOptions>(options);
            services.TryAddSingleton<IServiceActivatorOptions>(options);
-           services.TryAddSingleton<BrighterTracer>();
            
            services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
                (serviceProvider) => (IDispatcher)BuildDispatcher(serviceProvider),
