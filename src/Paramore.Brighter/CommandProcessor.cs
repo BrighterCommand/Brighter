@@ -345,12 +345,14 @@ namespace Paramore.Brighter
                 }
                 catch (Exception)
                 {
-                    span.span?.SetStatus(ActivityStatusCode.Error);
+                    if (span.created)
+                        span.span?.SetStatus(ActivityStatusCode.Error);
                     throw;
                 }
                 finally
                 {
-                    EndSpan(span.span);
+                    if (span.created)
+                        EndSpan(span.span);
                 }
             }
         }
