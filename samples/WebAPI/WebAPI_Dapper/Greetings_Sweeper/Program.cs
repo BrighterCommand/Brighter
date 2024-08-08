@@ -4,6 +4,7 @@ using Greetings_Sweeper.Extensions;
 using GreetingsApp.Requests;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -21,7 +22,17 @@ var brighterTracer = new BrighterTracer(TimeProvider.System);
 builder.Services.AddSingleton<IAmABrighterTracer>(brighterTracer);
 
 builder.Logging.ClearProviders();
-builder.Logging.AddConsole().AddDebug();
+builder.Logging.AddConsole();
+builder.Logging.AddOpenTelemetry(otel =>
+{
+    otel.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Greetings Sweeper"))
+        .AddOtlpExporter(options =>
+        {
+            options.Protocol = OtlpExportProtocol.Grpc;
+        })
+        .IncludeScopes = true;
+});
+
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(builder =>
     {

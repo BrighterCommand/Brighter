@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using DbMaker;
 using GreetingsApp.Handlers;
 using GreetingsApp.Policies;
@@ -9,20 +8,20 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using OpenTelemetry;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Observability;
+using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
 using TransportMaker;
-using ExportProcessorType = OpenTelemetry.ExportProcessorType;
 
 namespace GreetingsWeb;
 
@@ -132,8 +131,20 @@ public class Startup
 
     private void ConfigureObservability(IServiceCollection services)
     {
-        var brighterTracer = new BrighterTracer(TimeProvider.System);
-        services.AddSingleton<IAmABrighterTracer>(brighterTracer);
+        services.AddLogging(loggingBuilder =>
+        {
+            loggingBuilder.AddConsole();
+            loggingBuilder.AddOpenTelemetry(options =>
+            {
+                options.IncludeScopes = true;
+                options.AddOtlpExporter((exporterOptions, _) =>
+                    {
+                        exporterOptions.Protocol = OtlpExportProtocol.Grpc;
+                    })
+                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("GreetingsWeb"))
+                    .IncludeScopes = true;
+            });
+        });
 
         services.AddOpenTelemetry()
             .ConfigureResource(builder =>
@@ -145,7 +156,7 @@ public class Startup
             }).WithTracing(builder =>
             {
                 builder
-                    .AddSource(brighterTracer.ActivitySource.Name)
+                    .AddBrighterInstrumentation()
                     .AddSource("RabbitMQ.Client.*")
                     .SetSampler(new AlwaysOnSampler())
                     .AddAspNetCoreInstrumentation()
@@ -161,4 +172,6 @@ public class Startup
                 .AddOtlpExporter()
             ); 
     }
+
+
 }

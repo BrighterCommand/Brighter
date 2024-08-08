@@ -62,6 +62,13 @@ namespace Paramore.Brighter
     ///     </item>
     ///     <item>
     ///         <description>
+    ///             A <see cref="INeedInstrumentation"/> describing how we want to instrument the command processor for Open Telemetry support. We need to provide a <see cref="IAmABrighterTracer"/> to
+    ///             provide telemetry and a <see cref="InstrumentationOptions"/> to describe how noisy we want the telemetry to be. If you do not want to use Open Telemetry, use the <see cref="NoInstrumentation"/>
+    ///             method to indicate your intent.
+    ///         </description>
+    ///     </item>
+    ///     <item>
+    ///         <description>
     ///             Finally we need to provide a <see cref="IRequestContext"/> to provide context to requests handlers in the pipeline that can be used to pass information without using the message
     ///             that initiated the pipeline. We instantiate this via a user-provided <see cref="IAmARequestContextFactory"/>. The default approach is use <see cref="InMemoryRequestContextFactory"/>
     ///             to provide a <see cref="RequestContext"/> unless you have a requirement to replace this, such as in testing.
@@ -209,13 +216,24 @@ namespace Paramore.Brighter
         /// InstrumentationOptions.RequestContext - what is the context of the request
         /// InstrumentationOptions.All - all of the above
         /// </summary>
-        /// <param name="instrumentationOptions"></param>
+        /// <param name="tracer">What is the <see cref="BrighterTracer"/> that we will use to instrument the Command Processor</param>
+        /// <param name="instrumentationOptions">A <see cref="InstrumentationOptions"/> that tells us how detailed the instrumentation should be</param>
         /// <returns></returns>
         public INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions)
         {
             _tracer = tracer; 
            _instrumetationOptions = instrumentationOptions;
            return this;
+        }
+        
+        /// <summary>
+        /// We do not intend to instrument the CommandProcessor
+        /// </summary>
+        /// <returns></returns>
+        public INeedARequestContext NoInstrumentation()
+        {
+            _instrumetationOptions = InstrumentationOptions.None;
+            return this;
         }
 
         /// <summary>
@@ -361,8 +379,14 @@ namespace Paramore.Brighter
         /// InstrumentationOptions.RequestContext - what is the context of the request
         /// InstrumentationOptions.All - all of the above
         /// </param>
-        /// <returns></returns>
+        /// <returns>INeedARequestContext</returns>
         INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions); 
+        
+        /// <summary>
+        /// We don't need instrumentation of the CommandProcessor
+        /// </summary>
+        /// <returns>INeedARequestContext</returns>
+        INeedARequestContext NoInstrumentation();
     }
 
     /// <summary>

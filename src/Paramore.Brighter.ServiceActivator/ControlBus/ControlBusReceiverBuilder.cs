@@ -189,13 +189,14 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                     new RoutingKey($"{hostName}.{HEARTBEAT}"))
             };
 
-            return DispatchBuilder.With()
+            return DispatchBuilder.StartNew()
                 .CommandProcessorFactory(() => 
                     new CommandProcessorProvider(commandProcessor), new InMemoryRequestContextFactory()
                 )
                 .MessageMappers(incomingMessageMapperRegistry, null, null, null)
                 .ChannelFactory(_channelFactory)                                        
                 .Subscriptions(subscriptions)
+                .NoInstrumentation()
                 .Build();
         }
 

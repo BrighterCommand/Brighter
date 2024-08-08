@@ -3,6 +3,9 @@
   "profiles": {
     "Development": {
       "commandName": "Project",
+      "dotnetRunMessages": "true",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "BRIGHTER_GREETINGS_DATABASE": "Sqlite",

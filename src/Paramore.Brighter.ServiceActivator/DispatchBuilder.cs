@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -34,7 +35,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// progressive interfaces to manage the requirements for a complete Dispatcher via Intellisense in the IDE. The intent is to make it easier to
     /// recognize those dependencies that you need to configure
     /// </summary>
-    public class DispatchBuilder : INeedACommandProcessorFactory, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfSubcriptions, IAmADispatchBuilder
+    public class DispatchBuilder : INeedACommandProcessorFactory, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfSubcriptions, INeedObservability, IAmADispatchBuilder
     {
         private Func<IAmACommandProcessorProvider> _commandProcessorFactory;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
@@ -44,6 +45,8 @@ namespace Paramore.Brighter.ServiceActivator
         private IAmAMessageTransformerFactory _messageTransformerFactory;
         private IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
         private IAmARequestContextFactory _requestContextFactory;
+        private IAmABrighterTracer _tracer;
+        private InstrumentationOptions _instrumentationOptions;
 
         private DispatchBuilder() { }
 
@@ -51,7 +54,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Begins the fluent interface 
         /// </summary>
         /// <returns>INeedALogger.</returns>
-        public static INeedACommandProcessorFactory With()
+        public static INeedACommandProcessorFactory StartNew()
         {
             return new DispatchBuilder();
         }
@@ -110,13 +113,33 @@ namespace Paramore.Brighter.ServiceActivator
             _defaultChannelFactory = defaultChannelFactory;
             return this;
         }
+       
+        /// <summary>
+        /// Configures OpenTelemetry for the Dispatcher
+        /// </summary>
+        /// <param name="tracer">An instance of <see cref="BrighterTracer"/> with which to instrument the Dispatcher</param>
+        /// <param name="instrumentationOptions">An <see cref="InstrumentationOptions"/> defining how verbose the instrumentation should be</param>
+        /// <returns>INeedAListOfSubcriptions</returns>
+        public IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+        {
+             _tracer = tracer;
+             _instrumentationOptions = instrumentationOptions;
+             return this;
+        }
+        
+        public IAmADispatchBuilder NoInstrumentation()
+        {
+            _tracer = null;
+            _instrumentationOptions = InstrumentationOptions.None;
+            return this;
+        }
 
         /// <summary>
         /// A list of subscriptions i.e. mappings of channels to commands or events
         /// </summary>
         /// <param name="connections">The connections.</param>
         /// <returns>IAmADispatchBuilder.</returns>
-        public IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subscriptions)
+        public INeedObservability Subscriptions(IEnumerable<Subscription> subscriptions)
         {
             _subscriptions = subscriptions;
 
@@ -136,7 +159,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             return new Dispatcher(_commandProcessorFactory, _subscriptions, _messageMapperRegistry, 
                 _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync, 
-                _requestContextFactory
+                _requestContextFactory, _tracer, _instrumentationOptions
             );
         }
 
@@ -205,8 +228,31 @@ namespace Paramore.Brighter.ServiceActivator
         /// A list of connections i.e. mappings of channels to commands or events
         /// </summary>
         /// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subscriptions);
+        INeedObservability Subscriptions(IEnumerable<Subscription> subscriptions);
     }
+
+    public interface INeedObservability
+    {
+        /// <summary>
+        /// Sets the InstrumentationOptions for the Dispatcher
+        /// </summary>
+        /// <param name="tracer">The tracer that we should use to create telemetry</param>
+        /// <param name="instrumentationOptions">What depth of instrumentation do we want.
+        /// InstrumentationOptions.None - no telemetry
+        /// InstrumentationOptions.RequestInformation - id  and type of request
+        /// InstrumentationOptions.RequestBody -  body of the request
+        /// InstrumentationOptions.RequestContext - what is the context of the request
+        /// InstrumentationOptions.All - all of the above
+        /// </param>
+        /// <returns>IAmADispatchBuilder</returns>
+        IAmADispatchBuilder ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
+       
+        /// <summary>
+        /// We do not need any instrumentation for the Dispatcher
+        /// </summary>
+        /// <returns>IAmADispatchBuilder</returns>
+        IAmADispatchBuilder NoInstrumentation();
+    } 
 
     /// <summary>
     /// Interface IAmADispatchBuilder
