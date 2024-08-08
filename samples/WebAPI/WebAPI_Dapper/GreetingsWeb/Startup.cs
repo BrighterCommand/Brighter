@@ -18,7 +18,6 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Diagnostics;
-using Paramore.Brighter.Observability;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -138,7 +137,7 @@ public class Startup
             loggingBuilder.AddOpenTelemetry(options =>
             {
                 options.IncludeScopes = true;
-                options.AddOtlpExporter((exporterOptions, processorOptions) =>
+                options.AddOtlpExporter((exporterOptions, _) =>
                     {
                         exporterOptions.Protocol = OtlpExportProtocol.Grpc;
                     })
