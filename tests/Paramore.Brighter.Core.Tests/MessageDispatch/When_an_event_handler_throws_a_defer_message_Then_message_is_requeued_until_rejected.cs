@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
             
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(task);

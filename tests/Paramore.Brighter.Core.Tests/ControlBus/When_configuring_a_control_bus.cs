@@ -59,8 +59,8 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _controlBus = _busReceiverBuilder.Build(_hostName);
 
-            _controlBus.Connections.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.CONFIGURATION}");
-            _controlBus.Connections.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.HEARTBEAT}");
+            _controlBus.Subscriptions.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.CONFIGURATION}");
+            _controlBus.Subscriptions.Should().Contain(cn => cn.Name == $"{_hostName}.{ControlBusReceiverBuilder.HEARTBEAT}");
             _controlBus.CommandProcessor.Should().NotBeNull();
         }
         

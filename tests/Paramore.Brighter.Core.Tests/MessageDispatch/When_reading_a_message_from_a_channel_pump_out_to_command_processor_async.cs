@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options)));
             channel.Enqueue(message);
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
         }
 

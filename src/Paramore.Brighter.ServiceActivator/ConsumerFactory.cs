@@ -99,7 +99,7 @@ namespace Paramore.Brighter.ServiceActivator
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
             };
 
-            return new Consumer(_consumerName, _subscription.Name, channel, messagePump);
+            return new Consumer(_consumerName, _subscription, channel, messagePump);
         }
 
         private Consumer CreateAsync()
@@ -117,7 +117,7 @@ namespace Paramore.Brighter.ServiceActivator
                 ChannelFailureDelay = _subscription.ChannelFailureDelay
             };
 
-            return new Consumer(_consumerName, _subscription.Name, channel, messagePump);
+            return new Consumer(_consumerName, _subscription, channel, messagePump);
         }
     }
 }

@@ -115,7 +115,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             );
             
             channel.Enqueue(_message);
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
             channel.Enqueue(quitMessage);
         }
 

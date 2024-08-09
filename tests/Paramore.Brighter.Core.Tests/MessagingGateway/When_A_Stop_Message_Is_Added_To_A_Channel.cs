@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             
             _bus.Enqueue(sentMessage);
 
-            _channel.Stop();
+            _channel.Stop(new RoutingKey(Topic));
 
         }
 

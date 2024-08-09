@@ -147,7 +147,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     s_logger.LogWarning("MessagePump: BrokenCircuitException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Environment.CurrentManagedThreadId);
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: BrokenCircuitException messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     Task.Delay(ChannelFailureDelay).Wait();
                     continue;
                 }
@@ -155,7 +155,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     s_logger.LogWarning("MessagePump: ChannelFailureException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Environment.CurrentManagedThreadId);
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: ChannelFailureException messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     Task.Delay(ChannelFailureDelay).Wait();
                     continue;
                 }
@@ -163,14 +163,14 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     s_logger.LogError(exception, "MessagePump: Exception receiving messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Environment.CurrentManagedThreadId);
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: ChannelFailureException messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                 }
 
                 if (message == null)
                 {
                      Channel.Dispose();
                      span?.SetStatus(ActivityStatusCode.Error, "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
-                     _tracer.EndSpan(span);
+                     _tracer?.EndSpan(span);
                      throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
                 }
 
@@ -178,7 +178,7 @@ namespace Paramore.Brighter.ServiceActivator
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
                     span?.SetStatus(ActivityStatusCode.Ok, $"MessagePump: No queued messages on {Channel.Name} sleeping for {EmptyChannelDelay} ms");
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     Task.Delay(EmptyChannelDelay).Wait();
                     continue;
                 }
@@ -188,7 +188,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     s_logger.LogWarning("MessagePump: Failed to parse a message from the incoming message with id {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Environment.CurrentManagedThreadId);
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     IncrementUnacceptableMessageLimit();
                     AcknowledgeMessage(message);
 
@@ -200,7 +200,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     s_logger.LogInformation("MessagePump: Quit receiving messages from {ChannelName} on thread #{ManagementThreadId}", Channel.Name, Environment.CurrentManagedThreadId);
                     span?.SetStatus(ActivityStatusCode.Ok, $"MessagePump: Quit receiving messages from {Channel.Name} on thread #{Environment.CurrentManagedThreadId}");
-                    _tracer.EndSpan(span);
+                    _tracer?.EndSpan(span);
                     Channel.Dispose();
                     break;
                 }
@@ -395,7 +395,7 @@ namespace Paramore.Brighter.ServiceActivator
                     "MessagePump: Unacceptable message limit of {UnacceptableMessageLimit} reached, stopping reading messages from {ChannelName} on thread # {ManagementThreadId}",
                     UnacceptableMessageLimit,
                     Channel.Name,
-                    Thread.CurrentThread.ManagedThreadId
+                    Environment.CurrentManagedThreadId
                 );
                 
                 return true;

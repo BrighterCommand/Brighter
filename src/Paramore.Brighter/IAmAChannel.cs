@@ -65,8 +65,9 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// Stops this instance.
+        /// <param name="topic">The topic to post the MT_QUIT message too</param>
         /// </summary>
-        void Stop();
+        void Stop(RoutingKey topic);
         
         /// <summary>
         /// Adds a message to the queue

@@ -132,7 +132,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
         private Subscription GetConnection(string name)
         {
-            return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Connections, conn => conn.Name == name);
+            return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Subscriptions, conn => conn.Name == name);
         }
     }
 }

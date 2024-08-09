@@ -88,8 +88,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
             Task.Delay(250).Wait();
-            _dispatcher.Shut("test");
-            _dispatcher.Shut("newTest");
+            _dispatcher.Shut(subscription.Name);
+            _dispatcher.Shut(newSubscription.Name);
             Task.Delay(1000).Wait();
             _dispatcher.Consumers.Should().HaveCount(0);
         }
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         [Fact]
         public async Task When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
         {
-            _dispatcher.Open("newTest");
+            _dispatcher.Open(new SubscriptionName("newTest"));
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event, _publication);
             _bus.Enqueue(message);
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             Assert.Empty(_bus.Stream(_routingKey));
             _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
             _dispatcher.Consumers.Should().HaveCount(1);
-            _dispatcher.Connections.Should().HaveCount(2);
+            _dispatcher.Subscriptions.Should().HaveCount(2);
         }
 
         public void Dispose()

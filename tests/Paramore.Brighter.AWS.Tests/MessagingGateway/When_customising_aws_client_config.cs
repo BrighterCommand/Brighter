@@ -18,24 +18,19 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
-        private readonly MyCommand _myCommand;
-        private readonly string _correlationId;
-        private readonly string _replyTo;
-        private readonly string _contentType;
-        private readonly string _topicName;
 
-        private readonly InterceptingDelegatingHandler _publishHttpHandler;
-        private readonly InterceptingDelegatingHandler _subscribeHttpHandler;
+        private readonly InterceptingDelegatingHandler _publishHttpHandler = new();
+        private readonly InterceptingDelegatingHandler _subscribeHttpHandler = new();
 
         public CustomisingAwsClientConfigTests()
         {
-            _myCommand = new MyCommand{Value = "Test"};
-            _correlationId = Guid.NewGuid().ToString();
-            _replyTo = "http:\\queueUrl";
-            _contentType = "text\\plain";
+            MyCommand myCommand = new() {Value = "Test"};
+            string correlationId = Guid.NewGuid().ToString();
+            string replyTo = "http:\\queueUrl";
+            string contentType = "text\\plain";
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            var routingKey = new RoutingKey(_topicName);
+            string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            var routingKey = new RoutingKey(topicName);
             
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
@@ -44,12 +39,11 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: _correlationId,
-                    replyTo: _replyTo, contentType: _contentType),
-                new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
+                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: replyTo, contentType: contentType),
+                new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
             );
 
-            _subscribeHttpHandler = new InterceptingDelegatingHandler();
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var subscribeAwsConnection = new AWSMessagingGatewayConnection(credentials, region, config =>
             {
@@ -64,7 +58,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 config.HttpClientFactory = new InterceptingHttpClientFactory(_publishHttpHandler);
             });
 
-            _messageProducer = new SqsMessageProducer(publishAwsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
+            _messageProducer = new SqsMessageProducer(publishAwsConnection, new SnsPublication{Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create});
         }
 
         [Fact]

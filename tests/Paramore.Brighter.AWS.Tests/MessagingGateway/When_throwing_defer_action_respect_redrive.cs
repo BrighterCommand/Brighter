@@ -27,6 +27,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _sender;
         private readonly AWSMessagingGatewayConnection _awsConnection;
+        private readonly SqsSubscription<MyCommand> _subscription;
 
         public SnsReDrivePolicySDlqTests()
         {
@@ -39,7 +40,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var routingKey = new RoutingKey(topicName);
 
             //how are we consuming
-            var subscription = new SqsSubscription<MyCommand>(
+            _subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
@@ -79,7 +80,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             //We need to do this manually in a test - will create the channel from subscriber parameters
             ChannelFactory channelFactory = new(_awsConnection);
-            _channel = channelFactory.CreateChannel(subscription);
+            _channel = channelFactory.CreateChannel(_subscription);
 
             //how do we handle a command
             IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
@@ -143,7 +144,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             await Task.Delay(5000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message

@@ -59,7 +59,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <value>The name.</value>
         public ConsumerName Name { get; }
 
-        public SubscriptionName SubscriptionName { get; set; }
+        public Subscription Subscription { get; set; }
         /// <summary>
         /// Gets the performer.
         /// </summary>
@@ -83,13 +83,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// Initializes a new instance of the <see cref="Consumer"/> class.
         /// </summary>
         /// <param name="name">The name.</param>
-        /// <param name="subscriptionName">The name of the associated subscription.</param>
+        /// <param name="subscription"></param>
         /// <param name="channel">The channel.</param>
         /// <param name="messagePump">The message pump.</param>
-        public Consumer(ConsumerName name, SubscriptionName subscriptionName, IAmAChannel channel, IAmAMessagePump messagePump)
+        public Consumer(ConsumerName name, Subscription subscription, IAmAChannel channel, IAmAMessagePump messagePump)
         {
             Name = name;
-            SubscriptionName = subscriptionName;
+            Subscription = subscription;
             Performer = new Performer(channel, messagePump);
             State = ConsumerState.Shut;
         }
@@ -107,11 +107,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Shuts the task, which will not receive messages.
         /// </summary>
-        public void Shut()
+        /// <param name="topic">The topic we post the quit message to, in order to shut the perfomer</param>
+        public void Shut(RoutingKey topic)
         {
             if (State == ConsumerState.Open)
             {
-                Performer.Stop();
+                Performer.Stop(topic);
                 State = ConsumerState.Shut;
             }
         }

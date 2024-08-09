@@ -64,8 +64,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Opens the specified subscription name.
         /// </summary>
-        /// <param name="connectionName">Name of the subscription.</param>
-        void Open(string connectionName);
+        /// <param name="subscriptionName"></param>
+        void Open(SubscriptionName subscriptionName);
 
         /// <summary>
         /// Begins listening for messages on channels, and dispatching them to request handlers.
@@ -81,8 +81,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Shuts the specified subscription name.
         /// </summary>
-        /// <param name="connectionName">Name of the subscription.</param>
-        void Shut(string connectionName);
+        /// <param name="subscriptionName">Name of the subscription.</param>
+        void Shut(SubscriptionName subscriptionName);
 
         /// <summary>
         /// Get the current running state of the dispatcher

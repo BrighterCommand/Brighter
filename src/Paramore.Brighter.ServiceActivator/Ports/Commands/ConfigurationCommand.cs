@@ -52,7 +52,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Commands
         /// <value>The type.</value>
         public ConfigurationCommandType Type { get; set; }
 
-        public string SubscriptionName { get; set; }
+        public SubscriptionName SubscriptionName { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConfigurationCommand" /> class.

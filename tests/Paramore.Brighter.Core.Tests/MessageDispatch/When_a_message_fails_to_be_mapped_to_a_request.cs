@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            _channel.Stop();
+            _channel.Stop(new RoutingKey(Topic));
 
             await Task.WhenAll(task);
 

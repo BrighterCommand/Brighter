@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             channel.Enqueue(message2);
             
             //end the pump
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
             channel.Enqueue(quitMessage);
         }
 

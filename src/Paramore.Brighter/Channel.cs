@@ -39,9 +39,15 @@ namespace Paramore.Brighter
     {
         private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
+        private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
-        private static readonly Message s_NoneMessage = new Message();
+        private static readonly Message s_noneMessage = new();
+        
+        /// <summary>
+        ///   Gets the name.
+        /// </summary>
+        /// <value>The name.</value>
+        public ChannelName Name => new(_channelName);
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
@@ -92,14 +98,8 @@ namespace Paramore.Brighter
             
             messages.Each((message) => _queue.Enqueue(message));
         }
-
-       /// <summary>
-        ///   Gets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public ChannelName Name => new ChannelName(_channelName);
-
-       /// <summary>
+ 
+        /// <summary>
         /// Purges the queue
         /// </summary>
         public void Purge()
@@ -120,7 +120,7 @@ namespace Paramore.Brighter
                 Enqueue(_messageConsumer.Receive(timeoutInMilliseconds));
                 if (!_queue.TryDequeue(out message))
                 {
-                    message = s_NoneMessage; //Will be MT_NONE
+                    message = s_noneMessage; //Will be MT_NONE
                 }
             }
 
@@ -150,9 +150,9 @@ namespace Paramore.Brighter
         /// <summary>
         ///  Stops this instance.
         /// </summary>
-        public void Stop()
+        public void Stop(RoutingKey topic)
         {
-            _queue.Enqueue(MessageFactory.CreateQuitMessage());
+            _queue.Enqueue(MessageFactory.CreateQuitMessage(topic));
         }
 
         /// <summary>

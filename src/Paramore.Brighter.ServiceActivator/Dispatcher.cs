@@ -71,10 +71,9 @@ namespace Paramore.Brighter.ServiceActivator
         
         /// <summary>
         /// Gets the connections.
-        /// TODO: Rename to Subscriptions in V10
         /// </summary>
         /// <value>The connections.</value>
-        public IEnumerable<Subscription> Connections { get; private set; }
+        public IEnumerable<Subscription> Subscriptions { get; private set; }
 
         /// <summary>
         /// Gets the <see cref="Consumer"/>s
@@ -87,7 +86,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Used when communicating with this instance via the Control Bus
         /// </summary>
         /// <value>The name of the host.</value>
-        public HostName HostName { get; set; } = new HostName($"Brighter{Guid.NewGuid()}");
+        public HostName HostName { get; set; } = new($"Brighter{Guid.NewGuid()}");
 
         /// <summary>
         /// Gets the state of the <see cref="Dispatcher"/>
@@ -121,7 +120,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             CommandProcessorFactory = commandProcessorFactory;
             
-            Connections = subscriptions;
+            Subscriptions = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _messageTransformerFactory = messageTransformerFactory;
@@ -181,7 +180,7 @@ namespace Paramore.Brighter.ServiceActivator
             if (State == DispatcherState.DS_RUNNING)
             {
                 s_logger.LogInformation("Dispatcher: Stopping dispatcher");
-                Consumers.Each(consumer => consumer.Shut());
+                Consumers.Each(consumer => consumer.Shut(consumer.Subscription.RoutingKey));
             }
 
             return _controlTask;
@@ -190,10 +189,10 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Opens the specified subscription by name 
         /// </summary>
-        /// <param name="connectionName">The name of the subscription</param>
-        public void Open(string connectionName)
+        /// <param name="subscriptionName"></param>
+        public void Open(SubscriptionName subscriptionName)
         {
-            Open(Connections.SingleOrDefault(c => c.Name == connectionName));
+            Open(Subscriptions.SingleOrDefault(c => c.Name == subscriptionName));
         }
 
         /// <summary>
@@ -204,7 +203,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             s_logger.LogInformation("Dispatcher: Opening subscription {ChannelName}", subscription.Name);
 
-            AddConnectionToConnections(subscription);
+            AddSubscriptionToSubscriptions(subscription);
             var addedConsumers = CreateConsumers(new[] { subscription });
 
             switch (State)
@@ -227,11 +226,11 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
-        private void AddConnectionToConnections(Subscription subscription)
+        private void AddSubscriptionToSubscriptions(Subscription subscription)
         {
-            if (Connections.All(c => c.Name != subscription.Name))
+            if (Subscriptions.All(c => c.Name != subscription.Name))
             {
-                Connections = new List<Subscription>(Connections) { subscription };
+                Subscriptions = new List<Subscription>(Subscriptions) { subscription };
             }
         }
 
@@ -240,17 +239,17 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         public void Receive()
         {
-            CreateConsumers(Connections).Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
+            CreateConsumers(Subscriptions).Each(consumer => _consumers.TryAdd(consumer.Name, consumer));
             Start();
         }
 
         /// <summary>
         /// Shuts the specified subscription by name
         /// </summary>
-        /// <param name="connectionName">The name of the subscription</param>
-        public void Shut(string connectionName)
+        /// <param name="subscriptionName">The name of the subscription</param>
+        public void Shut(SubscriptionName subscriptionName)
         {
-            Shut(Connections.SingleOrDefault(c => c.Name == connectionName));
+            Shut(Subscriptions.SingleOrDefault(c => c.Name == subscriptionName));
         }
 
         /// <summary>
@@ -262,22 +261,22 @@ namespace Paramore.Brighter.ServiceActivator
             if (State == DispatcherState.DS_RUNNING)
             {
                 s_logger.LogInformation("Dispatcher: Stopping subscription {ChannelName}", subscription.Name);
-                var consumersForConnection = Consumers.Where(consumer => consumer.SubscriptionName == subscription.Name).ToArray();
+                var consumersForConnection = Consumers.Where(consumer => consumer.Subscription.Name == subscription.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
                 {
-                    consumersForConnection[i].Shut();
+                    consumersForConnection[i].Shut(subscription.RoutingKey);
                 }
             }
         }
 
         public DispatcherStateItem[] GetState()
         {
-            return Connections.Select(s => new DispatcherStateItem()
+            return Subscriptions.Select(s => new DispatcherStateItem()
             {
                 Name = s.Name,
                 ExpectPerformers = s.NoOfPerformers,
-                Performers = _consumers.Where(c => c.Value.SubscriptionName == s.Name).Select(c => new PerformerInformation()
+                Performers = _consumers.Where(c => c.Value.Subscription.Name == s.Name).Select(c => new PerformerInformation()
                 {
                     Name = c.Value.Name,
                     State = c.Value.State
@@ -287,7 +286,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public void SetActivePerformers(string connectionName, int numberOfPerformers)
         {
-            var subscription = Connections.SingleOrDefault(c => c.Name == connectionName);
+            var subscription = Subscriptions.SingleOrDefault(c => c.Name == connectionName);
             var currentPerformers = subscription?.NoOfPerformers;
             if(currentPerformers == numberOfPerformers)
                 return;
@@ -305,12 +304,12 @@ namespace Paramore.Brighter.ServiceActivator
             }
             else
             {
-                var consumersForConnection = Consumers.Where(consumer => subscription != null && consumer.SubscriptionName == subscription.Name)
+                var consumersForConnection = Consumers.Where(consumer => subscription != null && consumer.Subscription.Name == subscription.Name)
                     .ToArray();
                 var consumersToClose = currentPerformers - numberOfPerformers;
                 for (int i = 0; i < consumersToClose; ++i)
                 {
-                    consumersForConnection[i].Shut();
+                    consumersForConnection[i].Shut(subscription.RoutingKey);
                 }
             }
         }
