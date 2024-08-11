@@ -12,7 +12,7 @@
     <PackageVersion Include="AWSSDK.SQS" Version="3.7.301.33" />
     <PackageVersion Include="Azure.Identity" Version="1.12.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.0" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.21.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.21.2" />
     <PackageVersion Include="Confluent.Kafka" Version="2.5.0" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.5.0" />
     <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.5.0" />
