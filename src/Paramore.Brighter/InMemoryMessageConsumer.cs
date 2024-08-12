@@ -111,7 +111,14 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     public Message[] Receive(int timeoutInMilliseconds = 1000)
     {
         var messages = new[] {_bus.Dequeue(_topic)};
-        _lockedMessages.TryAdd(messages[0].Id, new LockedMessage(messages[0], _timeProvider.GetUtcNow()));
+        foreach (var message in messages)
+        {
+            //don't lock empty messages
+            if (message.Header.MessageType == MessageType.MT_NONE)
+                continue;
+            _lockedMessages.TryAdd(message.Id, new LockedMessage(message, _timeProvider.GetUtcNow()));
+        }
+
         return messages;
     }
 

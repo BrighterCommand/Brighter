@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 );
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-            var connection = new Subscription<MyEvent>(
+            var subscription = new Subscription<MyEvent>(
                 new SubscriptionName("test"),
                 noOfPerformers: 1, 
                 timeoutInMilliseconds: 1000, 
@@ -44,14 +44,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _dispatcher = new Dispatcher(
                 _commandProcessor, 
-                new List<Subscription> { connection }, 
+                new List<Subscription> { subscription }, 
                 null, 
                 messageMapperRegistry,
                requestContextFactory: new InMemoryRequestContextFactory() 
             );
 
             var @event = new MyEvent {Data = 4};
-            var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new() { Topic = connection.RoutingKey }).Result;
+            var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new() { Topic = _routingKey }).Result;
             
             _bus.Enqueue(message);
 
