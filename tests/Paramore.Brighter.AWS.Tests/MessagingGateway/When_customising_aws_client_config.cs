@@ -49,6 +49,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
 
+            _publishHttpHandler = new InterceptingDelegatingHandler();
             _subscribeHttpHandler = new InterceptingDelegatingHandler();
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var subscribeAwsConnection = new AWSMessagingGatewayConnection(credentials, region, config =>

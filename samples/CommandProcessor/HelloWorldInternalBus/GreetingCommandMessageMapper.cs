@@ -31,7 +31,7 @@ namespace HelloWorld
 {
     public class GreetingCommandMessageMapper : IAmAMessageMapper<GreetingCommand>
     {
-        public IRequestContext Context { get; set; }
+        public IRequestContext Context { get; set; } = null!;
 
         public Message MapToMessage(GreetingCommand request, Publication publication)
         {
@@ -45,7 +45,9 @@ namespace HelloWorld
         {
             var greetingCommand = JsonSerializer.Deserialize<GreetingCommand>(message.Body.Value, JsonSerialisationOptions.Options);
             
+#pragma warning disable CS8603 // Possible null reference return.
             return greetingCommand;
+#pragma warning restore CS8603 // Possible null reference return.
         }
     }
 }
