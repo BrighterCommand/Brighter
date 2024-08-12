@@ -63,7 +63,7 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
 
         foreach (var message in messages)
         {
-            uploads.Enqueue(UploadSafe(message, cancellationToken));
+            uploads.Enqueue(UploadSafe(message, cancellationToken)!);
         }
 
         var results = await Task.WhenAll(uploads);

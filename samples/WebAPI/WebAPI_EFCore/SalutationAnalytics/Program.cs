@@ -47,7 +47,7 @@ static IHostBuilder CreateHostBuilder(string[] args) =>
             configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
             configurationBuilder.AddCommandLine(args);
         })
-        .ConfigureLogging((context, builder) =>
+        .ConfigureLogging((_, builder) =>
         {
             builder.AddConsole();
             builder.AddDebug();
@@ -142,18 +142,26 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
 static string GetEnvironment()
 {
     //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
-    return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+    return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+           ?? throw new InvalidOperationException(" ASP_NETCORE_ENVIRONMENT is not set ");
 }
 
 static bool HasBinaryMessagePayload()
 {
-    return ConfigureTransport.TransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) ==
-           MessagingTransport.Kafka;
+    string? brighterTransport = Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT");
+    if (string.IsNullOrWhiteSpace(brighterTransport))
+        throw new InvalidOperationException("Transport is not set");
+    
+    MessagingTransport? transport = ConfigureTransport.TransportType(brighterTransport);
+    if (transport == null)
+        throw new InvalidOperationException("Transport is not set");
+    
+    return transport == MessagingTransport.Kafka;
 }
 
 static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection services)
 {
-    string connectionString = ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Salutations);
+    string? connectionString = ConnectionResolver.DbConnectionString(hostContext.Configuration, ApplicationType.Salutations);
 
     if (hostContext.HostingEnvironment.IsDevelopment())
     {
@@ -183,7 +191,7 @@ static IAmAProducerRegistry ConfigureProducerRegistry()
             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
             Exchange = new Exchange("paramore.brighter.exchange"),
         },
-        new RmqPublication[]
+        new[]
         {
             new RmqPublication
             {
