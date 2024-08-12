@@ -126,13 +126,16 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 
             _traceProvider.ForceFlush();
             
-            _exportedActivities.Count.Should().Be(4);
+            _exportedActivities.Count.Should().Be(5);
             _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
             
             //there should be a span for each message received by a pump
-            var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}");
+            var createActivity = _exportedActivities.FirstOrDefault(a => 
+                a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
+                && a.TagObjects.Any(to => to is { Value: not null, Key: BrighterSemanticConventions.MessageType } && Enum.Parse<MessageType>(to.Value.ToString() ?? string.Empty) == MessageType.MT_EVENT)
+                );
             createActivity.Should().NotBeNull();
-            createActivity.ParentId.Should().Be(_message.Header.TraceParent);
+            createActivity!.ParentId.Should().Be(_message.Header.TraceParent);
             createActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" }).Should().BeTrue();
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic).Should().BeTrue();
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey).Should().BeTrue();
