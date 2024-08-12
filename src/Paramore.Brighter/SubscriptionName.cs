@@ -70,6 +70,16 @@ namespace Paramore.Brighter
         {
             return rhs.ToString();
         }
+        
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.String"/> to <see cref="SubscriptionName"/>.
+        /// </summary>
+        /// <param name="rhs">The <see cref="SubscriptionName"/> we are converting to a <see cref="SubscriptionName"/></param>
+        /// <returns></returns>
+        public static implicit operator SubscriptionName(string rhs)
+        {
+            return new SubscriptionName(rhs);
+        }
 
         /// <summary>
         /// Does the subscription name match?
