@@ -32,6 +32,8 @@ namespace Paramore.Brighter
             opts.Converters.Add(new ObjectToInferredTypesConverter());
             opts.Converters.Add(new JsonStringEnumConverter());
             opts.Converters.Add(new SubscriptionNameConverter());
+            opts.Converters.Add(new RoutingKeyConvertor());
+            opts.Converters.Add(new ChannelNameConverter());
 
             Options = opts;
         }
