@@ -9,7 +9,7 @@ namespace SalutationAnalytics.Mappers
 {
     public class GreetingMadeMessageMapperAsync : IAmAMessageMapperAsync<GreetingMade>
     {
-        public IRequestContext Context { get; set; }
+        public IRequestContext Context { get; set; } = null!;
 
         public Task<Message> MapToMessageAsync(GreetingMade request, Publication publication, CancellationToken cancellationToken = default)
         {
@@ -20,8 +20,11 @@ namespace SalutationAnalytics.Mappers
         {
             //NOTE: We are showing an async pipeline here, but it is often overkill by comparison to using 
             //TaskCompletionSource for a Task over sync instead
-            using var ms = new MemoryStream(message.Body.Bytes); 
-            return await JsonSerializer.DeserializeAsync<GreetingMade>(ms, JsonSerialisationOptions.Options, cancellationToken);
+            using var ms = new MemoryStream(message.Body.Bytes);
+            GreetingMade? greetingMade = await JsonSerializer.DeserializeAsync<GreetingMade>(ms, JsonSerialisationOptions.Options, cancellationToken);
+            if (greetingMade == null)
+                throw new JsonException("Could not deserialise the message");
+            return greetingMade;
         }
     }
 }

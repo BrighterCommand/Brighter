@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         }
 
         [Fact]
-        public async void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
+        public async Task When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
             await _mysqlInbox.AddAsync(_raisedCommand, "some other key");
 

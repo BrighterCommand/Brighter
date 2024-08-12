@@ -18,18 +18,19 @@ public class InMemoryArchiveProvider: IAmAnArchiveProvider
         ArchivedMessages.Add(message.Id, message);
     }
 
-    public async Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
+    public Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
     {
         ArchivedMessages.Add(message.Id, message);
+        return Task.CompletedTask;
     }
 
-    public async Task<string[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+    public Task<string[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
     {
         foreach (var message in messages)
         {
             ArchivedMessages.Add(message.Id, message);
         }
 
-        return messages.Select(m => m.Id).ToArray();
+        return Task.FromResult(messages.Select(m => m.Id).ToArray());
     }
 }

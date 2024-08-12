@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             await Task.Delay(1000);
             _dispatcher.Shut(_subscription);
-            _dispatcher.End().Wait();
+            await _dispatcher.End();
 
             _dispatcher.Consumers.Should().NotContain(consumer => consumer.Name == _subscription.Name && consumer.State == ConsumerState.Open);
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
