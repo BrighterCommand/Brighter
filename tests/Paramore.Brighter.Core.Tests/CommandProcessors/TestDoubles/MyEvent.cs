@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyEvent : Event, IEquatable<MyEvent>
     {
-        public int Data { get; private set; }
+        public int Data { get; set; }
 
         public MyEvent() : base(Guid.NewGuid())
         {

@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                requestContextFactory: new InMemoryRequestContextFactory() 
             );
 
-            var @event = new MyEvent();
+            var @event = new MyEvent {Data = 4};
             var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new() { Topic = connection.RoutingKey }).Result;
             
             _bus.Enqueue(message);
@@ -61,17 +61,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 #pragma warning disable xUnit1031
         
         [Fact]
-        public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
+        public async Task When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
         {
-            Task.Delay(3000).Wait();
+            await Task.Delay(5000);
+            
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
             
-            _dispatcher.End().Wait();
+            await _dispatcher.End();
             
-            Assert.Empty(_bus.Stream(_routingKey));
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
             _commandProcessor.Observe<MyEvent>().Should().NotBeNull();
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.PublishAsync);
+            Assert.Empty(_bus.Stream(_routingKey));
         }
         
         public void Dispose()
