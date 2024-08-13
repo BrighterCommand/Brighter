@@ -177,7 +177,7 @@ namespace Paramore.Brighter.ServiceActivator
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
-                    span?.SetStatus(ActivityStatusCode.Ok, $"MessagePump: No queued messages on {Channel.Name} sleeping for {EmptyChannelDelay} ms");
+                    span?.SetStatus(ActivityStatusCode.Ok);
                     _tracer?.EndSpan(span);
                     Task.Delay(EmptyChannelDelay).Wait();
                     continue;
@@ -199,7 +199,7 @@ namespace Paramore.Brighter.ServiceActivator
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
                     s_logger.LogInformation("MessagePump: Quit receiving messages from {ChannelName} on thread #{ManagementThreadId}", Channel.Name, Environment.CurrentManagedThreadId);
-                    span?.SetStatus(ActivityStatusCode.Ok, $"MessagePump: Quit receiving messages from {Channel.Name} on thread #{Environment.CurrentManagedThreadId}");
+                    span?.SetStatus(ActivityStatusCode.Ok);
                     _tracer?.EndSpan(span);
                     Channel.Dispose();
                     break;

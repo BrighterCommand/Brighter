@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
-public class MessagePumpEmptyQueueOberservabilityTests
+public class MessagePumpQuitOberservabilityTests
 {
     private const string Topic = "MyTopic";
     private readonly RoutingKey _routingKey = new(Topic);
@@ -25,12 +25,10 @@ public class MessagePumpEmptyQueueOberservabilityTests
     private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
-    private readonly Message _message;
-    private readonly Channel _channel;
 
-    public MessagePumpEmptyQueueOberservabilityTests()
+    public MessagePumpQuitOberservabilityTests()
     {
-            var builder = Sdk.CreateTracerProviderBuilder();
+        var builder = Sdk.CreateTracerProviderBuilder();
             _exportedActivities = new List<Activity>();
 
             _traceProvider = builder
@@ -62,7 +60,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -72,17 +70,11 @@ public class MessagePumpEmptyQueueOberservabilityTests
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), tracer, instrumentationOptions)
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, EmptyChannelDelay = 1000
+                Channel = channel, TimeoutInMilliseconds = 5000, EmptyChannelDelay = 1000
             };
             
-            //in theory the message pump should see this from the consumer when the queue is empty
-            //we are just forcing this to run exactly once, before we quit.
-            _message = MessageFactory.CreateEmptyMessage(_routingKey);
-            
-            _channel.Enqueue(_message);
-            
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
-            _channel.Enqueue(quitMessage);
+            channel.Enqueue(quitMessage);
     }
 
     [Fact]
@@ -92,14 +84,14 @@ public class MessagePumpEmptyQueueOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        _exportedActivities.Count.Should().Be(2);
+        _exportedActivities.Count.Should().Be(1);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue(); 
         
         var emptyMessageActivity = _exportedActivities.FirstOrDefault(a => 
-            a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}" 
+            a.DisplayName == $"{_routingKey} {MessagePumpSpanOperation.Receive.ToSpanName()}" 
             && a.TagObjects.Any(t => 
                 t is { Value: not null, Key: BrighterSemanticConventions.MessageType } 
-                && Enum.Parse<MessageType>(t.Value.ToString()) == MessageType.MT_NONE
+                && Enum.Parse<MessageType>(t.Value.ToString()) == MessageType.MT_QUIT
                 )
             );
         
