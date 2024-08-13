@@ -172,8 +172,6 @@ namespace Paramore.Brighter
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
-
-            ConfigureCallbacks(producerRegistry);
         }
 
         /// <summary>
@@ -220,8 +218,6 @@ namespace Paramore.Brighter
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
-
-            ConfigureCallbacks(producerRegistry);
         }
 
         /// <summary>
@@ -261,8 +257,6 @@ namespace Paramore.Brighter
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
-
-            ConfigureCallbacks(producerRegistry);
         }
 
         /// <summary>
@@ -815,8 +809,7 @@ namespace Paramore.Brighter
                     $"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
 
-
-        private void ConfigureCallbacks(IAmAProducerRegistry producerRegistry)
+        private static void ConfigureCallbacks(IAmAProducerRegistry producerRegistry)
         {
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
             foreach (var producer in producerRegistry.Producers)
@@ -871,6 +864,8 @@ namespace Paramore.Brighter
                         _bus.PolicyRegistry = policyRegistry;
                         _bus.ProducerRegistry = producerRegistry;
                         _bus.OutboxBulkChunkSize = outboxBulkChunkSize;
+
+                        ConfigureCallbacks(producerRegistry);
                     }
                 }
             }
