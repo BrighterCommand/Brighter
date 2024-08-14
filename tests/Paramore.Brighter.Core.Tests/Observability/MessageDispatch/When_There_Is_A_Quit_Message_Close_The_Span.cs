@@ -78,7 +78,7 @@ public class MessagePumpQuitOberservabilityTests
     }
 
     [Fact]
-    public void When_There_Are_No_Messages_Close_The_Span()
+    public void When_There_Is_A_Quit_Message_Close_The_Span()
     {
         _messagePump.Run();
 
