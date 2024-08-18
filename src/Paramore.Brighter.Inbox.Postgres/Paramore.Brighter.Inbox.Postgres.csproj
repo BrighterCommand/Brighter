@@ -13,5 +13,6 @@
 
   <ItemGroup>
     <PackageReference Include="Npgsql" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
   </ItemGroup>
 </Project>

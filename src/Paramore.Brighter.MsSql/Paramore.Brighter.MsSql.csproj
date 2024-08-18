@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Data.SqlClient" />
+      <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     </ItemGroup>
 
     <ItemGroup>

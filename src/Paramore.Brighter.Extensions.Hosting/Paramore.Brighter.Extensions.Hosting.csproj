@@ -9,6 +9,7 @@
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
       <PackageReference Include="Microsoft.Extensions.Hosting" />
+      <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     </ItemGroup>
 
     <ItemGroup>

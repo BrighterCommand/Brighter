@@ -13,6 +13,7 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NJsonSchema" />
     <PackageReference Include="Polly" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">

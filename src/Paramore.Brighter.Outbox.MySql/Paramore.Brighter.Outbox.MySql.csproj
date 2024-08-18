@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MySqlConnector" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     
 
   </ItemGroup>

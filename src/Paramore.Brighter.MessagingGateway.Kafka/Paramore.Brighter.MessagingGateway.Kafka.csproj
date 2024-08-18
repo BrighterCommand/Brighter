@@ -12,5 +12,6 @@
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" />
     <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
   </ItemGroup>
 </Project>
