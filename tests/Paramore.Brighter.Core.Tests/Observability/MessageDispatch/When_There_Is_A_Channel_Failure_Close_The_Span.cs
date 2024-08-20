@@ -8,6 +8,7 @@ using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
@@ -15,7 +16,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
-public class MessagePumpEmptyQueueOberservabilityTests
+public class MessagePumpChannelFailureOberservabilityTests
 {
     private const string Topic = "MyTopic";
     private const string ChannelName = "myChannel";
@@ -28,7 +29,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
     private readonly TracerProvider _traceProvider;
     private readonly Message _message;
 
-    public MessagePumpEmptyQueueOberservabilityTests()
+    public MessagePumpChannelFailureOberservabilityTests()
     {
         var builder = Sdk.CreateTracerProviderBuilder();
             _exportedActivities = new List<Activity>();
@@ -62,7 +63,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            Channel channel = new(new(ChannelName), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            FailingChannel channel = new(new (ChannelName), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -86,7 +87,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
     }
 
     [Fact]
-    public void When_There_Are_No_Messages_Close_The_Span()
+    public void When_There_Is_A_Channel_Failure_Close_The_Span()
     {
         _messagePump.Run();
 
@@ -105,6 +106,5 @@ public class MessagePumpEmptyQueueOberservabilityTests
         
         emptyMessageActivity.Should().NotBeNull();
         emptyMessageActivity!.Status.Should().Be(ActivityStatusCode.Ok);
-        
     }
 }

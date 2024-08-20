@@ -37,7 +37,6 @@ namespace Paramore.Brighter
     /// </summary>
     public class Channel : IAmAChannel
     {
-        private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
         private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
@@ -47,7 +46,7 @@ namespace Paramore.Brighter
         ///   Gets the name.
         /// </summary>
         /// <value>The name.</value>
-        public ChannelName Name => new(_channelName);
+        public ChannelName Name { get; }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
@@ -55,9 +54,9 @@ namespace Paramore.Brighter
         /// <param name="channelName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
         /// <param name="maxQueueLength">What is the maximum buffer size we will accept</param>
-        public Channel(string channelName, IAmAMessageConsumer messageConsumer, int maxQueueLength = 1)
+        public Channel(ChannelName channelName, IAmAMessageConsumer messageConsumer, int maxQueueLength = 1)
         {
-            _channelName = channelName;
+            Name = channelName;
             _messageConsumer = messageConsumer;
 
             if (maxQueueLength < 1 || maxQueueLength > 10)

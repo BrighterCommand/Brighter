@@ -18,6 +18,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 public class MessagePumpUnacceptableMessageOberservabilityTests
 {
     private const string Topic = "MyTopic";
+    private const string ChannelName = "myChannel";
     private readonly RoutingKey _routingKey = new(Topic);
     private readonly InternalBus _bus = new();
     private readonly FakeTimeProvider _timeProvider = new();
@@ -62,7 +63,7 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new(ChannelName), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),

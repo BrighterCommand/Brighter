@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             SpyCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(new(Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));

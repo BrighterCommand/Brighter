@@ -57,9 +57,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
             
             return new Channel(
-                channelName:subscription.ChannelName, 
-                messageConsumer:messageConsumer, 
-                maxQueueLength:subscription.BufferSize
+                channelName: subscription.ChannelName, 
+                messageConsumer: messageConsumer, 
+                maxQueueLength: subscription.BufferSize
                 );
         }
     }

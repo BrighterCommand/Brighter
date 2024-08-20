@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             _bus = new InternalBus();
             IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, TimeProvider.System, 1000); 
 
-            _channel = new Channel(Topic, gateway);
+            _channel = new Channel(new(Topic), gateway);
 
             Message sentMessage = new(
                 new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),

@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             const int ackTimeoutMs = 1000;
             IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, ackTimeoutMs); 
 
-            _channel = new  Channel(Topic, gateway);
+            _channel = new  Channel(new (Topic), gateway);
 
             var sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),

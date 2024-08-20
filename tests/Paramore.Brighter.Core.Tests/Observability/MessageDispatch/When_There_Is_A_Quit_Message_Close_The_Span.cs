@@ -60,7 +60,7 @@ public class MessagePumpQuitOberservabilityTests
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(new (Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
