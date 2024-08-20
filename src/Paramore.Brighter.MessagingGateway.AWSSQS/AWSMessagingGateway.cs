@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Amazon.SimpleNotificationService;
+using System.Threading.Tasks;
 using Amazon.SimpleNotificationService.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -45,16 +45,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _awsClientFactory = new AWSClientFactory(awsConnection);
         }
 
-        protected string EnsureTopic(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
+        protected async Task<string> EnsureTopic(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
         {
             //on validate or assume, turn a routing key into a topicARN
             if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
-                ValidateTopic(topic, topicFindBy, makeTopic);
-            else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes);
+                await ValidateTopic(topic, topicFindBy, makeTopic);
+            else if (makeTopic == OnMissingChannel.Create) await CreateTopic(topic, attributes);
             return ChannelTopicArn;
         }
 
-        private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
+        private async Task CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
         {
             using (var snsClient = _awsClientFactory.CreateSnsClient())
             {
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 };
 
                 //create topic is idempotent, so safe to call even if topic already exists
-                var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
+                var createTopic = await snsClient.CreateTopicAsync(createTopicRequest);
 
                 if (!string.IsNullOrEmpty(createTopic.TopicArn))
                     ChannelTopicArn = createTopic.TopicArn;
@@ -83,10 +83,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void ValidateTopic(RoutingKey topic, TopicFindBy findTopicBy, OnMissingChannel onMissingChannel)
+        private async Task ValidateTopic(RoutingKey topic, TopicFindBy findTopicBy, OnMissingChannel onMissingChannel)
         {
             IValidateTopic topicValidationStrategy = GetTopicValidationStrategy(findTopicBy);
-            (bool exists, string topicArn) = topicValidationStrategy.Validate(topic);
+            (bool exists, string topicArn) = await topicValidationStrategy.Validate(topic);
             if (exists)
                 ChannelTopicArn = topicArn;
             else
