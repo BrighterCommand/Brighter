@@ -15,10 +15,6 @@ on:
       - '*.*.*'
   pull_request:
     branches: [ master, release/9X ]
-
-permissions:
-  id-token: write
-  contents: read
   
 env:
  # Stop wasting time caching packages

@@ -53,7 +53,12 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
             
-            _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
+            _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication
+            {
+                Topic = new RoutingKey(_topicName),
+                MakeChannels = OnMissingChannel.Create,
+                SnsSubject = _ => "test"
+            });
         }
 
 
