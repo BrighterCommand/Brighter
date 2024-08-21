@@ -406,7 +406,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
-                (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(ChannelTopicArn).GetAwaiter().GetResult();
+                (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(ChannelTopicArn);
                 if (exists)
                 {
                     try

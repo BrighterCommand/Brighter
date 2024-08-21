@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Net;
-using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SecurityToken;
@@ -45,10 +44,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _stsClient = clientFactory.CreateStsClient();
         }
 
-        public override async Task<(bool, string TopicArn)> Validate(string topic)
+        public override (bool, string TopicArn) Validate(string topic)
         {
             var topicArn = GetArnFromTopic(topic);
-            return await base.Validate(topicArn);
+            return base.Validate(topicArn);
         }
 
         private string GetArnFromTopic(string topicName)
