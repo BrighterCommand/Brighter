@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -30,7 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Class SqsMessageProducer.
     /// </summary>
-    public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync
+    public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
         /// <summary>
         /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
@@ -92,8 +93,18 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
            return !string.IsNullOrEmpty(ChannelTopicArn);
        }
-
+       
        /// <summary>
+       /// Sends the specified message.
+       /// </summary>
+       /// <param name="message">The message.</param>
+       public Task SendAsync(Message message)
+       {
+           Send(message);
+           return Task.CompletedTask;
+       }
+
+        /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
