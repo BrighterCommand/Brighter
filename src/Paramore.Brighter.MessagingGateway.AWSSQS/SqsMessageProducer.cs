@@ -98,10 +98,28 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
        /// Sends the specified message.
        /// </summary>
        /// <param name="message">The message.</param>
-       public Task SendAsync(Message message)
+       public async Task SendAsync(Message message)
        {
-           Send(message);
-           return Task.CompletedTask;
+           s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}", 
+               message.Header.Topic, message.Id, message.Body);
+            
+           ConfirmTopicExists(message.Header.Topic);
+
+           using (var client = _clientFactory.CreateSnsClient())
+           {
+               var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
+               var messageId = await publisher.PublishAsync(message);
+               if (messageId != null)
+               {
+                   s_logger.LogDebug(
+                       "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+                       message.Header.Topic, message.Id, messageId);
+                   return;
+               }
+           }
+
+           throw new InvalidOperationException(
+               string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
        }
 
         /// <summary>
@@ -110,26 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}", 
-                message.Header.Topic, message.Id, message.Body);
-            
-            ConfirmTopicExists(message.Header.Topic);
-
-            using (var client = _clientFactory.CreateSnsClient())
-            {
-                var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
-                var messageId = publisher.Publish(message);
-                if (messageId != null)
-                {
-                    s_logger.LogDebug(
-                        "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-                        message.Header.Topic, message.Id, messageId);
-                    return;
-                }
-            }
-
-            throw new InvalidOperationException(
-                string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
+            SendAsync(message).Wait();
         }
 
         /// <summary>
