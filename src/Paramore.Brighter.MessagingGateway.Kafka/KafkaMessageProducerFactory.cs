@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Wayne Hunsley <whunsley@gmail.com>
+Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -28,23 +28,24 @@ using Confluent.Kafka;
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     /// <summary>
-    /// Creates a registry of <see cref="KafkaMessageProducer"/> instances from <see cref="Publication"/> instances
+    /// Creates a dictionary of <see cref="KafkaMessageProducer"/> instances indexed by topic from a collection of <see cref="Publication"/> instances
     /// Note that we only return the interface and <see cref="KafkaMessageProducer"/> is internal as the underlying type is not needed
     /// </summary>
-    public class KafkaProducerRegistryFactory : IAmAProducerRegistryFactory
+    public class KafkaMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly IEnumerable<KafkaPublication> _publications;
         private Action<ProducerConfig> _configHook;
 
         /// <summary>
-        /// This constructs a <see cref="KafkaProducerRegistryFactory"/> which can be used to create a <see cref="ProducerRegistry" /> of <see cref="KafkaMessageProducer" /> instances.
-        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, and a collection of <see cref="KafkaPublication"/> instances
-        /// that determine how we publish to Kafka and the parameters of any topics if required.
+        /// This constructs a <see cref="KafkaMessageProducerFactory"/> which can be used to create a dictionary of <see cref="KafkaMessageProducer"/>
+        /// instances indexed by topic name.
+        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, and a collection of 
+        /// <see cref="KafkaPublication"/> instances that determine how we publish to Kafka and the parameters of any topics if required.
         /// </summary>
         /// <param name="globalConfiguration">Configures how we connect to the broker</param>
-        /// <param name="publication">How do we publish, both producer parameters and topic configuration</param>
-        public KafkaProducerRegistryFactory(
+        /// <param name="publications">The list of topics that we want to publish to</param>
+        public KafkaMessageProducerFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration, 
             IEnumerable<KafkaPublication> publications)
         {
@@ -52,18 +53,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _publications = publications;
             _configHook = null;
         }
-        
-        /// <summary>
-        /// Create a producer registry from the <see cref="KafkaMessagingGatewayConfiguration"/> and <see cref="KafkaPublication"/> instances supplied
-        /// to the constructor
-        /// </summary>
-        /// <returns>An <see cref="IAmAProducerRegistry"/> that represents a collection of Kafka Message Producers</returns>
-        public IAmAProducerRegistry Create()
-        {
-            var producerFactory = new KafkaMessageProducerFactory(_globalConfiguration, _publications);
-            producerFactory.SetConfigHook(_configHook);
 
-            return new ProducerRegistry(producerFactory.Create());
+        /// <inheritdoc />
+        public Dictionary<string,IAmAMessageProducer> Create()
+        {
+            var publicationsByTopic = new Dictionary<string, IAmAMessageProducer>();
+            foreach (var publication in _publications)
+            {
+
+                var producer = new KafkaMessageProducer(_globalConfiguration, publication);
+                if (_configHook != null)
+                    producer.ConfigHook(_configHook);
+                producer.Init();
+                publicationsByTopic[publication.Topic] = producer;
+            }
+
+            return publicationsByTopic;
         }
 
         /// <summary>

@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Toby Henderson <hendersont@gmail.com>
+Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,17 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAProducerRegistryFactory
+    /// Interface IAmAMessageProducerFactory
     /// </summary>
-    public interface IAmAProducerRegistryFactory
+    public interface IAmAMessageProducerFactory
     {
         /// <summary>
-        /// Creates a message producer registry.
+        /// Creates message producers.
         /// </summary>
-        /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
-        IAmAProducerRegistry Create();
+        /// <returns>A dictionary of middleware clients by topic, for sending messages to the middleware</returns>
+        Dictionary<string,IAmAMessageProducer> Create();
     }
 }

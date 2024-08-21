@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -21,37 +21,35 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Collections.Generic;
+using System.Linq;
 
-namespace Paramore.Brighter.MessagingGateway.AWSSQS
+namespace Paramore.Brighter
 {
-    public class SnsProducerRegistryFactory : IAmAProducerRegistryFactory
+    public class CombinedProducerRegistryFactory : IAmAProducerRegistryFactory
     {
-        private readonly AWSMessagingGatewayConnection _connection;
-        private readonly IEnumerable<SnsPublication> _snsPublications;
+        private readonly IAmAMessageProducerFactory[] _messageProducerFactories;
 
         /// <summary>
-        /// Create a collection of producers from the publication information
+        /// Creates a combined producer registry of the message producers created by a set of message
+        /// producer factories.
         /// </summary>
-        /// <param name="connection">The Connection to use to connect to AWS</param>
-        /// <param name="snsPublications">The publication describing the SNS topic that we want to use</param>
-        public SnsProducerRegistryFactory(
-            AWSMessagingGatewayConnection connection,
-            IEnumerable<SnsPublication> snsPublications)
+        /// <param name="messageProducerFactories">The set of message producer factories from which to create the combined registry</param>
+        public CombinedProducerRegistryFactory(params IAmAMessageProducerFactory[] messageProducerFactories)
         {
-            _connection = connection;
-            _snsPublications = snsPublications;
+            _messageProducerFactories = messageProducerFactories;
         }
 
         /// <summary>
-        /// Create a message producer for each publication, add it into the registry under the key of the topic
+        /// Create a combined producer registry of the producers created by the message producer factories,
+        /// under the key of each topic
         /// </summary>
         /// <returns></returns>
         public IAmAProducerRegistry Create()
         {
-            var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
-
-            return new ProducerRegistry(producerFactory.Create());
+            var producers = _messageProducerFactories
+                .SelectMany(x => x.Create())
+                .ToDictionary(x => x.Key, x => x.Value);
+            return new ProducerRegistry(producers);
         }
     }
 }

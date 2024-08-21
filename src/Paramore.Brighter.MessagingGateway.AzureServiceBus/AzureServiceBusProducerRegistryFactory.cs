@@ -45,13 +45,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
         public IAmAProducerRegistry Create()
         {
-            var producers = new Dictionary<string, IAmAMessageProducer>();
-            foreach (var publication in _asbPublications)
-            {
-                producers[publication.Topic] = AzureServiceBusMessageProducerFactory.Get(_clientProvider, publication, _bulkSendBatchSize);
-            }
+            var producerFactory = new AzureServiceBusMessageProducerFactory(_clientProvider, _asbPublications, _bulkSendBatchSize);
 
-            return new ProducerRegistry(producers);
+            return new ProducerRegistry(producerFactory.Create());
         }
     }
 }
