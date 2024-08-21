@@ -23,11 +23,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Net.Mime;
 using System.Text.Json;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
-using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -35,17 +33,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private readonly string _topicArn;
         private readonly AmazonSimpleNotificationServiceClient _client;
+        private readonly Func<Message, string> _subject;
 
-        public SqsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client)
+        public SqsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, Func<Message, string> subject = null)
         {
             _topicArn = topicArn;
             _client = client;
+            _subject = subject;
         }
 
         public string Publish(Message message)
         {
             var messageString = message.Body.Value;
-            var publishRequest = new PublishRequest(_topicArn, messageString);
+            var publishRequest = new PublishRequest(_topicArn, messageString, _subject?.Invoke(message));
 
             var messageAttributes = new Dictionary<string, MessageAttributeValue>();
             messageAttributes.Add(HeaderNames.Id, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.Id), DataType = "String"});
