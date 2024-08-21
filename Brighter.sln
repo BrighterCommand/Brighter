@@ -184,39 +184,39 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI_Common", "WebAPI_Com
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI", "WebAPI", "{2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransportMaker", "samples\WebAPI\WebAPI_Common\TransportMaker\TransportMaker.csproj", "{F0C3FC17-7D5B-4142-9166-BE0D55D66A10}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TransportMaker", "samples\WebAPI\WebAPI_Common\TransportMaker\TransportMaker.csproj", "{F0C3FC17-7D5B-4142-9166-BE0D55D66A10}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMaker", "samples\WebAPI\WebAPI_Common\DbMaker\DbMaker.csproj", "{BA45BF25-2EDA-403A-A13D-9245D04E0548}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DbMaker", "samples\WebAPI\WebAPI_Common\DbMaker\DbMaker.csproj", "{BA45BF25-2EDA-403A-A13D-9245D04E0548}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Salutations_Migrations", "samples\WebAPI\WebAPI_Common\Salutations_Migrations\Salutations_Migrations.csproj", "{E46CF97B-DE8B-4FC4-9D3D-941EE00A31E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutations_Migrations", "samples\WebAPI\WebAPI_Common\Salutations_Migrations\Salutations_Migrations.csproj", "{E46CF97B-DE8B-4FC4-9D3D-941EE00A31E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_Migrations", "samples\WebAPI\WebAPI_Common\Greetings_Migrations\Greetings_Migrations.csproj", "{5FCF6804-C2A3-45EE-B6B1-28A04E495BC8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_Migrations", "samples\WebAPI\WebAPI_Common\Greetings_Migrations\Greetings_Migrations.csproj", "{5FCF6804-C2A3-45EE-B6B1-28A04E495BC8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_Sweeper", "samples\WebAPI\WebAPI_Dapper\Greetings_Sweeper\Greetings_Sweeper.csproj", "{C7EE03A8-BF54-43AC-8A25-E7E75BA545F8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_Sweeper", "samples\WebAPI\WebAPI_Dapper\Greetings_Sweeper\Greetings_Sweeper.csproj", "{C7EE03A8-BF54-43AC-8A25-E7E75BA545F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsApp", "samples\WebAPI\WebAPI_Dapper\GreetingsApp\GreetingsApp.csproj", "{A887689F-0873-4C4A-9473-4BB600F7942B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsApp", "samples\WebAPI\WebAPI_Dapper\GreetingsApp\GreetingsApp.csproj", "{A887689F-0873-4C4A-9473-4BB600F7942B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsWeb", "samples\WebAPI\WebAPI_Dapper\GreetingsWeb\GreetingsWeb.csproj", "{3C8C7736-1E0B-440B-A568-8D5F127AA39B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWeb", "samples\WebAPI\WebAPI_Dapper\GreetingsWeb\GreetingsWeb.csproj", "{3C8C7736-1E0B-440B-A568-8D5F127AA39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationAnalytics", "samples\WebAPI\WebAPI_Dapper\SalutationAnalytics\SalutationAnalytics.csproj", "{449725FE-ED83-4114-B223-9A1858B8E6A5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationAnalytics", "samples\WebAPI\WebAPI_Dapper\SalutationAnalytics\SalutationAnalytics.csproj", "{449725FE-ED83-4114-B223-9A1858B8E6A5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationApp", "samples\WebAPI\WebAPI_Dapper\SalutationApp\SalutationApp.csproj", "{50A6142D-77DF-473B-B2B7-0B83FA2D4ED0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationApp", "samples\WebAPI\WebAPI_Dapper\SalutationApp\SalutationApp.csproj", "{50A6142D-77DF-473B-B2B7-0B83FA2D4ED0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsApp", "samples\WebAPI\WebAPI_Dynamo\GreetingsApp\GreetingsApp.csproj", "{85F0B3C7-CE58-4D5C-B21A-2AEE54B4FE50}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsApp", "samples\WebAPI\WebAPI_Dynamo\GreetingsApp\GreetingsApp.csproj", "{85F0B3C7-CE58-4D5C-B21A-2AEE54B4FE50}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsWeb", "samples\WebAPI\WebAPI_Dynamo\GreetingsWeb\GreetingsWeb.csproj", "{69C52373-BC86-459A-B084-2ACDAB365AC4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWeb", "samples\WebAPI\WebAPI_Dynamo\GreetingsWeb\GreetingsWeb.csproj", "{69C52373-BC86-459A-B084-2ACDAB365AC4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationAnalytics", "samples\WebAPI\WebAPI_Dynamo\SalutationAnalytics\SalutationAnalytics.csproj", "{AE69D26C-0B3F-4882-A0EC-894C7A54FB01}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationAnalytics", "samples\WebAPI\WebAPI_Dynamo\SalutationAnalytics\SalutationAnalytics.csproj", "{AE69D26C-0B3F-4882-A0EC-894C7A54FB01}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationApp", "samples\WebAPI\WebAPI_Dynamo\SalutationApp\SalutationApp.csproj", "{DDA9B399-AA4A-4DBE-BB8C-1C632C36759C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationApp", "samples\WebAPI\WebAPI_Dynamo\SalutationApp\SalutationApp.csproj", "{DDA9B399-AA4A-4DBE-BB8C-1C632C36759C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsApp", "samples\WebAPI\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj", "{FA1FCDD3-4E83-4189-A2F1-EF6EBEE00FDB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsApp", "samples\WebAPI\WebAPI_EFCore\GreetingsApp\GreetingsApp.csproj", "{FA1FCDD3-4E83-4189-A2F1-EF6EBEE00FDB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsWeb", "samples\WebAPI\WebAPI_EFCore\GreetingsWeb\GreetingsWeb.csproj", "{E17A5B72-1532-4271-B27C-2BA9DEE983EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWeb", "samples\WebAPI\WebAPI_EFCore\GreetingsWeb\GreetingsWeb.csproj", "{E17A5B72-1532-4271-B27C-2BA9DEE983EA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationAnalytics", "samples\WebAPI\WebAPI_EFCore\SalutationAnalytics\SalutationAnalytics.csproj", "{C13B6442-5B95-48A3-887B-929F72D7E4FF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationAnalytics", "samples\WebAPI\WebAPI_EFCore\SalutationAnalytics\SalutationAnalytics.csproj", "{C13B6442-5B95-48A3-887B-929F72D7E4FF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationApp", "samples\WebAPI\WebAPI_EFCore\SalutationApp\SalutationApp.csproj", "{F93DC497-CA32-45E6-8748-C674CF00C953}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SalutationApp", "samples\WebAPI\WebAPI_EFCore\SalutationApp\SalutationApp.csproj", "{F93DC497-CA32-45E6-8748-C674CF00C953}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TaskQueue", "TaskQueue", "{9A06FC18-50E3-40AE-8631-8A262AF6FB21}"
 	ProjectSection(SolutionItems) = preProject
@@ -225,93 +225,93 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TaskQueue", "TaskQueue", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CommandProcessor", "CommandProcessor", "{6494AB84-C125-4DDA-A2A0-06A6FD404A06}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\Transforms\AWSTransfomers\ClaimCheck\Greetings\Greetings.csproj", "{D43A06D3-CDAE-47F4-8FA1-B18716DC7D0B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\Transforms\AWSTransfomers\ClaimCheck\Greetings\Greetings.csproj", "{D43A06D3-CDAE-47F4-8FA1-B18716DC7D0B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\Transforms\AWSTransfomers\ClaimCheck\GreetingsSender\GreetingsSender.csproj", "{7106489C-745B-46ED-A7F3-1F893B5B621D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\Transforms\AWSTransfomers\ClaimCheck\GreetingsSender\GreetingsSender.csproj", "{7106489C-745B-46ED-A7F3-1F893B5B621D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\Transforms\AWSTransfomers\ClaimCheck\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{C734C254-463F-4A94-A6E1-D969C56D6D19}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\Transforms\AWSTransfomers\ClaimCheck\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{C734C254-463F-4A94-A6E1-D969C56D6D19}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\Transforms\AWSTransfomers\Compression\Greetings\Greetings.csproj", "{67860332-891E-4B3B-86EC-12B785CCE7DD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\Transforms\AWSTransfomers\Compression\Greetings\Greetings.csproj", "{67860332-891E-4B3B-86EC-12B785CCE7DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\Transforms\AWSTransfomers\Compression\GreetingsSender\GreetingsSender.csproj", "{854BF44F-BBE9-41D3-8502-64051965B261}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\Transforms\AWSTransfomers\Compression\GreetingsSender\GreetingsSender.csproj", "{854BF44F-BBE9-41D3-8502-64051965B261}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\Transforms\AWSTransfomers\Compression\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{6FF21F89-C197-477D-B915-4E4AD9FB68F0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\Transforms\AWSTransfomers\Compression\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{6FF21F89-C197-477D-B915-4E4AD9FB68F0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorld", "samples\CommandProcessor\HelloWorld\HelloWorld.csproj", "{7BD603CF-E18D-44D5-8FE0-59C723456345}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWorld", "samples\CommandProcessor\HelloWorld\HelloWorld.csproj", "{7BD603CF-E18D-44D5-8FE0-59C723456345}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorldAsync", "samples\CommandProcessor\HelloWorldAsync\HelloWorldAsync.csproj", "{D2F89380-A0F1-4801-8044-B6B81960D971}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWorldAsync", "samples\CommandProcessor\HelloWorldAsync\HelloWorldAsync.csproj", "{D2F89380-A0F1-4801-8044-B6B81960D971}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HelloWorldInternalBus", "samples\CommandProcessor\HelloWorldInternalBus\HelloWorldInternalBus.csproj", "{0454B14F-3006-4FF6-9237-692BD2F69D2F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HelloWorldInternalBus", "samples\CommandProcessor\HelloWorldInternalBus\HelloWorldInternalBus.csproj", "{0454B14F-3006-4FF6-9237-692BD2F69D2F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\TaskQueue\ASBTaskQueue\Greetings\Greetings.csproj", "{3D38CF1A-5967-412F-BD10-DCD2E8F3F956}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\TaskQueue\ASBTaskQueue\Greetings\Greetings.csproj", "{3D38CF1A-5967-412F-BD10-DCD2E8F3F956}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsScopedReceiverConsole", "samples\TaskQueue\ASBTaskQueue\GreetingsScopedReceiverConsole\GreetingsScopedReceiverConsole.csproj", "{FF318144-2B01-46CC-B713-E0196EB5CEEF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsScopedReceiverConsole", "samples\TaskQueue\ASBTaskQueue\GreetingsScopedReceiverConsole\GreetingsScopedReceiverConsole.csproj", "{FF318144-2B01-46CC-B713-E0196EB5CEEF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\TaskQueue\ASBTaskQueue\GreetingsSender\GreetingsSender.csproj", "{269AE907-74B1-4C9A-A1EF-BBE761A9FA89}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\TaskQueue\ASBTaskQueue\GreetingsSender\GreetingsSender.csproj", "{269AE907-74B1-4C9A-A1EF-BBE761A9FA89}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender.Web", "samples\TaskQueue\ASBTaskQueue\GreetingsSender.Web\GreetingsSender.Web.csproj", "{4B5C9FF7-90FA-4A2A-9320-64835F9DDE18}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender.Web", "samples\TaskQueue\ASBTaskQueue\GreetingsSender.Web\GreetingsSender.Web.csproj", "{4B5C9FF7-90FA-4A2A-9320-64835F9DDE18}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsWorker", "samples\TaskQueue\ASBTaskQueue\GreetingsWorker\GreetingsWorker.csproj", "{AC862775-A3E7-481F-8DDF-230AA9C5F5E3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWorker", "samples\TaskQueue\ASBTaskQueue\GreetingsWorker\GreetingsWorker.csproj", "{AC862775-A3E7-481F-8DDF-230AA9C5F5E3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\TaskQueue\ASBTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{C85150CF-9EC1-4B35-9D25-08196620DEEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\TaskQueue\ASBTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{C85150CF-9EC1-4B35-9D25-08196620DEEA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\TaskQueue\AWSTaskQueue\Greetings\Greetings.csproj", "{5A7D3538-EAA1-4CDB-93ED-3CC9A92B06EB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\TaskQueue\AWSTaskQueue\Greetings\Greetings.csproj", "{5A7D3538-EAA1-4CDB-93ED-3CC9A92B06EB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsPumper", "samples\TaskQueue\AWSTaskQueue\GreetingsPumper\GreetingsPumper.csproj", "{63588C1C-CF56-448D-AA72-5F3CB15C4C2A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPumper", "samples\TaskQueue\AWSTaskQueue\GreetingsPumper\GreetingsPumper.csproj", "{63588C1C-CF56-448D-AA72-5F3CB15C4C2A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\TaskQueue\AWSTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{1658E220-D1C3-4E46-818C-F1B51AD17FC5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\TaskQueue\AWSTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{1658E220-D1C3-4E46-818C-F1B51AD17FC5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\TaskQueue\AWSTaskQueue\GreetingsSender\GreetingsSender.csproj", "{505619BE-5E42-4D1A-8A15-9136BAEB5455}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\TaskQueue\AWSTaskQueue\GreetingsSender\GreetingsSender.csproj", "{505619BE-5E42-4D1A-8A15-9136BAEB5455}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\TaskQueue\KafkaSchemaRegistry\Greetings\Greetings.csproj", "{4A36E6EB-284B-4A50-8870-7C2EE0AAA177}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\TaskQueue\KafkaSchemaRegistry\Greetings\Greetings.csproj", "{4A36E6EB-284B-4A50-8870-7C2EE0AAA177}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\TaskQueue\KafkaSchemaRegistry\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{9E94822A-03B0-4E3B-9BE9-B445127C945F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\TaskQueue\KafkaSchemaRegistry\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{9E94822A-03B0-4E3B-9BE9-B445127C945F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\TaskQueue\KafkaSchemaRegistry\GreetingsSender\GreetingsSender.csproj", "{721DC202-2C89-4522-9800-F511DC9BB428}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\TaskQueue\KafkaSchemaRegistry\GreetingsSender\GreetingsSender.csproj", "{721DC202-2C89-4522-9800-F511DC9BB428}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\TaskQueue\KafkaTaskQueue\Greetings\Greetings.csproj", "{D01711AA-85A6-4D8C-B609-5D1551E9F3F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\TaskQueue\KafkaTaskQueue\Greetings\Greetings.csproj", "{D01711AA-85A6-4D8C-B609-5D1551E9F3F3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\TaskQueue\KafkaTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{0CBB7167-3CFF-415F-B9F8-8589909CDE86}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\TaskQueue\KafkaTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{0CBB7167-3CFF-415F-B9F8-8589909CDE86}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\TaskQueue\KafkaTaskQueue\GreetingsSender\GreetingsSender.csproj", "{2063BE68-AE31-42AD-98B2-07B9079F8F47}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\TaskQueue\KafkaTaskQueue\GreetingsSender\GreetingsSender.csproj", "{2063BE68-AE31-42AD-98B2-07B9079F8F47}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompetingReceiverConsole", "samples\TaskQueue\MsSqlMessagingGateway\CompetingReceiverConsole\CompetingReceiverConsole.csproj", "{1D5325D6-F029-4EF5-BC6C-DB2D1084E89E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompetingReceiverConsole", "samples\TaskQueue\MsSqlMessagingGateway\CompetingReceiverConsole\CompetingReceiverConsole.csproj", "{1D5325D6-F029-4EF5-BC6C-DB2D1084E89E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CompetingSender", "samples\TaskQueue\MsSqlMessagingGateway\CompetingSender\CompetingSender.csproj", "{A0C5CE8B-E152-41B0-B5EB-5168CC3060AE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompetingSender", "samples\TaskQueue\MsSqlMessagingGateway\CompetingSender\CompetingSender.csproj", "{A0C5CE8B-E152-41B0-B5EB-5168CC3060AE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Events", "samples\TaskQueue\MsSqlMessagingGateway\Events\Events.csproj", "{3AAF6921-E01F-4822-8517-7D77D16283E1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Events", "samples\TaskQueue\MsSqlMessagingGateway\Events\Events.csproj", "{3AAF6921-E01F-4822-8517-7D77D16283E1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\TaskQueue\MsSqlMessagingGateway\GreetingsSender\GreetingsSender.csproj", "{965720A9-CD15-4039-995F-589C96689F88}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\TaskQueue\MsSqlMessagingGateway\GreetingsSender\GreetingsSender.csproj", "{965720A9-CD15-4039-995F-589C96689F88}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\TaskQueue\MsSqlMessagingGateway\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{9962A8D5-4372-4F89-911E-FFB04D2AFD46}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\TaskQueue\MsSqlMessagingGateway\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{9962A8D5-4372-4F89-911E-FFB04D2AFD46}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\TaskQueue\RedisTaskQueue\Greetings\Greetings.csproj", "{25EE9F40-3C33-46FF-8970-1C90CDCA3D70}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\TaskQueue\RedisTaskQueue\Greetings\Greetings.csproj", "{25EE9F40-3C33-46FF-8970-1C90CDCA3D70}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiver", "samples\TaskQueue\RedisTaskQueue\GreetingsReceiver\GreetingsReceiver.csproj", "{62586BD1-B7A4-4502-982F-250A47A5893A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiver", "samples\TaskQueue\RedisTaskQueue\GreetingsReceiver\GreetingsReceiver.csproj", "{62586BD1-B7A4-4502-982F-250A47A5893A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\TaskQueue\RedisTaskQueue\GreetingsSender\GreetingsSender.csproj", "{3CFF9B08-4D06-4ECB-BF3F-48842BF69D40}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\TaskQueue\RedisTaskQueue\GreetingsSender\GreetingsSender.csproj", "{3CFF9B08-4D06-4ECB-BF3F-48842BF69D40}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\TaskQueue\RMQRequestReply\Greetings\Greetings.csproj", "{F20BB89C-E870-4639-86B7-ABD91F41B036}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\TaskQueue\RMQRequestReply\Greetings\Greetings.csproj", "{F20BB89C-E870-4639-86B7-ABD91F41B036}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsClient", "samples\TaskQueue\RMQRequestReply\GreetingsClient\GreetingsClient.csproj", "{8D9264F7-10AB-4F20-BB1E-1DE0C0DE1689}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsClient", "samples\TaskQueue\RMQRequestReply\GreetingsClient\GreetingsClient.csproj", "{8D9264F7-10AB-4F20-BB1E-1DE0C0DE1689}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsServer", "samples\TaskQueue\RMQRequestReply\GreetingsServer\GreetingsServer.csproj", "{9EEBCACC-DB47-41A1-8BCA-96294DF429CA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsServer", "samples\TaskQueue\RMQRequestReply\GreetingsServer\GreetingsServer.csproj", "{9EEBCACC-DB47-41A1-8BCA-96294DF429CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\TaskQueue\RMQTaskQueue\Greetings\Greetings.csproj", "{D7401E74-ED80-4B6D-9708-C0C254BAA762}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\TaskQueue\RMQTaskQueue\Greetings\Greetings.csproj", "{D7401E74-ED80-4B6D-9708-C0C254BAA762}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\TaskQueue\RMQTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{CE418939-FD6D-48B1-B8C9-EA278C9E7D06}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\TaskQueue\RMQTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{CE418939-FD6D-48B1-B8C9-EA278C9E7D06}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\TaskQueue\RMQTaskQueue\GreetingsSender\GreetingsSender.csproj", "{DFFA5AFC-D6ED-4193-9D86-3DE69B892150}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\TaskQueue\RMQTaskQueue\GreetingsSender\GreetingsSender.csproj", "{DFFA5AFC-D6ED-4193-9D86-3DE69B892150}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_Sweeper", "samples\WebAPI\WebAPI_EFCore\Greetings_Sweeper\Greetings_Sweeper.csproj", "{915BD9FD-2E29-4E2B-8DA3-A74055F32A20}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_Sweeper", "samples\WebAPI\WebAPI_EFCore\Greetings_Sweeper\Greetings_Sweeper.csproj", "{915BD9FD-2E29-4E2B-8DA3-A74055F32A20}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_Sweeper", "samples\WebAPI\WebAPI_Dynamo\Greetings_Sweeper\Greetings_Sweeper.csproj", "{7D8CE752-CCBB-4868-ADF0-30FF94CA611C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_Sweeper", "samples\WebAPI\WebAPI_Dynamo\Greetings_Sweeper\Greetings_Sweeper.csproj", "{7D8CE752-CCBB-4868-ADF0-30FF94CA611C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.PostgresSql", "src\Paramore.Brighter.Locking.PostgresSql\Paramore.Brighter.Locking.PostgresSql.csproj", "{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Locking.PostgresSql", "src\Paramore.Brighter.Locking.PostgresSql\Paramore.Brighter.Locking.PostgresSql.csproj", "{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.DynamoDB", "src\Paramore.Brighter.Locking.DynamoDB\Paramore.Brighter.Locking.DynamoDB.csproj", "{CBF99394-E332-439B-8632-ABDE06F6E343}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Locking.DynamoDB", "src\Paramore.Brighter.Locking.DynamoDB\Paramore.Brighter.Locking.DynamoDB.csproj", "{CBF99394-E332-439B-8632-ABDE06F6E343}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Salutation_Sweeper", "samples\WebAPI\WebAPI_Dapper\Salutation_Sweeper\Salutation_Sweeper.csproj", "{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutation_Sweeper", "samples\WebAPI\WebAPI_Dapper\Salutation_Sweeper\Salutation_Sweeper.csproj", "{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -983,18 +983,6 @@ Global
 		{021F3B51-A640-4C0D-9B47-FB4E32DF6715}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{021F3B51-A640-4C0D-9B47-FB4E32DF6715}.Release|x86.ActiveCfg = Release|Any CPU
 		{021F3B51-A640-4C0D-9B47-FB4E32DF6715}.Release|x86.Build.0 = Release|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|x86.Build.0 = Debug|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|x86.ActiveCfg = Release|Any CPU
-		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|x86.Build.0 = Release|Any CPU
 		{7FD4C263-74DA-4648-AD2A-7EB34FCBE18E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7FD4C263-74DA-4648-AD2A-7EB34FCBE18E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7FD4C263-74DA-4648-AD2A-7EB34FCBE18E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -1727,6 +1715,30 @@ Global
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C}.Release|x86.ActiveCfg = Release|Any CPU
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C}.Release|x86.Build.0 = Release|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Debug|x86.Build.0 = Debug|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|x86.ActiveCfg = Release|Any CPU
+		{9377F7E8-633D-494E-BD1A-02AADCC3FE5D}.Release|x86.Build.0 = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Debug|x86.Build.0 = Debug|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|x86.ActiveCfg = Release|Any CPU
+		{CBF99394-E332-439B-8632-ABDE06F6E343}.Release|x86.Build.0 = Release|Any CPU
 		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -1745,6 +1757,12 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{9E0E5F11-2777-4789-BB09-C866BC5F800D} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
+		{E9748DC0-6E72-4634-AF49-428F806E03B0} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
+		{8B12EDDE-31DB-4137-A55C-05A3DB77B861} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
+		{3A159082-7CC7-4629-A12E-A954AD46366D} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
+		{1DFC9C79-BA26-41A7-8AE5-89C3FC93134E} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
+		{ECE4A3A3-98D0-40E1-90DE-206F72C08853} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
+		{033A8626-4BD0-40B7-9A04-5E278BEB9FD6} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
 		{6494BB0C-728D-43CB-B3DA-E56E8D0E4938} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{FDD6E413-2BC4-4450-A9A6-E8BD2EF86052} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{28BC78DD-0B4E-4C45-957A-85DED8E55AAD} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
@@ -1757,16 +1775,18 @@ Global
 		{C2355F42-792D-4964-B068-79186F887C6D} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{D2B52F80-5106-4981-9031-A02C5EB479B4} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
+		{48D0EECA-B928-4B80-BE46-2C08CF3A946B} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
+		{C6B17EFD-4F05-4D45-AF3E-C4F3F790B994} = {2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB}
+		{202BA107-89D5-4868-AC5A-3527114C0109} = {2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB}
+		{11935469-A062-4CFF-9F72-F4F41E14C2B4} = {2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB}
 		{D8176160-F1B4-49E0-927F-04E997A55292} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{5DEF9723-646F-4522-9086-53941731C4A0} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
 		{D0ACABA2-F863-4BDD-9AF4-501264568C6C} = {D8176160-F1B4-49E0-927F-04E997A55292}
 		{65F8C2DE-0CB6-4102-8187-A247F1D5D3D7} = {D8176160-F1B4-49E0-927F-04E997A55292}
 		{AA2AA086-9B8A-4910-A793-E92B1E352351} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{F5B8D15A-22CC-4A73-A941-6AD34D0BDEA3} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
-		{2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{B0BD4716-F22E-4B9E-B7E0-3122829A3F4C} = {2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB}
-		{202BA107-89D5-4868-AC5A-3527114C0109} = {2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB}
-		{11935469-A062-4CFF-9F72-F4F41E14C2B4} = {2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB}
-		{C6B17EFD-4F05-4D45-AF3E-C4F3F790B994} = {2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB}
+		{2C2EEF53-F339-4C8C-8FF2-ACEE4038D6BB} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{F0C3FC17-7D5B-4142-9166-BE0D55D66A10} = {B0BD4716-F22E-4B9E-B7E0-3122829A3F4C}
 		{BA45BF25-2EDA-403A-A13D-9245D04E0548} = {B0BD4716-F22E-4B9E-B7E0-3122829A3F4C}
 		{E46CF97B-DE8B-4FC4-9D3D-941EE00A31E3} = {B0BD4716-F22E-4B9E-B7E0-3122829A3F4C}
@@ -1785,14 +1805,6 @@ Global
 		{C13B6442-5B95-48A3-887B-929F72D7E4FF} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{F93DC497-CA32-45E6-8748-C674CF00C953} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{9A06FC18-50E3-40AE-8631-8A262AF6FB21} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
-		{48D0EECA-B928-4B80-BE46-2C08CF3A946B} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
-		{033A8626-4BD0-40B7-9A04-5E278BEB9FD6} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
-		{5DEF9723-646F-4522-9086-53941731C4A0} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
-		{8B12EDDE-31DB-4137-A55C-05A3DB77B861} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
-		{3A159082-7CC7-4629-A12E-A954AD46366D} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
-		{1DFC9C79-BA26-41A7-8AE5-89C3FC93134E} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
-		{ECE4A3A3-98D0-40E1-90DE-206F72C08853} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
-		{E9748DC0-6E72-4634-AF49-428F806E03B0} = {9A06FC18-50E3-40AE-8631-8A262AF6FB21}
 		{6494AB84-C125-4DDA-A2A0-06A6FD404A06} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{D43A06D3-CDAE-47F4-8FA1-B18716DC7D0B} = {D0ACABA2-F863-4BDD-9AF4-501264568C6C}
 		{7106489C-745B-46ED-A7F3-1F893B5B621D} = {D0ACABA2-F863-4BDD-9AF4-501264568C6C}
