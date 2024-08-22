@@ -21,40 +21,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
 
-namespace Paramore.Brighter.MessagingGateway.MsSql
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    public class MsSqlMessageProducerFactory : IAmAMessageProducerFactory
+    /// <summary>
+    /// Creates a collection of RabbitMQ message producers from the RabbitMQ publication information
+    /// </summary>
+    /// <param name="connection">The connection to use to connect to RabbitMQ</param>
+    /// <param name="publications">The publications describing the RabbitMQ topics that we want to use</param>
+    public class RmqMessageProducerFactory(
+        RmqMessagingGatewayConnection connection,
+        IEnumerable<RmqPublication> publications)
+        : IAmAMessageProducerFactory
     {
-        private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
-        private readonly IEnumerable<Publication> _publications;
-
-        /// <summary>
-        /// Creates a collection of MsSQL message producers from the MsSQL publication information
-        /// </summary>
-        /// <param name="msSqlConfiguration">The connection to use to connect to MsSQL</param>
-        /// <param name="publications">The publications describing the MySQL topics that we want to use</param>
-        public MsSqlMessageProducerFactory(
-            RelationalDatabaseConfiguration msSqlConfiguration,
-            IEnumerable<Publication> publications)
-        {
-            _msSqlConfiguration = 
-                msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
-            if (string.IsNullOrEmpty(msSqlConfiguration.QueueStoreTable))
-                throw new ArgumentNullException(nameof(msSqlConfiguration.QueueStoreTable));
-            _publications = publications;
-        }
-
         /// <inheritdoc />
         public Dictionary<string,IAmAMessageProducer> Create()
         {
             var producers = new Dictionary<string, IAmAMessageProducer>();
-
-            foreach (var publication in _publications)
+            foreach (var publication in publications)
             {
-                producers[publication.Topic] = new MsSqlMessageProducer(_msSqlConfiguration, publication);
+                producers[publication.Topic] = new RmqMessageProducer(connection, publication);
             }
 
             return producers;
