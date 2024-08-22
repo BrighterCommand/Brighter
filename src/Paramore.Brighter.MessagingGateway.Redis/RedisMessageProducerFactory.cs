@@ -21,32 +21,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Collections.Generic;
 
-namespace Paramore.Brighter.MessagingGateway.MsSql
+namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    public class MsSqlMessageProducerFactory : IAmAMessageProducerFactory
+    public class RedisMessageProducerFactory : IAmAMessageProducerFactory
     {
-        private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
-        private readonly IEnumerable<Publication> _publications;
+        private readonly RedisMessagingGatewayConfiguration _redisConfiguration;
+        private readonly IEnumerable<RedisMessagePublication> _publications;
 
         /// <summary>
-        /// Creates a collection of MsSQL message producers from the MsSQL publication information
+        /// Creates a collection of Redis message producers from the Redis publication information
         /// </summary>
-        /// <param name="msSqlConfiguration">The connection to use to connect to MsSQL</param>
-        /// <param name="publications">The publications describing the MySQL topics that we want to use</param>
-        public MsSqlMessageProducerFactory(
-            RelationalDatabaseConfiguration msSqlConfiguration,
-            IEnumerable<Publication> publications)
+        /// <param name="redisConfiguration">The connection to use to connect to Redis</param>
+        /// <param name="publications">The publications describing the Redis topics that we want to use</param>
+        public RedisMessageProducerFactory(
+            RedisMessagingGatewayConfiguration redisConfiguration, 
+            IEnumerable<RedisMessagePublication> publications)
         {
-            _msSqlConfiguration = 
-                msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
-            if (string.IsNullOrEmpty(msSqlConfiguration.QueueStoreTable))
-                throw new ArgumentNullException(nameof(msSqlConfiguration.QueueStoreTable));
+            _redisConfiguration = redisConfiguration;
             _publications = publications;
         }
-
+        
         /// <inheritdoc />
         public Dictionary<string,IAmAMessageProducer> Create()
         {
@@ -54,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             foreach (var publication in _publications)
             {
-                producers[publication.Topic] = new MsSqlMessageProducer(_msSqlConfiguration, publication);
+                producers[publication.Topic] = new RedisMessageProducer(_redisConfiguration, publication);
             }
 
             return producers;

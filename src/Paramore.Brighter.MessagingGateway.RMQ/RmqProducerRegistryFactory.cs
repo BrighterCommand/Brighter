@@ -17,13 +17,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
         public IAmAProducerRegistry Create()
         {
-            var producers = new Dictionary<string, IAmAMessageProducer>();
-            foreach (var publication in publications)
-            {
-                producers[publication.Topic] = new RmqMessageProducer(connection, publication);
-            }
+            var producerFactory = new RmqMessageProducerFactory(connection, publications);
 
-            return new ProducerRegistry(producers);
+            return new ProducerRegistry(producerFactory.Create());
         }
     }
 }
