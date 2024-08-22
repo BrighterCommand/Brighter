@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Paramore.Brighter;
 
-public class InMemoryProducerRegistryFactory(InternalBus bus, IEnumerable<Publication> publications) : IAmAProducerRegistryFactory
+public class InMemoryProducerRegistryFactory(InternalBus bus, IEnumerable<Publication> publications) 
+    : IAmAProducerRegistryFactory
 {
     public IAmAProducerRegistry Create()
     {
-        var producers = new Dictionary<string, IAmAMessageProducer>();
-        foreach (var publication in publications)
-        {
-            var producer = new InMemoryProducer(bus, TimeProvider.System);
-            producer.Publication = publication;
-            producers[publication.Topic] = producer;
-        }
+        var producerFactory = new InMemoryMessageProducerFactory(bus, publications);
 
-        return new ProducerRegistry(producers);
+        return new ProducerRegistry(producerFactory.Create());
     }
 }
