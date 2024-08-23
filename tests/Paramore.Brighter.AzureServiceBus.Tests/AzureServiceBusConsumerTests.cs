@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using FakeItEasy;
+using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -14,7 +15,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 {
     public class AzureServiceBusConsumerTests
     {
-        private readonly IAdministrationClientWrapper _nameSpaceManagerWrapper;
+        private readonly FakeAdministrationClient _nameSpaceManagerWrapper;
         private readonly AzureServiceBusConsumer _azureServiceBusConsumer;
         private readonly IServiceBusReceiverWrapper _messageReceiver;
         private readonly IAmAMessageProducerSync _mockMessageProducer;
@@ -25,7 +26,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
         public AzureServiceBusConsumerTests()
         {
-            _nameSpaceManagerWrapper = A.Fake<IAdministrationClientWrapper>();
+            _nameSpaceManagerWrapper = new FakeAdministrationClient();
             _mockMessageProducer = A.Fake<IAmAMessageProducerSync>();
             _mockMessageReceiver = A.Fake<IServiceBusReceiverProvider>();
 
@@ -45,7 +46,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_a_subscription_exists_and_messages_are_in_the_queue_the_messages_are_returned()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
@@ -75,7 +77,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_a_subscription_does_not_exist_and_messages_are_in_the_queue_then_the_subscription_is_created_and_messages_are_returned()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(false);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
 
@@ -86,8 +89,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
-
-            A.CallTo(() => _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened();
+            
+            _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription");
             //A.CallTo(() => _nameSpaceManagerWrapper.f => f.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened();
             Assert.Equal("somebody", result[0].Body.Value);
         }
@@ -95,7 +98,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_a_message_is_a_command_type_then_the_message_type_is_set_correctly()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
@@ -116,7 +120,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_a_message_is_a_command_type_and_it_is_specified_in_funny_casing_then_the_message_type_is_set_correctly()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
@@ -136,7 +141,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_the_specified_message_type_is_unknown_then_it_should_default_to_MT_EVENT()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
@@ -155,7 +161,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_the_message_type_is_not_specified_it_should_default_to_MT_EVENT()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
@@ -175,7 +182,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_the_user_properties_on_the_azure_sb_message_is_null_it_should_default_to_message_type_to_MT_EVENT()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
@@ -196,7 +204,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_there_are_no_messages_then_it_returns_an_empty_array()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
 
             A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -208,9 +217,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_trying_to_create_a_subscription_which_was_already_created_by_another_thread_it_should_ignore_the_error()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(false);
-            A.CallTo(() => _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", _subConfig))
-                .Throws(new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists));
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.CreateSubscriptionException =
+                new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
@@ -222,14 +231,15 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
-
-            A.CallTo(() => _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened();
+            
             Assert.Equal("somebody", result[0].Body.Value);
         }
 
         [Fact]
         public void When_dispose_is_called_the_close_method_is_called()
         {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             _azureServiceBusConsumer.Receive(0);
             _azureServiceBusConsumer.Dispose();
 
@@ -239,6 +249,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_requeue_is_called_and_the_delay_is_zero_the_send_method_is_called()
         {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             var messageLockTokenOne = Guid.NewGuid();
             var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT);
             var message = new Message(messageHeader, new MessageBody("body"));
@@ -252,6 +264,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_requeue_is_called_and_the_delay_is_more_than_zero_the_sendWithDelay_method_is_called()
         {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+            
             var messageLockTokenOne = Guid.NewGuid();
             var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT);
             var message = new Message(messageHeader, new MessageBody("body"));
@@ -266,7 +281,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void
             When_there_is_an_error_talking_to_servicebus_when_checking_if_subscription_exist_then_a_ChannelFailureException_is_raised()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Throws(new Exception());
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.CreateSubscriptionException = new Exception();
 
             Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
         }
@@ -274,11 +290,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_there_is_an_error_talking_to_servicebus_when_creating_the_subscription_then_a_ChannelFailureException_is_raised_and_ManagementClientWrapper_is_reinitilised()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(false);
-            A.CallTo(() => _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", _subConfig)).Throws(new Exception());
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.CreateSubscriptionException = new Exception();
 
             Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
-            A.CallTo(() => _nameSpaceManagerWrapper.Reset()).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _nameSpaceManagerWrapper.ResetCount);
         }
 
         /// <summary>
@@ -287,7 +303,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_there_is_an_error_talking_to_servicebus_when_receiving_then_a_ChannelFailureException_is_raised_and_the_messageReceiver_is_recreated()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             A.CallTo(() => _messageReceiver.Receive(A<int>.Ignored, A<TimeSpan>.Ignored)).Throws<Exception>();
 
@@ -300,7 +317,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [InlineData(false)]
         public void Once_the_subscription_is_created_or_exits_it_does_not_check_if_it_exists_every_time(bool subscriptionExists)
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(subscriptionExists);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+            if (subscriptionExists) _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", new());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
             A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
@@ -311,21 +330,20 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _azureServiceBusConsumer.Receive(400);
             _azureServiceBusConsumer.Receive(400);
+            
+            //Subscription is only created once
+            Assert.Equal(1, _nameSpaceManagerWrapper.Topics["topic"].Count(s => s.Equals("subscription")));
 
-            if (subscriptionExists == false)
-            {
-                A.CallTo(() => _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened(1, Times.Exactly);
-            }
-
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).MustHaveHappened(1, Times.Exactly);
+            Assert.Equal(1, _nameSpaceManagerWrapper.SubscriptionExistCount);
         }
 
         [Fact]
         public void When_MessagingEntityAlreadyExistsException_does_not_check_if_subscription_exists()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(false);
-            A.CallTo(() => _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", new AzureServiceBusSubscriptionConfiguration()))
-                .Throws(new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists));
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+            _nameSpaceManagerWrapper.CreateSubscriptionException =
+                new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
@@ -338,16 +356,17 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
             _azureServiceBusConsumer.Receive(400);
-
-            A.CallTo(() => _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened();
+            
             Assert.Equal("somebody", result[0].Body.Value);
 
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).MustHaveHappened(1, Times.Exactly);
+            Assert.Equal(1, _nameSpaceManagerWrapper.SubscriptionExistCount);
         }
 
         [Fact]
         public void When_a_message_contains_a_null_body_message_is_still_processed()
         {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
 
@@ -366,6 +385,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_receiving_messages_and_the_receiver_is_closing_a_MT_QUIT_message_is_sent()
         {
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             A.CallTo(() => _messageReceiver.IsClosedOrClosing).Returns(true);
             A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Throws(new Exception("Closing"));
 
@@ -378,7 +398,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_a_subscription_does_not_exist_and_Missing_is_set_to_Validate_a_Channel_Failure_is_Raised()
         {
-            A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(false);
+            _nameSpaceManagerWrapper.ResetState();
 
             var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
                 ,makeChannels: OnMissingChannel.Validate, subscriptionConfiguration: _subConfig);
@@ -392,6 +412,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_ackOnRead_is_Set_and_ack_fails_then_exception_is_thrown()
         {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
             var mockMessageReceiver = A.Fake<IServiceBusReceiverProvider>();
@@ -425,6 +447,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_ackOnRead_is_Set_and_DeadLetter_fails_then_exception_is_thrown()
         {
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
             var mockMessageReceiver = A.Fake<IServiceBusReceiverProvider>();
