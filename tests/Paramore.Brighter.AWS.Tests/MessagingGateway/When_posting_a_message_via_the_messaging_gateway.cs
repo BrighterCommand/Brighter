@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
+using Amazon.SQS;
+using Amazon.SQS.Model;
 using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
@@ -14,6 +16,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
     [Trait("Category", "AWS")]
     public class SqsMessageProducerSendTests : IDisposable
     {
+        private readonly AmazonSQSClient _sqsClient;
+        private readonly string _queueName;
         private readonly Message _message;
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _messageProducer;
@@ -23,21 +27,24 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly string _replyTo;
         private readonly string _contentType;
         private readonly string _topicName;
+        private readonly string _subject;
 
         public SqsMessageProducerSendTests()
         {
-            _myCommand = new MyCommand{Value = "Test"};
+            _myCommand = new MyCommand{Value = "Testttttttt"};
             _correlationId = Guid.NewGuid().ToString();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(_topicName);
+            _subject = "test subject";
             
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
-                routingKey: routingKey
+                routingKey: routingKey,
+                rawMessageDelivery: false
             );
             
             _message = new Message(
@@ -49,6 +56,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+
+            _sqsClient = new AmazonSQSClient(credentials, region);
+            _queueName = subscription.ChannelName.ToValidSQSQueueName();
             
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
@@ -57,7 +67,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             {
                 Topic = new RoutingKey(_topicName),
                 MakeChannels = OnMissingChannel.Create,
-                SnsSubject = _ => "test"
+                SnsSubjectGenerator = _ => _subject
             });
         }
 
@@ -71,7 +81,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             await Task.Delay(1000);
             
-            var message =_channel.Receive(5000);
+            var message = _channel.Receive(5000);
             
             //clear the queue
             _channel.Acknowledge(message);
@@ -92,6 +102,53 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             message.Header.DelayedMilliseconds.Should().Be(0);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             message.Body.Value.Should().Be(_message.Body.Value);
+        }
+        
+        [Fact]
+        public async Task When_posting_a_message_via_the_producer_with_subject()
+        {
+            //arrange
+            _messageProducer.Send(_message);
+            
+            await Task.Delay(1000);
+
+            var message = await ReceiveRaw(5000);
+            
+            //clear the queue
+            await AcknowledgeRaw(message);
+
+            var jsonDocument = JsonDocument.Parse(message.Body);
+
+            jsonDocument.RootElement.TryGetProperty("Subject", out var subject).Should().BeTrue();
+            subject.GetString().Should().Be(_subject);
+        }
+
+        private async Task<Amazon.SQS.Model.Message> ReceiveRaw(int timeoutMilliseconds)
+        {
+            var urlResponse = await _sqsClient.GetQueueUrlAsync(_queueName);
+            
+            var request = new ReceiveMessageRequest(urlResponse.QueueUrl)
+            {
+                MaxNumberOfMessages = 1,
+                WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutMilliseconds).TotalSeconds,
+                MessageAttributeNames = ["All"],
+                MessageSystemAttributeNames = ["All"],
+            };
+            
+            var receiveResponse = await _sqsClient.ReceiveMessageAsync(request);
+            
+            if (receiveResponse.Messages.Count == 0)
+            {
+                return null;
+            }
+
+            return receiveResponse.Messages[0];
+        }
+
+        private async Task AcknowledgeRaw(Amazon.SQS.Model.Message message)
+        {
+            var urlResponse = await _sqsClient.GetQueueUrlAsync(_queueName);
+            await _sqsClient.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, message.ReceiptHandle));
         }
 
         public void Dispose()

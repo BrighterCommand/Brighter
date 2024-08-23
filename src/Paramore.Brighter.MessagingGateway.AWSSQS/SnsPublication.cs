@@ -49,8 +49,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public string TopicArn { get; set; }
 
         /// <summary>
-        /// The optional Subject passed through to the published SNS message
+        /// An optional delegate for generating the SNS subject for a given message
         /// </summary>
-        public Func<Message, string> SnsSubject { get; set; } = null;
+        public Func<Message, string> SnsSubjectGenerator { get; set; } = null;
     }
 }

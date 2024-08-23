@@ -33,19 +33,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private readonly string _topicArn;
         private readonly AmazonSimpleNotificationServiceClient _client;
-        private readonly Func<Message, string> _subject;
+        private readonly Func<Message, string> _subjectGenerator;
 
-        public SqsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, Func<Message, string> subject = null)
+        public SqsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, Func<Message, string> subjectGenerator = null)
         {
             _topicArn = topicArn;
             _client = client;
-            _subject = subject;
+            _subjectGenerator = subjectGenerator;
         }
 
         public string Publish(Message message)
         {
             var messageString = message.Body.Value;
-            var publishRequest = new PublishRequest(_topicArn, messageString, _subject?.Invoke(message));
+            var publishRequest = new PublishRequest()
+            {
+                TopicArn = _topicArn,
+                Subject = _subjectGenerator?.Invoke(message),
+                Message = messageString,
+            };
 
             var messageAttributes = new Dictionary<string, MessageAttributeValue>();
             messageAttributes.Add(HeaderNames.Id, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.Id), DataType = "String"});
