@@ -137,6 +137,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     throw new Exception($"LockToken for message with id {message.Id} is null or empty");
                 Logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
                     lockToken);
+                
+                if(ServiceBusReceiver == null)
+                    GetMessageReceiverProvider();
 
                 ServiceBusReceiver.Complete(lockToken).Wait();
                 if (SubscriptionConfiguration.RequireSession)
@@ -178,6 +181,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     throw new Exception($"LockToken for message with id {message.Id} is null or empty");
                 Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
+                if(ServiceBusReceiver == null)
+                    GetMessageReceiverProvider();
+                
                 ServiceBusReceiver.DeadLetter(lockToken).Wait();
                 if (SubscriptionConfiguration.RequireSession)
                     ServiceBusReceiver.Close();
