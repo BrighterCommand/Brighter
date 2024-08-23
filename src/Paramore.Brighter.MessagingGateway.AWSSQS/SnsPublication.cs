@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class SnsPublication : Publication
@@ -45,5 +47,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// as we use the topic from the header to dispatch to  an Arn.
         /// </summary>
         public string TopicArn { get; set; }
+        
+        /// <summary>
+        /// An optional delegate for generating the SNS subject for a given message
+        /// </summary>
+        public Func<Message, string> SnsSubjectGenerator { get; set; } = null;
     }
 }

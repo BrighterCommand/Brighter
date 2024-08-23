@@ -106,7 +106,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             using (var client = _clientFactory.CreateSnsClient())
             {
-                var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
+                var publisher = new SqsMessagePublisher(ChannelTopicArn, client, _publication.SnsSubjectGenerator);
                 var messageId = publisher.Publish(message);
                 if (messageId != null)
                 {
