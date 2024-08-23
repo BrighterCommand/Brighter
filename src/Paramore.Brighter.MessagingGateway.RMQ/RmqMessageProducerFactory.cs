@@ -25,23 +25,30 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    /// <summary>
-    /// Creates a collection of RabbitMQ message producers from the RabbitMQ publication information
-    /// </summary>
-    /// <param name="connection">The connection to use to connect to RabbitMQ</param>
-    /// <param name="publications">The publications describing the RabbitMQ topics that we want to use</param>
-    public class RmqMessageProducerFactory(
-        RmqMessagingGatewayConnection connection,
-        IEnumerable<RmqPublication> publications)
+    public class RmqMessageProducerFactory
         : IAmAMessageProducerFactory
     {
+        private readonly RmqMessagingGatewayConnection _connection;
+        private readonly IEnumerable<RmqPublication> _publications;
+
+        /// <summary>
+        /// Creates a collection of RabbitMQ message producers from the RabbitMQ publication information
+        /// </summary>
+        /// <param name="connection">The connection to use to connect to RabbitMQ</param>
+        /// <param name="publications">The publications describing the RabbitMQ topics that we want to use</param>
+        public RmqMessageProducerFactory(RmqMessagingGatewayConnection connection, IEnumerable<RmqPublication> publications)
+        {
+            _connection = connection;
+            _publications = publications;
+        }
+
         /// <inheritdoc />
         public Dictionary<string,IAmAMessageProducer> Create()
         {
             var producers = new Dictionary<string, IAmAMessageProducer>();
-            foreach (var publication in publications)
+            foreach (var publication in _publications)
             {
-                producers[publication.Topic] = new RmqMessageProducer(connection, publication);
+                producers[publication.Topic] = new RmqMessageProducer(_connection, publication);
             }
 
             return producers;

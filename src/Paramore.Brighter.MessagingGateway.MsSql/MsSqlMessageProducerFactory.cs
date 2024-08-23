@@ -23,12 +23,13 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
     public class MsSqlMessageProducerFactory : IAmAMessageProducerFactory
     {
-        private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
+        private readonly MsSqlConfiguration _msSqlConfiguration;
         private readonly IEnumerable<Publication> _publications;
 
         /// <summary>
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="msSqlConfiguration">The connection to use to connect to MsSQL</param>
         /// <param name="publications">The publications describing the MySQL topics that we want to use</param>
         public MsSqlMessageProducerFactory(
-            RelationalDatabaseConfiguration msSqlConfiguration,
+            MsSqlConfiguration msSqlConfiguration,
             IEnumerable<Publication> publications)
         {
             _msSqlConfiguration = 
