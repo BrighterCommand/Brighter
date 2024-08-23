@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 TopicArn = _topicArn,
                 Subject = _subjectGenerator?.Invoke(message),
-                Message = messageString,
+                Message = messageString
             };
 
             var messageAttributes = new Dictionary<string, MessageAttributeValue>();
