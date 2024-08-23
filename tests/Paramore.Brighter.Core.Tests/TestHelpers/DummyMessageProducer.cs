@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.TestHelpers
 
         public void Dispose()
         {
-            throw new System.NotImplementedException();
+            
         }
     }
 }
