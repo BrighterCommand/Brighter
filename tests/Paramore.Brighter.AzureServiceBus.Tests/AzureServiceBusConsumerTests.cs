@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
-using FakeItEasy;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -17,9 +15,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
     {
         private readonly FakeAdministrationClient _nameSpaceManagerWrapper;
         private readonly AzureServiceBusConsumer _azureServiceBusConsumer;
-        private readonly IServiceBusReceiverWrapper _messageReceiver;
-        private readonly IAmAMessageProducerSync _mockMessageProducer;
-        private readonly IServiceBusReceiverProvider _mockMessageReceiver;
+        private readonly FakeServiceBusReceiverWrapper _messageReceiver;
+        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeServiceBusReceiverProvider _fakeMessageReceiver;
 
         private readonly AzureServiceBusSubscriptionConfiguration _subConfig =
             new AzureServiceBusSubscriptionConfiguration();
@@ -27,20 +25,16 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public AzureServiceBusConsumerTests()
         {
             _nameSpaceManagerWrapper = new FakeAdministrationClient();
-            _mockMessageProducer = A.Fake<IAmAMessageProducerSync>();
-            _mockMessageReceiver = A.Fake<IServiceBusReceiverProvider>();
-
-            _messageReceiver = A.Fake<IServiceBusReceiverWrapper > ();
-
-            A.CallTo(() =>
-                    _mockMessageReceiver.Get("topic", "subscription", false))
-                .Returns(_messageReceiver);
+            _fakeMessageProducer = new FakeMessageProducer();
+            _messageReceiver = new FakeServiceBusReceiverWrapper();
+            _fakeMessageReceiver = new FakeServiceBusReceiverProvider(_messageReceiver);
+            
 
             var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
             ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
             
-            _azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
-                _nameSpaceManagerWrapper, _mockMessageReceiver);
+            _azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
+                _nameSpaceManagerWrapper, _fakeMessageReceiver);
         }
 
         [Fact]
@@ -50,18 +44,22 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_EVENT" } });
-            var message2 = A.Fake<IBrokeredMessageWrapper>();
-
-            A.CallTo(() => message2.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody2"));
-            A.CallTo(() => message2.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_DOCUMENT" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
+            }; 
+            
+            var message2 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody2"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_DOCUMENT" } }
+            }; 
+            
             brokeredMessageList.Add(message1);
             brokeredMessageList.Add(message2);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
@@ -80,13 +78,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_EVENT" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
+            }; 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
             
@@ -102,13 +101,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_COMMAND" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_COMMAND" } }
+            }; 
             brokeredMessageList.Add(message1);
-
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
@@ -124,12 +124,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "Mt_COmmAND" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_COmmAND" } }
+            }; 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
@@ -145,13 +147,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "wrong_message_type" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "wrong_message_type" } }
+            }; 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
@@ -165,12 +168,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object>());
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object>() 
+            }; 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
@@ -187,12 +192,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object>());
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object>()
+            }; 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
@@ -208,7 +215,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
             Assert.Empty(result);
@@ -222,13 +229,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_EVENT" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
+            }; 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
             
@@ -243,7 +251,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _azureServiceBusConsumer.Receive(0);
             _azureServiceBusConsumer.Dispose();
 
-            A.CallTo(() => _messageReceiver.Close()).MustHaveHappened(1, Times.Exactly);
+            Assert.True(_messageReceiver.IsClosedOrClosing);
         }
 
         [Fact]
@@ -251,6 +259,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+            _fakeMessageProducer.SentMessages.Clear();
             var messageLockTokenOne = Guid.NewGuid();
             var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT);
             var message = new Message(messageHeader, new MessageBody("body"));
@@ -258,7 +267,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _azureServiceBusConsumer.Requeue(message, 0);
 
-            A.CallTo(() => _mockMessageProducer.Send(message)).MustHaveHappened(1, Times.Exactly);
+            Assert.Single(_fakeMessageProducer.SentMessages);
         }
 
         [Fact]
@@ -266,6 +275,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+            _fakeMessageProducer.SentMessages.Clear();
             
             var messageLockTokenOne = Guid.NewGuid();
             var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT);
@@ -274,7 +284,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _azureServiceBusConsumer.Requeue(message, 100);
 
-            A.CallTo(() => _mockMessageProducer.SendWithDelay(message, 100)).MustHaveHappened(1, Times.Exactly);
+            Assert.Single(_fakeMessageProducer.SentMessages);
         }
 
         [Fact]
@@ -306,10 +316,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", ["subscription"]);
 
-            A.CallTo(() => _messageReceiver.Receive(A<int>.Ignored, A<TimeSpan>.Ignored)).Throws<Exception>();
+            _messageReceiver.MessageQueue.Clear();
+            _messageReceiver.ReceiveException = new Exception();
 
             Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
-            A.CallTo(() => _mockMessageReceiver.Get("topic", "subscription", false)).MustHaveHappened(2, Times.Exactly);
+            Assert.Equal(2, _fakeMessageReceiver.CreationCount);
         }
 
         [Theory]
@@ -319,14 +330,17 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+            _messageReceiver.MessageQueue.Clear();
             if (subscriptionExists) _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", new());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_EVENT" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
+            }; 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             _azureServiceBusConsumer.Receive(400);
             _azureServiceBusConsumer.Receive(400);
@@ -344,15 +358,17 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             _nameSpaceManagerWrapper.CreateSubscriptionException =
                 new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists);
-
+            _messageReceiver.MessageQueue.Clear();
+            
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_EVENT" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = Encoding.UTF8.GetBytes("somebody"),
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
+            }; 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
             _azureServiceBusConsumer.Receive(400);
@@ -367,15 +383,19 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+            
+            _messageReceiver.MessageQueue.Clear();
+            
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns((byte[])null);
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_EVENT" } });
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = (byte[])null,
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
+            }; 
 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.MessageQueue = brokeredMessageList;
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
@@ -386,8 +406,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_receiving_messages_and_the_receiver_is_closing_a_MT_QUIT_message_is_sent()
         {
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
-            A.CallTo(() => _messageReceiver.IsClosedOrClosing).Returns(true);
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Throws(new Exception("Closing"));
+            _messageReceiver.Close();
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
@@ -403,8 +422,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
                 ,makeChannels: OnMissingChannel.Validate, subscriptionConfiguration: _subConfig);
             
-            var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
-                _nameSpaceManagerWrapper, _mockMessageReceiver);
+            var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
+                _nameSpaceManagerWrapper, _fakeMessageReceiver);
 
             Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(400));
         }
@@ -414,28 +433,25 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
+            _messageReceiver.MessageQueue.Clear();
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-            var mockMessageReceiver = A.Fake<IServiceBusReceiverProvider>();
-
-            A.CallTo(() => mockMessageReceiver.Get("topic", "subscription", false)).Returns(_messageReceiver);
-
-            var lockToken = Guid.NewGuid().ToString();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns((byte[])null);
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_EVENT" } });
-            A.CallTo(() => message1.LockToken).Returns(lockToken);
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = (byte[])null,
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } },
+                LockToken = Guid.NewGuid().ToString()
+            }; 
 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
-            A.CallTo(() => _messageReceiver.Complete(lockToken)).Throws(new Exception());
+            _messageReceiver.MessageQueue = brokeredMessageList;
+            _messageReceiver.CompleteException = new Exception();
 
             var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
                 ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
             
-            var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
-                _nameSpaceManagerWrapper, mockMessageReceiver);
+            var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
+                _nameSpaceManagerWrapper, _fakeMessageReceiver);
 
             Message[] result = azureServiceBusConsumer.Receive(400);
 
@@ -450,27 +466,23 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
-            var message1 = A.Fake<IBrokeredMessageWrapper>();
-            var mockMessageReceiver = A.Fake<IServiceBusReceiverProvider>();
-
-            A.CallTo(() => mockMessageReceiver.Get("topic", "subscription", false)).Returns(_messageReceiver);
-
-            var lockToken = Guid.NewGuid().ToString();
-
-            A.CallTo(() => message1.MessageBodyValue).Returns((byte[])null);
-            A.CallTo(() => message1.ApplicationProperties).Returns(new Dictionary<string, object> { { "MessageType", "MT_EVENT" } });
-            A.CallTo(() => message1.LockToken).Returns(lockToken);
+            var message1 = new BrokeredMessage()
+            {
+                MessageBodyValue = (byte[])null,
+                ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } },
+                LockToken = Guid.NewGuid().ToString()
+            }; 
 
             brokeredMessageList.Add(message1);
 
-            A.CallTo(() => _messageReceiver.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
-            A.CallTo(() => _messageReceiver.DeadLetter(lockToken)).Throws(new Exception());
+            _messageReceiver.MessageQueue = brokeredMessageList;
+            _messageReceiver.DeadLetterException = new Exception();
 
             var sub = new AzureServiceBusSubscription<ASBTestCommand>(routingKey: new RoutingKey("topic"), channelName: new ChannelName("subscription")
                 ,makeChannels: OnMissingChannel.Create, bufferSize: 10, subscriptionConfiguration: _subConfig);
             
-            var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _mockMessageProducer,
-                _nameSpaceManagerWrapper, mockMessageReceiver);
+            var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
+                _nameSpaceManagerWrapper, _fakeMessageReceiver);
 
             Message[] result = azureServiceBusConsumer.Receive(400);
 
