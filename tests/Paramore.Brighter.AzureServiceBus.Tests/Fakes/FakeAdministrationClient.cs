@@ -16,21 +16,40 @@ public class FakeAdministrationClient : IAdministrationClientWrapper
 
     public int ResetCount { get; private set; } = 0;
     
-    public int SubscriptionExistCount { get; private set; } = 0;
+    public int ExistCount { get; private set; } = 0;
 
     public Exception CreateSubscriptionException { get; set; } = null;
 
+    public Exception ExistsException { get; set; } = null;
+    public int CreateCount { get; private set; } = 0;
+
     public bool TopicExists(string topicName)
-        => Topics.Keys.Any(t => t.Equals(topicName, StringComparison.InvariantCultureIgnoreCase));
+    {
+        ExistCount++;
+        if (ExistsException != null)
+            throw ExistsException;
+        return Topics.Keys.Any(t => t.Equals(topicName, StringComparison.InvariantCultureIgnoreCase));
+    }
 
     public bool QueueExists(string queueName)
-        => Queues.Any(q => q.Equals(queueName, StringComparison.InvariantCultureIgnoreCase));
+    {
+        ExistCount++;
+        if (ExistsException != null)
+            throw ExistsException;
+        return Queues.Any(q => q.Equals(queueName, StringComparison.InvariantCultureIgnoreCase));
+    }
 
     public void CreateQueue(string queueName, TimeSpan? autoDeleteOnIdle = null)
-        => Queues.Add(queueName);
+    {
+        CreateCount++;
+        Queues.Add(queueName);   
+    }
 
     public void CreateTopic(string topicName, TimeSpan? autoDeleteOnIdle = null)
-        => Topics.Add(topicName, []);
+    {
+        CreateCount++;
+        Topics.Add(topicName, []);
+    }
 
     public Task DeleteQueueAsync(string queueName)
     {
@@ -46,7 +65,7 @@ public class FakeAdministrationClient : IAdministrationClientWrapper
 
     public bool SubscriptionExists(string topicName, string subscriptionName)
     {
-        SubscriptionExistCount++;
+        ExistCount++;
         return Topics.ContainsKey(topicName) && Topics[topicName].Contains(subscriptionName);
     }
 
@@ -70,8 +89,10 @@ public class FakeAdministrationClient : IAdministrationClientWrapper
         Topics.Clear();
         Queues.Clear();
         ResetCount = 0;
-        SubscriptionExistCount = 0;
+        ExistCount = 0;
+        CreateCount = 0;
 
         CreateSubscriptionException = null;
+        ExistsException = null;
     }
 }

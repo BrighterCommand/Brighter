@@ -348,7 +348,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             //Subscription is only created once
             Assert.Equal(1, _nameSpaceManagerWrapper.Topics["topic"].Count(s => s.Equals("subscription")));
 
-            Assert.Equal(1, _nameSpaceManagerWrapper.SubscriptionExistCount);
+            Assert.Equal(1, _nameSpaceManagerWrapper.ExistCount);
         }
 
         [Fact]
@@ -375,7 +375,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             
             Assert.Equal("somebody", result[0].Body.Value);
 
-            Assert.Equal(1, _nameSpaceManagerWrapper.SubscriptionExistCount);
+            Assert.Equal(1, _nameSpaceManagerWrapper.ExistCount);
         }
 
         [Fact]

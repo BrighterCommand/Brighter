@@ -1,28 +1,28 @@
 ﻿using System;
+using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
-using FakeItEasy;
+using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests
 {
     public class AzureServiceBusMessageProducerTests
     {
-        private readonly IAdministrationClientWrapper _nameSpaceManagerWrapper;
-        private readonly IServiceBusSenderProvider _topicClientProvider;
-        private readonly IServiceBusSenderWrapper _topicClient;
+        private readonly FakeAdministrationClient _nameSpaceManagerWrapper;
+        private readonly FakeServiceBusSenderProvider _topicClientProvider;
+        private readonly FakeServiceBusSenderWrapper _topicClient;
         private readonly AzureServiceBusMessageProducer _producer;
         private readonly AzureServiceBusMessageProducer _queueProducer;
 
         public AzureServiceBusMessageProducerTests()
         {
-            _nameSpaceManagerWrapper = A.Fake<IAdministrationClientWrapper>();
-            _topicClientProvider = A.Fake<IServiceBusSenderProvider>();
-            _topicClient = A.Fake<IServiceBusSenderWrapper>();
+            _nameSpaceManagerWrapper = new FakeAdministrationClient();
+            _topicClient = new FakeServiceBusSenderWrapper();
+            _topicClientProvider = new FakeServiceBusSenderProvider(_topicClient);
+            
 
             _producer = new AzureServiceBusTopicMessageProducer(
                 _nameSpaceManagerWrapper, 
@@ -40,21 +40,21 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_the_topic_exists_and_sending_a_message_with_no_delay_it_should_send_the_message_to_the_correct_topicclient()
         {
-            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(true);
-            A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
-            A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, CancellationToken ct) => Task.FromResult(sentMessage = g));
-
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            
             _producer.Send(new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT), 
                 new MessageBody(messageBody, "JSON"))
             );
+            
+            ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
-            A.CallTo(() => _topicClient.CloseAsync()).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -62,15 +62,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [InlineData(true)]
         public void When_sending_a_command_message_type_message_with_no_delay_it_should_set_the_correct_messagetype_property(bool useQueues)
         {
-            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Returns(true);
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(true);
-            A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
-            A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, CancellationToken ct) => Task.FromResult(sentMessage = g));
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
 
             var producer = useQueues ? _queueProducer : _producer;
             
@@ -78,10 +74,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_COMMAND), 
                 new MessageBody(messageBody, "JSON"))
             );
+            
+            ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
-            A.CallTo(() => _topicClient.CloseAsync()).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -89,26 +87,19 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [InlineData(true)]
         public void When_the_topic_does_not_exist_it_should_be_created_and_the_message_is_sent_to_the_correct_topicclient(bool useQueues)
         {
-            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Returns(false);
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(false);
-            A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
-            A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, CancellationToken ct) => Task.FromResult(sentMessage = g));
+            _nameSpaceManagerWrapper.ResetState();
 
             var producer = useQueues ? _queueProducer : _producer;
             
             producer.Send(new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
                 new MessageBody(messageBody, "JSON")));
+            
+            ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.CreateQueue("topic", null)).MustHaveHappenedOnceExactly();
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.CreateTopic("topic", null)).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
         }
 
@@ -117,13 +108,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [InlineData(true)]
         public void When_a_message_is_send_and_an_exception_occurs_close_is_still_called(bool useQueues)
         {
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Returns(true);
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(true);
-            A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
 
-            A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).Throws(new Exception("Failed"));
+            _topicClient.SendException = new Exception("Failed");
 
             try
             {
@@ -138,7 +127,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 // ignored
             }
 
-            A.CallTo(() => _topicClient.CloseAsync()).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -147,18 +136,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void
             When_the_topic_exists_and_sending_a_message_with_a_delay_it_should_send_the_message_to_the_correct_topicclient(bool useQueues)
         {
-            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Returns(true);
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(true);
-            A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
-
-            A.CallTo(() => _topicClient.ScheduleMessageAsync(A<ServiceBusMessage>.Ignored, A<DateTimeOffset>.Ignored,
-                CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, DateTimeOffset t, CancellationToken ct) =>
-                Task.FromResult(sentMessage = g));
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
 
             var producer = useQueues ? _queueProducer : _producer;
             
@@ -166,10 +148,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 new Message(
                     new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT),
                     new MessageBody(messageBody, "JSON")), 1);
+            
+            ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
-            A.CallTo(() => _topicClient.CloseAsync()).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -179,28 +163,23 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             When_sending_a_command_message_type_message_with_delay_it_should_set_the_correct_messagetype_property(
                 bool useQueues)
         {
-            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Returns(true);
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(true);
-            A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
-
-            A.CallTo(() => _topicClient.ScheduleMessageAsync(A<ServiceBusMessage>.Ignored, A<DateTimeOffset>.Ignored,
-                CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, DateTimeOffset t, CancellationToken ct) =>
-                Task.FromResult(sentMessage = g));
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
 
             var producer = useQueues ? _queueProducer : _producer;
 
             producer.SendWithDelay(new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_COMMAND),
                 new MessageBody(messageBody, "JSON")), 1);
+            
+            ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
-            A.CallTo(() => _topicClient.CloseAsync()).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -210,33 +189,22 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             When_the_topic_does_not_exist_and_sending_a_message_with_a_delay_it_should_send_the_message_to_the_correct_topicclient(
                 bool useQueues)
         {
-            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Returns(false);
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(false);
-            A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
-
-            A.CallTo(() => _topicClient.ScheduleMessageAsync(A<ServiceBusMessage>.Ignored, A<DateTimeOffset>.Ignored,
-                CancellationToken.None)).ReturnsLazily((ServiceBusMessage g, DateTimeOffset t, CancellationToken ct) =>
-                Task.FromResult(sentMessage = g));
+            _nameSpaceManagerWrapper.ResetState();
 
             var producer = useQueues ? _queueProducer : _producer;
 
             producer.SendWithDelay(new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE),
                 new MessageBody(messageBody, "JSON")), 1);
+            
+            ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
-            if (useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.CreateQueue("topic", null))
-                    .MustHaveHappenedOnceExactly();
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.CreateTopic("topic", null))
-                    .MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
+            
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
-            A.CallTo(() => _topicClient.CloseAsync()).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _topicClient.ClosedCount);
         }
 
         [Theory]
@@ -248,12 +216,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Returns(topicExists);
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(topicExists);
-            
-            A.CallTo(() => _topicClientProvider.Get("topic")).Returns(_topicClient);
+            _nameSpaceManagerWrapper.ResetState();
+            if (topicExists)
+            {
+                _nameSpaceManagerWrapper.Topics.Add("topic", []);
+                _nameSpaceManagerWrapper.Queues.Add("topic");    
+            }
 
             var producer = useQueues ? _queueProducer : _producer;
             
@@ -265,17 +233,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 new MessageBody(messageBody, "JSON")), 1);
 
             if (topicExists == false)
-            {
-                if(useQueues)
-                    A.CallTo(() => _nameSpaceManagerWrapper.CreateQueue("topic", null)).MustHaveHappenedOnceExactly();
-                else
-                    A.CallTo(() => _nameSpaceManagerWrapper.CreateTopic("topic", null)).MustHaveHappenedOnceExactly();
-            }
+                Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).MustHaveHappenedOnceExactly();
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _nameSpaceManagerWrapper.ExistCount);
         }
 
         [Theory]
@@ -285,10 +245,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Throws(new Exception());
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Throws(new Exception());
+            _nameSpaceManagerWrapper.ExistsException = new Exception();
 
             var producer = useQueues ? _queueProducer : _producer;
             
@@ -297,7 +254,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                     new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
                     new MessageBody(messageBody, "JSON")), 1)
             );
-            A.CallTo(() => _nameSpaceManagerWrapper.Reset()).MustHaveHappenedOnceExactly();
+            Assert.Equal(1, _nameSpaceManagerWrapper.ResetCount);
         }
 
 
@@ -308,12 +265,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
-            if(useQueues)
-                A.CallTo(() => _nameSpaceManagerWrapper.QueueExists("topic")).Returns(true);
-            else
-                A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Returns(true);
+            _nameSpaceManagerWrapper.ResetState();
+            _nameSpaceManagerWrapper.Topics.Add("topic", []);
+            _nameSpaceManagerWrapper.Queues.Add("topic");
 
-            A.CallTo(() => _topicClientProvider.Get("topic")).Throws(new Exception()).Once().Then.Returns(_topicClient);
+            _topicClientProvider.SingleThrowGetException = new Exception();
 
             var producer = useQueues ? _queueProducer : _producer;
             
@@ -322,7 +278,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                new MessageBody(messageBody, "JSON"))
            );
 
-            A.CallTo(() => _topicClient.SendAsync(A<ServiceBusMessage>.Ignored, CancellationToken.None)).MustHaveHappenedOnceExactly();
+            Assert.Single(_topicClient.SentMessages);
         }
 
         [Fact]
