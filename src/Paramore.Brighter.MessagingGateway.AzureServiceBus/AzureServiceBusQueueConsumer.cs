@@ -55,8 +55,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         public override void Purge()
         {
-            Logger.LogInformation("Purging messages from {Subscription} Subscription on queue {Queue}", 
-                SubscriptionName, RoutingKey);
+            Logger.LogInformation("Purging messages from Queue {Queue}", 
+                RoutingKey);
 
             AdministrationClientWrapper.DeleteQueueAsync(RoutingKey);
             EnsureChannel();
