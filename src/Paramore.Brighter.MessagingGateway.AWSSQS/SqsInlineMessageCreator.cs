@@ -253,7 +253,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
             }
 
-            return new HeaderResult<string>(string.Empty, true);;
+            return new HeaderResult<string>(null, true);;
         }
 
         private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
