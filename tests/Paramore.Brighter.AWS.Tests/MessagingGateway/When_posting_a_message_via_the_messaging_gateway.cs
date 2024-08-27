@@ -37,7 +37,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
-                routingKey: routingKey
+                routingKey: routingKey,
+                rawMessageDelivery: false
             );
             
             _message = new Message(
@@ -57,10 +58,16 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
 
-        [Fact]
-        public async Task When_posting_a_message_via_the_producer()
+        [Theory]
+        [InlineData("test subject")]
+        [InlineData(null)]
+        public async Task When_posting_a_message_via_the_producer(string subject)
         {
             //arrange
+            if (subject != null)
+            {
+                _message.Header.Bag.Add("Subject", subject);
+            }
             _messageProducer.Send(_message);
             
             await Task.Delay(1000);
@@ -86,6 +93,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             message.Header.DelayedMilliseconds.Should().Be(0);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             message.Body.Value.Should().Be(_message.Body.Value);
+            
+            message.Header.Bag.TryGetValue("Subject", out var actualSubject).Should().Be(subject != null);
+            actualSubject.Should().Be(subject);
         }
 
         public void Dispose()
@@ -95,7 +105,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _messageProducer?.Dispose();
         }
         
-        private DateTime RoundToSeconds(DateTime dateTime)
+        private static DateTime RoundToSeconds(DateTime dateTime)
         {
             return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);
         }
