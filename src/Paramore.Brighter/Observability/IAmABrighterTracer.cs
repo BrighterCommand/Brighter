@@ -84,6 +84,19 @@ public interface IAmABrighterTracer : IDisposable
         InstrumentationOptions options = InstrumentationOptions.All
     ) where TRequest : class, IRequest;
 
+    /// <param name="messagePumpException"></param>
+    /// <param name="topic">The <see cref="RoutingKey"/> for this span</param>
+    /// <param name="operation">The <see cref="MessagingSystem"/> we were trying to perform</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> that we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
+    Activity CreateMessagePumpExceptionSpan(
+        Exception messagePumpException,
+        RoutingKey topic,
+        MessagePumpSpanOperation operation,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All);
+
     /// <summary>
     /// Create a span for a batch of messages to be cleared  
     /// </summary>
@@ -147,5 +160,17 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="handlerSpans"></param>
     void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans);
 
-   
+    /// <summary>
+    /// The parent span for the message pump. This is the entry point for the message pump
+    /// </summary>
+    /// <param name="operation">The <see cref="MessagePumpSpanOperation"/>. This should be Begin or End</param></param>
+    /// <param name="topic">The <see cref="RoutingKey"/> for this span</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> that we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
+    Activity CreateMessagePumpSpan(
+        MessagePumpSpanOperation operation,
+        RoutingKey topic,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
 }

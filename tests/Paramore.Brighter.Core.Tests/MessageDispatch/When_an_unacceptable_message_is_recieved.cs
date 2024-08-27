@@ -36,11 +36,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpUnacceptableMessageTests
     {
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly Channel _channel;
         private readonly InternalBus _bus;
         private readonly RoutingKey _routingKey = new RoutingKey(Topic);
-        private FakeTimeProvider _timeProvider = new FakeTimeProvider();
+        private readonly FakeTimeProvider _timeProvider = new FakeTimeProvider();
 
         public MessagePumpUnacceptableMessageTests()
         {
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _bus = new InternalBus();
             
-            _channel = new Channel(new (Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),

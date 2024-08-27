@@ -30,6 +30,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class ChannelStopTests
     {
         private const string Topic = "myTopic";
+        private const string ChannelName = "myChannel";
         private readonly IAmAChannel _channel;
         private readonly InternalBus _bus;
 
@@ -38,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             _bus = new InternalBus();
             IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, TimeProvider.System, 1000); 
 
-            _channel = new Channel(new(Topic), gateway);
+            _channel = new Channel(new(ChannelName), new(Topic), gateway);
 
             Message sentMessage = new(
                 new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),

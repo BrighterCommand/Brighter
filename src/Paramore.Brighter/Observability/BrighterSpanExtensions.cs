@@ -62,6 +62,7 @@ public static class BrighterSpanExtensions
    {
        MessagePumpSpanOperation.Receive => "receive",
        MessagePumpSpanOperation.Process => "process",
+       MessagePumpSpanOperation.Begin => "begin",
        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
    };
 }

@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
             var consumer = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, new FakeTimeProvider(), 1000); 
 
-            _channel = new Channel(new(ChannelName), consumer);
+            _channel = new Channel(new(ChannelName),new (Topic), consumer);
 
             var sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),

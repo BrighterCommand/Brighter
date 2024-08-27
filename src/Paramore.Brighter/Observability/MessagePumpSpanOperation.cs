@@ -5,6 +5,7 @@
 /// </summary>
 public enum MessagePumpSpanOperation
 {
-    Receive = 0,    // Receive a message via a pull
-    Process = 1,    // Process a message from a push
+    Begin = 0,      // Begin the message pump
+    Receive = 1,    // Receive a message via a pull
+    Process = 2,    // Process a message from a push
 }

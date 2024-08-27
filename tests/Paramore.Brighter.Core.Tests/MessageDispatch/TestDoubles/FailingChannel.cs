@@ -23,21 +23,29 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
-    internal class FailingChannel(ChannelName channelName, IAmAMessageConsumer messageConsumer, int maxQueueLength= 1)
-        : Channel(channelName, messageConsumer, maxQueueLength)
+    internal class FailingChannel(ChannelName channelName, RoutingKey topic, IAmAMessageConsumer messageConsumer, int maxQueueLength= 1, bool brokenCircuit = false)
+        : Channel(channelName, topic, messageConsumer, maxQueueLength)
     {
         public int NumberOfRetries { get; set; } = 0;
         private int _attempts = 0;
 
-        public new Message Receive(int timeoutinMilliseconds)
+        public override Message Receive(int timeoutinMilliseconds)
         {
             if (_attempts <= NumberOfRetries)
             {
                 _attempts++;
-                throw new ChannelFailureException("Test general failure", new Exception("inner test exception"));
+                var channelFailureException = new ChannelFailureException("Test general failure", new Exception("inner test exception"));
+                if (brokenCircuit)
+                {
+                    var brokenCircuitException = new BrokenCircuitException("An inner broken circuit exception");
+                    channelFailureException = new ChannelFailureException("Test broken circuit failure", brokenCircuitException);
+                }
+
+                throw channelFailureException;
             }
 
             return base.Receive(timeoutinMilliseconds);

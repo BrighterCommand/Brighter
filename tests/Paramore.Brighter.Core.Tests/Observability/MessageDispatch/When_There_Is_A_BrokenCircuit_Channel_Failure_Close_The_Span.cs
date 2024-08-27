@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
-public class MessagePumpChannelFailureOberservabilityTests
+public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
 {
     private const string Topic = "MyTopic";
     private const string ChannelName = "myChannel";
@@ -31,7 +31,7 @@ public class MessagePumpChannelFailureOberservabilityTests
     private readonly MyEvent _myEvent = new();
     private readonly Message _message;
 
-    public MessagePumpChannelFailureOberservabilityTests()
+    public MessagePumpBrokenCircuitChannelFailureOberservabilityTests()
     {
         var builder = Sdk.CreateTracerProviderBuilder();
             _exportedActivities = new List<Activity>();
@@ -69,7 +69,8 @@ public class MessagePumpChannelFailureOberservabilityTests
                 new (ChannelName), 
                 _routingKey,
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000),
-                brokenCircuit: false);
+                brokenCircuit: true);
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -103,7 +104,7 @@ public class MessagePumpChannelFailureOberservabilityTests
     }
 
     [Fact]
-    public void When_There_Is_A_Channel_Failure_Close_The_Span()
+    public void When_There_Is_A_BrokenCircuit_Channel_Failure_Close_The_Span()
     {
         _messagePump.Run();
 
@@ -115,9 +116,9 @@ public class MessagePumpChannelFailureOberservabilityTests
         var errorMessageActivity = _exportedActivities.FirstOrDefault(a => 
             a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
             && a.Status == ActivityStatusCode.Error
-            );
+        );
         
         errorMessageActivity.Should().NotBeNull();
-        errorMessageActivity!.Status.Should().Be(ActivityStatusCode.Error);
+        errorMessageActivity?.Status.Should().Be(ActivityStatusCode.Error);
     }
 }

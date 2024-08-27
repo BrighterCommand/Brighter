@@ -63,7 +63,7 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            _channel = new Channel(new(ChannelName), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -96,7 +96,7 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        _exportedActivities.Count.Should().Be(2);
+        _exportedActivities.Count.Should().Be(3);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue(); 
         
         var emptyMessageActivity = _exportedActivities.FirstOrDefault(a => 

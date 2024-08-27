@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using OpenTelemetry.Trace;
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -198,6 +200,84 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             links: links,
             startTime: now);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
+
+    /// <summary>
+    /// The parent span for the message pump. This is the entry point for the message pump
+    /// </summary>
+    /// <param name="operation">The <see cref="MessagePumpSpanOperation"/>. This should be Begin or End</param>
+    /// <param name="topic">The <see cref="RoutingKey"/> for this span</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> that we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
+    public Activity CreateMessagePumpSpan(
+        MessagePumpSpanOperation operation,
+        RoutingKey topic,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        if (operation != MessagePumpSpanOperation.Begin)
+            throw new ArgumentOutOfRangeException(nameof(operation), "Operation must be Begin or End");
+        
+        var spanName = $"{topic} {operation.ToSpanName()}";
+        var kind = ActivityKind.Consumer;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection()
+        {
+            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
+            { BrighterSemanticConventions.MessagingDestination, topic },
+            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
+        };
+        
+        Activity activity = ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
+        
+        Activity.Current = activity;
+
+        return activity; 
+    }
+
+    /// <summary>
+    /// When there is a failure during message processing we need to create a span for that message failure
+    /// as we don't have a message to derive the span details for
+    /// </summary>
+    /// <param name="messagePumpException"></param>
+    /// <param name="topic">The <see cref="RoutingKey"/> for this span</param>
+    /// <param name="operation">The <see cref="MessagingSystem"/> we were trying to perform</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> that we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns>A span (or dotnet Activity) for the current message named topic operation.name</returns>
+    public Activity CreateMessagePumpExceptionSpan(
+        Exception messagePumpException,
+        RoutingKey topic,
+        MessagePumpSpanOperation operation,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var spanName = $"{topic} {operation.ToSpanName()}";
+        var kind = ActivityKind.Consumer;
+        var now = _timeProvider.GetUtcNow();
+
+        var tags = new ActivityTagsCollection()
+        {
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
+            { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
+            { BrighterSemanticConventions.MessagingDestination, topic },
+            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
+        };
+        
+       Activity activity;
+        if (Activity.Current != null)
+            activity = ActivitySource.StartActivity(name: spanName, kind: kind, parentContext: Activity.Current.Context, tags: tags, links: null,  now);
+        else
+            activity = ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
+        
+        activity?.RecordException(messagePumpException);
+        activity?.SetStatus(ActivityStatusCode.Error, messagePumpException.Message);
         
         Activity.Current = activity;
 
@@ -488,7 +568,6 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="span">The owning <see cref="Activity"/> to which we will write the event; nothing written if null</param>
     /// <param name="messagingSystem">Which <see cref="MessagingSystem"/> is the producer</param>
     /// <param name="message">The <see cref="Message"/> being produced</param>
-    /// <param name="isAsync">Is the call async</param>
     public static void WriteProducerEvent(Activity span, MessagingSystem messagingSystem, Message message)
     {
         if (span == null) return;
@@ -553,7 +632,7 @@ public class BrighterTracer : IAmABrighterTracer
         var handlerNames = handlerSpans.Keys.ToList();
         foreach (var handlerName in handlerNames)
         {
-            var handlerSpan = handlerSpans[handlerName];
+            //var handlerSpan = handlerSpans[handlerName];
             foreach (var hs in handlerSpans)
             {
                 if (hs.Key != handlerName)

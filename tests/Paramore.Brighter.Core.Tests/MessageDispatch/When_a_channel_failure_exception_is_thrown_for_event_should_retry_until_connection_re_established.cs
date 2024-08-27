@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpRetryEventConnectionFailureTests
     {
         private const string Topic = "MyTopic";
+        private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            var channel = new FailingChannel(new ChannelName(Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2)
+            var channel = new FailingChannel(new ChannelName(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2)
             {
                 NumberOfRetries = 1
             };

@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpCommandRequeueCountThresholdTests
     {
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            _channel = new Channel(new(Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new(Channel) ,_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);

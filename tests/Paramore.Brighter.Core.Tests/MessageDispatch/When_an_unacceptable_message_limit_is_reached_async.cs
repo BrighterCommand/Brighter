@@ -35,6 +35,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpUnacceptableMessageLimitBreachedAsyncTests
     {
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly InternalBus _bus = new();
         private readonly RoutingKey _routingKey = new(Topic);
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
 
-            Channel channel = new(new(Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 3);
+            Channel channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 3);
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,

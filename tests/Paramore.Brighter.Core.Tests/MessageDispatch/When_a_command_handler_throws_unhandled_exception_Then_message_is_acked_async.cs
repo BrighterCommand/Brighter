@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             InternalBus bus = new();
             
-            _channel = new Channel(new(ChannelName), new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, 1000));
+            _channel = new Channel(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, 1000));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 TestCorrelator.GetLogEventsFromCurrentContext()
                     .Should().Contain(x => x.Level == LogEventLevel.Error)
                     .Which.MessageTemplate.Text
-                    .Should().Be("MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}");
+                    .Should().Be("MessagePump: Failed to dispatch message '{Id}' from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}");
             }
         }
     }

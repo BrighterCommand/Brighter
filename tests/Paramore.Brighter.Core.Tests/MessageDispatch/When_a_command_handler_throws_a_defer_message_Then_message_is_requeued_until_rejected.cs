@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
 
-            _channel = new Channel(new(ChannelName), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),

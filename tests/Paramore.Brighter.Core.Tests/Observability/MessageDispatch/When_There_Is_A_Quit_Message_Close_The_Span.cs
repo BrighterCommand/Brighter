@@ -18,6 +18,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 public class MessagePumpQuitOberservabilityTests
 {
     private const string Topic = "MyTopic";
+    private const string Channel = "MyChannel";
     private readonly RoutingKey _routingKey = new(Topic);
     private readonly InternalBus _bus = new();
     private readonly FakeTimeProvider _timeProvider = new();
@@ -60,7 +61,7 @@ public class MessagePumpQuitOberservabilityTests
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            Channel channel = new(new (Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -84,7 +85,7 @@ public class MessagePumpQuitOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        _exportedActivities.Count.Should().Be(1);
+        _exportedActivities.Count.Should().Be(2);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue(); 
         
         var emptyMessageActivity = _exportedActivities.FirstOrDefault(a => 

@@ -11,6 +11,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpFailingMessageTranslationTestsAsync
     {
         private const string Topic = "MyTopic";
+        private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
@@ -21,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            _channel = new Channel(new(Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new FailingEventMessageMapperAsync()));

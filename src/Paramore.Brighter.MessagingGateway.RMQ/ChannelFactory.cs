@@ -58,6 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             
             return new Channel(
                 channelName: subscription.ChannelName, 
+                routingKey: subscription.RoutingKey, 
                 messageConsumer: messageConsumer, 
                 maxQueueLength: subscription.BufferSize
                 );

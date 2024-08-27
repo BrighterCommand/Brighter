@@ -38,8 +38,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The name.</value>
         ChannelName Name { get; }
-        
-         /// <summary>
+
+        /// <summary>
+        /// The topic that this channel is for (how a broker routes to it)
+        /// </summary>
+        /// <value>The topic on the broker</value>
+        RoutingKey RoutingKey { get; }
+
+        /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>

@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var channel = new Channel(new(ChannelName), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            var channel = new Channel(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -127,7 +127,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 
             _traceProvider.ForceFlush();
             
-            _exportedActivities.Count.Should().Be(5);
+            _exportedActivities.Count.Should().Be(6);
             _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
             
             //there should be a span for each message received by a pump

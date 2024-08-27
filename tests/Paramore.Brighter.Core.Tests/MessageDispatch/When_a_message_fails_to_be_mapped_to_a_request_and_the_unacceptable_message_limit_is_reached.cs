@@ -34,10 +34,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpUnacceptableMessageLimitTests
     {
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly InternalBus _bus = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly Channel _channel;
         private readonly FakeTimeProvider _timeProvider;
 
         public MessagePumpUnacceptableMessageLimitTests()
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
             _timeProvider = new FakeTimeProvider();
-            _channel = new Channel(new (Topic), new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
                 null);
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
             };
 
             var unmappableMessage = new Message(
