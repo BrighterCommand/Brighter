@@ -308,7 +308,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private static string ToSecondsAsString(int timeoutInMilliseconds)
+        private string ToSecondsAsString(int timeoutInMilliseconds)
         {
             int timeOutInSeconds = 0;
             if (timeoutInMilliseconds >= 1000)
