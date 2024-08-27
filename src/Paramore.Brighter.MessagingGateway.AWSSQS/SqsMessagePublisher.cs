@@ -43,8 +43,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public string Publish(Message message)
         {
             var messageString = message.Body.Value;
-            object subject = GetSubject(message);
-            var publishRequest = new PublishRequest(_topicArn, messageString, subject?.ToString());
+            var subject = GetSubject(message);
+            var publishRequest = new PublishRequest(_topicArn, messageString, subject);
 
             var messageAttributes = new Dictionary<string, MessageAttributeValue>();
             messageAttributes.Add(HeaderNames.Id, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.Id), DataType = "String"});
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
              return null;
         }
 
-        private static object GetSubject(Message message)
+        private static string GetSubject(Message message)
         {
             var subjectExists = message.Header.Bag.TryGetValue("Subject", out var subject);
             if (subjectExists)
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 message.Header.Bag.Remove("Subject");
             }
 
-            return subject;
+            return subject?.ToString();
         }
     }
 }
