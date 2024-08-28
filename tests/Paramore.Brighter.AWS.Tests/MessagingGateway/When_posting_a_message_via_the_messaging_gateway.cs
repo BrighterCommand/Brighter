@@ -37,7 +37,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
-                routingKey: routingKey
+                routingKey: routingKey,
+                rawMessageDelivery: false
             );
             
             _message = new Message(
@@ -58,14 +59,21 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
         [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task When_posting_a_message_via_the_producer(bool sendAsync)
+        [InlineData("test subject", true)]
+        [InlineData(null, true)]
+        [InlineData("test subject", false)]
+        [InlineData(null, false)]
+        public async Task When_posting_a_message_via_the_producer(string subject, bool sendAsync)
         {
             //arrange
+            if (subject != null)
+            {
+                _message.Header.Bag.Add("Subject", subject);
+            }
+
             if (sendAsync)
             {
-                _messageProducer.SendAsync(_message).Wait();
+                await _messageProducer.SendAsync(_message);
             }
             else
             {
@@ -95,6 +103,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             message.Header.DelayedMilliseconds.Should().Be(0);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             message.Body.Value.Should().Be(_message.Body.Value);
+            
+            message.Header.Bag.TryGetValue("Subject", out var actualSubject).Should().Be(subject != null);
+            actualSubject.Should().Be(subject);
         }
 
         public void Dispose()
@@ -104,7 +115,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _messageProducer?.Dispose();
         }
         
-        private DateTime RoundToSeconds(DateTime dateTime)
+        private static DateTime RoundToSeconds(DateTime dateTime)
         {
             return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);
         }
