@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Net;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _snsClient = snsClient;
         }
 
-        public virtual (bool, string TopicArn) Validate(string topicArn)
+        public virtual async Task<(bool, string TopicArn)> ValidateAsync(string topicArn)
         {
             //List topics does not work across accounts - GetTopicAttributesRequest works within the region
             //List Topics is rate limited to 30 ListTopic transactions per second, and can be rate limited
@@ -55,9 +56,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                var topicAttributes = _snsClient.GetTopicAttributesAsync(
+                var topicAttributes = await _snsClient.GetTopicAttributesAsync(
                     new GetTopicAttributesRequest(topicArn)
-                ).GetAwaiter().GetResult();
+                );
 
                 exists = ((topicAttributes.HttpStatusCode == HttpStatusCode.OK)  && (topicAttributes.Attributes["TopicArn"] == topicArn));
             }
