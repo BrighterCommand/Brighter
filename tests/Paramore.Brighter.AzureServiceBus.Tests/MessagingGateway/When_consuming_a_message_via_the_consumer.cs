@@ -70,7 +70,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _serviceBusClient = clientProvider.GetServiceBusClient();
 
             var channelFactory =
-                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, false));
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
             _channel = channelFactory.CreateChannel(subscription);
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
@@ -155,7 +155,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _administrationClient.DeleteChannelAsync(_topicName, false).GetAwaiter().GetResult();
+            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
             _channel?.Dispose();
             _producerRegistry?.Dispose();
         }

@@ -15,6 +15,8 @@ namespace Paramore.Brighter.MSSQL.Tests
         private IAmARelationalDbConnectionProvider _connectionProvider;
         private IAmARelationalDbConnectionProvider _masterConnectionProvider;
 
+        public IAmARelationalDbConnectionProvider ConnectionProvider => _connectionProvider;
+
         private const string _textQueueDDL = @"CREATE TABLE [dbo].[{0}](
                 [Id][bigint] IDENTITY(1, 1) NOT NULL,
                 [Topic] [nvarchar](255) NOT NULL,
