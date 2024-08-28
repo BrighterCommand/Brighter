@@ -10,23 +10,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     /// </summary>
     public interface IServiceBusSenderWrapper
     {
-        /// <summary>
-        /// Send a Message
-        /// </summary>
-        /// <param name="message">The message to send.</param>
-        void Send(ServiceBusMessage message);
-
-        /// <summary>
-        /// Schedule a message to be sent.
-        /// </summary>
-        /// <param name="message">Message to be scheduled.</param>
-        /// <param name="scheduleEnqueueTime">The time to scheduled the message.</param>
-        void ScheduleMessage(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime);
-
-        /// <summary>
-        /// Close the Connection.
-        /// </summary>
-        void Close();
 
         /// <summary>
         /// Send a Message

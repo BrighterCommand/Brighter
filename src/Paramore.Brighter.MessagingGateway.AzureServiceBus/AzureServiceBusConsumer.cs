@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
@@ -11,92 +9,28 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// <summary>
     /// Implementation of <see cref="IAmAMessageConsumer"/> using Azure Service Bus for Transport.
     /// </summary>
-    public class AzureServiceBusConsumer : IAmAMessageConsumer
+    public abstract class AzureServiceBusConsumer : IAmAMessageConsumer
     {
-        private readonly string _topicName;
+        protected abstract string SubscriptionName { get; }
+        protected abstract ILogger Logger { get; }
+
+        protected readonly AzureServiceBusSubscription Subscription;
+        protected readonly string RoutingKey;
         private readonly IAmAMessageProducerSync _messageProducerSync;
-        private readonly IAdministrationClientWrapper _administrationClientWrapper;
-        private readonly IServiceBusReceiverProvider _serviceBusReceiverProvider;
+        protected readonly IAdministrationClientWrapper AdministrationClientWrapper;
         private readonly int _batchSize;
-        private IServiceBusReceiverWrapper _serviceBusReceiver;
-        private readonly string _subscriptionName;
-        private readonly bool _useQueues;
-        private bool _subscriptionCreated;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusConsumer>();
-        private readonly OnMissingChannel _makeChannel;
-        private readonly AzureServiceBusSubscriptionConfiguration _subscriptionConfiguration;
-        private readonly ServiceBusReceiveMode _receiveMode;
+        protected IServiceBusReceiverWrapper ServiceBusReceiver;
+        protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
         
-        /// <summary>
-        /// Initializes an Instance of <see cref="AzureServiceBusConsumer"/> that uses Queues
-        /// </summary>
-        /// <param name="queueName">The name of the Topic.</param>
-        /// <param name="messageProducerSync">An instance of the Messaging Producer used for Requeue.</param>
-        /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
-        /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
-        /// <param name="batchSize">How many messages to receive at a time.</param>
-        /// <param name="receiveMode">The mode in which to Receive.</param>
-        /// <param name="makeChannels">The mode in which to make Channels.</param>
-        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
-        public AzureServiceBusConsumer(string queueName, IAmAMessageProducerSync messageProducerSync,
-            IAdministrationClientWrapper administrationClientWrapper,
-            IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10,
-            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
-            OnMissingChannel makeChannels = OnMissingChannel.Create,
-            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = default): this(messageProducerSync,
-            administrationClientWrapper, serviceBusReceiverProvider, batchSize, receiveMode, makeChannels,
-            subscriptionConfiguration)
+        protected AzureServiceBusConsumer(AzureServiceBusSubscription subscription, IAmAMessageProducerSync messageProducerSync,
+            IAdministrationClientWrapper administrationClientWrapper)
         {
-            _useQueues = true;
-            _topicName = queueName;
-            
-            if (!_subscriptionConfiguration.RequireSession)
-                GetMessageReceiverProvider();
-        }
-
-        /// <summary>
-        /// Initializes an Instance of <see cref="AzureServiceBusConsumer"/> that uses Topics
-        /// </summary>
-        /// <param name="topicName">The name of the Topic.</param>
-        /// <param name="subscriptionName">The name of the Subscription on the Topic.</param>
-        /// <param name="messageProducerSync">An instance of the Messaging Producer used for Requeue.</param>
-        /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
-        /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
-        /// <param name="batchSize">How many messages to receive at a time.</param>
-        /// <param name="receiveMode">The mode in which to Receive.</param>
-        /// <param name="makeChannels">The mode in which to make Channels.</param>
-        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
-        public AzureServiceBusConsumer(string topicName, string subscriptionName,
-            IAmAMessageProducerSync messageProducerSync, IAdministrationClientWrapper administrationClientWrapper,
-            IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10,
-            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
-            OnMissingChannel makeChannels = OnMissingChannel.Create,
-            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = default) : this(messageProducerSync,
-            administrationClientWrapper, serviceBusReceiverProvider, batchSize, receiveMode, makeChannels,
-            subscriptionConfiguration)
-        {
-            _subscriptionName = subscriptionName;
-            _topicName = topicName;
-            _useQueues = false;
-            
-            if (!_subscriptionConfiguration.RequireSession)
-                GetMessageReceiverProvider();
-        }
-
-        private AzureServiceBusConsumer(IAmAMessageProducerSync messageProducerSync,
-            IAdministrationClientWrapper administrationClientWrapper,
-            IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10,
-            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
-            OnMissingChannel makeChannels = OnMissingChannel.Create,
-            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = default)
-        {
+            Subscription = subscription;
+            RoutingKey = subscription.RoutingKey;
+            _batchSize = subscription.BufferSize;
+            SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
             _messageProducerSync = messageProducerSync;
-            _administrationClientWrapper = administrationClientWrapper;
-            _serviceBusReceiverProvider = serviceBusReceiverProvider;
-            _batchSize = batchSize;
-            _makeChannel = makeChannels;
-            _subscriptionConfiguration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
-            _receiveMode = receiveMode;
+            AdministrationClientWrapper = administrationClientWrapper;
         }
 
         /// <summary>
@@ -108,45 +42,47 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <returns>Message.</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            s_logger.LogDebug(
-                "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}.",
-                _topicName, _subscriptionName, timeoutInMilliseconds, _batchSize);
+            Logger.LogDebug(
+                "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}",
+                RoutingKey, SubscriptionName, timeoutInMilliseconds, _batchSize);
 
             IEnumerable<IBrokeredMessageWrapper> messages;
-            EnsureSubscription();
+            EnsureChannel();
 
             var messagesToReturn = new List<Message>();
 
             try
             {
-                if (_subscriptionConfiguration.RequireSession)
+                if (SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
                 {
                     GetMessageReceiverProvider();
-                    if (_serviceBusReceiver == null)
+                    if (ServiceBusReceiver == null)
                     {
-                        s_logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}",
-                            _topicName);
+                        Logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}",
+                            RoutingKey);
                         return messagesToReturn.ToArray();   
                     }
                 }
-                messages = _serviceBusReceiver.Receive(_batchSize, TimeSpan.FromMilliseconds(timeoutInMilliseconds)).GetAwaiter().GetResult();
+
+                messages = ServiceBusReceiver.Receive(_batchSize, TimeSpan.FromMilliseconds(timeoutInMilliseconds))
+                    .GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                if (_serviceBusReceiver is {IsClosedOrClosing: true} && !_subscriptionConfiguration.RequireSession)
+                if (ServiceBusReceiver is {IsClosedOrClosing: true} && !SubscriptionConfiguration.RequireSession)
                 {
-                    s_logger.LogDebug("Message Receiver is closing...");
+                    Logger.LogDebug("Message Receiver is closing...");
                     var message = new Message(
-                        new MessageHeader(string.Empty, _topicName, MessageType.MT_QUIT), 
+                        new MessageHeader(string.Empty, RoutingKey, MessageType.MT_QUIT), 
                         new MessageBody(string.Empty));
                     messagesToReturn.Add(message);
                     return messagesToReturn.ToArray();
                 }
 
-                s_logger.LogError(e, "Failing to receive messages.");
+                Logger.LogError(e, "Failing to receive messages");
 
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
-                if(!_subscriptionConfiguration.RequireSession)
+                if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
                     GetMessageReceiverProvider();
 
                 throw new ChannelFailureException("Failing to receive messages.", e);
@@ -171,7 +107,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             var topic = message.Header.Topic;
 
-            s_logger.LogInformation("Requeuing message with topic {Topic} and id {Id}.", topic, message.Id);
+            Logger.LogInformation("Requeuing message with topic {Topic} and id {Id}", topic, message.Id);
 
             if (delayMilliseconds > 0)
             {
@@ -192,46 +128,41 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            //Only ACK if ReceiveMode is Peek
-            if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
+            try
             {
-                try
-                {
-                    EnsureSubscription();
-                    var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
+                EnsureChannel();
+                var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
 
-                    if (string.IsNullOrEmpty(lockToken))
-                        throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                    s_logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
-                        lockToken);
+                if (string.IsNullOrEmpty(lockToken))
+                    throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+                Logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
+                    lockToken);
+                
+                if(ServiceBusReceiver == null)
+                    GetMessageReceiverProvider();
 
-                    _serviceBusReceiver.Complete(lockToken).Wait();
-                    if(_subscriptionConfiguration.RequireSession)
-                        _serviceBusReceiver.Close();
-                }
-                catch (AggregateException ex)
+                ServiceBusReceiver.Complete(lockToken).Wait();
+                if (SubscriptionConfiguration.RequireSession)
+                    ServiceBusReceiver.Close();
+            }
+            catch (AggregateException ex)
+            {
+                if (ex.InnerException is ServiceBusException asbException)
+                    HandleAsbException(asbException, message.Id);
+                else
                 {
-                    if (ex.InnerException is ServiceBusException asbException)
-                        HandleASBException(asbException, message.Id);
-                    else
-                    {
-                        s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
-                        throw;
-                    }
-                }
-                catch (ServiceBusException ex)
-                {
-                    HandleASBException(ex, message.Id);
-                }
-                catch (Exception ex)
-                {
-                    s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+                    Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
                     throw;
                 }
             }
-            else
+            catch (ServiceBusException ex)
             {
-                s_logger.LogDebug("Completing with Id {Id} is not possible due to receive Mode being set to {ReceiveMode}", message.Id, _receiveMode);
+                HandleAsbException(ex, message.Id);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+                throw;
             }
         }
 
@@ -241,88 +172,59 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
-            //Only Reject if ReceiveMode is Peek
-            if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
+            try
             {
-                try
-                {
-                    EnsureSubscription();
-                    var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
+                EnsureChannel();
+                var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
 
-                    if (string.IsNullOrEmpty(lockToken))
-                        throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                    s_logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+                if (string.IsNullOrEmpty(lockToken))
+                    throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+                Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
-                    _serviceBusReceiver.DeadLetter(lockToken).Wait();
-                    if(_subscriptionConfiguration.RequireSession)
-                        _serviceBusReceiver.Close();
-                }
-                catch (Exception ex)
-                {
-                    s_logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
-                    throw;
-                }
+                if(ServiceBusReceiver == null)
+                    GetMessageReceiverProvider();
+                
+                ServiceBusReceiver.DeadLetter(lockToken).Wait();
+                if (SubscriptionConfiguration.RequireSession)
+                    ServiceBusReceiver.Close();
             }
-            else
+            catch (Exception ex)
             {
-                s_logger.LogWarning("Dead Lettering Message with Id {Id} is not possible due to receive Mode being set to {ReceiveMode}", message.Id, _receiveMode);
+                Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
+                throw;
             }
         }
 
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
-        public void Purge()
-        {
-            s_logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}", 
-                _subscriptionName, _topicName);
-
-            _administrationClientWrapper.DeleteChannelAsync(_topicName, _subscriptionConfiguration.UseServiceBusQueue);
-            EnsureSubscription();
-        }
+        public abstract void Purge();
 
         /// <summary>
         /// Dispose of the Consumer.
         /// </summary>
         public void Dispose()
         {
-            s_logger.LogInformation("Disposing the consumer...");
-            _serviceBusReceiver?.Close();
-            s_logger.LogInformation("Consumer disposed.");
+            Logger.LogInformation("Disposing the consumer...");
+            ServiceBusReceiver?.Close();
+            Logger.LogInformation("Consumer disposed");
         }
 
-        private void GetMessageReceiverProvider()
-        {
-            s_logger.LogInformation(
-                "Getting message receiver provider for topic {Topic} and subscription {ChannelName} with receive Mode {ReceiveMode}...",
-                _topicName, _subscriptionName, _receiveMode);
-            try
-            {
-                _serviceBusReceiver = _useQueues
-                    ? _serviceBusReceiverProvider.Get(_topicName, _receiveMode,
-                        _subscriptionConfiguration.RequireSession)
-                    : _serviceBusReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode,
-                        _subscriptionConfiguration.RequireSession);
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e, "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}.", _topicName, _subscriptionName);
-            }
-        }
+        protected abstract void GetMessageReceiverProvider();
 
         private Message MapToBrighterMessage(IBrokeredMessageWrapper azureServiceBusMessage)
         {
             if (azureServiceBusMessage.MessageBodyValue == null)
             {
-                s_logger.LogWarning(
-                    "Null message body received from topic {Topic} via subscription {ChannelName}.",
-                    _topicName, _subscriptionName);
+                Logger.LogWarning(
+                    "Null message body received from topic {Topic} via subscription {ChannelName}",
+                    RoutingKey, SubscriptionName);
             }
 
             var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
             
-            s_logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}.",
-                _topicName, _subscriptionName, messageBody);
+            Logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}",
+                RoutingKey, SubscriptionName, messageBody);
             
             MessageType messageType = GetMessageType(azureServiceBusMessage);
             var replyAddress = GetReplyAddress(azureServiceBusMessage);
@@ -332,7 +234,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             
             var headers = new MessageHeader(
                 messageId: azureServiceBusMessage.Id, 
-                topic:_topicName, 
+                topic:RoutingKey, 
                 messageType: messageType, 
                 source: null,
                 type: "",
@@ -346,8 +248,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 delayedMilliseconds: 0
                 );
 
-            if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
-                headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
+            headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
             
             foreach (var property in azureServiceBusMessage.ApplicationProperties)
             {
@@ -360,7 +261,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
         {
-            if (azureServiceBusMessage.ApplicationProperties == null || !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey, out object property))
+            if (azureServiceBusMessage.ApplicationProperties == null ||
+                !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey,
+                    out object property))
                 return MessageType.MT_EVENT;
 
             if (Enum.TryParse(property.ToString(), true, out MessageType messageType))
@@ -372,7 +275,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
         {
             if (azureServiceBusMessage.ApplicationProperties is null ||
-                !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey, out object property))
+                !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey,
+                    out object property))
             {
                 return null;
             }
@@ -385,67 +289,25 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
         {
             var count = 0;
-            if (azureServiceBusMessage.ApplicationProperties != null && azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey, out object property))
+            if (azureServiceBusMessage.ApplicationProperties != null &&
+                azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
+                    out object property))
             {
                 int.TryParse(property.ToString(), out count);
             }
+
             return count;
         }
 
-        private void EnsureSubscription()
-        {
-            if (_subscriptionCreated || _makeChannel.Equals(OnMissingChannel.Assume) || _useQueues)
-                return;
+        protected abstract void EnsureChannel();
 
-            try
-            {
-                if (_administrationClientWrapper.SubscriptionExists(_topicName, _subscriptionName))
-                {
-                    _subscriptionCreated = true;
-                    return;
-                }
-
-                if (_makeChannel.Equals(OnMissingChannel.Validate))
-                {
-                    throw new ChannelFailureException(
-                        $"Subscription {_subscriptionName} does not exist on topic {_topicName} and missing channel mode set to Validate.");
-                }
-
-                _administrationClientWrapper.CreateSubscription(_topicName, _subscriptionName, _subscriptionConfiguration);
-                _subscriptionCreated = true;
-            }
-            catch (ServiceBusException ex)
-            {
-                if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
-                {
-                    s_logger.LogWarning(
-                        "Message entity already exists with topic {Topic} and subscription {ChannelName}.", _topicName,
-                        _subscriptionName);
-                    _subscriptionCreated = true;
-                }
-                else
-                {
-                    throw new ChannelFailureException("Failing to check or create subscription", ex);
-                }
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e, "Failing to check or create subscription.");
-
-                //The connection to Azure Service bus may have failed so we re-establish the connection.
-                _administrationClientWrapper.Reset();
-
-                throw new ChannelFailureException("Failing to check or create subscription", e);
-            }
-        }
-
-        private void HandleASBException(ServiceBusException ex, string messageId)
+        private void HandleAsbException(ServiceBusException ex, string messageId)
         {
             if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
-                s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId);
+                Logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId);
             else
             {
-                s_logger.LogError(ex,
+                Logger.LogError(ex,
                     "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
                     messageId, ex.Reason);
             }
