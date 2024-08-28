@@ -1,43 +1,67 @@
-﻿using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+﻿using System.Collections.Generic;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     /// <summary>
-    /// Factory class for creating instances of <see cref="AzureServiceBusMessageProducer"/>
+    /// Factory class for creating dictionary of instances of <see cref="AzureServiceBusMessageProducer"/>
+    /// indexed by topic name
     /// </summary>
-    internal static class AzureServiceBusMessageProducerFactory
+    public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
     {
+        private readonly IServiceBusClientProvider _clientProvider;
+        private readonly IEnumerable<AzureServiceBusPublication> _publications;
+        private readonly int _bulkSendBatchSize;
+
         /// <summary>
-        /// Factory to create an Azure Service Bus Producer
+        /// Factory to create a dictionary of Azure Service Bus Producers indexed by topic name
         /// </summary>
-        /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
-        /// <param name="asbPublication">Describes the parameters for the producer</param>
-        /// <returns>A Message Producer</returns>
-        public static AzureServiceBusMessageProducer Get(
+        /// <param name="configuration">The configuration of the connection to ASB</param>
+        /// <param name="publications">A set of publications - topics on the server - to configure</param>
+        public AzureServiceBusMessageProducerFactory(
             AzureServiceBusConfiguration configuration,
-            AzureServiceBusPublication asbPublication)
+            IEnumerable<AzureServiceBusPublication> publications)
         {
-            var clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
-            return Get(clientProvider, asbPublication, configuration.BulkSendBatchSize);
+            _clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
+            _publications = publications;
+            _bulkSendBatchSize = configuration.BulkSendBatchSize;
         }
 
         /// <summary>
-        /// Factory to create an Azure Service Bus Producer
+        /// Factory to create a dictionary of Azure Service Bus Producers indexed by topic name
         /// </summary>
         /// <param name="clientProvider">The connection to ASB</param>
-        /// <param name="asbPublication">Describes the parameters for the producer</param>
-        /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
-        /// <returns></returns>
-        public static AzureServiceBusMessageProducer Get(
+        /// <param name="publications">A set of publications - topics on the server - to configure</param>
+        /// <param name="bulkSendBatchSize">The maximum size to chunk messages when dispatching to ASB</param>
+        public AzureServiceBusMessageProducerFactory(
             IServiceBusClientProvider clientProvider,
-            AzureServiceBusPublication asbPublication,
-            int bulkSendBatchSize = 10)
+            IEnumerable<AzureServiceBusPublication> publications,
+            int bulkSendBatchSize)
         {
-            var nameSpaceManagerWrapper = new AdministrationClientWrapper(clientProvider);
-            var topicClientProvider = new ServiceBusSenderProvider(clientProvider);
-
-            return new AzureServiceBusMessageProducer(nameSpaceManagerWrapper, topicClientProvider, asbPublication, bulkSendBatchSize);
+            _clientProvider = clientProvider;
+            _publications = publications;
+            _bulkSendBatchSize = bulkSendBatchSize;
         }
+
+        /// <inheritdoc />
+        public Dictionary<string, IAmAMessageProducer> Create()
+        {
+            var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
+            var topicClientProvider = new ServiceBusSenderProvider(_clientProvider);
+
+            var producers = new Dictionary<string, IAmAMessageProducer>();
+            foreach (var publication in _publications)
+            {
+                var producer = new AzureServiceBusMessageProducer(
+                    nameSpaceManagerWrapper, 
+                    topicClientProvider, 
+                    publication, 
+                    _bulkSendBatchSize);
+                producers.Add(publication.Topic, producer);
+            }
+
+            return producers;
+        }        
     }
 }

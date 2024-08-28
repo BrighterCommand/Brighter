@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,35 +23,35 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 
-namespace Paramore.Brighter.MessagingGateway.AWSSQS
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    public class SnsProducerRegistryFactory : IAmAProducerRegistryFactory
+    public class RmqMessageProducerFactory
+        : IAmAMessageProducerFactory
     {
-        private readonly AWSMessagingGatewayConnection _connection;
-        private readonly IEnumerable<SnsPublication> _snsPublications;
+        private readonly RmqMessagingGatewayConnection _connection;
+        private readonly IEnumerable<RmqPublication> _publications;
 
         /// <summary>
-        /// Create a collection of producers from the publication information
+        /// Creates a collection of RabbitMQ message producers from the RabbitMQ publication information
         /// </summary>
-        /// <param name="connection">The Connection to use to connect to AWS</param>
-        /// <param name="snsPublications">The publication describing the SNS topic that we want to use</param>
-        public SnsProducerRegistryFactory(
-            AWSMessagingGatewayConnection connection,
-            IEnumerable<SnsPublication> snsPublications)
+        /// <param name="connection">The connection to use to connect to RabbitMQ</param>
+        /// <param name="publications">The publications describing the RabbitMQ topics that we want to use</param>
+        public RmqMessageProducerFactory(RmqMessagingGatewayConnection connection, IEnumerable<RmqPublication> publications)
         {
             _connection = connection;
-            _snsPublications = snsPublications;
+            _publications = publications;
         }
 
-        /// <summary>
-        /// Create a message producer for each publication, add it into the registry under the key of the topic
-        /// </summary>
-        /// <returns></returns>
-        public IAmAProducerRegistry Create()
+        /// <inheritdoc />
+        public Dictionary<string,IAmAMessageProducer> Create()
         {
-            var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
+            var producers = new Dictionary<string, IAmAMessageProducer>();
+            foreach (var publication in _publications)
+            {
+                producers[publication.Topic] = new RmqMessageProducer(_connection, publication);
+            }
 
-            return new ProducerRegistry(producerFactory.Create());
+            return producers;
         }
     }
 }

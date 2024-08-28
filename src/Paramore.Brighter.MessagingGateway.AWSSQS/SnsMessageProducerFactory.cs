@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -25,17 +25,17 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    public class SnsProducerRegistryFactory : IAmAProducerRegistryFactory
+    public class SnsMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly AWSMessagingGatewayConnection _connection;
         private readonly IEnumerable<SnsPublication> _snsPublications;
 
         /// <summary>
-        /// Create a collection of producers from the publication information
+        /// Creates a collection of SNS message producers from the SNS publication information
         /// </summary>
         /// <param name="connection">The Connection to use to connect to AWS</param>
-        /// <param name="snsPublications">The publication describing the SNS topic that we want to use</param>
-        public SnsProducerRegistryFactory(
+        /// <param name="snsPublications">The publications describing the SNS topics that we want to use</param>
+        public SnsMessageProducerFactory(
             AWSMessagingGatewayConnection connection,
             IEnumerable<SnsPublication> snsPublications)
         {
@@ -43,15 +43,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _snsPublications = snsPublications;
         }
 
-        /// <summary>
-        /// Create a message producer for each publication, add it into the registry under the key of the topic
-        /// </summary>
-        /// <returns></returns>
-        public IAmAProducerRegistry Create()
+        /// <inheritdoc />
+        public Dictionary<string,IAmAMessageProducer> Create()
         {
-            var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
+            var producers = new Dictionary<string, IAmAMessageProducer>();
+            foreach (var p in _snsPublications)
+            {
+                var producer = new SqsMessageProducer(_connection, p);
+                if (producer.ConfirmTopicExists())
+                    producers[p.Topic] = producer;
+                else
+                    throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
+            }
 
-            return new ProducerRegistry(producerFactory.Create());
+            return producers;
         }
     }
 }
