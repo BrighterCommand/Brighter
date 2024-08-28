@@ -76,6 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="receiveMode">The mode in which to receive messages.</param>
         public AzureServiceBusSubscription(
             SubscriptionName name = null,
             ChannelName channelName = null,

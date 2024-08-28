@@ -17,20 +17,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <summary>
         /// Factory to create a dictionary of Azure Service Bus Producers indexed by topic name
         /// </summary>
-        /// <param name="configuration">The configuration of the connection to ASB</param>
-        /// <param name="publications">A set of publications - topics on the server - to configure</param>
-        public AzureServiceBusMessageProducerFactory(
-            AzureServiceBusConfiguration configuration,
-            IEnumerable<AzureServiceBusPublication> publications)
-        {
-            _clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
-            _publications = publications;
-            _bulkSendBatchSize = configuration.BulkSendBatchSize;
-        }
-
-        /// <summary>
-        /// Factory to create a dictionary of Azure Service Bus Producers indexed by topic name
-        /// </summary>
         /// <param name="clientProvider">The connection to ASB</param>
         /// <param name="publications">A set of publications - topics on the server - to configure</param>
         /// <param name="bulkSendBatchSize">The maximum size to chunk messages when dispatching to ASB</param>
@@ -53,12 +39,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var producers = new Dictionary<string, IAmAMessageProducer>();
             foreach (var publication in _publications)
             {
-                var producer = new AzureServiceBusMessageProducer(
-                    nameSpaceManagerWrapper, 
-                    topicClientProvider, 
-                    publication, 
-                    _bulkSendBatchSize);
-                producers.Add(publication.Topic, producer);
+                if(publication.UseServiceBusQueue)
+                    producers.Add(publication.Topic, new AzureServiceBusQueueMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize));
+                else
+                    producers.Add(publication.Topic, new AzureServiceBusTopicMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize));
             }
 
             return producers;

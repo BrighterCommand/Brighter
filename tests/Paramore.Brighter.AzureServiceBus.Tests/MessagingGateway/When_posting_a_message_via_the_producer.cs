@@ -64,7 +64,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _administrationClient.CreateSubscription(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration());
 
             var channelFactory =
-                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, false));
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
             _topicChannel = channelFactory.CreateChannel(subscription);
             _queueChannel = channelFactory.CreateChannel(queueSubscription);
 
@@ -127,8 +127,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _administrationClient.DeleteChannelAsync(_topicName, false).GetAwaiter().GetResult();
-            _administrationClient.DeleteChannelAsync(_queueName, true).GetAwaiter().GetResult();
+            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
+            _administrationClient.DeleteQueueAsync(_queueName).GetAwaiter().GetResult();
         }
 
         private DateTime RoundToSeconds(DateTime dateTime)

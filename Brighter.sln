@@ -313,6 +313,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Locking.D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutation_Sweeper", "samples\WebAPI\WebAPI_Dapper\Salutation_Sweeper\Salutation_Sweeper.csproj", "{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.MsSql", "src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj", "{758EE237-C722-4A0A-908C-2D08C1E59025}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1751,6 +1753,18 @@ Global
 		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|x86.ActiveCfg = Release|Any CPU
 		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}.Release|x86.Build.0 = Release|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Debug|x86.Build.0 = Debug|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|Any CPU.Build.0 = Release|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|x86.ActiveCfg = Release|Any CPU
+		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
