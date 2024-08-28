@@ -59,16 +59,26 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
         [Theory]
-        [InlineData("test subject")]
-        [InlineData(null)]
-        public async Task When_posting_a_message_via_the_producer(string subject)
+        [InlineData("test subject", true)]
+        [InlineData(null, true)]
+        [InlineData("test subject", false)]
+        [InlineData(null, false)]
+        public async Task When_posting_a_message_via_the_producer(string subject, bool sendAsync)
         {
             //arrange
             if (subject != null)
             {
                 _message.Header.Bag.Add("Subject", subject);
             }
-            _messageProducer.Send(_message);
+
+            if (sendAsync)
+            {
+                await _messageProducer.SendAsync(_message);
+            }
+            else
+            {
+                _messageProducer.Send(_message);
+            }
             
             await Task.Delay(1000);
             

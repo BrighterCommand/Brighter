@@ -24,6 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _client = client;
         }
 
-        public string Publish(Message message)
+        public async Task<string> PublishAsync(Message message)
         {
             var messageString = message.Body.Value;
             var subject = GetSubject(message);
@@ -64,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             publishRequest.MessageAttributes = messageAttributes;
             
             
-             var response = _client.PublishAsync(publishRequest).GetAwaiter().GetResult();
+             var response = await _client.PublishAsync(publishRequest);
              if (response.HttpStatusCode == System.Net.HttpStatusCode.OK || response.HttpStatusCode == System.Net.HttpStatusCode.Created || response.HttpStatusCode == System.Net.HttpStatusCode.Accepted)
              {
                  return response.MessageId;
@@ -82,6 +83,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
 
             return subject?.ToString();
+        }
+
+        public string Publish(Message message)
+        {
+            return PublishAsync(message).GetAwaiter().GetResult();
         }
     }
 }
