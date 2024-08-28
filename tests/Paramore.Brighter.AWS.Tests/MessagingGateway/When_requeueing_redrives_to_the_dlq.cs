@@ -56,7 +56,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             _sender = new SqsMessageProducer(_awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
             
-            _sender.ConfirmTopicExists(topicName);
+            _sender.ConfirmTopicExistsAsync(topicName).Wait();
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);

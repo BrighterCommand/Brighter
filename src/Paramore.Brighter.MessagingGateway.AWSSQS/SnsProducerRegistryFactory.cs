@@ -50,7 +50,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public IAmAProducerRegistry Create()
         {
             var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
-
             return new ProducerRegistry(producerFactory.Create());
         }
     }
