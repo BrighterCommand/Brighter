@@ -57,11 +57,20 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
 
-        [Fact]
-        public async Task When_posting_a_message_via_the_producer()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task When_posting_a_message_via_the_producer(bool sendAsync)
         {
             //arrange
-            _messageProducer.Send(_message);
+            if (sendAsync)
+            {
+                _messageProducer.SendAsync(_message).Wait();
+            }
+            else
+            {
+                _messageProducer.Send(_message);
+            }
             
             await Task.Delay(1000);
             

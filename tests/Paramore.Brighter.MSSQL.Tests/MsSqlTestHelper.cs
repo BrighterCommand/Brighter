@@ -13,6 +13,8 @@ namespace Paramore.Brighter.MSSQL.Tests
         private SqlSettings _sqlSettings;
         private IMsSqlConnectionProvider _connectionProvider;
         private IMsSqlConnectionProvider _masterConnectionProvider;
+        
+        public IMsSqlConnectionProvider ConnectionProvider { get => _connectionProvider; }
 
         private const string _queueDDL = @"CREATE TABLE [dbo].[{0}](
                 [Id][bigint] IDENTITY(1, 1) NOT NULL,
