@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             foreach (var p in _snsPublications)
             {
                 var producer = new SqsMessageProducer(_connection, p);
-                if (producer.ConfirmTopicExists())
+                if (producer.ConfirmTopicExistsAsync().GetAwaiter().GetResult())
                     producers[p.Topic] = producer;
                 else
                     throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
