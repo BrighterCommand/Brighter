@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Toby Henderson <hendersont@gmail.com>
+Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -19,20 +19,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
 
-namespace Paramore.Brighter
+using System.Collections.Generic;
+
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
-    /// Interface IAmAProducerRegistryFactory
+    /// Creates a collection of RabbitMQ message producers from the RabbitMQ publication information
     /// </summary>
-    public interface IAmAProducerRegistryFactory
+    /// <param name="connection">The connection to use to connect to RabbitMQ</param>
+    /// <param name="publications">The publications describing the RabbitMQ topics that we want to use</param>
+    public class RmqMessageProducerFactory(
+        RmqMessagingGatewayConnection connection,
+        IEnumerable<RmqPublication> publications)
+        : IAmAMessageProducerFactory
     {
-        /// <summary>
-        /// Creates a message producer registry.
-        /// </summary>
-        /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
-        IAmAProducerRegistry Create();
+        /// <inheritdoc />
+        public Dictionary<string,IAmAMessageProducer> Create()
+        {
+            var producers = new Dictionary<string, IAmAMessageProducer>();
+            foreach (var publication in publications)
+            {
+                producers[publication.Topic] = new RmqMessageProducer(connection, publication);
+            }
+
+            return producers;
+        }
     }
 }
