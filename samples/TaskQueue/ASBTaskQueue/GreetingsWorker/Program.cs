@@ -5,17 +5,12 @@ using Greetings.Adaptors.Services;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
-using Greetings.Ports.Mappers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
-using Paramore.Brighter.MsSql;
-using Paramore.Brighter.MsSql.EntityFrameworkCore;
-using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Control.Api;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -76,7 +71,7 @@ var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTable
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
 
-var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
+var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider);
 builder.Services.AddServiceActivator(options =>
     {
         options.Subscriptions = subscriptions;

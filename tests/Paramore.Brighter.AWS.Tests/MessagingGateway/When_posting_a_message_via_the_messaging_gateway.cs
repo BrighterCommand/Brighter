@@ -37,7 +37,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
-                routingKey: routingKey
+                routingKey: routingKey,
+                rawMessageDelivery: false
             );
             
             _message = new Message(
@@ -58,15 +59,27 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
 
-        [Fact]
-        public async Task When_posting_a_message_via_the_producer()
+        [Theory]
+        [InlineData("test subject", true)]
+        [InlineData(null, true)]
+        [InlineData("test subject", false)]
+        [InlineData(null, false)]
+        public async Task When_posting_a_message_via_the_producer(string subject, bool sendAsync)
         {
             //arrange
-            _messageProducer.Send(_message);
-            
+            _message.Header.Subject = subject;
+            if (sendAsync)
+            {
+                await _messageProducer.SendAsync(_message);
+            }
+            else
+            {
+                _messageProducer.Send(_message);
+            }
+
             await Task.Delay(1000);
             
-            var message =_channel.Receive(5000);
+            var message = _channel.Receive(5000);
             
             //clear the queue
             _channel.Acknowledge(message);
@@ -82,6 +95,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             message.Header.ReplyTo.Should().Be(_replyTo);
             message.Header.ContentType.Should().Be(_contentType);
             message.Header.HandledCount.Should().Be(0);
+            message.Header.Subject.Should().Be(subject);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
             message.Header.TimeStamp.Should().BeAfter(RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
             message.Header.DelayedMilliseconds.Should().Be(0);
@@ -96,7 +110,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _messageProducer?.Dispose();
         }
         
-        private DateTime RoundToSeconds(DateTime dateTime)
+        private static DateTime RoundToSeconds(DateTime dateTime)
         {
             return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);
         }
