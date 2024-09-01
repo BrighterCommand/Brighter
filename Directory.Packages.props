@@ -4,12 +4,12 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.400.7" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.400.13" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.401.1" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.400.7" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.7" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.7" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.402.4" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.400.13" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.13" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.13" />
     <PackageVersion Include="Azure.Identity" Version="1.12.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.21.2" />
@@ -36,7 +36,7 @@
     <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="5.2.0" />
     <PackageVersion Include="MessagePack" Version="2.5.172" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.1" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.8" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="8.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
@@ -51,13 +51,13 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.8.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.0" />
     <PackageVersion Include="MQTTnet" Version="3.1.2" />
     <PackageVersion Include="MySqlConnector" Version="2.3.7" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Npgsql" Version="8.0.3" />
-    <PackageVersion Include="NUnit" Version="4.1.0" />
+    <PackageVersion Include="NUnit" Version="4.2.2" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.3.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -86,7 +86,7 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.3.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.7.1" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.7.3" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageVersion Include="System.Text.Json" Version="8.0.4" />
