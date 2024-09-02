@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
     public class ClearParams
     {
         public int AmountToClear;
-        public int MinimumAge;
+        public TimeSpan MinimumAge;
         public Dictionary<string, object> Args;
     }
 
@@ -261,7 +261,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
         public void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
-            int minimumAge = 5000, 
+            TimeSpan? minimumAge = null, 
             bool useBulk = false,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null)
@@ -269,7 +269,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             Commands.Add(CommandType.Clear);
             ClearParamsList.Add(new ClearParams
             {
-                AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args
+                AmountToClear = amountToClear, MinimumAge = minimumAge ?? TimeSpan.FromMilliseconds(5000), Args = args
             });
         }
 

@@ -33,7 +33,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
-        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 1, args);
+        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 100, 1, args);
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
@@ -51,7 +51,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 
-        var messages =_dynamoDbOutbox.OutstandingMessages(0, context, 100, 1, args);
+        var messages =_dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 100, 1, args);
 
         //Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
@@ -74,7 +74,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
-        var outstandingMessages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 1);
+        var outstandingMessages = await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 100, 1);
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -101,7 +101,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
-        var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(0, context, 100, 1);
+        var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 100, 1);
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -134,10 +134,10 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
         // Get the first page
-        var outstandingMessages = (await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 5, 1, args)).ToList();
+        var outstandingMessages = (await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 5, 1, args)).ToList();
         outstandingMessages.Count.Should().Be(5);
         // Get the remainder
-        outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 2, args));
+        outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 100, 2, args));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -169,10 +169,10 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
         // Get the first page
-        var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(0, context, 5, 1, args).ToList();
+        var outstandingMessages = _dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 5, 1, args).ToList();
         outstandingMessages.Count.Should().Be(5);
         // Get the remainder
-        outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(0, context, 100, 2, args));
+        outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 100, 2, args));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -211,10 +211,10 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var outstandingMessages = new List<Message>();
         for (var i = 1; i < 5; i++)
         {
-            outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 5, i));
+            outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 5, i));
         }
         // Do a last page in case other tests have added more messages
-        outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(0, context, 100, 5));
+        outstandingMessages.AddRange(await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 100, 5));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)
@@ -254,10 +254,10 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var outstandingMessages = new List<Message>();
         for (var i = 1; i < 5; i++)
         {
-            outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(0, context, 5, i));
+            outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 5, i));
         }
         // Do a last page in case other tests have added more messages
-        outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(0, context, 100, 5));
+        outstandingMessages.AddRange(_dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 100, 5));
 
         //Other tests may leave messages, so make sure that we grab ours
         foreach (var message in messages)

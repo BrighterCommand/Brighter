@@ -930,13 +930,13 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostAsync{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object},bool,System.Threading.CancellationToken)"/>
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        /// <param name="minimumAge">The minimum age to clear (Default 5 second).</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         public void ClearOutstandingFromOutbox(
             int amountToClear = 100,
-            int minimumAge = 5000,
+            TimeSpan? minimumAge = null,
             bool useBulk = false,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null
@@ -947,7 +947,8 @@ namespace Paramore.Brighter
 
             try
             {
-                s_bus.ClearOustandingFromOutbox(amountToClear, minimumAge, useBulk, context, args);
+                var minAge = minimumAge ?? TimeSpan.FromMilliseconds(5000);
+                s_bus.ClearOutstandingFromOutbox(amountToClear, minAge, useBulk, context, args);
             }
             finally
             {

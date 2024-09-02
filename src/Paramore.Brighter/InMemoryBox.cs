@@ -15,7 +15,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// When was this item written to the box
         /// </summary>
-        DateTime WriteTime { get; }
+        DateTimeOffset WriteTime { get; }
     }
      
     /// <summary>
@@ -78,7 +78,7 @@ namespace Paramore.Brighter
             _lastScanAt = now;
         }
 
-        private void RemoveExpiredMessages(DateTime now)
+        private void RemoveExpiredMessages(DateTimeOffset now)
         {
             if (Monitor.TryEnter(_cleanupRunningLockObject))
             {

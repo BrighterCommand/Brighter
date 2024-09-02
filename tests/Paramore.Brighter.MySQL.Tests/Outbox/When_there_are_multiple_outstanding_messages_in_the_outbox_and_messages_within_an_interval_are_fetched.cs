@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public void When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched()
         {
-            var messages = _mySqlOutbox.OutstandingMessages(millSecondsSinceSent: 0, _context);
+            var messages = _mySqlOutbox.OutstandingMessages(dispatchedSince: TimeSpan.Zero, _context);
 
             var msgs = messages as Message[] ?? messages.ToArray();
             msgs.Should().NotBeNullOrEmpty();
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched_async()
         {
-            var messages = await _mySqlOutbox.OutstandingMessagesAsync(millSecondsSinceSent: 0, _context);
+            var messages = await _mySqlOutbox.OutstandingMessagesAsync(dispatchedSince: TimeSpan.Zero, _context);
 
             var msgs = messages as Message[] ?? messages.ToArray();
             msgs.Should().NotBeNullOrEmpty();

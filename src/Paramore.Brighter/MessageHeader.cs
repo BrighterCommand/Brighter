@@ -204,7 +204,7 @@ namespace Paramore.Brighter
         /// Internal usage. The date the message was created.
         /// Defaults to now in UTC
         /// </summary>
-        public DateTime TimeStamp { get; set; }
+        public DateTimeOffset TimeStamp { get; set; }
         
         /// <summary>
         /// REQUIRED (for OTel support, OPTIONAL in Cloud Events)

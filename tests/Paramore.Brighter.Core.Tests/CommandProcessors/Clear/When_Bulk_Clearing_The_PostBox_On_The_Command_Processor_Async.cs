@@ -127,7 +127,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             await _outbox.AddAsync(_messageOne, context);
             await _outbox.AddAsync(_messageTwo, context);
 
-            _commandProcessor.ClearOutstandingFromOutbox(2, 1);
+            _commandProcessor.ClearOutstandingFromOutbox(2, TimeSpan.FromMilliseconds(1));
 
             await Task.Delay(3000);
 

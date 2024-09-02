@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             
             await Task.Delay(200);
 
-            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0, context);
+            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
             undispatchedMessages.Count().Should().Be(2);
         }

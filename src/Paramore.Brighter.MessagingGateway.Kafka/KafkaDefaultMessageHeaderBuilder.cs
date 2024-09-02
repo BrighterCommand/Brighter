@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
 
             if (message.Header.TimeStamp != default)
-                headers.Add(HeaderNames.TIMESTAMP, new DateTimeOffset(message.Header.TimeStamp).ToString().ToByteArray());
+                headers.Add(HeaderNames.TIMESTAMP, message.Header.TimeStamp.ToString().ToByteArray());
             else
                 headers.Add(HeaderNames.TIMESTAMP, DateTimeOffset.UtcNow.ToString().ToByteArray());
             

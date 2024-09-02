@@ -147,7 +147,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost2.Header.MessageType.Should().Be(_messageTwo.Header.MessageType);
             
             var depositedPost3 = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _messageThree.Id);
             //message should correspond to the command
             depositedPost3.Id.Should().Be(_messageThree.Id);
@@ -156,7 +156,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost3.Header.MessageType.Should().Be(_messageThree.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = _outbox.OutstandingMessages(0, context);
+            var outstandingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
             outstandingMessages.Count().Should().Be(3);
         }
         

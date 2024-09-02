@@ -58,8 +58,8 @@ namespace Paramore.Brighter
         /// Outbox Archiver will swallow any errors during the archive process, but record them. Assumption is
         /// that these are transient errors which can be retried
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How stale is the message that we want archive</param>
-        public void Archive(int millisecondsDispatchedSince)
+        /// <param name="dispatchedSince">How stale is the message that we want archive</param>
+        public void Archive(TimeSpan dispatchedSince)
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
             var requestContext = _requestContextFactory.Create();
@@ -67,7 +67,7 @@ namespace Paramore.Brighter
             
             try
             {
-                _bus.Archive(millisecondsDispatchedSince, requestContext);  
+                _bus.Archive(dispatchedSince, requestContext);  
             }
             catch (Exception e)
             {
@@ -85,17 +85,17 @@ namespace Paramore.Brighter
         /// Outbox Archiver will swallow any errors during the archive process, but record them. Assumption is
         /// that these are transient errors which can be retried       
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How stale is the message that</param>
+        /// <param name="dispatchedSince">How stale is the message that</param>
         /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        public async Task ArchiveAsync(int millisecondsDispatchedSince, RequestContext requestContext, CancellationToken cancellationToken)
+        public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext, CancellationToken cancellationToken)
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
             requestContext.Span = activity;
             
             try
             {
-                await _bus.ArchiveAsync(millisecondsDispatchedSince, requestContext, cancellationToken);
+                await _bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
             }
             catch (Exception e)
             {

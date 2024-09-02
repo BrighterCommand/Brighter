@@ -177,7 +177,7 @@ internal class RmqMessagePublisher
                 message.Body.Bytes);
         }
 
-        private IBasicProperties CreateBasicProperties(string id, DateTime timeStamp, string type, string contentType,
+        private IBasicProperties CreateBasicProperties(string id, DateTimeOffset timeStamp, string type, string contentType,
             string replyTo, bool persistMessage, IDictionary<string, object> headers = null)
         {
             var basicProperties = _channel.CreateBasicProperties();
@@ -186,7 +186,7 @@ internal class RmqMessagePublisher
             basicProperties.ContentType = contentType;
             basicProperties.Type = type;
             basicProperties.MessageId = id;
-            basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(timeStamp));
+            basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(timeStamp.DateTime));
             if (!string.IsNullOrEmpty(replyTo))
                 basicProperties.ReplyTo = replyTo;
 

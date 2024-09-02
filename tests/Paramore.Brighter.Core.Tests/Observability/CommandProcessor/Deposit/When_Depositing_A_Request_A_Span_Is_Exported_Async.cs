@@ -129,7 +129,7 @@ public class AsyncCommandProcessorDepositObservabilityTests
         mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperType && (string)a.Value == "async").Should().BeTrue();
         
         //depositing a message should be an event
-        var message = _outbox.OutstandingMessages(0, context).Single();
+        var message = _outbox.OutstandingMessages(TimeSpan.Zero, context).Single();
         var depositEvent = events.Single(e => e.Name == OutboxDbOperation.Add.ToSpanName());
         depositEvent.Tags.Any(a => a is { Value: not null, Key: BrighterSemanticConventions.OutboxSharedTransaction } && (bool)a.Value == false).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "async" ).Should().BeTrue();

@@ -15,17 +15,17 @@ namespace Paramore.Brighter
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">Minimum age in milliseconds</param>
+        /// <param name="dispatchedSince">Minimum age</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-        void Archive(int millisecondsDispatchedSince, RequestContext requestContext);
+        void Archive(TimeSpan dispatchedSince, RequestContext requestContext);
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How stale is the message that we want to archive</param>
+        /// <param name="dispatchedSince">How stale is the message that we want to archive</param>
         /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        Task ArchiveAsync(int millisecondsDispatchedSince, RequestContext requestContext, CancellationToken cancellationToken);
+        Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext, CancellationToken cancellationToken);
         
         /// <summary>
         /// Used with RPC to call a remote service via the external bus
@@ -73,8 +73,8 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        void ClearOustandingFromOutbox(int amountToClear,
-            int minimumAge,
+        void ClearOutstandingFromOutbox(int amountToClear,
+            TimeSpan minimumAge,
             bool useBulk,
             RequestContext requestContext,
             Dictionary<string, object> args = null);

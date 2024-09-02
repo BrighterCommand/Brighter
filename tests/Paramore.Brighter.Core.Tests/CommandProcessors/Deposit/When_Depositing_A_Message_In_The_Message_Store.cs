@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = _fakeOutbox.OutstandingMessages(0, context);
+            var outstandingMessages = _fakeOutbox.OutstandingMessages(TimeSpan.Zero, context);
             var outstandingMessage = outstandingMessages.Single();
             outstandingMessage.Id.Should().Be(_message.Id);
         }

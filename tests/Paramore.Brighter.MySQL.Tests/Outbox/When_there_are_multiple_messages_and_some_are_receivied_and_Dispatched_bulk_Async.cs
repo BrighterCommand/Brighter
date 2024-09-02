@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
 
             await Task.Delay(TimeSpan.FromSeconds(5));
 
-            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0, _context);
+            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, _context);
 
             undispatchedMessages.Count().Should().Be(2);
         }
