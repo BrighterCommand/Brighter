@@ -35,8 +35,10 @@ namespace Paramore.Brighter.ServiceActivator
     {
         /// <summary>
         /// Stops this instance.
+        /// <param name="topic">The topic to post the quit message to</param>
         /// </summary>
-        void Stop();
+        void Stop(RoutingKey topic);
+        
         /// <summary>
         /// Runs this instance.
         /// </summary>

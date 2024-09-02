@@ -8,6 +8,7 @@ public class InMemoryChannelFactory(InternalBus internalBus, TimeProvider timePr
     {
         return new Channel(
             subscription.ChannelName, 
+            subscription.RoutingKey, 
             new InMemoryMessageConsumer(subscription.RoutingKey,internalBus, timeProvider, ackTimeoutMs),
             subscription.BufferSize
             );

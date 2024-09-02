@@ -54,6 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             
             return new Channel(
                 subscription.ChannelName, 
+                subscription.RoutingKey, 
                 _messageConsumerFactory.Create(subscription),
                 subscription.BufferSize
                 );

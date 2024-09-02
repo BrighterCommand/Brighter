@@ -85,7 +85,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 EnsureQueue();
 
                 return new Channel(
-                    subscription.ChannelName.ToValidSQSQueueName(),
+                    subscription.ChannelName.ToValidSQSQueueName(), 
+                    subscription.RoutingKey.ToValidSNSTopicName(),
                     _messageConsumerFactory.Create(subscription),
                     subscription.BufferSize
                 );

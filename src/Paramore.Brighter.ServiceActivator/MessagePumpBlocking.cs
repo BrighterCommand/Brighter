@@ -26,6 +26,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -47,12 +48,16 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
+        /// <param name="tracer">What is the tracer we will use for telemetry</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         public MessagePumpBlocking(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistry messageMapperRegistry, 
             IAmAMessageTransformerFactory messageTransformerFactory,
-            IAmARequestContextFactory requestContextFactory) 
-            : base(commandProcessorProvider, requestContextFactory)
+            IAmARequestContextFactory requestContextFactory,
+            IAmABrighterTracer tracer = null,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
+            : base(commandProcessorProvider, requestContextFactory, tracer, instrumentationOptions)
         {
             var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();

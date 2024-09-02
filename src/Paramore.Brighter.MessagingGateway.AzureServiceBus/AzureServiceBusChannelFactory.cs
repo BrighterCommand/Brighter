@@ -39,7 +39,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 _azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
 
             return new Channel(
-                channelName: subscription.ChannelName,
+                channelName: subscription.ChannelName, 
+                routingKey: subscription.RoutingKey,
                 messageConsumer: messageConsumer,
                 maxQueueLength: subscription.BufferSize
             );

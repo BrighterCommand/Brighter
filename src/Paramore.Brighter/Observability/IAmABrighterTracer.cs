@@ -36,6 +36,21 @@ public interface IAmABrighterTracer : IDisposable
     /// The ActivitySource for the tracer
     /// </summary>
     ActivitySource ActivitySource { get; }
+    
+    /// <summary>
+    /// Create a span when we consume a message from a queue or stream
+    /// </summary>
+    /// <param name="operation">How did we obtain the message. InstrumentationOptions.Receive => pull; InstrumentationOptions.Process => push</param>
+    /// <param name="message">What is the <see cref="Message"/> that we received; if they have a traceparentid we will use that as a parent for this trace</param>
+    /// <param name="messagingSystem">What is the messaging system that we are receiving a message from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
+    /// <returns></returns>
+    Activity CreateSpan(
+        MessagePumpSpanOperation operation,
+        Message message,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All
+    );
 
     /// <summary>
     /// Create a span for a request in CommandProcessor
@@ -68,6 +83,19 @@ public interface IAmABrighterTracer : IDisposable
         ActivityLink[] links = null, 
         InstrumentationOptions options = InstrumentationOptions.All
     ) where TRequest : class, IRequest;
+
+    /// <param name="messagePumpException"></param>
+    /// <param name="topic">The <see cref="RoutingKey"/> for this span</param>
+    /// <param name="operation">The <see cref="MessagingSystem"/> we were trying to perform</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> that we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
+    Activity CreateMessagePumpExceptionSpan(
+        Exception messagePumpException,
+        RoutingKey topic,
+        MessagePumpSpanOperation operation,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All);
 
     /// <summary>
     /// Create a span for a batch of messages to be cleared  
@@ -132,4 +160,17 @@ public interface IAmABrighterTracer : IDisposable
     /// <param name="handlerSpans"></param>
     void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans);
 
+    /// <summary>
+    /// The parent span for the message pump. This is the entry point for the message pump
+    /// </summary>
+    /// <param name="operation">The <see cref="MessagePumpSpanOperation"/>. This should be Begin or End</param></param>
+    /// <param name="topic">The <see cref="RoutingKey"/> for this span</param>
+    /// <param name="messagingSystem">The <see cref="MessagingSystem"/> that we are receiving from</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
+    Activity CreateMessagePumpSpan(
+        MessagePumpSpanOperation operation,
+        RoutingKey topic,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions instrumentationOptions = InstrumentationOptions.All);
 }

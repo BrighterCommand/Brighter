@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -25,6 +26,10 @@ namespace Paramore.Brighter
         ///  Otherwise the CommandProcessor is a singleton.
         /// </summary>
         bool UseScoped { get; set; }
- 
+
+        /// <summary>
+        /// How detailed should the instrumentation of the Dispatcher operations be
+        /// </summary>
+        InstrumentationOptions InstrumentationOptions { get; set; }
     }
 }

@@ -63,7 +63,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = new BrighterOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
-            services.TryAddSingleton<IAmABrighterTracer>(new BrighterTracer());
 
             return BrighterHandlerBuilder(services, options);
         }
