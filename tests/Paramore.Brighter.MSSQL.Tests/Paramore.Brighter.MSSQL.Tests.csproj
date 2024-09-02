@@ -24,6 +24,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.MsSql\Paramore.Brighter.Inbox.MsSql.csproj" />
+      <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.MessagingGateway.MsSql\Paramore.Brighter.MessagingGateway.MsSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj" />
     </ItemGroup>

@@ -103,8 +103,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IBrighterBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
-                !a.IsDynamic && !a.FullName.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) &&
-                !a.FullName.StartsWith("System.", true, CultureInfo.InvariantCulture));
+                !a.IsDynamic && a.FullName?.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) != true &&
+                a.FullName?.StartsWith("System.", true, CultureInfo.InvariantCulture) != true);
 
             var assemblies = appDomainAssemblies.Concat(extraAssemblies).ToArray();
 
@@ -185,11 +185,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(assemblies));
 
             var transforms =
-                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
+                from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
-                from i in ti.ImplementedInterfaces
+                from i in ti.GetInterfaces()
                 where i == typeof(IAmAMessageTransformAsync)
-                select new { TransformType = ti.AsType() };
+                select new { TransformType = ti };
 
             foreach (var transform in transforms)
             {
@@ -203,11 +203,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             assemblies = assemblies.Concat(new[] { assembly });
             var subscribers =
-                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
+                from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
-                from i in ti.ImplementedInterfaces
+                from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType
-                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
+                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
 
             foreach (var subscriber in subscribers)
             {
@@ -218,11 +218,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private void RegisterMappersFromAssemblies(Assembly[] assemblies)
         {
             var mappers =
-                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
+                from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
-                from i in ti.ImplementedInterfaces
+                from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
-                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
+                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
 
             foreach (var mapper in mappers)
             {
@@ -233,11 +233,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private void RegisterAsyncMappersFromAssemblies(Assembly[] assemblies)
         {
             var mappers =
-                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
+                from ti in assemblies.SelectMany(GetLoadableTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
-                from i in ti.ImplementedInterfaces
+                from i in ti.GetInterfaces()
                 where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapperAsync<>)
-                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
+                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti };
 
             foreach (var mapper in mappers)
             {
@@ -245,5 +245,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
         }
 
+        private static Type[] GetLoadableTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                return e.Types;
+            }
+        }
     }
 }

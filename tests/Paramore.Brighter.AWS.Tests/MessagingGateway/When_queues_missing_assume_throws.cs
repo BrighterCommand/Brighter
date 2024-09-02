@@ -39,7 +39,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                     MakeChannels = OnMissingChannel.Create 
                 });
             
-           producer.ConfirmTopicExists(topicName); 
+           producer.ConfirmTopicExistsAsync(topicName).Wait(); 
             
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateChannel(subscription);
