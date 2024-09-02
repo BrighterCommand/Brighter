@@ -166,7 +166,7 @@ namespace Paramore.Brighter
             var transforms = new List<IAmAMessageTransform>();
 
             //Allowed to be null to avoid breaking v9 interfaces
-            if (_messageTransformerFactory == null)
+            if (_messageTransformerFactory is null)
             {
                 int i = transformAttributes.Count();
                 if (i > 0)
@@ -180,7 +180,7 @@ namespace Paramore.Brighter
             {
                 var transformType = attribute.GetHandlerType();
                 var transformer = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
-                if (transformer == null)
+                if (transformer is null)
                 {
                     throw new InvalidOperationException(string.Format("Message Transformer Factory could not create a transform of type {0}",
                         transformType.Name));

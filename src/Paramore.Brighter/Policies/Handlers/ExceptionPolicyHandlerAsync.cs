@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Policies.Handlers
             if (_initialized) return;
 
             var policies = (List<string>)initializerList[0];
-            policies.Each(p => _policies.Add(Context.Policies.Get<AsyncPolicy>(p)));
+            policies.Each(p => _policies.Add(Context!.Policies!.Get<AsyncPolicy>(p)));
             _initialized = true;
         }
 

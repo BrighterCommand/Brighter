@@ -37,21 +37,17 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="TMessage">The type of message to archive</typeparam>
     /// <typeparam name="TTransaction">The transaction type of the Db</typeparam>
-    public class OutboxArchiver<TMessage, TTransaction> where TMessage: Message
+    public class OutboxArchiver<TMessage, TTransaction>(
+        IAmAnExternalBusService bus,
+        IAmARequestContextFactory? requestContextFactory = null)
+        where TMessage : Message
     {
-        private readonly IAmAnExternalBusService _bus;
         private const string ARCHIVE_OUTBOX = "Archive Outbox";
         
         private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
-        private readonly IAmARequestContextFactory _requestContextFactory;
+        private readonly IAmARequestContextFactory _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
 
         private const string SUCCESS_MESSAGE = "Successfully archiver {NumberOfMessageArchived} out of {MessagesToArchive}, batch size : {BatchSize}";
-
-        public OutboxArchiver(IAmAnExternalBusService bus, IAmARequestContextFactory requestContextFactory = null)
-        {
-            _bus = bus;
-            _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
-        }
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
@@ -67,7 +63,7 @@ namespace Paramore.Brighter
             
             try
             {
-                _bus.Archive(dispatchedSince, requestContext);  
+                bus.Archive(dispatchedSince, requestContext);  
             }
             catch (Exception e)
             {
@@ -95,7 +91,7 @@ namespace Paramore.Brighter
             
             try
             {
-                await _bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
+                await bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
             }
             catch (Exception e)
             {

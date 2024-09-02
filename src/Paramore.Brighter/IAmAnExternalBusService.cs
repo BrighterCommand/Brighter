@@ -34,7 +34,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request pipeline</param>        
         /// <typeparam name="T">The type of the call</typeparam>
         /// <typeparam name="TResponse">The type of the response</typeparam>
-        void CallViaExternalBus<T, TResponse>(Message outMessage, RequestContext requestContext)
+        void CallViaExternalBus<T, TResponse>(Message outMessage, RequestContext? requestContext)
             where T : class, ICall where TResponse : class, IResponse;
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace Paramore.Brighter
         /// <param name="args"></param>
         /// <exception cref="InvalidOperationException">Thrown if there is no async outbox defined</exception>
         /// <exception cref="NullReferenceException">Thrown if a message cannot be found</exception>
-        void ClearOutbox(string[] posts, RequestContext requestContext, Dictionary<string, object> args = null);
+        void ClearOutbox(string[] posts, RequestContext requestContext, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// This is the clear outbox for explicit clearing of messages.
@@ -61,7 +61,7 @@ namespace Paramore.Brighter
             IEnumerable<string> posts,
             RequestContext requestContext,
             bool continueOnCapturedContext = true,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         );
 
@@ -77,7 +77,7 @@ namespace Paramore.Brighter
             TimeSpan minimumAge,
             bool useBulk,
             RequestContext requestContext,
-            Dictionary<string, object> args = null);
+            Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Given a request, run the transformation pipeline to create a message
@@ -111,7 +111,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
-        void CreateRequestFromMessage<TRequest>(Message message, RequestContext requestContext, out TRequest request)
+        void CreateRequestFromMessage<TRequest>(Message message, RequestContext? requestContext, out TRequest request)
             where TRequest : class, IRequest;
     }
     
@@ -135,10 +135,10 @@ namespace Paramore.Brighter
         Task AddToOutboxAsync(
             TMessage message,
             RequestContext requestContext,
-            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
+            IAmABoxTransactionProvider<TTransaction>? overridingTransactionProvider = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default,
-            string batchId = null);
+            string? batchId = null);
 
         /// <summary>
         /// Adds a message to the outbox
@@ -153,8 +153,8 @@ namespace Paramore.Brighter
         void AddToOutbox(
             TMessage message,
             RequestContext requestContext,
-            IAmABoxTransactionProvider<TTransaction> overridingTransactionProvider = null,
-            string batchId = null);
+            IAmABoxTransactionProvider<TTransaction>? overridingTransactionProvider = null,
+            string? batchId = null);
 
         /// <summary>
         /// Do we have an async outbox defined?
@@ -180,7 +180,7 @@ namespace Paramore.Brighter
         /// <param name="batchId">The Id of the batch to be flushed</param>
         /// <param name="transactionProvider">The Transaction provider</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        void EndBatchAddToOutbox(string batchId, IAmABoxTransactionProvider<TTransaction> transactionProvider, RequestContext requestContext);
+        void EndBatchAddToOutbox(string batchId, IAmABoxTransactionProvider<TTransaction>? transactionProvider, RequestContext requestContext);
 
         /// <summary>
         /// Flush the batch of Messages to the outbox.
@@ -192,7 +192,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TTransaction"></typeparam>
         /// <returns>Awaitable Task</returns>
         Task EndBatchAddToOutboxAsync(string batchId,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider, RequestContext requestContext,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider, RequestContext requestContext,
             CancellationToken cancellationToken);
     }
 }

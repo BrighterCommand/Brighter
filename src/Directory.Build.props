@@ -8,6 +8,8 @@
     <PackageProjectUrl>https://www.goparamore.io/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <SignAssembly>true</SignAssembly>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
 
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>

@@ -3,11 +3,13 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter
 {
-    public abstract class TransformPipelineAsync<TRequest> : IDisposable where TRequest : class, IRequest
+    public abstract class TransformPipelineAsync<TRequest>(
+        IAmAMessageMapperAsync<TRequest> messageMapper,
+        IEnumerable<IAmAMessageTransformAsync> transforms)  : IDisposable where TRequest : class, IRequest
     {
-        protected IAmAMessageMapperAsync<TRequest> MessageMapper;
-        protected IEnumerable<IAmAMessageTransformAsync> Transforms;
-        protected TransformLifetimeScopeAsync InstanceScope;
+        protected IAmAMessageMapperAsync<TRequest> MessageMapper = messageMapper;
+        protected IEnumerable<IAmAMessageTransformAsync> Transforms = transforms;
+        protected TransformLifetimeScopeAsync? InstanceScope;
 
         /// <summary>
         /// Disposes a pipeline builder, which will call release on the factory for any transforms generated for the pipeline 

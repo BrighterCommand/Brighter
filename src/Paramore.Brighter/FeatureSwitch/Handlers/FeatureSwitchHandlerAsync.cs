@@ -36,7 +36,7 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
     /// <typeparam name="TRequest">The type of the request</typeparam>
     public class FeatureSwitchHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
-        private Type _handler;
+        private Type? _handler;
         private FeatureSwitchStatus _status;
 
         /// <summary>
@@ -54,6 +54,7 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
         /// or stops execution of the feature switched handler.
         /// </summary>
         /// <param name="command">The command.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>TRequest.</returns>
         public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
 
             if (featureEnabled is FeatureSwitchStatus.Config)
             {              
-                featureEnabled = Context.FeatureSwitches?.StatusOf(_handler) ?? FeatureSwitchStatus.On;
+                featureEnabled = Context.FeatureSwitches?.StatusOf(_handler!) ?? FeatureSwitchStatus.On;
             }
 
             return featureEnabled is FeatureSwitchStatus.Off 

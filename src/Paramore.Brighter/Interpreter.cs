@@ -30,8 +30,8 @@ namespace Paramore.Brighter
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {
         private readonly IAmASubscriberRegistry _registry;
-        private readonly IAmAHandlerFactorySync _handlerFactorySync;
-        private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
+        private readonly IAmAHandlerFactorySync? _handlerFactorySync;
+        private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
 
         internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactorySync handlerFactorySync)
             : this(registry, handlerFactorySync, null)
@@ -41,7 +41,7 @@ namespace Paramore.Brighter
             : this(registry, null, asyncHandlerFactory)
         { }
 
-        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory)
+        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactorySync? handlerFactorySync, IAmAHandlerFactoryAsync? asyncHandlerFactory)
         {
             _registry = registry;
             _handlerFactorySync = handlerFactorySync;
@@ -52,7 +52,7 @@ namespace Paramore.Brighter
         {
             return new RequestHandlers<TRequest>(
                 _registry.Get<TRequest>()
-                    .Select(handlerType => _handlerFactorySync.Create(handlerType))
+                    .Select(handlerType => _handlerFactorySync!.Create(handlerType))
                     .Cast<IHandleRequests<TRequest>>());
         }
 
@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         {
             return new AsyncRequestHandlers<TRequest>(
                 _registry.Get<TRequest>()
-                    .Select(handlerType => _asyncHandlerFactory.Create(handlerType))
+                    .Select(handlerType => _asyncHandlerFactory!.Create(handlerType))
                     .Cast<IHandleRequestsAsync<TRequest>>());
         }
     }

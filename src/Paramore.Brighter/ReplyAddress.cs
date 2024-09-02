@@ -71,6 +71,6 @@ namespace Paramore.Brighter
         /// Gets the correlation identifier.
         /// </summary>
         /// <value>The correlation identifier.</value>
-        public string CorrelationId { get; set; }
+        public string? CorrelationId { get; set; }
     }
 }

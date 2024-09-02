@@ -36,10 +36,10 @@ namespace Paramore.Brighter.Monitoring.Handlers
     public class MonitorHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
         private readonly IAmAControlBusSenderAsync _controlBusSender;
-        private bool _isMonitoringEnabled;
-        private string _handlerName;
-        private string _instanceName;
-        private string _handlerFullAssemblyName;
+        private readonly bool _isMonitoringEnabled;
+        private string? _handlerName;
+        private readonly string? _instanceName;
+        private string? _handlerFullAssemblyName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MonitorHandlerAsync{T}"/> class.
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
         {
             if (!_isMonitoringEnabled) return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-            ExceptionDispatchInfo capturedException = null;
+            ExceptionDispatchInfo? capturedException = null;
             var timeBeforeHandle = DateTime.UtcNow; 
             try
             {

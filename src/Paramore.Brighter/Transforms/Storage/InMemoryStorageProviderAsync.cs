@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <returns>The luggage as a stream</returns>
         public async Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default)
         {
-            if (_contents.TryGetValue(claimCheck, out string value))
+            if (_contents.TryGetValue(claimCheck, out string? value))
             {
                 var stream = new MemoryStream();
                 var writer = new StreamWriter(stream);

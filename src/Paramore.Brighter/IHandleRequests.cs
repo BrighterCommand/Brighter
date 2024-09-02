@@ -39,7 +39,7 @@ namespace Paramore.Brighter
         /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
         /// </summary>
         /// <value>The context.</value>
-        IRequestContext Context { get; set; }
+        IRequestContext? Context { get; set; }
         
         /// <summary>
         /// Describes the path. To support pipeline tracing. Generally return the name of this handler to <see cref="IAmAPipelineTracer"/>,
@@ -56,7 +56,7 @@ namespace Paramore.Brighter
         /// for an attribute-handler pair used to provide orthogonal QoS to the pipeline.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        void InitializeFromAttributeParams(params object[] initializerList);
+        void InitializeFromAttributeParams(params object?[] initializerList);
 
         /// <summary>
         /// Gets the name of the Handler. Useful for diagnostic purposes

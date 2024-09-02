@@ -45,7 +45,7 @@ namespace Paramore.Brighter
         /// Gets the channel.
         /// </summary>
         /// <value>The channel.</value>
-        public IAmAChannelFactory ChannelFactory { get; set; }
+        public IAmAChannelFactory? ChannelFactory { get; set; }
 
         /// <summary>
         /// Gets the name we use for this channel. In platforms where queues have names, will be used as the name of the queue
@@ -144,9 +144,9 @@ namespace Paramore.Brighter
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
             Type dataType,
-            SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -154,15 +154,15 @@ namespace Paramore.Brighter
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)
         {
             DataType = dataType;
-            Name = name ?? new SubscriptionName(dataType.FullName);
-            ChannelName = channelName ?? new ChannelName(dataType.FullName);
-            RoutingKey = routingKey ?? new RoutingKey(dataType.FullName);
+            Name = name ?? new SubscriptionName(dataType.FullName!);
+            ChannelName = channelName ?? new ChannelName(dataType.FullName!);
+            RoutingKey = routingKey ?? new RoutingKey(dataType.FullName!);
             BufferSize = bufferSize;
             NoOfPerformers = noOfPerformers;
             timeOut ??= TimeSpan.FromMilliseconds(300);
@@ -205,9 +205,9 @@ namespace Paramore.Brighter
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
-            SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int noOfPerformers = 1,
             int bufferSize = 1,
             TimeSpan? timeOut = null,
@@ -215,7 +215,7 @@ namespace Paramore.Brighter
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)

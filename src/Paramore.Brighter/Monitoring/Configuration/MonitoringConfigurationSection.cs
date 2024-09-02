@@ -38,6 +38,6 @@ namespace Paramore.Brighter.Monitoring.Configuration
         /// <summary>
         /// What is the instance we are reporting from - used to allow aggregation of logs for a particular node.
         /// </summary>
-        public string InstanceName { get; set; }
+        public string? InstanceName { get; set; }
     }
 }

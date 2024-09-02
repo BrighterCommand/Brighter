@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
         /// </summary>
         /// <value>The context.</value>
-        public IRequestContext Context { get; set; }
+        public IRequestContext? Context { get; set; }
 
         /// <summary>
         /// Dispose of this transform; a no-op

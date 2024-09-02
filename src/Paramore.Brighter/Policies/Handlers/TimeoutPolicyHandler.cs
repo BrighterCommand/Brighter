@@ -151,13 +151,13 @@ namespace Paramore.Brighter.Policies.Handlers
             var timer = new Timer(state =>
                 {
                     // Recover your state information
-                    var myTcs = (TaskCompletionSource<TRequest>)state;
+                    var myTcs = (TaskCompletionSource<TRequest>?)state;
 
                     //signal cancellation to tasks that have run out of time - its up to them to try and abort
                     cancellationTokenSource.Cancel();
 
                     // Fault our proxy with a TimeoutException
-                    myTcs.TrySetException(new TimeoutException());
+                    myTcs!.TrySetException(new TimeoutException());
                 },
                 tcs,
                 millisecondsTimeout,
@@ -168,10 +168,10 @@ namespace Paramore.Brighter.Policies.Handlers
             task.ContinueWith((antecedent, state) =>
                 {
                     // Recover our state data
-                    var tuple = (Tuple<Timer, TaskCompletionSource<TRequest>>)state;
+                    var tuple = (Tuple<Timer, TaskCompletionSource<TRequest>>?)state;
 
                     // Cancel the Timer
-                    tuple.Item1.Dispose();
+                    tuple!.Item1.Dispose();
 
                     // Marshal results to proxy
                     MarshalTaskResults(antecedent, tuple.Item2);
@@ -190,7 +190,7 @@ namespace Paramore.Brighter.Policies.Handlers
             switch (source.Status)
             {
                 case TaskStatus.Faulted:
-                    proxy.TrySetException(source.Exception);
+                    proxy.TrySetException(source.Exception!);
                     break;
                 case TaskStatus.Canceled:
                     proxy.TrySetCanceled();

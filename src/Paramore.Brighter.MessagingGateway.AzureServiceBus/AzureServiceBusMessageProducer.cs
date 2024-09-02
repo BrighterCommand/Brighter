@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         /// <summary>
         /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
@@ -246,7 +246,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
             azureServiceBusMessage.ContentType = message.Header.ContentType;
             azureServiceBusMessage.MessageId = message.Header.Id;
-            if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object value))
+            if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
                 azureServiceBusMessage.SessionId = value.ToString();
 
             return azureServiceBusMessage;

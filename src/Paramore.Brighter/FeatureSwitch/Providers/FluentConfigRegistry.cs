@@ -61,7 +61,7 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
     {
         private readonly IDictionary<Type, FeatureSwitchStatus> _switches;
 
-        private Type _nextType;
+        private Type? _nextType;
 
         private FluentConfigRegistryBuilder()
         {

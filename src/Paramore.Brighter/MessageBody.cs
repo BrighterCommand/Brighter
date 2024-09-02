@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The message body as a byte array.
         /// </summary>
-        public byte[] Bytes { get; private set; }
+        public byte[]? Bytes { get; private set; }
 
         /// <summary>
         /// The type of message encoded into Bytes.  A hint for deserialization that 
@@ -112,14 +112,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="bytes">The Body of the Message</param>
         /// <param name="contentType">The content type of message encoded in body</param>
-        /// <param name="encoding"></param>
+        /// <param name="characterEncoding"></param>
         [JsonConstructor]
-        public MessageBody(byte[] bytes, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(byte[]? bytes, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             ContentType = contentType;
             CharacterEncoding = characterEncoding;
             
-            if (bytes == null)
+            if (bytes is null)
             {
                 Bytes = Array.Empty<byte>();
                 return;

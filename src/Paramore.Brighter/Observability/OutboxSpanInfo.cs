@@ -48,10 +48,10 @@ public record OutboxSpanInfo(
     OutboxDbOperation dbOperation, 
     string dbTable,
     int serverPort = 0, 
-    string dbInstanceId = null, 
-    string dbStatement = null,
-    string dbUser = null,
-    string networkPeerAddress = null,
+    string? dbInstanceId = null, 
+    string? dbStatement = null,
+    string? dbUser = null,
+    string? networkPeerAddress = null,
     int networkPeerPort = 0,
-    string serverAddress = null,
-    Dictionary<string, string> dbAttributes = null);
+    string? serverAddress = null,
+    Dictionary<string, string>? dbAttributes = null);

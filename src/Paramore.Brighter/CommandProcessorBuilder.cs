@@ -78,18 +78,18 @@ namespace Paramore.Brighter
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedInstrumentation, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private IAmARequestContextFactory _requestContextFactory;
-        private IAmASubscriberRegistry _registry;
-        private IAmAHandlerFactory _handlerFactory;
-        private IPolicyRegistry<string> _policyRegistry;
-        private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
-        private IAmAnExternalBusService _bus;
+        private IAmARequestContextFactory? _requestContextFactory;
+        private IAmASubscriberRegistry? _registry;
+        private IAmAHandlerFactory? _handlerFactory;
+        private IPolicyRegistry<string>? _policyRegistry;
+        private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
+        private IAmAnExternalBusService? _bus;
         private bool _useRequestReplyQueues;
-        private IAmAChannelFactory _responseChannelFactory;
-        private IEnumerable<Subscription> _replySubscriptions;
-        private InboxConfiguration _inboxConfiguration;
-        private InstrumentationOptions _instrumetationOptions;
-        private IAmABrighterTracer _tracer;
+        private IAmAChannelFactory? _responseChannelFactory;
+        private IEnumerable<Subscription>? _replySubscriptions;
+        private InboxConfiguration? _inboxConfiguration;
+        private InstrumentationOptions? _instrumetationOptions;
+        private IAmABrighterTracer? _tracer;
 
         private CommandProcessorBuilder()
         {
@@ -172,9 +172,9 @@ namespace Paramore.Brighter
         public INeedInstrumentation ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
-            IAmAChannelFactory responseChannelFactory = null, 
-            IEnumerable<Subscription> subscriptions = null,
-            InboxConfiguration inboxConfiguration = null
+            IAmAChannelFactory? responseChannelFactory = null, 
+            IEnumerable<Subscription>? subscriptions = null,
+            InboxConfiguration? inboxConfiguration = null
         )
         {
             _inboxConfiguration = inboxConfiguration;
@@ -219,7 +219,7 @@ namespace Paramore.Brighter
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> that we will use to instrument the Command Processor</param>
         /// <param name="instrumentationOptions">A <see cref="InstrumentationOptions"/> that tells us how detailed the instrumentation should be</param>
         /// <returns></returns>
-        public INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions)
+        public INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions)
         {
             _tracer = tracer; 
            _instrumetationOptions = instrumentationOptions;
@@ -254,12 +254,36 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
+            if(_registry == null)
+                throw new ConfigurationException(
+                    "A SubscriberRegistry must be provided to construct a command processor");
+            if(_handlerFactory == null)
+                throw new ConfigurationException(
+                    "A HandlerFactory must be provided to construct a command processor");
+            if(_requestContextFactory == null)
+                throw new ConfigurationException(
+                    "A RequestContextFactory must be provided to construct a command processor");
+            if(_policyRegistry == null)
+                throw new ConfigurationException(
+                    "A PolicyRegistry must be provided to construct a command processor");
+            if(_featureSwitchRegistry == null)
+                throw new ConfigurationException(
+                    "A FeatureSwitchRegistry must be provided to construct a command processor");
+            if(_instrumetationOptions == null)
+                throw new ConfigurationException(
+                    "InstrumentationOptions must be provided to construct a command processor");
+            
             if (_bus == null) 
             {
                 return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory, 
                     requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
-                    featureSwitchRegistry: _featureSwitchRegistry, instrumentationOptions: _instrumetationOptions);
+                    featureSwitchRegistry: _featureSwitchRegistry, instrumentationOptions: _instrumetationOptions.Value);
             }
+            
+            if(_inboxConfiguration == null)
+                throw new ConfigurationException(
+                    "InboxConfiguration must be provided to construct a command processor");
+            if(_tracer == null)
 
             if (!_useRequestReplyQueues)
                 return new CommandProcessor(
@@ -271,7 +295,7 @@ namespace Paramore.Brighter
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
-                    instrumentationOptions: _instrumetationOptions
+                    instrumentationOptions: _instrumetationOptions.Value
                 );
             
             if (_useRequestReplyQueues)
@@ -286,7 +310,7 @@ namespace Paramore.Brighter
                     replySubscriptions: _replySubscriptions,
                     responseChannelFactory: _responseChannelFactory,
                     tracer: _tracer,
-                    instrumentationOptions: _instrumetationOptions
+                    instrumentationOptions: _instrumetationOptions.Value
                 );
 
             throw new ConfigurationException(
@@ -354,9 +378,9 @@ namespace Paramore.Brighter
         INeedInstrumentation ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
-            IAmAChannelFactory responseChannelFactory = null, 
-            IEnumerable<Subscription> subscriptions = null,
-            InboxConfiguration inboxConfiguration = null
+            IAmAChannelFactory? responseChannelFactory = null, 
+            IEnumerable<Subscription>? subscriptions = null,
+            InboxConfiguration? inboxConfiguration = null
             );
 
         /// <summary>
@@ -380,7 +404,7 @@ namespace Paramore.Brighter
         /// InstrumentationOptions.All - all of the above
         /// </param>
         /// <returns>INeedARequestContext</returns>
-        INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions); 
+        INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer? tracer, InstrumentationOptions instrumentationOptions); 
         
         /// <summary>
         /// We don't need instrumentation of the CommandProcessor

@@ -57,9 +57,9 @@ namespace Paramore.Brighter
         /// Initializers the parameters.
         /// </summary>
         /// <returns>System.Object[].</returns>
-        public virtual object[] InitializerParams()
+        public virtual object?[] InitializerParams()
         {
-            return new object[0];
+            return [];
         }
 
         //In which order should we run this, within the pre or post sequence for the main target?

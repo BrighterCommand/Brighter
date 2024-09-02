@@ -35,7 +35,7 @@ namespace Paramore.Brighter
         private readonly int _batchSize;
         private readonly bool _useBulk;
         private readonly IAmARequestContextFactory _requestContextFactory;
-        private readonly Dictionary<string, object> _args;
+        private readonly Dictionary<string, object>? _args;
 
         private const string IMPLICITCLEAROUTBOX = "Implicit Clear Outbox";
 
@@ -54,7 +54,7 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             int batchSize = 100,
             bool useBulk = false,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object>? args = null)
         {
             _timeSinceSent = timeSinceSent;
             _commandProcessor = commandProcessor;

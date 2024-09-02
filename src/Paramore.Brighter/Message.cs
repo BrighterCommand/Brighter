@@ -59,9 +59,9 @@ namespace Paramore.Brighter
         /// Gets the identifier of the message.
         /// </summary>
         /// <value>The identifier.</value>
-        public string Id
+        public string? Id
         {
-            get { return Header.Id; }
+            get { return Header!.Id; }
         }
         
         /// <summary>
@@ -164,7 +164,7 @@ namespace Paramore.Brighter
         {
             unchecked
             {
-                return ((Header != null ? Header.GetHashCode() : 0) * 397) ^ (Body != null ? Body.GetHashCode() : 0);
+                return ((Header is not null ? Header.GetHashCode() : 0) * 397) ^ (Body is not null ? Body.GetHashCode() : 0);
             }
         }
 

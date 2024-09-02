@@ -54,13 +54,13 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandlerAsync<TRequest>>();
 
-        private IHandleRequestsAsync<TRequest> _successor;
+        private IHandleRequestsAsync<TRequest>? _successor;
 
         /// <summary>
         /// Gets or sets the context.
         /// </summary>
         /// <value>The context.</value>
-        public IRequestContext Context { get; set; }
+        public IRequestContext? Context { get; set; }
 
         /// <summary>
         /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
@@ -169,9 +169,9 @@ namespace Paramore.Brighter
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public virtual void InitializeFromAttributeParams(params object[] initializerList) { }
+        public virtual void InitializeFromAttributeParams(params object?[] initializerList) { }
 
-        internal MethodInfo FindHandlerMethod()
+        internal MethodInfo? FindHandlerMethod()
         {
             var methods = GetType().GetMethods();
             return methods

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Policies.Handlers
         /// </summary>
         public const string CAUSE_OF_FALLBACK_EXCEPTION = "Fallback_Exception_Cause";
 
-        private Func<TRequest, TRequest> _exceptionHandlerFunc;
+        private Func<TRequest, TRequest>? _exceptionHandlerFunc;
 
         #region Overrides of RequestHandler<TRequest>
 
@@ -73,6 +73,8 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest command)
         {
+            if (_exceptionHandlerFunc is null)
+                throw new ArgumentException("ExceptionHandler must be set before handling.");
             return _exceptionHandlerFunc(command);
         }
 

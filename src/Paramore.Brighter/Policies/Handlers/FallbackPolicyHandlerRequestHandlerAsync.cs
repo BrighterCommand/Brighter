@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Policies.Handlers
         /// </summary>
         public const string CAUSE_OF_FALLBACK_EXCEPTION = "Fallback_Exception_Cause";
 
-        private Func<TRequest, CancellationToken, Task<TRequest>> _exceptionHandlerFunc;
+        private Func<TRequest, CancellationToken, Task<TRequest>>? _exceptionHandlerFunc;
 
         /// <summary>
         /// Initializes from attribute parameters.
@@ -71,6 +71,8 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <returns>TRequest.</returns>
         public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
+            if (_exceptionHandlerFunc is null)
+                throw new ArgumentException("ExceptionHandler must be set before handling.");
             return await _exceptionHandlerFunc(command, cancellationToken);
         }
 

@@ -40,9 +40,9 @@ namespace Paramore.Brighter.Monitoring.Handlers
     {
         readonly IAmAControlBusSender _controlBusSender;
         private readonly bool _isMonitoringEnabled;
-        private string _handlerName;
-        private readonly string _instanceName;
-        private string _handlerFullAssemblyName;
+        private string? _handlerName;
+        private readonly string? _instanceName;
+        private string? _handlerFullAssemblyName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.

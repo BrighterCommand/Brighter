@@ -39,6 +39,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task"/>.</returns>

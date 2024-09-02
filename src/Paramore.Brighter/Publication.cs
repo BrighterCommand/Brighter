@@ -50,7 +50,7 @@ namespace Paramore.Brighter
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
         /// Identifies the schema that data adheres to. Incompatible changes to the schema SHOULD be reflected by a different URI. 
         /// </summary>
-        public Uri DataSchema { get; set; }
+        public Uri? DataSchema { get; set; }
         
         /// <summary>
         /// What do we do with infrastructure dependencies for the producer?
@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The type of the request that we expect to publish on this channel
         /// </summary>
-        public Type RequestType { get; set; }
+        public Type? RequestType { get; set; }
         
         /// <summary>
         /// REQUIRED
@@ -81,12 +81,12 @@ namespace Paramore.Brighter
         /// but the source identifier alone might not be sufficient as a qualifier for any specific event if the
         /// source context has internal sub-structure.
         /// </summary>
-        public string Subject { get; set; }
+        public string? Subject { get; set; }
         
         /// <summary>
         /// The topic this publication is for
         /// </summary>
-        public RoutingKey Topic { get; set; }
+        public RoutingKey? Topic { get; set; }
 
         /// <summary>
         /// REQUIRED

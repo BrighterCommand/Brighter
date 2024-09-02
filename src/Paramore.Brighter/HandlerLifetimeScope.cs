@@ -34,10 +34,10 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<HandlerLifetimeScope>();
 
-        private readonly IAmAHandlerFactorySync _handlerFactorySync;
+        private readonly IAmAHandlerFactorySync? _handlerFactorySync;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
-        private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
+        private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
 
         public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync) 
             : this(handlerFactorySync, null)
@@ -47,7 +47,7 @@ namespace Paramore.Brighter
             : this(null, asyncHandlerFactory)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory) 
+        public HandlerLifetimeScope(IAmAHandlerFactorySync? handlerFactorySync, IAmAHandlerFactoryAsync? asyncHandlerFactory) 
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
@@ -76,14 +76,14 @@ namespace Paramore.Brighter
             _trackedObjects.Each((trackedItem) =>
             {
                 //free disposable items
-                _handlerFactorySync.Release(trackedItem);
+                _handlerFactorySync?.Release(trackedItem);
                 s_logger.LogDebug("Releasing handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             _trackedAsyncObjects.Each(trackedItem =>
             {
                 //free disposable items
-                _asyncHandlerFactory.Release(trackedItem);
+                _asyncHandlerFactory?.Release(trackedItem);
                 s_logger.LogDebug("Releasing async handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 

@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns>IAmAMessageMapperAsync&lt;T&gt;.</returns>
-        IAmAMessageMapperAsync<T> GetAsync<T>() where T : class, IRequest;
+        IAmAMessageMapperAsync<T>? GetAsync<T>() where T : class, IRequest;
         /// <summary>
         /// Registers this instance.
         /// </summary>

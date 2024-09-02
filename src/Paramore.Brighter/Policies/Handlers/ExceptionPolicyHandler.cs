@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Policies.Handlers
             
             //we expect the first and only parameter to be a string
             var policies = (List<string>)initializerList[0];
-            policies.Each(p => _policies.Add(Context.Policies.Get<Policy>(p)));
+            policies.Each(p => _policies.Add(Context!.Policies!.Get<Policy>(p)));
             _initialized = true;
         }
 

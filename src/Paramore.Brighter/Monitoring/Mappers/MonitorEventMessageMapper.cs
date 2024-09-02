@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Monitoring.Mappers
 {
     public class MonitorEventMessageMapper : IAmAMessageMapper<MonitorEvent>
     {
-        public IRequestContext Context { get; set; }
+        public IRequestContext? Context { get; set; }
 
         /// <summary>
         /// Maps to message.
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Monitoring.Mappers
         /// <returns>TRequest.</returns>
         public MonitorEvent MapToRequest(Message message)
         {
-            return JsonSerializer.Deserialize<MonitorEvent>(message.Body.Value, JsonSerialisationOptions.Options);
+            return JsonSerializer.Deserialize<MonitorEvent>(message.Body.Value, JsonSerialisationOptions.Options)!;
         }
     }
 }

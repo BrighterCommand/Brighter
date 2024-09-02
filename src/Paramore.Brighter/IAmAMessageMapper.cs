@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
         /// </summary>
         /// <value>The context.</value>
-        IRequestContext Context { get; set; }
+        IRequestContext? Context { get; set; }
         
         /// <summary>
         /// Maps to message.
