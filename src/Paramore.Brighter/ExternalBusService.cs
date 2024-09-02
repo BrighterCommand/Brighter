@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         //bool should be made thread-safe by locking the object
         private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
 
-        private DateTimeOffset _lastOutStandingMessageCheckAt = DateTime.UtcNow;
+        private DateTimeOffset _lastOutStandingMessageCheckAt = DateTimeOffset.UtcNow;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;

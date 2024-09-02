@@ -360,7 +360,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default)
         {
             return WriteToStoreAsync(null,
-                connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTimeOffset.Now), null,
+                connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTimeOffset.UtcNow), null,
                 cancellationToken);
         }
 

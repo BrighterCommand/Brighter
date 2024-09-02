@@ -99,7 +99,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 {
                     IAmAnExternalBusService externalBusService = scope.ServiceProvider.GetService<IAmAnExternalBusService>();
                     
-                    await externalBusService.ArchiveAsync(TimeSpan.FromHours(options.MinimumAge),  new RequestContext(), cancellationToken);
+                    await externalBusService.ArchiveAsync(options.MinimumAge,  new RequestContext(), cancellationToken);
                 }
                 catch (Exception e)
                 {

@@ -90,12 +90,12 @@ builder.Services.AddBrighter(options =>
     configure.TransactionProvider = makeOutbox.transactionProvider;
     configure.ConnectionProvider = makeOutbox.connectionProvider;
     configure.MaxOutStandingMessages = 5;
-    configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+    configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
 })
 .UseOutboxSweeper(options =>
 {
     options.TimerInterval = 3;
-    options.MinimumMessageAge = 1000;
+    options.MinimumMessageAge = TimeSpan.FromSeconds(1);
     options.BatchSize = 10;
     options.UseBulk = false;
 });

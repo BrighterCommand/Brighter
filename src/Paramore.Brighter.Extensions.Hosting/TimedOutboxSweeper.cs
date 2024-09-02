@@ -115,7 +115,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                     IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
 
                     var outBoxSweeper = new OutboxSweeper(
-                        timeSinceSent: TimeSpan.FromMilliseconds(_options.MinimumMessageAge),
+                        timeSinceSent: _options.MinimumMessageAge,
                         commandProcessor: commandProcessor,
                         new InMemoryRequestContextFactory(),
                         _options.BatchSize,

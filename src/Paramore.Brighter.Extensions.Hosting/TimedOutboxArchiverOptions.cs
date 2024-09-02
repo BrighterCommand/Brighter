@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.Extensions.Hosting
 {
     public class TimedOutboxArchiverOptions
@@ -34,6 +36,6 @@ namespace Paramore.Brighter.Extensions.Hosting
         /// <summary>
         /// The minimum age in hours to Archive
         /// </summary>
-        public int MinimumAge { get; set; } = 24;
+        public TimeSpan MinimumAge { get; set; } = TimeSpan.FromHours(24);
     }
 }

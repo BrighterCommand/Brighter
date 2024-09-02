@@ -42,7 +42,7 @@ public record NodeStatusEvent : IEvent
     /// <summary>
     /// Timestamp of Status Event
     /// </summary>
-    public DateTimeOffset TimeStamp { get; init; } = DateTimeOffset.Now;
+    public DateTimeOffset TimeStamp { get; init; } = DateTimeOffset.UtcNow;
     
     /// <summary>
     /// The version of the running process

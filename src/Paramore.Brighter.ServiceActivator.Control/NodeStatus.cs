@@ -30,7 +30,7 @@ public record NodeStatus
     /// <summary>
     /// Timestamp of Status Event
     /// </summary>
-    public DateTimeOffset TimeStamp { get; } = DateTimeOffset.Now;
+    public DateTimeOffset TimeStamp { get; } = DateTimeOffset.UtcNow;
 
     /// <summary>
     /// The version of the running process
