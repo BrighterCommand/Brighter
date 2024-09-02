@@ -231,7 +231,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}Timestamp",
-                    DbType = DbType.DateTime,
+                    DbType = DbType.DateTimeOffset,
                     Value = (object)message.Header.TimeStamp.ToUniversalTime() ?? DBNull.Value
                 }, //always store in UTC, as this is how we query messages
                 new SqlParameter
