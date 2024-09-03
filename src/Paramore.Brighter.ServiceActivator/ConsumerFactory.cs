@@ -30,15 +30,15 @@ namespace Paramore.Brighter.ServiceActivator
     internal class ConsumerFactory<TRequest> : IConsumerFactory where TRequest : class, IRequest
     {
         private readonly IAmACommandProcessorProvider _commandProcessorProvider;
-        private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
+        private readonly IAmAMessageMapperRegistry? _messageMapperRegistry;
         private readonly Subscription _subscription;
-        private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
+        private readonly IAmAMessageTransformerFactory? _messageTransformerFactory;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IAmABrighterTracer _tracer;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly ConsumerName _consumerName;
-        private readonly IAmAMessageMapperRegistryAsync _messageMapperRegistryAsync;
-        private readonly IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
+        private readonly IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
+        private readonly IAmAMessageTransformerFactoryAsync? _messageTransformerFactoryAsync;
 
         public ConsumerFactory(
             IAmACommandProcessorProvider commandProcessorProvider,
@@ -88,9 +88,15 @@ namespace Paramore.Brighter.ServiceActivator
 
         private Consumer CreateBlocking()
         {
+            if (_messageMapperRegistry is null || _messageTransformerFactory is null)
+                throw new ArgumentException("Message Mapper Registry and Transform factory must be set");
+            
+            if (_subscription.ChannelFactory is null)
+                throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
+            
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
             var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessorProvider, _messageMapperRegistry, 
-                _messageTransformerFactory, _requestContextFactory, _tracer, _instrumentationOptions)
+                _messageTransformerFactory, _requestContextFactory, channel, _tracer, _instrumentationOptions)
             {
                 Channel = channel,
                 TimeOut = _subscription.TimeOut,
@@ -104,9 +110,15 @@ namespace Paramore.Brighter.ServiceActivator
 
         private Consumer CreateAsync()
         {
+            if (_messageMapperRegistryAsync is null || _messageTransformerFactoryAsync is null)
+                throw new ArgumentException("Message Mapper Registry and Transform factory must be set");
+
+            if (_subscription.ChannelFactory is null)
+                throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
+            
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
             var messagePump = new MessagePumpAsync<TRequest>(_commandProcessorProvider, _messageMapperRegistryAsync, 
-                _messageTransformerFactoryAsync, _requestContextFactory, _tracer, _instrumentationOptions)
+                _messageTransformerFactoryAsync, _requestContextFactory, channel, _tracer, _instrumentationOptions)
             {
                 Channel = channel,
                 TimeOut = _subscription.TimeOut,

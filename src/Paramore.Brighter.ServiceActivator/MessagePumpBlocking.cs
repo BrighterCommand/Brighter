@@ -55,9 +55,10 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistry messageMapperRegistry, 
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmABrighterTracer tracer = null,
+            IAmAChannel channel,
+            IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
-            : base(commandProcessorProvider, requestContextFactory, tracer, instrumentationOptions)
+            : base(commandProcessorProvider, requestContextFactory, tracer, channel, instrumentationOptions)
         {
             var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();

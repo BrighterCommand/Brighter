@@ -54,7 +54,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private readonly IAmARequestContextFactory _requestContextFactory;
-        private readonly IAmABrighterTracer _tracer;
+        private readonly IAmABrighterTracer? _tracer;
         private readonly InstrumentationOptions _instrumentationOptions;
         private int _unacceptableMessageCount;
 
@@ -68,17 +68,20 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="commandProcessorProvider">Provides a correctly scoped command processor </param>
         /// <param name="requestContextFactory">Provides a request context</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
+        /// <param name="channel"></param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         protected MessagePump(
             IAmACommandProcessorProvider commandProcessorProvider, 
             IAmARequestContextFactory requestContextFactory,
-            IAmABrighterTracer tracer,
+            IAmABrighterTracer? tracer,
+            IAmAChannel channel,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             CommandProcessorProvider = commandProcessorProvider;
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
+            Channel = channel;
         }
 
         /// <summary>
@@ -137,8 +140,8 @@ namespace Paramore.Brighter.ServiceActivator
 
                 s_logger.LogDebug("MessagePump: Receiving messages from channel {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
 
-                Activity span = null;
-                Message message = null;
+                Activity? span = null;
+                Message? message = null;
                 try
                 {
                     message = Channel.Receive(TimeOut);
@@ -167,7 +170,7 @@ namespace Paramore.Brighter.ServiceActivator
                     _tracer?.EndSpan(errorSpan );
                 }
 
-                if (message == null)
+                if (message is null)
                 {
                      Channel.Dispose();
                      span?.SetStatus(ActivityStatusCode.Error, "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
@@ -332,7 +335,7 @@ namespace Paramore.Brighter.ServiceActivator
             _unacceptableMessageCount++;
         }
         
-        private RequestContext InitRequestContext(Activity span, Message message)
+        private RequestContext InitRequestContext(Activity? span, Message message)
         {
             var context = _requestContextFactory.Create();
             context.Span = span;
@@ -363,7 +366,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 if (message.HandledCountReached(RequeueCount))
                 {
-                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object value) ? value.ToString() : null;
+                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value.ToString() : null;
 
                     s_logger.LogError(
                         "MessagePump: Have tried {RequeueCount} times to handle this message {Id}{OriginalMessageId} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}, dropping message.",

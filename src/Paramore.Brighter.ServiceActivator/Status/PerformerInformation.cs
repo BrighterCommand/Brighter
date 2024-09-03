@@ -1,8 +1,8 @@
 namespace Paramore.Brighter.ServiceActivator.Status
 {
-    public class PerformerInformation
+    public class PerformerInformation (string name, ConsumerState state)
     {
-        public string Name { get; set; }
-        public ConsumerState State { get; set; }
+        public string Name { get; } = name;
+        public ConsumerState State { get; } = state;
     }
 }

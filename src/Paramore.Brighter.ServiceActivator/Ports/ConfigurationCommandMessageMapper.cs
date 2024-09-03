@@ -7,7 +7,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports
 {
     public class ConfigurationCommandMessageMapper : IAmAMessageMapper<ConfigurationCommand>
     {
-        public IRequestContext Context { get; set; }
+        public IRequestContext? Context { get; set; }
 
         public Message MapToMessage(ConfigurationCommand request, Publication publication)
         {
@@ -21,7 +21,8 @@ namespace Paramore.Brighter.ServiceActivator.Ports
 
         public ConfigurationCommand MapToRequest(Message message)
         {
-            return JsonSerializer.Deserialize<ConfigurationCommand>(message.Body.Value, JsonSerialisationOptions.Options);
+            return JsonSerializer.Deserialize<ConfigurationCommand>(message.Body.Value,
+                JsonSerialisationOptions.Options) ?? throw new ArgumentException("Message body must not be null");
         }
 
     }

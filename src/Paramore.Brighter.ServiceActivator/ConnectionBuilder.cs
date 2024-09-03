@@ -171,6 +171,11 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Subscription Build()
         {
+            if (_type is null) throw new ArgumentException("Cannot build connection without a Type");
+            if (_name is null) throw new ArgumentException("Cannot build connection without a Name");
+            if (_channelName is null) throw new ArgumentException("Cannot build connection without a Channel Name");
+            if (_routingKey is null) throw new ArgumentException("Cannot build connection without a Routing Key");
+            
             return new Subscription(_type,
                 new SubscriptionName(_name),
                 new ChannelName(_channelName),
