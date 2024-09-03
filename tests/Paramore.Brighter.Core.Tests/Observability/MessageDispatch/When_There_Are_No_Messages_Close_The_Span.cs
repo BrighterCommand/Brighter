@@ -70,7 +70,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
-                new InMemoryRequestContextFactory(), tracer, instrumentationOptions)
+                new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = 1000
             };

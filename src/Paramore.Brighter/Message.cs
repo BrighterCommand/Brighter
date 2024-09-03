@@ -59,9 +59,9 @@ namespace Paramore.Brighter
         /// Gets the identifier of the message.
         /// </summary>
         /// <value>The identifier.</value>
-        public string? Id
+        public string Id
         {
-            get { return Header!.Id; }
+            get { return Header.Id; }
         }
         
         /// <summary>

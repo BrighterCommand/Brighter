@@ -7,7 +7,7 @@ public class NodeStatusEventMessageMapper : IAmAMessageMapper<NodeStatusEvent>
 {
     private readonly string topicName = "control.heartbeat";
 
-    public IRequestContext Context { get; set; } = null!;
+    public IRequestContext? Context { get; set; } = null!;
 
     public Message MapToMessage(NodeStatusEvent request, Publication publication)
     {

@@ -27,6 +27,8 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
             return;
         }
 
+        if (message.Body.Bytes is null) throw new AggregateException("Messages must have a body to be archived");
+
         var opts = GetUploadOptions(message);
         blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes), opts);
     }
@@ -46,6 +48,8 @@ public class AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options) :
             _logger.LogDebug("Message with Id {MessageId} has already been uploaded", message.Id);
             return;
         }
+        
+        if (message.Body.Bytes is null) throw new AggregateException("Messages must have a body to be archived");
 
         var opts = GetUploadOptions(message);
         await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), opts, cancellationToken);

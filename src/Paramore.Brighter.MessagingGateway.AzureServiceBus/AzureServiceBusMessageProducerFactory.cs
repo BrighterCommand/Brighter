@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
@@ -39,6 +40,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
             foreach (var publication in _publications)
             {
+                if (publication.Topic is null)
+                    throw new ArgumentException("Publication must have a Topic.");
                 if(publication.UseServiceBusQueue)
                     producers.Add(publication.Topic, new AzureServiceBusQueueMessageProducer(nameSpaceManagerWrapper, topicClientProvider, publication, _bulkSendBatchSize));
                 else
