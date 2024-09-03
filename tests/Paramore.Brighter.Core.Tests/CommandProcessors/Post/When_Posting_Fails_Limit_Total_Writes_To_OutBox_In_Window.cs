@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 tracer,
                 outbox: _outbox,
                 maxOutStandingMessages:3,
-                maxOutStandingCheckIntervalMilliSeconds:250
+                maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250)
             );  
             
             _commandProcessor = CommandProcessorBuilder.StartNew()

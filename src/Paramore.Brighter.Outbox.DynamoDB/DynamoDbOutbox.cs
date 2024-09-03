@@ -238,7 +238,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
+        /// <param name="dispatchedSince">How long ago was the message dispatched?</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
@@ -246,21 +246,21 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="args">Used to pass through the topic we are searching for messages in. Use Key: "Topic"</param>
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince, 
+            TimeSpan dispatchedSince, 
             RequestContext requestContext,
             int pageSize = 100, 
             int pageNumber = 1, 
             int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
-            return DispatchedMessagesAsync(millisecondsDispatchedSince, requestContext, pageSize, pageNumber, outboxTimeout, args, CancellationToken.None)
+            return DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, outboxTimeout, args, CancellationToken.None)
                 .GetAwaiter().GetResult();
         }
 
         /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
+        /// <param name="dispatchedSince">How long ago was the message dispatched?</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
@@ -270,7 +270,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns>A list of dispatched messages</returns>
         /// <exception cref="ArgumentException"></exception>
         public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
-            double millisecondsDispatchedSince,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
@@ -280,30 +280,29 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             if (args == null || !args.ContainsKey("Topic"))
             {
-                return await DispatchedMessagesForAllTopicsAsync(millisecondsDispatchedSince, pageSize, pageNumber, cancellationToken);
+                return await DispatchedMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
             }
 
             var topic = (string)args["Topic"];
-            return await DispatchedMessagesForTopicAsync(millisecondsDispatchedSince, pageSize, pageNumber, topic, cancellationToken);
+            return await DispatchedMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
         }
         
         /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent. 
         /// </summary>
-        /// <param name="hoursDispatchedSince">How many hours back to look</param>
+        /// <param name="dispatchedSince">How many hours back to look</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">The number of results to return. Only returns this number of results</param>
         /// <param name="cancellationToken">How to cancel</param>
         /// <returns></returns>
         public async Task<IEnumerable<Message>> DispatchedMessagesAsync(
-            int hoursDispatchedSince, 
+            TimeSpan dispatchedSince, 
             RequestContext requestContext,
             int pageSize = 100,
             CancellationToken cancellationToken = default
             )
         {
-            var hoursToMilliseconds = TimeSpan.FromHours(hoursDispatchedSince).Milliseconds;
-            return await DispatchedMessagesAsync(hoursToMilliseconds, requestContext, pageSize: pageSize, pageNumber: 1, outboxTimeout: -1, args: null, cancellationToken: cancellationToken);
+            return await DispatchedMessagesAsync(dispatchedSince, requestContext, pageSize: pageSize, pageNumber: 1, outboxTimeout: -1, args: null, cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -354,7 +353,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public async Task MarkDispatchedAsync(
             string id,
             RequestContext requestContext,
-            DateTime? dispatchedAt = null,
+            DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
@@ -379,7 +378,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public async Task MarkDispatchedAsync(
             IEnumerable<string> ids,
             RequestContext requestContext,
-            DateTime? dispatchedAt = null,
+            DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
@@ -396,7 +395,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args"></param>
-        public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+        public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             var message = _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig).Result;
             MarkMessageDispatched(dispatchedAt ?? _timeProvider.GetUtcNow(), message);
@@ -417,20 +416,20 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// Returns messages that have yet to be dispatched
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago as the message sent?</param>
+        /// <param name="dispatchedSince">How long ago as the message sent?</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
         /// <param name="args"></param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public IEnumerable<Message> OutstandingMessages(
-         double millisecondsDispatchedSince, 
+         TimeSpan dispatchedSince, 
          RequestContext requestContext,
          int pageSize = 100, 
          int pageNumber = 1, 
          Dictionary<string, object> args = null)
         {
-            return OutstandingMessagesAsync(millisecondsDispatchedSince, requestContext, pageSize, pageNumber, args)
+            return OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, args)
                 .GetAwaiter()
                 .GetResult();
         }
@@ -438,7 +437,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// Returns messages that have yet to be dispatched
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago as the message sent?</param>
+        /// <param name="dispatchedSince">How long ago as the message sent?</param>
         /// <param name="requestContext"></param>
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
@@ -446,7 +445,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
-            double millisecondsDispatchedSince,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
@@ -455,17 +454,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             if (args == null || !args.ContainsKey("Topic"))
             {
-                return await OutstandingMessagesForAllTopicsAsync(millisecondsDispatchedSince, pageSize, pageNumber, cancellationToken);
+                return await OutstandingMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
             }
 
             var topic = args["Topic"].ToString();
-            return await OutstandingMessagesForTopicAsync(millisecondsDispatchedSince, pageSize, pageNumber, topic, cancellationToken);
+            return await OutstandingMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
         }
 
-        private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(double millisecondsDispatchedSince, int pageSize, int pageNumber, 
+        private async Task<IEnumerable<Message>> OutstandingMessagesForAllTopicsAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber, 
             CancellationToken cancellationToken)
         {
-            var olderThan = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var olderThan = _timeProvider.GetUtcNow() - dispatchedSince;
 
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1 && _outstandingAllTopicsQueryContext?.NextPage != pageNumber)
@@ -537,10 +536,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return results.Select(msg => msg.ConvertToMessage());
         }
 
-        private async Task<IEnumerable<Message>> OutstandingMessagesForTopicAsync(double millisecondsDispatchedSince, int pageSize, int pageNumber,
+        private async Task<IEnumerable<Message>> OutstandingMessagesForTopicAsync(TimeSpan dispatchedSince, int pageSize, int pageNumber,
             string topicName, CancellationToken cancellationToken)
         {
-            var olderThan = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var olderThan = _timeProvider.GetUtcNow() - dispatchedSince;
 
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1)
@@ -603,13 +602,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         }
 
         private async Task<IEnumerable<Message>> DispatchedMessagesForTopicAsync(
-            double millisecondsDispatchedSince,
+            TimeSpan dispatchedSince,
             int pageSize,
             int pageNumber,
             string topicName,
             CancellationToken cancellationToken)
         {
-            var sinceTime = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var sinceTime = _timeProvider.GetUtcNow() - dispatchedSince;
 
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1)
@@ -648,12 +647,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         }
 
         private async Task<IEnumerable<Message>> DispatchedMessagesForAllTopicsAsync(
-            double millisecondsDispatchedSince,
+            TimeSpan dispatchedSince,
             int pageSize,
             int pageNumber,
             CancellationToken cancellationToken)
         {
-            var sinceTime = _timeProvider.GetUtcNow().Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var sinceTime = _timeProvider.GetUtcNow() - dispatchedSince;
 
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1 && _dispatchedAllTopicsQueryContext?.NextPage != pageNumber)

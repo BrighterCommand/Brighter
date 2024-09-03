@@ -132,7 +132,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             config.ConnectionProvider = makeOutbox.connectionProvider;
             config.TransactionProvider = makeOutbox.transactionProvider;
             config.MaxOutStandingMessages = 5;
-            config.MaxOutStandingCheckIntervalMilliSeconds = 500;
+            config.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
         })
         .AutoFromAssemblies();
 

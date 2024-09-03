@@ -348,7 +348,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
-                busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
+                busConfiguration.MaxOutStandingCheckInterval,
                 busConfiguration.OutBoxBag,
                 busConfiguration.ArchiveBatchSize,
                 busConfiguration.InstrumentationOptions);

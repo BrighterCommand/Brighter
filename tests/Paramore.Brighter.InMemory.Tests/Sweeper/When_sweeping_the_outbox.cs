@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Globalization;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -23,7 +21,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var timeProvider = new FakeTimeProvider();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
             var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
 
             var messages = new Message[]
             {
@@ -58,7 +56,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var timeProvider = new FakeTimeProvider();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
             var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
 
             var messages = new Message[]
             {
@@ -92,7 +90,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var timeProvider = new FakeTimeProvider();
             var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
 
             Message oldMessage = new MessageTestDataBuilder();
             commandProcessor.DepositPost(oldMessage.ToStubRequest());
@@ -129,7 +127,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             var timeProvider = new FakeTimeProvider();
             var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
 
             Message oldMessage = new MessageTestDataBuilder();
             commandProcessor.DepositPost(oldMessage.ToStubRequest());

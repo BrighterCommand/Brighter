@@ -83,7 +83,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             var dispatchedAt = DateTime.UtcNow;
             outbox.MarkDispatched(messageId, context, dispatchedAt);
 
-            var dispatchedMessages = outbox.DispatchedMessages(500, context);
+            var dispatchedMessages = outbox.DispatchedMessages(TimeSpan.FromMilliseconds(500), context);
 
             //Assert
             dispatchedMessages.Count().Should().Be(1);
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
-            var outstandingMessages = outbox.OutstandingMessages(0, context);
+            var outstandingMessages = outbox.OutstandingMessages(TimeSpan.Zero, context);
             
             //Assert
             outstandingMessages.Count().Should().Be(1);
@@ -161,8 +161,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             timeProvider.Advance(TimeSpan.FromMilliseconds(500));
 
-            var sentMessages = outbox.DispatchedMessages(5000, context);
-            var outstandingMessages = outbox.OutstandingMessages(0, context);
+            var sentMessages = outbox.DispatchedMessages(TimeSpan.FromMilliseconds(5000), context);
+            var outstandingMessages = outbox.OutstandingMessages(TimeSpan.Zero, context);
 
             //Assert
             sentMessages.Count().Should().Be(2);

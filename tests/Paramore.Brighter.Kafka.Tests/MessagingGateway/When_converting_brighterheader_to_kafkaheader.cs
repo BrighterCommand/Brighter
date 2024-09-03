@@ -51,7 +51,7 @@ public class KafkaDefaultMessageHeaderBuilderTests
         headers.GetLastBytes(HeaderNames.MESSAGE_ID).Should().Equal(message.Header.Id.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.TOPIC).Should().Equal(message.Header.Topic.ToByteArray());
         headers.GetLastBytes(HeaderNames.TIMESTAMP).Should()
-            .Equal(new DateTimeOffset(message.Header.TimeStamp).ToUnixTimeMilliseconds().ToString().ToByteArray());
+            .Equal(message.Header.TimeStamp.ToUnixTimeMilliseconds().ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.CORRELATION_ID).Should()
             .Equal(message.Header.CorrelationId.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.PARTITIONKEY).Should().Equal(message.Header.PartitionKey.ToByteArray());

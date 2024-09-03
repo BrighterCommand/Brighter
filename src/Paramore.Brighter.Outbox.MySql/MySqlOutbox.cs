@@ -214,7 +214,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 new MySqlParameter
                 {
                     ParameterName = $"@{prefix}Timestamp",
-                    DbType = DbType.DateTime2,
+                    DbType = DbType.DateTimeOffset,
                     Value = message.Header.TimeStamp.ToUniversalTime()
                 }, //always store in UTC, as this is how we query messages
                 new MySqlParameter

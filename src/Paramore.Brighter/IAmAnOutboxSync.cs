@@ -66,7 +66,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
-        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="dispatchedSince"></param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
@@ -74,7 +74,7 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>List of messages that need to be dispatched.</returns>
         IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince, 
+            TimeSpan dispatchedSince, 
             RequestContext requestContext,
             int pageSize = 100, 
             int pageNumber = 1, 
@@ -98,19 +98,19 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
-        void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
+        void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object> args = null);
 
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
-        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="dispatchedSince">How many seconds since the message was sent do we wait to declare it outstanding</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">Number of items on the page, default is 100</param>
         /// <param name="pageNumber">Page number of results to return, default is first</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         IEnumerable<Message> OutstandingMessages(
-            double millSecondsSinceSent, 
+            TimeSpan dispatchedSince, 
             RequestContext requestContext,
             int pageSize = 100, 
             int pageNumber = 1,

@@ -86,9 +86,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
         /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
-        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
+        /// If you set MaxOutStandingMessages to 0 this property is effectively ignored
         /// </summary>
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } 
+        public TimeSpan MaxOutStandingCheckInterval { get; set; } 
         
         /// <summary>
         /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
@@ -186,7 +186,7 @@ namespace Paramore.Brighter
         /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
         /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
         /// </summary>
-        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+        public TimeSpan MaxOutStandingCheckInterval { get; set; } = TimeSpan.Zero;
         
         /// <summary>
         /// The Outbox we wish to use for messaging

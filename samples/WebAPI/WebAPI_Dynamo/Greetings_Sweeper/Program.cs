@@ -32,7 +32,7 @@ builder.Services.AddBrighter(options =>
     configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
     configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
     configure.MaxOutStandingMessages = 5;
-    configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+    configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
     configure.OutBoxBag = new Dictionary<string, object> { { "Topic", "GreetingMade" } };
 });
 

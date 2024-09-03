@@ -43,13 +43,13 @@ namespace Paramore.Brighter
         //bool should be made thread-safe by locking the object
         private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
 
-        private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
+        private DateTimeOffset _lastOutStandingMessageCheckAt = DateTimeOffset.UtcNow;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
         private bool _disposed;
         private readonly int _maxOutStandingMessages;
-        private readonly double _maxOutStandingCheckIntervalMilliSeconds;
+        private readonly TimeSpan _maxOutStandingCheckInterval;
         private readonly Dictionary<string, object> _outBoxBag;
         private readonly IAmABrighterTracer _tracer;
 
@@ -67,7 +67,7 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
-        /// <param name="maxOutStandingCheckIntervalMilliSeconds">How long before we check for maxOutStandingMessages</param>
+        /// <param name="maxOutStandingCheckInterval">How long before we check for maxOutStandingMessages</param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="archiveBatchSize">What batch size to use when archiving from the Outbox</param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
@@ -83,7 +83,7 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory = null,
             int outboxTimeout = 300,
             int maxOutStandingMessages = -1,
-            int maxOutStandingCheckIntervalMilliSeconds = 1000,
+            TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object> outBoxBag = null,
             int archiveBatchSize = 100,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
@@ -119,7 +119,7 @@ namespace Paramore.Brighter
 
             _outboxTimeout = outboxTimeout;
             _maxOutStandingMessages = maxOutStandingMessages;
-            _maxOutStandingCheckIntervalMilliSeconds = maxOutStandingCheckIntervalMilliSeconds;
+            _maxOutStandingCheckInterval = maxOutStandingCheckInterval ?? TimeSpan.FromMilliseconds(1000);
             _outBoxBag = outBoxBag;
             _archiveBatchSize = archiveBatchSize;
             _instrumentationOptions = instrumentationOptions;
@@ -234,14 +234,14 @@ namespace Paramore.Brighter
         /// Archive Message from the outbox to the outbox archive provider
         /// Throws any archiving exception
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">Minimum age in hours</param>
+        /// <param name="dispatchedSince">Minimum age</param>
         /// <param name="requestContext">The request context for the pipeline</param>
-        public void Archive(int millisecondsDispatchedSince, RequestContext requestContext)
+        public void Archive(TimeSpan dispatchedSince, RequestContext requestContext)
         {
             try
             {
                 var messages = _outBox
-                    .DispatchedMessages(millisecondsDispatchedSince, requestContext, _archiveBatchSize)
+                    .DispatchedMessages(dispatchedSince, requestContext, _archiveBatchSize)
                     .ToArray();
 
                 s_logger.LogInformation(
@@ -275,16 +275,16 @@ namespace Paramore.Brighter
         /// Archive Message from the outbox to the outbox archive provider
         /// Throws any archiving exception
         /// </summary>
-        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="dispatchedSince"></param>
         /// <param name="requestContext"></param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        public async Task ArchiveAsync(int millisecondsDispatchedSince, RequestContext requestContext,
+        public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext,
             CancellationToken cancellationToken)
         {
             try
             {
                 var messages = (await _asyncOutbox.DispatchedMessagesAsync(
-                    millisecondsDispatchedSince, requestContext, pageSize: _archiveBatchSize,
+                    dispatchedSince, requestContext, pageSize: _archiveBatchSize,
                     cancellationToken: cancellationToken
                 )).ToArray();
 
@@ -438,12 +438,12 @@ namespace Paramore.Brighter
         /// happened by returning control - that happens in parallel. 
         /// </summary>
         /// <param name="amountToClear">Maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
+        /// <param name="minimumAge">The minimum age of messages to be cleared.</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="requestContext">The request context for the pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearOustandingFromOutbox(int amountToClear,
-            int minimumAge,
+        public void ClearOutstandingFromOutbox(int amountToClear,
+            TimeSpan minimumAge,
             bool useBulk,
             RequestContext requestContext,
             Dictionary<string, object> args = null)
@@ -613,7 +613,7 @@ namespace Paramore.Brighter
 
         private Task BackgroundDispatchUsingSync(
             int amountToClear,
-            int millisecondsSinceSent,
+            TimeSpan timeSinceSent,
             RequestContext requestContext,
             Dictionary<string, object> args
         )
@@ -636,7 +636,7 @@ namespace Paramore.Brighter
                 {
                     requestContext.Span = span;
 
-                    var messages = _outBox.OutstandingMessages(millisecondsSinceSent,
+                    var messages = _outBox.OutstandingMessages(timeSinceSent,
                         requestContext, amountToClear, args: args
                     ).ToArray();
 
@@ -678,7 +678,7 @@ namespace Paramore.Brighter
 
         private async Task BackgroundDispatchUsingAsync(
             int amountToClear,
-            int milliSecondsSinceSent,
+            TimeSpan timeSinceSent,
             bool useBulk,
             RequestContext requestContext,
             Dictionary<string, object> args
@@ -702,7 +702,7 @@ namespace Paramore.Brighter
                     requestContext.Span = span;
 
                     var messages =
-                        (await _asyncOutbox.OutstandingMessagesAsync(milliSecondsSinceSent, requestContext,
+                        (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
                             pageSize: amountToClear, args: args)).ToArray();
 
                     BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, true,
@@ -765,9 +765,6 @@ namespace Paramore.Brighter
         private void CheckOutstandingMessages(RequestContext requestContext)
         {
             var now = DateTime.UtcNow;
-            var checkInterval =
-                TimeSpan.FromMilliseconds(_maxOutStandingCheckIntervalMilliSeconds);
-
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
 
@@ -776,7 +773,7 @@ namespace Paramore.Brighter
                 timeSinceLastCheck.TotalSeconds
             );
 
-            if (timeSinceLastCheck < checkInterval)
+            if (timeSinceLastCheck < _maxOutStandingCheckInterval)
             {
                 s_logger.LogDebug($"Check not ready to run yet");
                 return;
@@ -1108,7 +1105,7 @@ namespace Paramore.Brighter
                 {
                     _outStandingCount = _outBox
                         .OutstandingMessages(
-                            _maxOutStandingCheckIntervalMilliSeconds,
+                            _maxOutStandingCheckInterval,
                             requestContext,
                             args: _outBoxBag
                         )

@@ -228,13 +228,13 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                  return null;
             }
 
-            public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+            public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object> args = null)
             {
                 //ignore
             }
 
             public IEnumerable<Message> DispatchedMessages(
-                double millisecondsDispatchedSince, 
+                TimeSpan millisecondsDispatchedSince, 
                 RequestContext requestContext,
                 int pageSize = 100, 
                 int pageNumber = 1,
@@ -246,7 +246,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             }
 
             public IEnumerable<Message> OutstandingMessages(
-                double millSecondsSinceSent, 
+                TimeSpan dispatchedSince, 
                 RequestContext requestContext,
                 int pageSize = 100, 
                 int pageNumber = 1,
@@ -256,7 +256,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             }
 
 
-            public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
+            public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince)
             {
                return Array.Empty<Message>(); 
             }

@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             //message should be in the store
             var depositedPost = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 
             depositedPost.Should().NotBeNull();
@@ -112,7 +112,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = await _outbox.OutstandingMessagesAsync(0, context);
+            var outstandingMessages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
             var outstandingMessage = outstandingMessages.Single();
             outstandingMessage.Id.Should().Be(_message.Id);
         }

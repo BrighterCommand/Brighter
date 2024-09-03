@@ -90,7 +90,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(20000, context, new CancellationToken());
+        await _bus.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(0);
@@ -118,7 +118,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(20000, context, new CancellationToken());
+        await _bus.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(1);
@@ -144,7 +144,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(20000, context, new CancellationToken());
+        await _bus.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(3);
@@ -160,7 +160,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         var context = new RequestContext();
         
         //act
-        await _bus.ArchiveAsync(20000, context, new CancellationToken());
+        await _bus.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(0);

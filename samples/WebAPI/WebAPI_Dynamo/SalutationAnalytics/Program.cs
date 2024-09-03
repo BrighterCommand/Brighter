@@ -119,7 +119,7 @@ static void ConfigureBrighter(
                 configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                 configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
                 configure.MaxOutStandingMessages = 5;
-                configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+                configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
             }
         )
         .AutoFromAssemblies();

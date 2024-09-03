@@ -159,7 +159,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="dispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
@@ -168,7 +168,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>A list of dispatched messages</returns>
         public Task<IEnumerable<Message>> DispatchedMessagesAsync(
-            double millisecondsDispatchedSince,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
@@ -178,14 +178,14 @@ namespace Paramore.Brighter
         {
             return ReadFromStoreAsync(
                 connection =>
-                    CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber),
+                    CreatePagedDispatchedCommand(connection, dispatchedSince, pageSize, pageNumber),
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
         /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="dispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
@@ -193,7 +193,7 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
@@ -202,7 +202,7 @@ namespace Paramore.Brighter
         {
             return ReadFromStore(
                 connection =>
-                    CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber),
+                    CreatePagedDispatchedCommand(connection, dispatchedSince, pageSize, pageNumber),
                 dr => MapListFunction(dr));
         }
         
@@ -335,7 +335,7 @@ namespace Paramore.Brighter
         public Task MarkDispatchedAsync(
             string id,
             RequestContext requestContext,
-            DateTime? dispatchedAt = null,
+            DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
@@ -355,12 +355,12 @@ namespace Paramore.Brighter
         public Task MarkDispatchedAsync(
             IEnumerable<string> ids,
             RequestContext requestContext,
-            DateTime? dispatchedAt = null,
+            DateTimeOffset? dispatchedAt = null,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
             return WriteToStoreAsync(null,
-                connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow), null,
+                connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTimeOffset.UtcNow), null,
                 cancellationToken);
         }
 
@@ -371,7 +371,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Allows additional arguments to be provided for specific Outbox Db providers</param>
-        public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+        public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             WriteToStore(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow),
                 null);
@@ -380,28 +380,28 @@ namespace Paramore.Brighter
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
-        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="dispatchedSince">How many seconds since the message was sent do we wait to declare it outstanding</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
         /// <param name="pageSize">The number of entries on a page</param>
         /// <param name="pageNumber">The page to return</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         public IEnumerable<Message> OutstandingMessages(
-            double millSecondsSinceSent,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             Dictionary<string, object> args = null)
         {
             return ReadFromStore(
-                connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber),
+                connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber),
                 dr => MapListFunction(dr));
         }
 
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
-        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="dispatchedSince">How many seconds since the message was sent do we wait to declare it outstanding</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">The number of entries to return in a page</param>
         /// <param name="pageNumber">The page number to return</param>
@@ -409,7 +409,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
         public Task<IEnumerable<Message>> OutstandingMessagesAsync(
-            double millSecondsSinceSent,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
@@ -417,7 +417,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default)
         {
             return ReadFromStoreAsync(
-                connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber),
+                connection => CreatePagedOutstandingCommand(connection, dispatchedSince, pageSize, pageNumber),
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
@@ -486,12 +486,12 @@ namespace Paramore.Brighter
 
         private DbCommand CreatePagedDispatchedCommand(
             DbConnection connection, 
-            double millisecondsDispatchedSince,
+            TimeSpan timeDispatchedSince,
             int pageSize, 
             int pageNumber)
             => CreateCommand(connection, GenerateSqlText(queries.PagedDispatchedCommand), 0,
                 CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize),
-                CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince));
+                CreateSqlParameter("OutstandingSince", -1 * timeDispatchedSince.Milliseconds));
         
         private DbCommand CreateDispatchedCommand(DbConnection connection, int hoursDispatchedSince, int pageSize)
             => CreateCommand(connection, GenerateSqlText(queries.DispatchedCommand), 0,
@@ -509,11 +509,11 @@ namespace Paramore.Brighter
 
         private DbCommand CreatePagedOutstandingCommand(
             DbConnection connection, 
-            double milliSecondsSinceAdded,
+            TimeSpan timeSinceAdded,
             int pageSize, 
             int pageNumber)
             => CreateCommand(connection, GenerateSqlText(queries.PagedOutstandingCommand), 0,
-                CreatePagedOutstandingParameters(milliSecondsSinceAdded, pageSize, pageNumber));
+                CreatePagedOutstandingParameters(timeSinceAdded.Milliseconds, pageSize, pageNumber));
         
         private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
             => CreateCommand(connection, GenerateSqlText(queries.GetNumberOfOutstandingMessagesCommand), 0);
@@ -531,13 +531,13 @@ namespace Paramore.Brighter
                 insertClause.parameters);
         }
 
-        private DbCommand InitMarkDispatchedCommand(DbConnection connection, string messageId, DateTime? dispatchedAt)
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, string messageId, DateTimeOffset? dispatchedAt)
             => CreateCommand(connection, GenerateSqlText(queries.MarkDispatchedCommand), 0,
                 CreateSqlParameter("MessageId", messageId),
                 CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()));
 
         private DbCommand InitMarkDispatchedCommand(DbConnection connection, IEnumerable<string> messageIds,
-            DateTime? dispatchedAt)
+            DateTimeOffset? dispatchedAt)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
             return CreateCommand(connection, GenerateSqlText(queries.MarkMultipleDispatchedCommand, inClause.inClause), 0,

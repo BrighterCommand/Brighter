@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.Extensions.Hosting
@@ -38,7 +39,7 @@ namespace Paramore.Brighter.Extensions.Hosting
         /// <summary>
         /// The age a message to pickup by the sweeper in milliseconds.
         /// </summary>
-        public int MinimumMessageAge { get; set; } = 5000;
+        public TimeSpan MinimumMessageAge { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
         /// The maximum number of messages to dispatch.

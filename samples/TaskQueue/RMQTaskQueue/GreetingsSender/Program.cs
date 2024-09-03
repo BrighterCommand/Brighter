@@ -79,7 +79,7 @@ namespace GreetingsSender
                 {
                     configure.ProducerRegistry = producerRegistry;
                     configure.MaxOutStandingMessages = 5;
-                    configure.MaxOutStandingCheckIntervalMilliSeconds = 500;
+                    configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                 })
                 .AutoFromAssemblies();
 
