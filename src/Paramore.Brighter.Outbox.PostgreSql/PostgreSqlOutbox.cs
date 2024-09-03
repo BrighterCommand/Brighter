@@ -237,7 +237,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     ParameterName = $"{prefix}Timestamp",
                     NpgsqlDbType = NpgsqlDbType.TimestampTz,
-                    Value = message.Header.TimeStamp
+                    Value = message.Header.TimeStamp.DateTime.ToUniversalTime()
                 },
                 new NpgsqlParameter
                 {

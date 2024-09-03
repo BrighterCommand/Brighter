@@ -7,7 +7,7 @@ public record NodeStatusEvent : IEvent
     /// <summary>
     /// The event Id
     /// </summary>
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
 
     /// <summary>
     /// The Diagnostics Span
@@ -42,7 +42,7 @@ public record NodeStatusEvent : IEvent
     /// <summary>
     /// Timestamp of Status Event
     /// </summary>
-    public DateTime TimeStamp { get; init; } = DateTime.UtcNow;
+    public DateTimeOffset TimeStamp { get; init; } = DateTimeOffset.UtcNow;
     
     /// <summary>
     /// The version of the running process

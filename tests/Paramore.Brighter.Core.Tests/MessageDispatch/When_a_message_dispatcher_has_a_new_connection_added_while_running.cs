@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _bus.Stream(new RoutingKey(TopicName)).Count().Should().Be(0);
             _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
             _dispatcher.Consumers.Should().HaveCount(2);
-            _dispatcher.Connections.Should().HaveCount(2);
+            _dispatcher.Subscriptions.Should().HaveCount(2);
         }
 
         public void Dispose()

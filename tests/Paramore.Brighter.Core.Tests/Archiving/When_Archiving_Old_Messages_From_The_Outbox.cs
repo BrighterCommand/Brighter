@@ -84,7 +84,7 @@ public class ServiceBusMessageStoreArchiverTests
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(20000, context);
+        _bus.Archive(TimeSpan.FromMilliseconds(20000), context);
         
         //assert
         _outbox.EntryCount.Should().Be(0);
@@ -112,7 +112,7 @@ public class ServiceBusMessageStoreArchiverTests
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(20000, context);
+        _bus.Archive(TimeSpan.FromMilliseconds(20000), context);
         
         //assert
         _outbox.EntryCount.Should().Be(1);
@@ -138,7 +138,7 @@ public class ServiceBusMessageStoreArchiverTests
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(20000, context);
+        _bus.Archive(TimeSpan.FromMilliseconds(20000), context);
         
         //assert
         _outbox.EntryCount.Should().Be(3);
@@ -151,7 +151,7 @@ public class ServiceBusMessageStoreArchiverTests
     public void When_Archiving_An_Empty_The_Outbox()
     {
         var context = new RequestContext();
-        _bus.Archive(20000, context);
+        _bus.Archive(TimeSpan.FromMilliseconds(20000), context);
         
         //assert
         _outbox.EntryCount.Should().Be(0);

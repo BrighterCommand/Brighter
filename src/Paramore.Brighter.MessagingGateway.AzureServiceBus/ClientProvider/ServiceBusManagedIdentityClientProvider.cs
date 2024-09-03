@@ -8,9 +8,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
     /// <summary>
     /// Provides Azure Service Bus Clients using Managed Identity Credentials.
     /// </summary>
-    public class ServiceBusManagedIdentityClientProvider : IServiceBusClientProvider
+    public class ServiceBusManagedIdentityClientProvider : ServiceBusClientProvider
     {
-        private readonly string _fullyQualifiedNameSpace;
+        protected override ServiceBusClient Client { get; }
+        protected override ServiceBusAdministrationClient AdminClient { get; }
 
         /// <summary>
         /// Initializes an implementation is <see cref="IServiceBusClientProvider"/> using Managed Identity for Authentication.
@@ -24,26 +25,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
                 throw new ArgumentNullException(nameof(fullyQualifiedNameSpace),
                     "Fully qualified Namespace is null or empty, ensure this is set in the constructor.");
             }
-
-            _fullyQualifiedNameSpace = fullyQualifiedNameSpace;
-        }
-
-        /// <summary>
-        /// Provides an Azure Service Bus Client
-        /// </summary>
-        /// <returns>Azure Service Bus Client</returns>
-        public ServiceBusClient GetServiceBusClient()
-        {
-            return new ServiceBusClient(_fullyQualifiedNameSpace, new ManagedIdentityCredential());
-        }
-
-        /// <summary>
-        /// Provides an Azure Service Bus Administration Client
-        /// </summary>
-        /// <returns>Azure Service Bus Administration Client</returns>
-        public ServiceBusAdministrationClient GetServiceBusAdministrationClient()
-        {
-            return new ServiceBusAdministrationClient(_fullyQualifiedNameSpace, new ManagedIdentityCredential());
+            
+            Client = new ServiceBusClient(fullyQualifiedNameSpace, new ManagedIdentityCredential());
+            AdminClient = new ServiceBusAdministrationClient(fullyQualifiedNameSpace,
+                new ManagedIdentityCredential());
         }
     }
 }

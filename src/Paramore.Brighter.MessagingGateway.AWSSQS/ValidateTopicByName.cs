@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
@@ -46,9 +47,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         //Note that we assume here that topic names are globally unique, if not provide the topic ARN directly in the SNSAttributes of the subscription
         //This approach can have be rate throttled at scale. AWS limits to 30 ListTopics calls per second, so it you have a lot of clients starting
         //you may run into issues
-        public (bool, string TopicArn) Validate(string topicName)
+        public async Task<(bool, string TopicArn)> ValidateAsync(string topicName)
         {
-            var topic = _snsClient.FindTopicAsync(topicName).GetAwaiter().GetResult();
+            var topic = await _snsClient.FindTopicAsync(topicName);
             return (topic != null, topic?.TopicArn);
         }
     }

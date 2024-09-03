@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var connection = new Subscription<MyEvent>(
+            var subscription = new Subscription<MyEvent>(
                 new SubscriptionName("test"), 
                 noOfPerformers: 1, 
                 timeoutInMilliseconds: 1000, 
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _dispatcher = new Dispatcher(
                 _commandProcessor, 
-                new List<Subscription> { connection },
+                new List<Subscription> { subscription },
                 messageMapperRegistry,
                 requestContextFactory: new InMemoryRequestContextFactory()
             );

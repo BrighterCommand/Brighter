@@ -36,6 +36,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpToCommandProcessorTests
     {
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly InternalBus _bus = new ();
         private readonly FakeTimeProvider _timeProvider = new();
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messagerMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
@@ -60,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options)));
             channel.Enqueue(message);
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
         }
 

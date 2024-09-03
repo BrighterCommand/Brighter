@@ -81,11 +81,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 SqsSubscription sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels);
+                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels).Wait();
                 EnsureQueue();
 
                 return new Channel(
-                    subscription.ChannelName.ToValidSQSQueueName(),
+                    subscription.ChannelName.ToValidSQSQueueName(), 
+                    subscription.RoutingKey.ToValidSNSTopicName(),
                     _messageConsumerFactory.Create(subscription),
                     subscription.BufferSize
                 );
@@ -399,7 +400,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 return;
 
             using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
-            (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(ChannelTopicArn);
+            (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).ValidateAsync(ChannelTopicArn).GetAwaiter().GetResult();
             if (exists)
             {
                 try

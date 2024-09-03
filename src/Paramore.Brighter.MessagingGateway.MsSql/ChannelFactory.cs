@@ -32,7 +32,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             
             s_logger.LogDebug("MsSqlInputChannelFactory: create input channel {ChannelName} for topic {Topic}", subscription.ChannelName, subscription.RoutingKey);
             return new Channel(
-                subscription.ChannelName,
+                subscription.ChannelName, 
+                subscription.RoutingKey,
                 _msSqlMessageConsumerFactory.Create(subscription),
                 subscription.BufferSize);
         }

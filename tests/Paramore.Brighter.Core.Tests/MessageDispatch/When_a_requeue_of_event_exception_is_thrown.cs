@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpEventRequeueTests
     {
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            Channel channel = new(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2);
+            Channel channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2);
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
@@ -67,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             channel.Enqueue(message1);
             channel.Enqueue(message2);
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
             channel.Enqueue(quitMessage);
         }
 

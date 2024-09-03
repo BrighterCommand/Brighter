@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         /// <param name="requestBody">The request body.</param>
         /// <param name="writeTime">The request arrived at when.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        public InboxItem(Type requestType, string requestBody, DateTime writeTime, string contextKey)
+        public InboxItem(Type requestType, string requestBody, DateTimeOffset writeTime, string contextKey)
         {
             RequestType = requestType;
             RequestBody = requestBody;
@@ -68,7 +68,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The command when.</value>
 
-        public DateTime WriteTime { get; }
+        public DateTimeOffset WriteTime { get; }
 
         /// <summary>
         /// The Id and the key for the context i.e. message type, that we are looking for

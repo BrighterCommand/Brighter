@@ -11,12 +11,13 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         private readonly IAmAMessageConsumer _gateway;
         private const int BufferLimit = 2;
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly InternalBus _bus = new();
 
         public BufferedChannelTests()
         {
             _gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus,new FakeTimeProvider(), 1000); 
-            _channel = new Channel(Topic, _gateway, BufferLimit);
+            _channel = new Channel(new (Channel), new (Topic), _gateway, BufferLimit);
         }
 
         [Fact]
@@ -79,13 +80,13 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         [Fact]
         public void When_we_try_to_create_with_too_small_a_buffer()
         {
-              Assert.Throws<ConfigurationException>(() => new Channel("test", _gateway, 0));
+              Assert.Throws<ConfigurationException>(() => new Channel(new(Channel), new (Topic), _gateway, 0));
         }
 
         [Fact]
         public void When_we_try_to_create_with_too_large_a_buffer()
         {
-              Assert.Throws<ConfigurationException>(() => new Channel("test", _gateway, 11));
+              Assert.Throws<ConfigurationException>(() => new Channel(new(Channel), new (Topic), _gateway, 11));
         }
     }
 }

@@ -34,13 +34,14 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         private readonly InternalBus _bus = new InternalBus();
         private readonly FakeTimeProvider _fakeTimeProvider = new FakeTimeProvider();
         private const string Topic = "myTopic";
+        private const string ChannelName = "myChannel";
 
         public ChannelAcknowledgeTests()
         {
             const int ackTimeoutMs = 1000;
             IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, ackTimeoutMs); 
 
-            _channel = new  Channel(Topic, gateway);
+            _channel = new  Channel(new (ChannelName), new(Topic), gateway);
 
             var sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),

@@ -138,17 +138,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             //message should be in the store
             var depositedPost = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
             
             //message should be in the store
             var depositedPost2 = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message2.Id);
             
             //message should be in the store
             var depositedPost3 = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message3.Id);
 
             depositedPost.Should().NotBeNull();

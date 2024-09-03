@@ -36,11 +36,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpUnacceptableMessageTests
     {
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly Channel _channel;
         private readonly InternalBus _bus;
         private readonly RoutingKey _routingKey = new RoutingKey(Topic);
-        private FakeTimeProvider _timeProvider = new FakeTimeProvider();
+        private readonly FakeTimeProvider _timeProvider = new FakeTimeProvider();
 
         public MessagePumpUnacceptableMessageTests()
         {
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _bus = new InternalBus();
             
-            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
@@ -78,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(new[] { task });

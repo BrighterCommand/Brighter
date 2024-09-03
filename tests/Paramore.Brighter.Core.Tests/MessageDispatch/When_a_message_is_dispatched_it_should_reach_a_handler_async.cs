@@ -12,6 +12,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
   public class MessagePumpDispatchAsyncTests
     {
         private const string Topic = "MyTopic";
+        private const string ChannelName = "myChannel";
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
@@ -34,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            var channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
             channel.Enqueue(message);
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
             channel.Enqueue(quitMessage);
         }
 

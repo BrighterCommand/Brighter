@@ -38,7 +38,7 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
-        var messages = _dynamoDbOutbox.DispatchedMessages(0, context,100, 1, args:args);
+        var messages = _dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context,100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
         message.Body.Value.Should().Be(_message.Body.Value);
@@ -56,7 +56,7 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
-        var messages = _dynamoDbOutbox.DispatchedMessages(0, context, 100, 1, args:args);
+        var messages = _dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
         message.Body.Value.Should().Be(_message.Body.Value);

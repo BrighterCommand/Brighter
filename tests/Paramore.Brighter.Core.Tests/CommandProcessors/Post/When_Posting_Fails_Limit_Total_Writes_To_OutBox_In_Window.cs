@@ -70,13 +70,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 tracer,
                 outbox: _outbox,
                 maxOutStandingMessages:3,
-                maxOutStandingCheckIntervalMilliSeconds:250
+                maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250)
             );  
             
-            _commandProcessor = CommandProcessorBuilder.With()
+            _commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
+                .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

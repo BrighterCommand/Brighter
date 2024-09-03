@@ -6,6 +6,7 @@
 
     <ItemGroup>
       <PackageReference Include="AWSSDK.DynamoDBv2" />
+      <PackageReference Include="NJsonSchema" />
     </ItemGroup>
 
     <ItemGroup>

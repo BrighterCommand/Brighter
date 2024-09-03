@@ -202,13 +202,14 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
-            int minimumAge = 5000, 
+            TimeSpan? minimumAge = null, 
             bool useBulk = false, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null)
         {
+            var minAge = minimumAge ?? TimeSpan.FromMilliseconds(500);
             var depositedMessages = Deposited.Where(m =>
-                    m.EnqueuedTime < timeProvider.GetUtcNow().DateTime.AddMilliseconds(-1 * minimumAge) &&
+                    m.EnqueuedTime < timeProvider.GetUtcNow() - minAge &&
                     !Dispatched.ContainsKey(m.Request.Id))
                 .Take(amountToClear)
                 .Select(m => m.Request.Id)

@@ -22,10 +22,10 @@
     <LangVersion>latest</LangVersion>
 
     <!-- Version numbers have to be included at the same level as source link otherwise versions are reset to 1.0.0 -->
-    <AssemblyVersion>9.0.0.0</AssemblyVersion>
-    <FileVersion>9.0.0.0</FileVersion>
-    <InformationalVersion>9.0.0</InformationalVersion>
-    <Version>9.0.0</Version>
+    <AssemblyVersion>10.0.0.0</AssemblyVersion>
+    <FileVersion>10.0.0.0</FileVersion>
+    <InformationalVersion>10.0.0</InformationalVersion>
+    <Version>10.0.0</Version>
   </PropertyGroup>
 
   <!-- Deterministic builds ensure that the same binary is produced regardless of the machine building it -->

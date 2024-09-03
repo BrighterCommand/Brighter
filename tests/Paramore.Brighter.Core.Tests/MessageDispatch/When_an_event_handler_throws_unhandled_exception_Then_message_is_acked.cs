@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpEventProcessingExceptionTests
     {
         private const string Topic = "MyEvent";
+        private const string Channel = "MyChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly int _requeueCount = 5;
         private readonly RoutingKey _routingKey = new(Topic);
@@ -52,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _bus = new InternalBus();
             
-            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null); 
@@ -94,7 +95,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                     .Should().Contain(x => x.Level == LogEventLevel.Error)
                     .Which.MessageTemplate.Text
                     .Should().Be(
-                        "MessagePump: Failed to dispatch message {Id} from {ChannelName} on thread # {ManagementThreadId}");
+                        "MessagePump: Failed to dispatch message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}");
             }
         }
     }

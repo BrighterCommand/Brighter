@@ -107,7 +107,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _outbox
-              .DispatchedMessages(120000, new RequestContext(), 1)
+              .DispatchedMessages(TimeSpan.FromMilliseconds(120000), new RequestContext(), 1)
               .SingleOrDefault();
               
             message.Should().NotBeNull();

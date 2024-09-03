@@ -81,10 +81,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 outbox: _outbox
             );  
             
-            _commandProcessor = CommandProcessorBuilder.With()
+            _commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
+                .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

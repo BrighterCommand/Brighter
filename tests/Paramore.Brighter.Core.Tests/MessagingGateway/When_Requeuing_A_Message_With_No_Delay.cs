@@ -33,13 +33,14 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     {
         private readonly IAmAChannel _channel;
         private const string Topic = "myTopic";
+        private const string ChannelName = "myChannel";
         private readonly InternalBus _bus = new();
 
         public ChannelRequeueWithoutDelayTest()
         {
             var consumer = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, new FakeTimeProvider(), 1000); 
 
-            _channel = new Channel(Topic, consumer);
+            _channel = new Channel(new(ChannelName),new (Topic), consumer);
 
             var sentMessage = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),

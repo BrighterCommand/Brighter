@@ -33,30 +33,48 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAChannel _channel;
         private readonly IAmAMessagePump _messagePump;
 
-        public Performer(
-            IAmAChannel channel, 
-            IAmAMessagePump messagePump)
+        /// <summary>
+        /// Constructs a performer, a combination of a message pump and a channel that it reads from
+        /// A peformer is a single thread, increase the number of performs to increase the number of threads
+        /// </summary>
+        /// <param name="channel">The channel to read messages from</param>
+        /// <param name="messagePump">The message pump that reads messages</param>
+        public Performer(IAmAChannel channel, IAmAMessagePump messagePump)
         {
             _channel = channel;
             _messagePump = messagePump;
         }
 
-        public void Stop()
+        /// <summary>
+        /// Stops a performer, by posting a quit message to the channel
+        /// </summary>
+        /// <param name="routingKey">The topic to post the quit message too</param>
+        public void Stop(RoutingKey routingKey)
         {
-            _channel.Stop();
+            _channel.Stop(routingKey);
         }
 
+        /// <summary>
+        /// Runs this instance.
+        /// </summary>
+        /// <returns>Task.</returns>
         public async Task Run()
         {
             await Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
         }
 
+        /// <summary>
+        /// Shut this performer and clean up its resources
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Shut this performer and clean up its resources
+        /// </summary>
         ~Performer()
         {
             Dispose(false);

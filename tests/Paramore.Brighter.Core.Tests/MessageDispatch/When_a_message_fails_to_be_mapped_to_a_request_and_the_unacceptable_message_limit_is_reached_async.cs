@@ -34,17 +34,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpUnacceptableMessageLimitTestsAsync
     {
         private const string Topic = "MyTopic";
+        private const string Channel = "MyChannel";
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly InternalBus _bus = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly Channel _channel;
         private readonly FakeTimeProvider _timeProvider = new();
 
         public MessagePumpUnacceptableMessageLimitTestsAsync()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            _channel = new Channel(Topic, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2);
+            Channel channel = new(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2);
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new FailingEventMessageMapperAsync()));
@@ -52,14 +52,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _messagePump = new MessagePumpAsync<MyFailingMapperEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
             };
 
             var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
 
-            _channel.Enqueue(unmappableMessage);
-            _channel.Enqueue(unmappableMessage);
-            _channel.Enqueue(unmappableMessage);
+            channel.Enqueue(unmappableMessage);
+            channel.Enqueue(unmappableMessage);
+            channel.Enqueue(unmappableMessage);
         }
 
         [Fact]

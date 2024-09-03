@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessageDispatcherMultiplePerformerTests
     {
         private const string Topic = "myTopic";
+        private const string ChannelName = "myChannel";
         private readonly Dispatcher _dispatcher;
         private readonly InternalBus _bus;
 
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _bus = new InternalBus();
             var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, 1000);
             
-            IAmAChannel channel = new Channel(Topic, consumer, 6);
+            IAmAChannel channel = new Channel(new (ChannelName), new(Topic), consumer, 6);
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(

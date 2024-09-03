@@ -119,7 +119,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutstandingFromOutbox(3, 0, useBulk: true, requestContext: context);
+        _commandProcessor.ClearOutstandingFromOutbox(3, TimeSpan.Zero, useBulk: true, requestContext: context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         

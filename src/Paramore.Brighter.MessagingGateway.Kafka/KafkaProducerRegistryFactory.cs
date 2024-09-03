@@ -28,7 +28,7 @@ using Confluent.Kafka;
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     /// <summary>
-    /// Creates a <see cref="KafkaMessageProducer"/> from a <see cref="Publication"/>
+    /// Creates a registry of <see cref="KafkaMessageProducer"/> instances from <see cref="Publication"/> instances
     /// Note that we only return the interface and <see cref="KafkaMessageProducer"/> is internal as the underlying type is not needed
     /// </summary>
     public class KafkaProducerRegistryFactory : IAmAProducerRegistryFactory
@@ -38,9 +38,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private Action<ProducerConfig> _configHook;
 
         /// <summary>
-        /// This constructs a <see cref="KafkaProducerRegistryFactory"/> which can be used to create a <see cref="KafkaMessageProducer"/>.
-        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, and a <see cref="KafkaPublication"/>
-        /// that determines how we publish to Kafka and the parameters of any topic if required.
+        /// This constructs a <see cref="KafkaProducerRegistryFactory"/> which can be used to create a <see cref="ProducerRegistry" /> of <see cref="KafkaMessageProducer" /> instances.
+        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, and a collection of <see cref="KafkaPublication"/> instances
+        /// that determine how we publish to Kafka and the parameters of any topics if required.
         /// </summary>
         /// <param name="globalConfiguration">Configures how we connect to the broker</param>
         /// <param name="publications">The list of topics that we want to publish to</param>
@@ -54,24 +54,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
         
         /// <summary>
-        /// Create a message producer from tne <see cref="KafkaMessagingGatewayConfiguration"/> and <see cref="KafkaPublication"/> supplied
+        /// Create a producer registry from the <see cref="KafkaMessagingGatewayConfiguration"/> and <see cref="KafkaPublication"/> instances supplied
         /// to the constructor
         /// </summary>
         /// <returns>An <see cref="IAmAProducerRegistry"/> that represents a collection of Kafka Message Producers</returns>
         public IAmAProducerRegistry Create()
         {
-            var publicationsByTopic = new Dictionary<string, IAmAMessageProducer>();
-            foreach (var publication in _publications)
-            {
+            var producerFactory = new KafkaMessageProducerFactory(_globalConfiguration, _publications);
+            producerFactory.SetConfigHook(_configHook);
 
-                var producer = new KafkaMessageProducer(_globalConfiguration, publication);
-                if (_configHook != null)
-                    producer.ConfigHook(_configHook);
-                producer.Init();
-                publicationsByTopic[publication.Topic] = producer;
-            }
-
-            return new ProducerRegistry(publicationsByTopic);
+            return new ProducerRegistry(producerFactory.Create());
         }
 
         /// <summary>

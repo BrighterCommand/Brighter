@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
-        private readonly BrighterTracer _tracer;
+        private readonly IAmABrighterTracer _tracer;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -124,7 +124,7 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _subscriberRegistry = subscriberRegistry;
@@ -172,7 +172,7 @@ namespace Paramore.Brighter
             InboxConfiguration inboxConfiguration = null,
             IEnumerable<Subscription> replySubscriptions = null,
             IAmAChannelFactory responseChannelFactory = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
         {
@@ -203,7 +203,7 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IEnumerable<Subscription> replySubscriptions = null,
-            BrighterTracer tracer = null,
+            IAmABrighterTracer tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _requestContextFactory = requestContextFactory;
@@ -319,7 +319,7 @@ namespace Paramore.Brighter
             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
-            var handlerSpans = new Dictionary<string, Activity>();
+            var handlerSpans = new ConcurrentDictionary<string, Activity>();
             try
             {
                 using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
@@ -393,7 +393,7 @@ namespace Paramore.Brighter
             var context = InitRequestContext(span, requestContext);
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
-            var handlerSpans = new Dictionary<string, Activity>();
+            var handlerSpans = new ConcurrentDictionary<string, Activity>();
              try
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
@@ -930,13 +930,13 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostAsync{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object},bool,System.Threading.CancellationToken)"/>
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        /// <param name="minimumAge">The minimum age to clear (Default 5 second).</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         public void ClearOutstandingFromOutbox(
             int amountToClear = 100,
-            int minimumAge = 5000,
+            TimeSpan? minimumAge = null,
             bool useBulk = false,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null
@@ -947,7 +947,8 @@ namespace Paramore.Brighter
 
             try
             {
-                s_bus.ClearOustandingFromOutbox(amountToClear, minimumAge, useBulk, context, args);
+                var minAge = minimumAge ?? TimeSpan.FromMilliseconds(5000);
+                s_bus.ClearOutstandingFromOutbox(amountToClear, minAge, useBulk, context, args);
             }
             finally
             {

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -27,14 +26,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             s_logger.LogDebug("MsSqlMessageProducerFactory: create producer");
 
-            var producers = new Dictionary<string, IAmAMessageProducer>();
+            var producerFactory = new MsSqlMessageProducerFactory(_msSqlConfiguration, _publications);
 
-            foreach (var publication in _publications)
-            {
-                producers[publication.Topic] = new MsSqlMessageProducer(_msSqlConfiguration, publication);
-            }
-
-            return new ProducerRegistry(producers);
+            return new ProducerRegistry(producerFactory.Create());
         }
     }
 }

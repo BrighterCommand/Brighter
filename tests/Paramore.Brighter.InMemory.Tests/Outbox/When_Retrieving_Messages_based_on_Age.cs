@@ -28,15 +28,15 @@ public class When_Retrieving_Messages_based_on_Age
         outbox.Add(new MessageTestDataBuilder(), context);
         outbox.Add(new MessageTestDataBuilder(), context);
 
-        var messagesToDispatch = outbox.OutstandingMessages(2000, context);
-        var allMessages = outbox.OutstandingMessages(0, context).ToArray();
+        var messagesToDispatch = outbox.OutstandingMessages(TimeSpan.FromMilliseconds(2000), context);
+        var allMessages = outbox.OutstandingMessages(TimeSpan.Zero, context).ToArray();
 
         foreach (var message in allMessages)
         {
             outbox.MarkDispatched(message.Id, context);
         }
 
-        var messagesAfterDispatch = outbox.OutstandingMessages(0, context);
+        var messagesAfterDispatch = outbox.OutstandingMessages(TimeSpan.Zero, context);
 
         Assert.Equal(2, messagesToDispatch.Count());
         Assert.Equal(4, allMessages.Count());
@@ -58,15 +58,15 @@ public class When_Retrieving_Messages_based_on_Age
         await outbox.AddAsync(new MessageTestDataBuilder(), context);
         await outbox.AddAsync(new MessageTestDataBuilder(), context);
 
-        var messagesToDispatch = await outbox.OutstandingMessagesAsync(2000, context);
-        var allMessages = (await outbox.OutstandingMessagesAsync(0, context)).ToArray();
+        var messagesToDispatch = await outbox.OutstandingMessagesAsync(TimeSpan.FromMilliseconds(2000), context);
+        var allMessages = (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context)).ToArray();
 
         foreach (var message in allMessages)
         {
             await outbox.MarkDispatchedAsync(message.Id, context);
         }
 
-        var messagesAfterDispatch = await outbox.OutstandingMessagesAsync(0, context);
+        var messagesAfterDispatch = await outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
         Assert.Equal(2, messagesToDispatch.Count());
         Assert.Equal(4, allMessages.Count());

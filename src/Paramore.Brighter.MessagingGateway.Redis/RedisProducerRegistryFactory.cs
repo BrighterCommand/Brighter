@@ -21,14 +21,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
         public IAmAProducerRegistry Create()
         {
-            var producers = new Dictionary<string, IAmAMessageProducer>();
+            var producerFactory = new RedisMessageProducerFactory(_redisConfiguration, _publications);
 
-            foreach (var publication in _publications)
-            {
-                producers[publication.Topic] = new RedisMessageProducer(_redisConfiguration, publication);
-            }
-
-            return new ProducerRegistry(producers);
+            return new ProducerRegistry(producerFactory.Create());
         }
     }
 }

@@ -70,7 +70,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task SendAsync(Message message)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, true);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
             
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             bus.Enqueue(message);
@@ -92,7 +92,7 @@ namespace Paramore.Brighter
             var msgs = messages as Message[] ?? messages.ToArray();
             foreach (var msg in msgs)
             {
-                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg, true);
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg);
                 bus.Enqueue(msg);
                 OnMessagePublished?.Invoke(true, msg.Id); 
                 yield return new[] { msg.Id };
@@ -105,7 +105,7 @@ namespace Paramore.Brighter
         /// <param name="message">The message to send</param>
         public void Send(Message message)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, true);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
         }

@@ -62,6 +62,13 @@ namespace Paramore.Brighter
     ///     </item>
     ///     <item>
     ///         <description>
+    ///             A <see cref="INeedInstrumentation"/> describing how we want to instrument the command processor for Open Telemetry support. We need to provide a <see cref="IAmABrighterTracer"/> to
+    ///             provide telemetry and a <see cref="InstrumentationOptions"/> to describe how noisy we want the telemetry to be. If you do not want to use Open Telemetry, use the <see cref="NoInstrumentation"/>
+    ///             method to indicate your intent.
+    ///         </description>
+    ///     </item>
+    ///     <item>
+    ///         <description>
     ///             Finally we need to provide a <see cref="IRequestContext"/> to provide context to requests handlers in the pipeline that can be used to pass information without using the message
     ///             that initiated the pipeline. We instantiate this via a user-provided <see cref="IAmARequestContextFactory"/>. The default approach is use <see cref="InMemoryRequestContextFactory"/>
     ///             to provide a <see cref="RequestContext"/> unless you have a requirement to replace this, such as in testing.
@@ -69,7 +76,7 @@ namespace Paramore.Brighter
     ///     </item>
     /// </list> 
     /// </summary>
-    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
+    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedInstrumentation, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
@@ -82,6 +89,7 @@ namespace Paramore.Brighter
         private IEnumerable<Subscription> _replySubscriptions;
         private InboxConfiguration _inboxConfiguration;
         private InstrumentationOptions _instrumetationOptions;
+        private IAmABrighterTracer _tracer;
 
         private CommandProcessorBuilder()
         {
@@ -92,7 +100,7 @@ namespace Paramore.Brighter
         /// Begins the Fluent Interface
         /// </summary>
         /// <returns>INeedAHandlers.</returns>
-        public static INeedAHandlers With()
+        public static INeedAHandlers StartNew()
         {
             return new CommandProcessorBuilder();
         }
@@ -161,7 +169,7 @@ namespace Paramore.Brighter
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
         /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
         /// <returns></returns>
-        public INeedARequestContext ExternalBus(
+        public INeedInstrumentation ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
             IAmAChannelFactory responseChannelFactory = null, 
@@ -195,7 +203,7 @@ namespace Paramore.Brighter
         /// Use to indicate that you are not using Task Queues.
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext NoExternalBus()
+        public INeedInstrumentation NoExternalBus()
         {
             return this;
         }
@@ -208,12 +216,24 @@ namespace Paramore.Brighter
         /// InstrumentationOptions.RequestContext - what is the context of the request
         /// InstrumentationOptions.All - all of the above
         /// </summary>
-        /// <param name="instrumentationOptions"></param>
+        /// <param name="tracer">What is the <see cref="BrighterTracer"/> that we will use to instrument the Command Processor</param>
+        /// <param name="instrumentationOptions">A <see cref="InstrumentationOptions"/> that tells us how detailed the instrumentation should be</param>
         /// <returns></returns>
-        public INeedARequestContext InstrumentationOptions(InstrumentationOptions instrumentationOptions)
+        public INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions)
         {
+            _tracer = tracer; 
            _instrumetationOptions = instrumentationOptions;
            return this;
+        }
+        
+        /// <summary>
+        /// We do not intend to instrument the CommandProcessor
+        /// </summary>
+        /// <returns></returns>
+        public INeedARequestContext NoInstrumentation()
+        {
+            _instrumetationOptions = InstrumentationOptions.None;
+            return this;
         }
 
         /// <summary>
@@ -250,6 +270,7 @@ namespace Paramore.Brighter
                     bus: _bus,
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
+                    tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions
                 );
             
@@ -264,6 +285,7 @@ namespace Paramore.Brighter
                     inboxConfiguration: _inboxConfiguration,
                     replySubscriptions: _replySubscriptions,
                     responseChannelFactory: _responseChannelFactory,
+                    tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions
                 );
 
@@ -329,7 +351,7 @@ namespace Paramore.Brighter
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
         /// <param name="inboxConfiguration">What is the inbox configuration</param>
         /// <returns></returns>
-        INeedARequestContext ExternalBus(
+        INeedInstrumentation ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
             IAmAChannelFactory responseChannelFactory = null, 
@@ -341,7 +363,30 @@ namespace Paramore.Brighter
         /// We don't send messages out of process
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext NoExternalBus();
+        INeedInstrumentation NoExternalBus();
+    }
+
+    public interface INeedInstrumentation
+    {
+        /// <summary>
+        /// Sets the InstrumentationOptions for the CommandProcessor
+        /// </summary>
+        /// <param name="tracer">The tracer that we should use to create telemetry</param>
+        /// <param name="instrumentationOptions">What depth of instrumentation do we want.
+        /// InstrumentationOptions.None - no telemetry
+        /// InstrumentationOptions.RequestInformation - id  and type of request
+        /// InstrumentationOptions.RequestBody -  body of the request
+        /// InstrumentationOptions.RequestContext - what is the context of the request
+        /// InstrumentationOptions.All - all of the above
+        /// </param>
+        /// <returns>INeedARequestContext</returns>
+        INeedARequestContext ConfigureInstrumentation(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions); 
+        
+        /// <summary>
+        /// We don't need instrumentation of the CommandProcessor
+        /// </summary>
+        /// <returns>INeedARequestContext</returns>
+        INeedARequestContext NoInstrumentation();
     }
 
     /// <summary>
@@ -349,21 +394,8 @@ namespace Paramore.Brighter
     /// </summary>
     public interface INeedARequestContext
     {
-        
         /// <summary>
-        /// Sets the InstrumentationOptions for the CommandProcessor
-        /// InstrumentationOptions.None - no telemetry
-        /// InstrumentationOptions.RequestInformation - id  and type of request
-        /// InstrumentationOptions.RequestBody -  body of the request
-        /// InstrumentationOptions.RequestContext - what is the context of the request
-        /// InstrumentationOptions.All - all of the above
-        /// </summary>
-        /// <param name="instrumentationOptions"></param>
-        /// <returns></returns>
-        INeedARequestContext InstrumentationOptions(InstrumentationOptions instrumentationOptions);
-        
-        /// <summary>
-        /// Requests the context factory.
+        /// Sets the context factory, which is used to create context for the pipeline.
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>

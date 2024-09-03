@@ -72,7 +72,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _sqlOutbox.Delete([_firstMessage.Id], context);
 
             //assert
-            var remainingMessages = _sqlOutbox.OutstandingMessages(0, context);
+            var remainingMessages = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
 
             var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
             msgs.Should().HaveCount(2);
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             
             _sqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id}, context);
 
-            var messages = _sqlOutbox.OutstandingMessages(0, context);
+            var messages = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
 
             messages.Should().HaveCount(0);
         }

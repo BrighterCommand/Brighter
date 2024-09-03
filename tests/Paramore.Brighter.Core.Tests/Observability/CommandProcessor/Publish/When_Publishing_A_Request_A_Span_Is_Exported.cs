@@ -100,7 +100,7 @@ public class CommandProcessorPublishObservabilityTests
         var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
-        var first = publishActivities.First();
+        var first = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyEventHandler)));
         first.ParentId.Should().Be(createActivity.Id);
         first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
         first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue(); 
@@ -113,7 +113,7 @@ public class CommandProcessorPublishObservabilityTests
         activityEvent.Tags.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
         
         //--second publish
-        var second = publishActivities.Last();
+        var second = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyOtherEventHandler)));
         second.ParentId.Should().Be(createActivity.Id);
         second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
         second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue();
@@ -164,7 +164,7 @@ public class CommandProcessorPublishObservabilityTests
         var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
-        var first = publishActivities.First();
+        var first = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyEventHandler)));
         first.ParentId.Should().Be(createActivity.Id);
         first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
         first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue(); 
@@ -178,7 +178,7 @@ public class CommandProcessorPublishObservabilityTests
         first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
         
         //--second publish
-        var second = publishActivities.Last();
+        var second = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyOtherEventHandler)));
         second.ParentId.Should().Be(createActivity.Id);
         second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
         second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue();
@@ -226,7 +226,7 @@ public class CommandProcessorPublishObservabilityTests
         var publishActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Publish.ToSpanName()}").ToList();
 
         //--first publish
-        var first = publishActivities.First();
+        var first = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyEventHandler)));
         first.ParentId.Should().Be(createActivity.Id);
         first.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
         first.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue(); 
@@ -240,7 +240,7 @@ public class CommandProcessorPublishObservabilityTests
         first.Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();       
         
         //--second publish
-        var second = publishActivities.Last();
+        var second = publishActivities.First(activity => activity.Events.Any(e => e.Name == nameof(MyOtherEventHandler)));
         second.ParentId.Should().Be(createActivity.Id);
         second.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == @event.Id).Should().BeTrue();
         second.Tags.Any(t => t is { Key: BrighterSemanticConventions.RequestType, Value: nameof(MyEvent) }).Should().BeTrue();

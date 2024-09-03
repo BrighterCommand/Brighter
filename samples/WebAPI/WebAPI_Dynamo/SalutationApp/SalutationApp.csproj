@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+   <PropertyGroup>
+     <TargetFramework>net8.0</TargetFramework>
+   </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj" />
+      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+    </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Polly.Contrib.WaitAndRetry" />
+  </ItemGroup>
+
+</Project>

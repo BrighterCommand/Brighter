@@ -52,6 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             return new Channel(
                 subscription.ChannelName, 
+                subscription.RoutingKey, 
                 _kafkaMessageConsumerFactory.Create(subscription), 
                 subscription.BufferSize);
         }

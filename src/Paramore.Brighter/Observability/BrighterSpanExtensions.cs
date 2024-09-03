@@ -57,4 +57,12 @@ public static class BrighterSpanExtensions
        OutboxDbOperation.OutStandingMessages => "retrieve.outstanding_messages",
        _ => throw new ArgumentOutOfRangeException(nameof(span), span, null)
    };
+   
+   public static string ToSpanName(this MessagePumpSpanOperation operation) => operation switch
+   {
+       MessagePumpSpanOperation.Receive => "receive",
+       MessagePumpSpanOperation.Process => "process",
+       MessagePumpSpanOperation.Begin => "begin",
+       _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
+   };
 }

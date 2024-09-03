@@ -23,6 +23,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         private readonly string _topicName;
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly RmqMessageConsumer _deadLetterConsumer;
+        private readonly RmqSubscription<MyCommand> _subscription;
 
 
         public RMQMessageConsumerRetryDLQTests()
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             var deadLetterQueueName = $"{_message.Header.Topic}.DLQ";
             var deadLetterRoutingKey = $"{_message.Header.Topic}.DLQ";
 
-            var subscription = new RmqSubscription<MyCommand>(
+            _subscription = new RmqSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
@@ -74,7 +75,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //set up our receiver
             _channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
-            _channel = _channelFactory.CreateChannel(subscription);
+            _channel = _channelFactory.CreateChannel(_subscription);
 
             //how do we handle a command
             IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
@@ -130,7 +131,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             await Task.Delay(20000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message
