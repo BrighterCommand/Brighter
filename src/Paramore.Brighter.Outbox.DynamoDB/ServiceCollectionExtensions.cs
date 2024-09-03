@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return brighterBuilder;
         }
 
-        private static DynamoDbOutbox BuildDynamoDbOutbox(IServiceProvider provider)
+        private static IAmAnOutbox<Message> BuildDynamoDbOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<DynamoDbConfiguration>();
             if (config == null)
@@ -58,8 +58,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             if (dynamoDb == null)
                 throw new InvalidOperationException("No service of type IAmazonDynamoDb was found. Please register before calling this method");
 
-
-            return new DynamoDbOutbox(dynamoDb, config);
+            if (config.SparseOutstandingIndex)
+            {
+                return new SparseOutstandingIndexDynamoDbOutbox(dynamoDb, config);
+            }
+            else
+            {
+                return new DynamoDbOutbox(dynamoDb, config);
+            }
         }
     }
 }
