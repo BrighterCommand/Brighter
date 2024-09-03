@@ -134,7 +134,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         {
             if (!string.IsNullOrEmpty(message.Header.DataRef))
             {
-                var id = message.Header.DataRef;
+                var id = message.Header.DataRef!;
                 var luggage = new StreamReader(_store.Retrieve(id)).ReadToEnd();
                 var newBody = new MessageBody(luggage);
                 message.Body = newBody;

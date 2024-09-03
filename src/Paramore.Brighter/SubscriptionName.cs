@@ -86,7 +86,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
-        public bool Equals(SubscriptionName other)
+        public bool Equals(SubscriptionName? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -121,7 +121,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator ==(SubscriptionName left, SubscriptionName right)
+        public static bool operator ==(SubscriptionName? left, SubscriptionName? right)
         {
             return Equals(left, right);
         }
@@ -132,7 +132,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator !=(SubscriptionName left, SubscriptionName right)
+        public static bool operator !=(SubscriptionName? left, SubscriptionName? right)
         {
             return !Equals(left, right);
         }

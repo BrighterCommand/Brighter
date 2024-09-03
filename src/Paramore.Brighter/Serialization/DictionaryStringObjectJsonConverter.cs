@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Serialization
 
                 reader.Read();
 
-                dictionary.Add(propertyName, ReadJsonElement(ref reader, options));
+                dictionary.Add(propertyName!, ReadJsonElement(ref reader, options));
             }
 
             return dictionary;

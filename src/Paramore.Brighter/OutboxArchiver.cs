@@ -57,7 +57,9 @@ namespace Paramore.Brighter
         /// <param name="dispatchedSince">How stale is the message that we want archive</param>
         public void Archive(TimeSpan dispatchedSince)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
+#pragma warning restore CS0618 // Type or member is obsolete
             var requestContext = _requestContextFactory.Create();
             requestContext.Span = activity;
             
@@ -86,7 +88,9 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token</param>
         public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext, CancellationToken cancellationToken)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
+#pragma warning restore CS0618 // Type or member is obsolete
             requestContext.Span = activity;
             
             try

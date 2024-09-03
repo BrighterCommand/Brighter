@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
@@ -48,7 +47,7 @@ namespace Paramore.Brighter
         /// Gets the header.
         /// </summary>
         /// <value>The header.</value>
-        public MessageHeader Header { get; set; }
+        public MessageHeader Header { get; init; }
         /// <summary>
         /// Gets the body.
         /// </summary>
@@ -164,7 +163,7 @@ namespace Paramore.Brighter
         {
             unchecked
             {
-                return ((Header is not null ? Header.GetHashCode() : 0) * 397) ^ (Body is not null ? Body.GetHashCode() : 0);
+                return (Header.GetHashCode() * 397) ^ (Body is not null ? Body.GetHashCode() : 0);
             }
         }
 

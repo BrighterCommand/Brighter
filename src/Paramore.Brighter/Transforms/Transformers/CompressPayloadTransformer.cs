@@ -94,6 +94,8 @@ namespace Paramore.Brighter.Transforms.Transformers
         {
             var bytes = message.Body.Bytes;
 
+            if (bytes is null) throw new ArgumentException("Cannot transform and empty body");
+            
             //don't transform it too small
             if (bytes.Length < _thresholdInBytes) return message;
             

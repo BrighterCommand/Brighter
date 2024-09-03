@@ -175,7 +175,10 @@ namespace Paramore.Brighter
             
             if (Requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
             {
-                return JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);
+                var result = JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);
+
+                if (result is null) throw new ArgumentException("Body must not be null");
+                return result;
             }
 
             throw new RequestNotFoundException<T>(id);

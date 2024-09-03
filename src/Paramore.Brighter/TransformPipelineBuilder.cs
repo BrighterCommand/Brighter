@@ -120,7 +120,6 @@ namespace Paramore.Brighter
         /// Builds a pipeline.
         /// Anything marked with <see cref="UnwrapWithAttribute"/> will run after the <see cref="IAmAMessageMapper{TRequest}"/>
         /// </summary>
-        /// <param name="requestContext">The context of this request</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
         public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>() where TRequest : class, IRequest
@@ -245,7 +244,7 @@ namespace Paramore.Brighter
                     method => method.GetParameters().Length == 2 
                     && method.GetParameters().First().ParameterType == typeof(TRequest)
                     && method.GetParameters().Last().ParameterType == typeof(Publication)
-                );
+                )!;
         }
 
         private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
@@ -255,7 +254,7 @@ namespace Paramore.Brighter
                 .SingleOrDefault(
                     method => method.GetParameters().Length == 1 
                     && method.GetParameters().Single().ParameterType == typeof(Message)
-                );
+                )!;
         }
 
         private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest

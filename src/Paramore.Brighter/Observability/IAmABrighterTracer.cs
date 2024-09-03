@@ -122,7 +122,7 @@ public interface IAmABrighterTracer : IDisposable
     /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
     Activity? CreateDbSpan(
         OutboxSpanInfo info, 
-        Activity parentActivity, 
+        Activity? parentActivity, 
         InstrumentationOptions options = InstrumentationOptions.All
     );
     

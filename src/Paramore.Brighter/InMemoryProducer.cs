@@ -54,12 +54,12 @@ namespace Paramore.Brighter
         /// The producer is being used within the context of a CommandProcessor pipeline which will have initiated the trace
         /// or be using one from a containing framework like ASP.NET Core
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
-        public event Action<bool, string> OnMessagePublished;
+        public event Action<bool, string>? OnMessagePublished;
 
         /// <summary>
         /// Dispsose of the producer; a no-op for the in-memory producer

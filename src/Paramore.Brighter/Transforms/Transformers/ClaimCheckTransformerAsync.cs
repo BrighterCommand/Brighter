@@ -50,7 +50,6 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// it retrieves the payload, via the claim check and replaces the payload.
         /// </summary>
         /// <param name="store">The storage to use for the payload</param>
-        /// <param name="threshold">The size at which checking luggage is triggered. If size is 0 or less, the check will always be triggered</param>
         public ClaimCheckTransformerAsync(IAmAStorageProviderAsync store)
         {
             _store = store;
