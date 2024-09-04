@@ -29,10 +29,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         public string OutstandingIndexName { get; set; }
         /// <summary>
-        /// Whether the outbox table uses a sparse outstanding index
-        /// </summary>
-        public bool SparseOutstandingIndex { get; set; }
-        /// <summary>
         /// Timeout in milliseconds
         /// </summary>
         public int Timeout { get; }
@@ -52,8 +48,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             RegionEndpoint region,
             string tableName = null,
             int timeout = 500,
-            int numberOfShards = 3,
-            bool sparseOutstandingIndex = false)
+            int numberOfShards = 3)
         {
             Credentials = credentials;
             Region = region;
@@ -62,17 +57,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             DeliveredIndexName = "Delivered";
             Timeout = timeout;
             NumberOfShards = numberOfShards;
-            SparseOutstandingIndex = sparseOutstandingIndex;
         }
 
-        public DynamoDbConfiguration(string tableName = null, int timeout = 500, int numberOfShards = 3, bool sparseOutstandingIndex = false)
+        public DynamoDbConfiguration(string tableName = null, int timeout = 500, int numberOfShards = 3)
         {
             TableName = tableName ?? "brighter_outbox";
             OutstandingIndexName = "Outstanding";
             DeliveredIndexName = "Delivered";
             Timeout = timeout;
             NumberOfShards = numberOfShards;
-            SparseOutstandingIndex = sparseOutstandingIndex;
         }
     }
 }
