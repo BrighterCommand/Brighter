@@ -271,7 +271,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 message, 
                 _dynamoOverwriteTableConfig,
                 cancellationToken);
-       }
+        }
 
         public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
@@ -296,13 +296,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 message, 
                 _dynamoOverwriteTableConfig)
                 .Wait(_configuration.Timeout);
-
         }
 
         private static void MarkMessageDispatched(DateTime? dispatchedAt, MessageItem message)
         {
             message.DeliveryTime = dispatchedAt.Value.Ticks;
             message.DeliveredAt = $"{dispatchedAt:yyyy-MM-dd}";
+
+            // Set the outstanding created time to null to remove the attribute
+            // from the item in dynamo
+            message.OutstandingCreatedTime = null;
         }
 
         /// <summary>
@@ -386,7 +389,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
        
         private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default)
         {
-            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
+            var messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();
         }
 
@@ -460,9 +463,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private async Task<IEnumerable<Message>> OutstandingMessagesForTopicAsync(double millisecondsDispatchedSince,
             string topicName, CancellationToken cancellationToken)
         {
-            var olrderThan = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var olderThan = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
 
-            var messages = (await QueryAllOutstandingShardsAsync(topicName, olrderThan, cancellationToken)).ToList();
+            var messages = (await QueryAllOutstandingShardsAsync(topicName, olderThan, cancellationToken)).ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
@@ -485,14 +488,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             for (int shard = 0; shard < _configuration.NumberOfShards; shard++)
             {
-                // We get all the messages for topic, added within a time range
-                // There should be few enough of those that we can efficiently filter for those
-                // that don't have a delivery date.
                 var queryConfig = new QueryOperationConfig
                 {
                     IndexName = _configuration.OutstandingIndexName,
-                    KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, minimumAge, shard),
-                    FilterExpression = new NoDispatchTimeExpression().Generate(),
+                    KeyExpression = new KeyTopicOutstandingCreatedTimeExpression().Generate(topic, minimumAge, shard),
                     ConsistentRead = false
                 };
 

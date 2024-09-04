@@ -41,9 +41,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// The time at which the message was created, in ticks
         /// </summary>
-        [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
         [DynamoDBProperty]
         public long CreatedTime { get; set; }
+
+        /// <summary>
+        /// The time at which the message was created, in ticks. Null if the message has been dispatched.
+        /// </summary>
+        [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
+        [DynamoDBProperty]
+        public long? OutstandingCreatedTime { get; set; }
 
         /// <summary>
         /// The time at which the message was delivered, formatted as a string yyyy-MM-dd
@@ -122,6 +128,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CharacterEncoding = message.Body.CharacterEncoding.ToString();
             CreatedAt = $"{date}";
             CreatedTime = date.Ticks;
+            OutstandingCreatedTime = date.Ticks;
             DeliveryTime = 0;
             HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             MessageId = message.Id.ToString();
@@ -163,12 +170,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             return new Message(header, body);
         }
-
-        public void MarkMessageDelivered(DateTime deliveredAt)
-        {
-            DeliveryTime = deliveredAt.Ticks;
-            DeliveredAt = $"{deliveredAt:yyyy-MM-dd}";
-        }
     }
 
     public class MessageItemBodyConverter : IPropertyConverter
@@ -176,29 +177,30 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public DynamoDBEntry ToEntry(object value)
         {
             byte[] body = value as byte[];
-            if (body == null) throw new ArgumentOutOfRangeException("Expected the body to be a byte array");
+            if (body == null)
+                throw new ArgumentOutOfRangeException("Expected the body to be a byte array");
 
             DynamoDBEntry entry = new Primitive
             {
                 Value = body,
                 Type = DynamoDBEntryType.Binary
-                
+
             };
-            
+
             return entry;
         }
 
         public object FromEntry(DynamoDBEntry entry)
         {
             byte[] data = Array.Empty<byte>();
-            Primitive primitive = entry as Primitive; 
+            Primitive primitive = entry as Primitive;
             if (primitive?.Value is byte[] bytes)
                 data = bytes;
             if (primitive?.Value is string text)    //for historical data that used UTF-8 strings
                 data = Encoding.UTF8.GetBytes(text);
             if (primitive == null || !(primitive.Value is string || primitive.Value is byte[]))
                 throw new ArgumentOutOfRangeException("Expected Dynamo to have stored a byte array");
-            
+
             return data;
         }
     }
