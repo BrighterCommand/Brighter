@@ -275,7 +275,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var context = new RequestContext();
         await _dynamoDbOutbox.AddAsync(_message, context);
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
@@ -300,7 +300,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         var context = new RequestContext();
         _dynamoDbOutbox.Add(_message, context);
 
-        await Task.Delay(1000);
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
 
         var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
 
