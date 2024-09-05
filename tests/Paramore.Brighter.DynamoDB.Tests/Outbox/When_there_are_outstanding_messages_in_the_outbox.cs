@@ -297,7 +297,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     [Fact]
     public async Task When_an_outstanding_message_is_dispatched()
     {
-        var context = new RequestContext();
+        var context = new RequestContext(); 
         _dynamoDbOutbox.Add(_message, context);
 
         _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
