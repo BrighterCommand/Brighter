@@ -323,11 +323,11 @@ namespace Paramore.Brighter.Outbox.MsSql
             return correlationId;
         }
 
-        private static DateTime GetTimeStamp(DbDataReader dr)
+        private static DateTimeOffset GetTimeStamp(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Timestamp");
             var timeStamp = dr.IsDBNull(ordinal)
-                ? DateTime.MinValue
+                ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
@@ -439,7 +439,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             var header = new MessageHeader(id, topic, messageType);
 
-                DateTime timeStamp = GetTimeStamp(dr);
+                DateTimeOffset timeStamp = GetTimeStamp(dr);
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);

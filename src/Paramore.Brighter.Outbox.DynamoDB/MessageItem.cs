@@ -115,7 +115,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         public MessageItem(Message message, int shard = 0, long? expiresAt = null)
         {
-            var date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
+            var date = message.Header.TimeStamp == DateTimeOffset.MinValue ? DateTimeOffset.UtcNow : message.Header.TimeStamp;
 
             Body = message.Body.Bytes;
             ContentType = message.Header.ContentType;
