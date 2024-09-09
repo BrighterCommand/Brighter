@@ -116,7 +116,9 @@ public class ServiceBusMessageStoreArchiverTests
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(TimeSpan.FromMilliseconds(20000), context);
+        _timeProvider.Advance(TimeSpan.FromSeconds(30));
+        
+        _bus.Archive(TimeSpan.FromSeconds(30), context);
         
         //assert
         _outbox.EntryCount.Should().Be(1);
