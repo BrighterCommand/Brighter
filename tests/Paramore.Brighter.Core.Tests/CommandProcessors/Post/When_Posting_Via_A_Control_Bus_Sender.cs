@@ -44,14 +44,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         private readonly MyCommand _myCommand = new();
         private readonly Message _message;
         private readonly InMemoryOutbox _outbox;
+        private readonly FakeTimeProvider _timeProvider;
 
         public ControlBusSenderPostMessageTests()
         {
             const string topic = "MyCommand";
             _myCommand.Value = "Hello World";
 
-            var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(new InternalBus(), timeProvider)
+            _timeProvider = new FakeTimeProvider();
+            InMemoryProducer producer = new(new InternalBus(), _timeProvider)
             {
                 Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
             };
@@ -77,8 +78,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
             var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, producer},});
 
-            var tracer = new BrighterTracer(timeProvider);
-            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
+            var tracer = new BrighterTracer(_timeProvider);
+            _outbox = new InMemoryOutbox(_timeProvider) {Tracer = tracer};
             
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
@@ -87,7 +88,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _outbox
+                _outbox,
+                timeProvider: _timeProvider
             );
 
             CommandProcessor.ClearServiceBus();
@@ -104,10 +106,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         public void When_Posting_Via_A_Control_Bus_Sender()
         {
             _controlBusSender.Post(_myCommand);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(30));
 
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _outbox
-              .DispatchedMessages(TimeSpan.FromMilliseconds(120000), new RequestContext(), 1)
+              .DispatchedMessages(TimeSpan.FromSeconds(10), new RequestContext(), 1)
               .SingleOrDefault();
               
             message.Should().NotBeNull();

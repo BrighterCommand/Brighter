@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
+using Polly;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
@@ -12,16 +17,44 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
     [Trait("Category", "InMemory")]
     public class SweeperTests
     {
+        private const string MyTopic = "MyTopic";
+
         [Fact]
         public async Task When_outstanding_in_outbox_sweep_clears_them()
         {
             //Arrange
-            const int milliSecondsSinceSent = 500;
+            var timeSinceSent = TimeSpan.FromMilliseconds(500);
+
 
             var timeProvider = new FakeTimeProvider();
+            var tracer = new BrighterTracer(timeProvider);
+            var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
-            var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                { MyTopic, new InMemoryProducer(internalBus, timeProvider) }
+            });
+
+            var bus = new ExternalBusService<Message, Transaction>(
+                producerRegistry,
+                new PolicyRegistry(),
+                new MessageMapperRegistry(
+                    new SimpleMessageMapperFactory(_ => throw new NotImplementedException()),
+                    new SimpleMessageMapperFactoryAsync(_ => throw new NotImplementedException())
+                ),
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                tracer,
+                outbox
+            ); 
+
+            var commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry(),
+                bus);
+
+            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
             var messages = new Message[]
             {
@@ -30,33 +63,57 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             foreach (var message in messages)
             {
-                outbox.Add(message, new RequestContext());
                 commandProcessor.Post(message.ToStubRequest());
             }
 
             //Act
-            timeProvider.Advance(TimeSpan.FromMilliseconds(1000)); // -- let the messages expire
+            timeProvider.Advance(timeSinceSent); // -- let the messages expire
 
             sweeper.Sweep();
 
             await Task.Delay(200); //Give the sweep time to run
 
             //Assert
-            outbox.EntryCount.Should().Be(3);
-            commandProcessor.Dispatched.Count.Should().Be(3);
-            commandProcessor.Deposited.Count.Should().Be(3);
+            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(3);
+            outbox.EntryCount.Should().Be(0);
         }
 
         [Fact]
         public async Task When_outstanding_in_outbox_sweep_clears_them_async()
         {
             //Arrange
-            const int milliSecondsSinceSent = 500;
+            var timeSinceSent = TimeSpan.FromMilliseconds(500);
 
             var timeProvider = new FakeTimeProvider();
+            
+            var tracer = new BrighterTracer(timeProvider);
+            var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
-            var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                { MyTopic, new InMemoryProducer(internalBus, timeProvider) }
+            });
+
+            var bus = new ExternalBusService<Message, Transaction>(
+                producerRegistry,
+                new PolicyRegistry(),
+                new MessageMapperRegistry(
+                    new SimpleMessageMapperFactory(_ => throw new NotImplementedException()),
+                    new SimpleMessageMapperFactoryAsync(_ => throw new NotImplementedException())
+                ),
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                tracer,
+                outbox
+            ); 
+
+            var commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry(),
+                bus);
+            
+            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
             var messages = new Message[]
             {
@@ -65,44 +122,71 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             foreach (var message in messages)
             {
-                outbox.Add(message, new RequestContext());
                 commandProcessor.Post(message.ToStubRequest());
             }
 
             //Act
-            timeProvider.Advance(TimeSpan.FromMilliseconds(milliSecondsSinceSent * 2)); // -- let the messages expire
+            timeProvider.Advance(timeSinceSent); // -- let the messages expire
 
             sweeper.SweepAsyncOutbox();
 
             await Task.Delay(200); //Give the sweep time to run
 
             //Assert
-            outbox.EntryCount.Should().Be(3);
-            commandProcessor.Dispatched.Count.Should().Be(3);
-            commandProcessor.Deposited.Count.Should().Be(3);
+            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(3);
+            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(0);
         }
 
         [Fact]
         public async Task When_too_new_to_sweep_leaves_them()
         {
             //Arrange
-            const int milliSecondsSinceSent = 500;
+            var timeSinceSent = TimeSpan.FromMilliseconds(500);
 
             var timeProvider = new FakeTimeProvider();
-            var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
+            var tracer = new BrighterTracer(timeProvider);
+            var internalBus = new InternalBus();
+            var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                { MyTopic, new InMemoryProducer(internalBus, timeProvider) }
+            });
+
+            var bus = new ExternalBusService<Message, Transaction>(
+                producerRegistry,
+                new PolicyRegistry(),
+                new MessageMapperRegistry(
+                    new SimpleMessageMapperFactory(_ => throw new NotImplementedException()),
+                    new SimpleMessageMapperFactoryAsync(_ => throw new NotImplementedException())
+                ),
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                tracer,
+                outbox
+            ); 
+
+            var commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry(),
+                bus);
+            
+            var sweeper = new OutboxSweeper(
+                timeSinceSent, 
+                commandProcessor, 
+                new InMemoryRequestContextFactory());
 
             Message oldMessage = new MessageTestDataBuilder();
             commandProcessor.DepositPost(oldMessage.ToStubRequest());
+            
+            //delay so the previous message is old enough to sweep 
+            timeProvider.Advance(timeSinceSent); 
 
             var messages = new Message[]
             {
                 new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()
             };
 
-            //Thread.Sleep(milliSecondsSinceSent * 2);
-            timeProvider.Advance(
-                TimeSpan.FromMilliseconds(milliSecondsSinceSent * 2)); //-- allow the messages to be old enough to sweep
 
             foreach (var message in messages)
             {
@@ -110,24 +194,52 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             }
 
             //Act
+            
             sweeper.Sweep();
 
             await Task.Delay(200); //Give the sweep time to run
 
             //Assert
-            commandProcessor.Dispatched.Count.Should().Be(1);
-            commandProcessor.Deposited.Count.Should().Be(4);
+            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(3);
+            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(0);
         }
 
         [Fact]
         public async Task When_too_new_to_sweep_leaves_them_async()
         {
             //Arrange
-            const int milliSecondsSinceSent = 500;
+            var timeSinceSent = TimeSpan.FromMilliseconds(500);
 
             var timeProvider = new FakeTimeProvider();
-            var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
+            
+            var tracer = new BrighterTracer(timeProvider);
+            var internalBus = new InternalBus();
+            var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                { MyTopic, new InMemoryProducer(internalBus, timeProvider) }
+            });
+
+            var bus = new ExternalBusService<Message, Transaction>(
+                producerRegistry,
+                new PolicyRegistry(),
+                new MessageMapperRegistry(
+                    new SimpleMessageMapperFactory(_ => throw new NotImplementedException()),
+                    new SimpleMessageMapperFactoryAsync(_ => throw new NotImplementedException())
+                ),
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                tracer,
+                outbox
+            ); 
+
+            var commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry(),
+                bus);           
+            
+            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 
             Message oldMessage = new MessageTestDataBuilder();
             commandProcessor.DepositPost(oldMessage.ToStubRequest());
@@ -137,8 +249,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()
             };
 
-            timeProvider.Advance(
-                TimeSpan.FromMilliseconds(milliSecondsSinceSent * 2)); //-- allow the messages to be old enough to sweep
+            //-- allow the messages to be old enough to sweep
+            timeProvider.Advance(timeSinceSent); 
 
             foreach (var message in messages)
             {
@@ -151,8 +263,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(200); //Give the sweep time to run
 
             //Assert
-            commandProcessor.Deposited.Count.Should().Be(4);
-            commandProcessor.Dispatched.Count.Should().Be(1);
+            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(3);
+            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(0);
         }
     }
 }
