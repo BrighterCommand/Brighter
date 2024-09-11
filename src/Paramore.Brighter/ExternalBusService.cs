@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         //bool should be made thread-safe by locking the object
         private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
 
-        private DateTimeOffset _lastOutStandingMessageCheckAt = DateTimeOffset.UtcNow;
+        private DateTimeOffset _lastOutStandingMessageCheckAt;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
@@ -52,6 +52,7 @@ namespace Paramore.Brighter
         private readonly TimeSpan _maxOutStandingCheckInterval;
         private readonly Dictionary<string, object> _outBoxBag;
         private readonly IAmABrighterTracer _tracer;
+        private readonly TimeProvider _timeProvider;
 
         /// <summary>
         /// Creates an instance of External Bus Services
@@ -70,9 +71,9 @@ namespace Paramore.Brighter
         /// <param name="maxOutStandingCheckInterval">How long before we check for maxOutStandingMessages</param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="archiveBatchSize">What batch size to use when archiving from the Outbox</param>
+        /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
-        public ExternalBusService(
-            IAmAProducerRegistry producerRegistry,
+        public ExternalBusService(IAmAProducerRegistry producerRegistry,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
@@ -86,6 +87,7 @@ namespace Paramore.Brighter
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object> outBoxBag = null,
             int archiveBatchSize = 100,
+            TimeProvider timeProvider = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _producerRegistry = producerRegistry ??
@@ -105,6 +107,9 @@ namespace Paramore.Brighter
             if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
                 throw new ConfigurationException(
                     "A Command Processor with an external bus must have a message transformer factory");
+            
+            _timeProvider = (timeProvider is null) ? TimeProvider.System : timeProvider;
+            _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
 
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
             _transformPipelineBuilderAsync =
@@ -764,7 +769,7 @@ namespace Paramore.Brighter
 
         private void CheckOutstandingMessages(RequestContext requestContext)
         {
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow();
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
 
@@ -777,11 +782,11 @@ namespace Paramore.Brighter
             {
                 s_logger.LogDebug($"Check not ready to run yet");
                 return;
-            }
+            }                                                    
 
             s_logger.LogDebug(
                 "Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait",
-                DateTime.UtcNow, timeSinceLastCheck.TotalSeconds
+                now, timeSinceLastCheck.TotalSeconds
             );
             //This is expensive, so use a background thread
             Task.Run(
@@ -821,7 +826,7 @@ namespace Paramore.Brighter
                         if (_asyncOutbox != null)
                             await RetryAsync(
                                 async ct =>
-                                    await _asyncOutbox.MarkDispatchedAsync(id, requestContext, DateTime.UtcNow,
+                                    await _asyncOutbox.MarkDispatchedAsync(id, requestContext, _timeProvider.GetUtcNow(),
                                         cancellationToken: ct),
                                 requestContext
                             );
@@ -848,7 +853,7 @@ namespace Paramore.Brighter
 
                         if (_outBox != null)
                             Retry(
-                                () => _outBox.MarkDispatched(id, requestContext, DateTime.UtcNow),
+                                () => _outBox.MarkDispatched(id, requestContext, _timeProvider.GetUtcNow()),
                                 requestContext);
                     }
                 };
@@ -895,7 +900,7 @@ namespace Paramore.Brighter
                             );
                             if (sent)
                                 Retry(
-                                    () => _outBox.MarkDispatched(message.Id, requestContext, DateTime.UtcNow, args),
+                                    () => _outBox.MarkDispatched(message.Id, requestContext, _timeProvider.GetUtcNow(), args),
                                     requestContext
                                 );
                         }
@@ -949,7 +954,7 @@ namespace Paramore.Brighter
                             {
                                 await RetryAsync(async _ =>
                                         await _asyncOutbox.MarkDispatchedAsync(
-                                            successfulMessage, requestContext, DateTime.UtcNow,
+                                            successfulMessage, requestContext, _timeProvider.GetUtcNow(),
                                             cancellationToken: cancellationToken
                                         ),
                                     requestContext,
@@ -1024,7 +1029,7 @@ namespace Paramore.Brighter
                             if (sent)
                                 await RetryAsync(
                                     async _ => await _asyncOutbox.MarkDispatchedAsync(
-                                        message.Id, requestContext, DateTime.UtcNow,
+                                        message.Id, requestContext, _timeProvider.GetUtcNow(),
                                         cancellationToken: cancellationToken
                                     ),
                                     requestContext,
@@ -1097,7 +1102,7 @@ namespace Paramore.Brighter
         {
             s_checkOutstandingSemaphoreToken.Wait();
 
-            _lastOutStandingMessageCheckAt = DateTime.UtcNow;
+            _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
             s_logger.LogDebug("Begin count of outstanding messages");
             try
             {

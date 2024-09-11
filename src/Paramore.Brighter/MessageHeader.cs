@@ -268,7 +268,7 @@ namespace Paramore.Brighter
             MessageType messageType,
             Uri source = null,
             string type = "goparamore.io.Paramore.Brighter.Message",
-            DateTime? timeStamp = null,
+            DateTimeOffset? timeStamp = null,
             string correlationId = null,
             string replyTo = null,
             string contentType = "text/plain",

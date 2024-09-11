@@ -342,7 +342,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
             if (dr.FieldCount > 4)
             {
-                DateTime timeStamp = GetTimeStamp(dr);
+                DateTimeOffset timeStamp = GetTimeStamp(dr);
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);
@@ -461,11 +461,11 @@ namespace Paramore.Brighter.Outbox.MySql
             return dr.GetString(dr.GetOrdinal("Topic"));
         }
 
-        private static DateTime GetTimeStamp(IDataReader dr)
+        private static DateTimeOffset GetTimeStamp(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Timestamp");
             var timeStamp = dr.IsDBNull(ordinal)
-                ? DateTime.MinValue
+                ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
