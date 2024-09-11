@@ -197,7 +197,7 @@ namespace Paramore.Brighter
         /// used internally when we send the message to its destination
         /// </summary>
         /// <value>The topic.</value>
-        public string Topic { get; set; }
+        public RoutingKey Topic { get; set; }
 
         /// <summary>
         /// REQUIRED
@@ -264,11 +264,11 @@ namespace Paramore.Brighter
         /// <param name="delayedMilliseconds">The delay in milliseconds to this message (usually to retry)</param>
         public MessageHeader(
             string messageId,
-            string topic,
+            RoutingKey topic,
             MessageType messageType,
             Uri source = null,
             string type = "goparamore.io.Paramore.Brighter.Message",
-            DateTime? timeStamp = null,
+            DateTimeOffset? timeStamp = null,
             string correlationId = null,
             string replyTo = null,
             string contentType = "text/plain",
@@ -284,7 +284,7 @@ namespace Paramore.Brighter
             MessageType = messageType;
             if (source != null) Source = source;
             Type = type;
-            TimeStamp = timeStamp ?? DateTime.UtcNow;
+            TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
             HandledCount = 0;
             DelayedMilliseconds = 0;
             CorrelationId = correlationId ?? string.Empty;
@@ -308,7 +308,7 @@ namespace Paramore.Brighter
             var newHeader = new MessageHeader
             {
                 Id = Id,
-                Topic = $"{Topic}",
+                Topic = new RoutingKey($"{Topic}"),
                 MessageType = MessageType,
                 TimeStamp = TimeStamp,
                 HandledCount = 0,

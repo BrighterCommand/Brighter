@@ -147,7 +147,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             var header = new MessageHeader(
                 messageId: messageId,
-                topic: Topic,
+                topic: new RoutingKey(Topic),
                 messageType: messageType,
                 timeStamp: timestamp,
                 correlationId: correlationId,

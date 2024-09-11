@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <inheritdoc />
-        public Dictionary<string,IAmAMessageProducer> Create()
+        public Dictionary<RoutingKey,IAmAMessageProducer> Create()
         {
             var publicationsByTopic = new Dictionary<string, IAmAMessageProducer>();
             foreach (var publication in _publications)

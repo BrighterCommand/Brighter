@@ -59,14 +59,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             };
 
             const string topic = "MyRequest";
+            var routingKey = new RoutingKey(topic);
             var fakeTimeProvider = new FakeTimeProvider();
-            
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { topic, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
-                {
-                    Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}
-                } }
+                { 
+                    routingKey, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
+                    {
+                        Publication = {Topic = routingKey, RequestType = typeof(MyRequest)}
+                    } 
+                }
             });
 
             var timeProvider = fakeTimeProvider;

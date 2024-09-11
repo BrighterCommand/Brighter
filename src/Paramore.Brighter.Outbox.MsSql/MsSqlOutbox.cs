@@ -280,7 +280,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         #region Property Extractors
 
-        private static string GetTopic(DbDataReader dr) => dr.GetString(dr.GetOrdinal("Topic"));
+        private static RoutingKey GetTopic(DbDataReader dr) => new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
 
         private static MessageType GetMessageType(DbDataReader dr) =>
             (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));

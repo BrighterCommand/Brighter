@@ -23,9 +23,10 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     {
         const string topic = "MyTopic";
 
+        var routingKey = new RoutingKey(topic);
         var producer = new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
         {
-            Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+            Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
         };
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -41,9 +42,9 @@ public class ServiceBusMessageStoreArchiverTestsAsync
             .Handle<Exception>()
             .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { topic, producer },
+            { routingKey, producer },
         });
 
         var policyRegistry = new PolicyRegistry

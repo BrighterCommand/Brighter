@@ -39,6 +39,22 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Create a null object or Empty routing key
+        /// </summary>
+        /// <returns></returns>
+        public static RoutingKey CreateEmpty() => new RoutingKey(string.Empty);
+
+        /// <summary>
+        /// Tests for an empty routing key
+        /// </summary>
+        /// <param name="routingKey">The routing key to test</param>
+        /// <returns></returns>
+        public static bool IsNullOrEmpty(RoutingKey routingKey)
+        {
+            return routingKey == null || string.IsNullOrEmpty(routingKey.Value);
+        }
+
+        /// <summary>
         /// Gets the name of the channel as a string.
         /// </summary>
         /// <value>The value.</value>

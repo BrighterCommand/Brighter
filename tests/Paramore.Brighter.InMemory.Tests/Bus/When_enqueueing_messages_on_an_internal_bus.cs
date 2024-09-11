@@ -16,7 +16,7 @@ public class InternalBusEnqueueTests
         const string topic = "test";
          
         //act
-       internalBus.Enqueue(new Message(new MessageHeader(messageId, topic, MessageType.MT_COMMAND), new MessageBody("test_content")));
+       internalBus.Enqueue(new Message(new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_COMMAND), new MessageBody("test_content")));
         
         //assert
         var message = internalBus.Stream(new RoutingKey(topic)).Single();

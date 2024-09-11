@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
             for (int i = 0; i < 5; i++)
             {
                 Message _message = new(
-                    new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
+                    new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND),
                     new MessageBody($"test message")
                 );
 

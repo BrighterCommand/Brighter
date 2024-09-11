@@ -31,12 +31,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         }
 
         /// <inheritdoc />
-        public Dictionary<string, IAmAMessageProducer> Create()
+        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
         {
             var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
             var topicClientProvider = new ServiceBusSenderProvider(_clientProvider);
 
-            var producers = new Dictionary<string, IAmAMessageProducer>();
+            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
             foreach (var publication in _publications)
             {
                 if(publication.UseServiceBusQueue)

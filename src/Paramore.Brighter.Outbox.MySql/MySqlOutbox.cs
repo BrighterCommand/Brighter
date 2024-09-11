@@ -456,9 +456,9 @@ namespace Paramore.Brighter.Outbox.MySql
             return replyTo;
         }
 
-        private static string GetTopic(IDataReader dr)
+        private static RoutingKey GetTopic(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
         }
 
         private static DateTime GetTimeStamp(IDataReader dr)

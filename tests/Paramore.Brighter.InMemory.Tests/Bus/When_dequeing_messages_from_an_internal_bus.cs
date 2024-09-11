@@ -17,7 +17,7 @@ public class InternalBusDequeueTests
       var messageId = Guid.NewGuid().ToString();
       
       internalBus.Enqueue(new Message(
-          new MessageHeader(messageId, topic, MessageType.MT_COMMAND), 
+          new MessageHeader(messageId, new RoutingKey(topic), MessageType.MT_COMMAND), 
           new MessageBody(body))
       );
       
