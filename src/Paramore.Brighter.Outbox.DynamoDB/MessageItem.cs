@@ -42,9 +42,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// The time at which the message was created, in ticks
         /// </summary>
-        [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
         [DynamoDBProperty]
         public long CreatedTime { get; set; }
+
+        /// <summary>
+        /// The time at which the message was created, in ticks. Null if the message has been dispatched.
+        /// </summary>
+        [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
+        [DynamoDBProperty]
+        public long? OutstandingCreatedTime { get; set; }
 
         /// <summary>
         /// The time at which the message was delivered, formatted as a string yyyy-MM-dd
@@ -123,6 +129,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CharacterEncoding = message.Body.CharacterEncoding.ToString();
             CreatedAt = date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
             CreatedTime = date.Ticks;
+            OutstandingCreatedTime = date.Ticks;
             DeliveryTime = 0;
             HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             MessageId = message.Id.ToString();

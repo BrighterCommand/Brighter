@@ -365,7 +365,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 message, 
                 _dynamoOverwriteTableConfig,
                 cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-       }
+        }
 
         /// <summary>
         /// Marks a set of messages as dispatched in the Outbox
@@ -404,13 +404,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 message, 
                 _dynamoOverwriteTableConfig)
                 .Wait(_configuration.Timeout);
-
         }
 
         private static void MarkMessageDispatched(DateTimeOffset dispatchedAt, MessageItem message)
         {
             message.DeliveryTime = dispatchedAt.Ticks;
             message.DeliveredAt = dispatchedAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
+            // Set the outstanding created time to null to remove the attribute
+            // from the item in dynamo
+            message.OutstandingCreatedTime = null;
         }
 
         /// <summary>
@@ -423,11 +426,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="args"></param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public IEnumerable<Message> OutstandingMessages(
-         TimeSpan dispatchedSince, 
-         RequestContext requestContext,
-         int pageSize = 100, 
-         int pageNumber = 1, 
-         Dictionary<string, object> args = null)
+            TimeSpan dispatchedSince, 
+            RequestContext requestContext,
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null)
         {
             return OutstandingMessagesAsync(dispatchedSince, requestContext, pageSize, pageNumber, args)
                 .GetAwaiter()
@@ -584,20 +587,20 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return queryResult.Messages.Select(msg => msg.ConvertToMessage());
         }
 
-       private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
-       {
-           var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
-           var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
-           
-           var transaction = dynamoDbUnitOfWork.GetTransaction();
-           transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
-           tcs.SetResult(transaction);
-           return tcs.Task;
-       }
+        private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
+        {
+            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
+            var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
+            
+            var transaction = dynamoDbUnitOfWork.GetTransaction();
+            transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
+            tcs.SetResult(transaction);
+            return tcs.Task;
+        }
        
         private async Task<Message> GetMessage(string id, CancellationToken cancellationToken = default)
         {
-            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken);
+            var messageItem = await _context.LoadAsync<MessageItem>(id, _dynamoOverwriteTableConfig, cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();
         }
 
@@ -734,14 +737,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 do
                 {
-                    // We get all the messages for topic, added within a time range
-                    // There should be few enough of those that we can efficiently filter for those
-                    // that don't have a delivery date.
                     var queryConfig = new QueryOperationConfig
                     {
                         IndexName = _configuration.OutstandingIndexName,
-                        KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topicName, olderThan, shard),
-                        FilterExpression = new NoDispatchTimeExpression().Generate(),
+                        KeyExpression = new KeyTopicOutstandingCreatedTimeExpression().Generate(topicName, olderThan, shard),
                         Limit = batchSize - results.Count,
                         PaginationToken = paginationToken,
                         ConsistentRead = false
