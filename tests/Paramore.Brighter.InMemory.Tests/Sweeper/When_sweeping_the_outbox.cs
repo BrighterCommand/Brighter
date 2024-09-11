@@ -21,7 +21,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         public async Task When_outstanding_in_outbox_sweep_clears_them()
         {
             //Arrange
-            var timeSinceSent = TimeSpan.FromMilliseconds(500);
+            var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
 
             var timeProvider = new FakeTimeProvider();
@@ -59,6 +59,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 tracer,
                 outbox
             ); 
+            
+            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -93,7 +95,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         public async Task When_outstanding_in_outbox_sweep_clears_them_async()
         {
             //Arrange
-            var timeSinceSent = TimeSpan.FromMilliseconds(500);
+            var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
             var timeProvider = new FakeTimeProvider();
             
@@ -129,6 +131,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 tracer,
                 outbox
             ); 
+            
+            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -163,7 +167,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         public async Task When_too_new_to_sweep_leaves_them()
         {
             //Arrange
-            var timeSinceSent = TimeSpan.FromMilliseconds(500);
+            var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
             var timeProvider = new FakeTimeProvider();
             var tracer = new BrighterTracer(timeProvider);
@@ -200,6 +204,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 tracer,
                 outbox
             ); 
+            
+            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -224,7 +230,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             foreach (var e in events)
             {
-                commandProcessor.Post(e);
+                commandProcessor.DepositPost(e);
             }
 
             //Act
@@ -242,7 +248,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         public async Task When_too_new_to_sweep_leaves_them_async()
         {
             //Arrange
-            var timeSinceSent = TimeSpan.FromMilliseconds(500);
+            var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
             var timeProvider = new FakeTimeProvider();
             
@@ -280,6 +286,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
                 tracer,
                 outbox
             ); 
+            
+            CommandProcessor.ClearServiceBus();
 
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
@@ -301,7 +309,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             foreach (var e in events)
             {
-                commandProcessor.Post(e);
+                commandProcessor.DepositPost(e);
             }
 
             //Act
