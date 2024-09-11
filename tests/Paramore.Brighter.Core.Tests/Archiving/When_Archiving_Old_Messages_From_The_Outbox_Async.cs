@@ -18,6 +18,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     private readonly InMemoryOutbox _outbox;
     private readonly InMemoryArchiveProvider _archiveProvider;
     private readonly ExternalBusService<Message,CommittableTransaction> _bus;
+    private readonly FakeTimeProvider _timeProvider;
 
     public ServiceBusMessageStoreArchiverTestsAsync()
     {
@@ -53,9 +54,9 @@ public class ServiceBusMessageStoreArchiverTestsAsync
             { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
         }; 
         
-        var timeProvider = new FakeTimeProvider();
+        _timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer();
-        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
+        _outbox = new InMemoryOutbox(_timeProvider){Tracer = tracer};
         _archiveProvider = new InMemoryArchiveProvider();
         
         _bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -91,7 +92,9 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context, new CancellationToken());
+        _timeProvider.Advance(TimeSpan.FromSeconds(30));
+        
+        await _bus.ArchiveAsync(TimeSpan.FromSeconds(15), context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(0);
@@ -119,7 +122,9 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context, new CancellationToken());
+        _timeProvider.Advance(TimeSpan.FromSeconds(30));
+        
+        await _bus.ArchiveAsync(TimeSpan.FromSeconds(15), context, new CancellationToken());
         
         //assert
         _outbox.EntryCount.Should().Be(1);
