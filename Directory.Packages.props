@@ -48,7 +48,7 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.8.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.9.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.0" />
     <PackageVersion Include="MQTTnet" Version="3.1.2" />
     <PackageVersion Include="MySqlConnector" Version="2.3.7" />
