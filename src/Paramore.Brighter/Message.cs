@@ -71,7 +71,7 @@ namespace Paramore.Brighter
         {
             get
             {
-                if (Header.Bag.TryGetValue(DeliveryTagHeaderName, out object value))
+                if (Header.Bag.TryGetValue(DeliveryTagHeaderName, out object? value))
                     return (ulong) value;
                 else
                     return 0;
@@ -93,7 +93,7 @@ namespace Paramore.Brighter
         {
             get
             {
-                if (Header.Bag.TryGetValue(RedeliveredHeaderName, out object value))
+                if (Header.Bag.TryGetValue(RedeliveredHeaderName, out object? value))
                     return (bool) value;
                 else
                 {

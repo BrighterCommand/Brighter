@@ -336,7 +336,7 @@ namespace Paramore.Brighter
 
             try
             {
-                return Requests.TryGetValue(messageId, out OutboxEntry entry) ? entry.Message : new Message();
+                return Requests.TryGetValue(messageId, out OutboxEntry? entry) ? entry.Message : new Message();
             }
             finally
             {
@@ -438,7 +438,7 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
 
-            if (Requests.TryGetValue(id, out OutboxEntry entry))
+            if (Requests.TryGetValue(id, out OutboxEntry? entry))
             {
                 entry.TimeFlushed = dispatchedAt ?? _timeProvider.GetUtcNow().DateTime;
             }

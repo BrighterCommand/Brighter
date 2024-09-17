@@ -171,12 +171,12 @@ namespace Paramore.Brighter
         /// <param name="initializerList">The initializer list.</param>
         public virtual void InitializeFromAttributeParams(params object?[] initializerList) { }
 
-        internal MethodInfo? FindHandlerMethod()
+        internal MethodInfo FindHandlerMethod()
         {
             var methods = GetType().GetMethods();
             return methods
                 .Where(method => method.Name == nameof(HandleAsync))
-                .SingleOrDefault(method => method.GetParameters().Length == 2 
+                .Single(method => method.GetParameters().Length == 2 
                     && method.GetParameters()[0].ParameterType == typeof(TRequest)
                     && method.GetParameters()[1].ParameterType == typeof(CancellationToken));
         }

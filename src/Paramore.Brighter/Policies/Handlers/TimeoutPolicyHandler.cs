@@ -84,9 +84,9 @@ namespace Paramore.Brighter.Policies.Handlers
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _milliseconds = (int)initializerList[0];
+            _milliseconds = (int?)initializerList[0] ?? 0;
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Policies.Handlers
                     //we already cancelled the task
                     ct.ThrowIfCancellationRequested();
                     //allow the handlers that can timeout to grab the cancellation token
-                    Context.Bag[CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN] = ct;
+                    Context?.Bag.AddOrUpdate(CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN, ct, (s, o) => o = ct);
                     return base.Handle(command);
                 },
                 cancellationToken: ct,

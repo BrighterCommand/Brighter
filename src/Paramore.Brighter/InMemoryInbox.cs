@@ -102,6 +102,8 @@ namespace Paramore.Brighter
     /// </summary>
     public class InMemoryInbox(TimeProvider timeProvider) : InMemoryBox<InboxItem>(timeProvider), IAmAnInboxSync, IAmAnInboxAsync
     {
+        private readonly TimeProvider _timeProvider = timeProvider;
+
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
@@ -125,7 +127,7 @@ namespace Paramore.Brighter
             string key = InboxItem.CreateKey(command.Id, contextKey);
             if (!Exists<T>(command.Id, contextKey))
             {
-                if (!Requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, timeProvider.GetUtcNow().DateTime, contextKey)))
+                if (!Requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, _timeProvider.GetUtcNow().DateTime, contextKey)))
                 {
                     throw new Exception($"Could not add command: {command.Id} to the Inbox");
                 }
@@ -173,7 +175,7 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            if (Requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
+            if (Requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem? inboxItem))
             {
                 var result = JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);
 

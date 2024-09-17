@@ -160,12 +160,12 @@ namespace Paramore.Brighter
         public virtual void InitializeFromAttributeParams(params object?[] initializerList) { }
 
 
-        internal MethodInfo? FindHandlerMethod()
+        internal MethodInfo FindHandlerMethod()
         {
             var methods = GetType().GetMethods();
             return methods
                 .Where(method => method.Name == nameof(Handle))
-                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
+                .Single(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
         }
     }
 }

@@ -131,7 +131,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <returns></returns>
         public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
-            if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
+            if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object? objId))
             {
                 var id = (string)objId;
                 var luggage = await new StreamReader(await _store.RetrieveAsync(id, cancellationToken)).ReadToEndAsync();

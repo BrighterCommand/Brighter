@@ -57,10 +57,10 @@ namespace Paramore.Brighter.Monitoring.Handlers
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _handlerName = (string)initializerList[0];
-            _handlerFullAssemblyName = (string)initializerList[1];
+            _handlerName = (string?)initializerList[0];
+            _handlerFullAssemblyName = (string?)initializerList[1];
         }
 
         /// <summary>

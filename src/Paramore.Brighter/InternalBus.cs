@@ -80,7 +80,7 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
         
         var found = _messages.TryGetValue(topic, out var messages);
         
-        if (!found || !messages.Any())
+        if (!found || messages is null || !messages.Any())
             return MessageFactory.CreateEmptyMessage(topic);
 
         if (!messages.TryTake(out Message message, timeout.Value.Milliseconds, CancellationToken.None))

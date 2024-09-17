@@ -60,7 +60,7 @@ namespace Paramore.Brighter
 
             if (context == null)
             {
-                Context = (handlerType) => handlerType.FullName;
+                Context = (handlerType) => handlerType?.FullName ?? string.Empty;
             }
         }
     }

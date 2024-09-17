@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Policies.Handlers
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
             var catchAll = Convert.ToBoolean(initializerList[0]);
             var catchBrokenCircuit = Convert.ToBoolean(initializerList[1]);
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (Exception exception)
             {
-                Context.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, exception, (s, o) => exception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, exception, (s, o) => exception);
             }
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (BrokenCircuitException brokenCircuitExceptionexception)
             {
-                Context.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception, (s, o) => brokenCircuitExceptionexception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception, (s, o) => brokenCircuitExceptionexception);
             }
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }

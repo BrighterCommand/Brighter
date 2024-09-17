@@ -69,7 +69,7 @@ namespace Paramore.Brighter
 
             //This is expensive, so use a background thread
             Task.Factory.StartNew(
-                action: state => RemoveExpiredMessages((DateTimeOffset)state),
+                action: state => RemoveExpiredMessages((DateTimeOffset)state!),
                 state: now,
                 cancellationToken: CancellationToken.None,
                 creationOptions: TaskCreationOptions.DenyChildAttach,
@@ -115,7 +115,7 @@ namespace Paramore.Brighter
                     int entriesToRemove = upperSize - newSize;
 
                     Task.Factory.StartNew(
-                        action: state => Compact((int)state),
+                        action: state => Compact((int)state!),
                         state: entriesToRemove,
                         CancellationToken.None,
                         TaskCreationOptions.DenyChildAttach,

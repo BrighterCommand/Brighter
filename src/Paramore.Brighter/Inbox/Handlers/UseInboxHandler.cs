@@ -57,11 +57,11 @@ namespace Paramore.Brighter.Inbox.Handlers
             _inbox = inbox;
         }
         
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _onceOnly = (bool) initializerList[0];
-            _contextKey = (string)initializerList[1];
-            _onceOnlyAction = (OnceOnlyAction)initializerList[2];
+            _onceOnly = (bool?) initializerList[0] ?? false;
+            _contextKey = (string?)initializerList[1];
+            _onceOnlyAction = (OnceOnlyAction?)initializerList[2] ?? OnceOnlyAction.Throw;
             
             base.InitializeFromAttributeParams(initializerList);
         }

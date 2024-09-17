@@ -332,7 +332,7 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="parentActivity">The parent <see cref="Activity"/>, if any, that we should assign to this span</param>
     /// <param name="options">The <see cref="InstrumentationOptions"/> that explain how deep should the instrumentation go?</param>
     /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
-    public Activity? CreateDbSpan(OutboxSpanInfo info, Activity parentActivity, InstrumentationOptions options)
+    public Activity? CreateDbSpan(OutboxSpanInfo info, Activity? parentActivity, InstrumentationOptions options)
     {
         var spanName = !string.IsNullOrEmpty(info.dbTable) 
             ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
@@ -384,7 +384,7 @@ public class BrighterTracer : IAmABrighterTracer
     public Activity? CreateProducerSpan(
         Publication publication, 
         Message? message, 
-        Activity parentActivity,
+        Activity? parentActivity,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
     )
     {

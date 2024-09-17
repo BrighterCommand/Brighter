@@ -90,7 +90,7 @@ namespace Paramore.Brighter
         /// though Cloud Events does not.
         /// Default value is "text/plain"
         /// </summary>
-        public string ContentType { get; set; }
+        public string? ContentType { get; set; }
         
         /// <summary>
         /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,
@@ -104,7 +104,7 @@ namespace Paramore.Brighter
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
         /// Identifies the schema that data adheres to. Incompatible changes to the schema SHOULD be reflected by a different URI. 
         /// </summary>
-        public Uri DataSchema { get; set; }
+        public Uri? DataSchema { get; set; }
         
         /// <summary>
         /// OPTIONAL
@@ -115,7 +115,7 @@ namespace Paramore.Brighter
         ///  - If the consumer wants to verify that the Data has not been tampered with, it can retrieve it from a trusted source using this attribute.
         ///  - If the Data MUST only be viewed by trusted consumers (e.g. personally identifiable information), only a trusted consumer can retrieve it using this attribute and a pre-shared secret.
         /// </summary>
-        public string DataRef { get; set; }
+        public string? DataRef { get; set; }
         
         /// <summary>
         /// OPTIONAL
@@ -161,7 +161,7 @@ namespace Paramore.Brighter
         /// do not have to filter replies intended for other listeners.
         /// </summary>
         /// <value>The reply to.</value>
-        public string ReplyTo { get; set; }
+        public string? ReplyTo { get; set; }
         
         /// <summary>
         /// OPTIONAL
@@ -171,7 +171,7 @@ namespace Paramore.Brighter
         /// but the source identifier alone might not be sufficient as a qualifier for any specific event if the
         /// source context has internal sub-structure.
         /// </summary>
-        public string Subject { get; set; }
+        public string? Subject { get; set; }
 
         /// <summary>
         /// REQUIRED
@@ -217,7 +217,7 @@ namespace Paramore.Brighter
         ///     - trace-flags
         /// In .NET it is set from Activity.Current.Id
         /// </summary>
-        public string TraceParent { get; set; }
+        public string? TraceParent { get; set; }
         
         /// <summary>
         /// OPTIONAL
@@ -228,7 +228,7 @@ namespace Paramore.Brighter
         /// in multiple distributed tracing graphs.
         /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
         /// </summary>
-        public string TraceState { get; set; }
+        public string? TraceState { get; set; }
         
         /// <summary>
         /// REQUIRED
@@ -243,7 +243,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'
         /// </summary>
-        public MessageHeader() { }
+        // public MessageHeader() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
@@ -266,15 +266,15 @@ namespace Paramore.Brighter
             string messageId,
             RoutingKey topic,
             MessageType messageType,
-            Uri source = null,
+            Uri? source = null,
             string type = "goparamore.io.Paramore.Brighter.Message",
             DateTimeOffset? timeStamp = null,
-            string correlationId = null,
-            RoutingKey replyTo = null,
+            string? correlationId = null,
+            RoutingKey? replyTo = null,
             string contentType = "text/plain",
             string partitionKey = "",
-            Uri dataSchema = null,
-            string subject = null,
+            Uri? dataSchema = null,
+            string? subject = null,
             int handledCount = 0,
             int delayedMilliseconds = 0
             )
@@ -305,19 +305,17 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public MessageHeader Copy()
         {
-            var newHeader = new MessageHeader
-            {
-                Id = Id,
-                Topic = new RoutingKey($"{Topic}"),
-                MessageType = MessageType,
-                TimeStamp = TimeStamp,
-                HandledCount = 0,
-                DelayedMilliseconds = 0,
-                CorrelationId = CorrelationId,
-                ReplyTo = $"{ReplyTo}",
-                ContentType = $"{ContentType}",
-                PartitionKey = $"{PartitionKey}"
-            };
+            var newHeader = new MessageHeader(Id,
+                new RoutingKey($"{Topic}"),
+                MessageType,
+                timeStamp : TimeStamp,
+                handledCount : 0,
+                delayedMilliseconds : 0,
+                correlationId: CorrelationId,
+                replyTo : $"{ReplyTo}",
+                contentType : $"{ContentType}",
+                partitionKey : $"{PartitionKey}"
+            );
 
             foreach (var item in Bag)
             {
@@ -332,7 +330,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
-        public bool Equals(MessageHeader other)
+        public bool Equals(MessageHeader? other)
         {
             if (ReferenceEquals(null, other)) return false;
             return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType;
@@ -343,7 +341,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;

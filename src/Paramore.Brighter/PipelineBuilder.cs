@@ -226,6 +226,10 @@ namespace Paramore.Brighter
             )
                 return;
 
+            if (_inboxConfiguration is null)
+                throw new ArgumentException("Inbox Configuration must be provided");
+            if (_inboxConfiguration.Context is null)
+                throw new ArgumentException("Inbox Configuration must be set");
             var useInboxAttribute = new UseInboxAttribute(
                 step: 0,
                 contextKey: _inboxConfiguration.Context(implicitHandler.GetType()),
@@ -246,6 +250,10 @@ namespace Paramore.Brighter
             )
                 return;
 
+            if (_inboxConfiguration is null)
+                throw new ArgumentException("Inbox Configuration must be provided");
+            if (_inboxConfiguration.Context is null)
+                throw new ArgumentException("Inbox Configuration must be set");
             var useInboxAttribute = new UseInboxAsyncAttribute(
                 step: 0,
                 contextKey: _inboxConfiguration.Context(implicitHandler.GetType()),

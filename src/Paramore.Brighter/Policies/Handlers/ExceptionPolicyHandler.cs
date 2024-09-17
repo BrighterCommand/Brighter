@@ -54,12 +54,12 @@ namespace Paramore.Brighter.Policies.Handlers
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
         /// <exception cref="System.ArgumentException">Could not find the policy for this attribute, did you register it with the command processor's container;initializerList</exception>
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
             if (_initialized) return;
             
             //we expect the first and only parameter to be a string
-            var policies = (List<string>)initializerList[0];
+            var policies = (List<string>?)initializerList[0] ?? [];
             policies.Each(p => _policies.Add(Context!.Policies!.Get<Policy>(p)));
             _initialized = true;
         }

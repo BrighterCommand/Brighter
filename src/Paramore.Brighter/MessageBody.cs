@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// The message body as a byte array.
         /// </summary>
-        public byte[]? Bytes { get; private set; }
+        public byte[] Bytes { get; private set; }
 
         /// <summary>
         /// The type of message encoded into Bytes.  A hint for deserialization that 
@@ -85,7 +85,7 @@ namespace Paramore.Brighter
         /// <param name="characterEncoding">The encoding of the content. Defaults to MessageEncoding.UTF8.
         /// If you pass us "application/octet" but the type is ascii or utf8, we will convert to base64 for you.
         /// </param>
-        public MessageBody(string body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(string? body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             ContentType = contentType;
             CharacterEncoding = characterEncoding;
@@ -98,13 +98,13 @@ namespace Paramore.Brighter
                 return;
             }
             
-            Bytes = CharacterEncoding switch
+            Bytes = (CharacterEncoding switch
             {
                 CharacterEncoding.Base64 => Convert.FromBase64String(body),
                 CharacterEncoding.UTF8 => Encoding.UTF8.GetBytes(body),
                 CharacterEncoding.ASCII => Encoding.ASCII.GetBytes(body),
                 _ => Bytes
-            };
+            })!;
         }
 
         /// <summary>
@@ -168,7 +168,8 @@ namespace Paramore.Brighter
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageBody? other)
         {
-            return Bytes.SequenceEqual(other?.Bytes) && ContentType.Equals(other?.ContentType);
+            if (other is null) return false;
+            return Bytes.SequenceEqual(other.Bytes) && ContentType.Equals(other?.ContentType);
         }
 
         /// <summary>

@@ -46,9 +46,9 @@ namespace Paramore.Brighter.Logging.Handlers
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _timing = (HandlerTiming)initializerList[0];
+            _timing = (HandlerTiming?)initializerList[0] ?? HandlerTiming.Before;
         }
 
         /// <summary>

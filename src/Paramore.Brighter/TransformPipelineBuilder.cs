@@ -209,7 +209,7 @@ namespace Paramore.Brighter
         private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
-            if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute> transformAttributes))
+            if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute>? transformAttributes))
             {
                 transformAttributes = FindMapToMessage(messageMapper)
                     .GetOtherWrapsInPipeline()
@@ -224,7 +224,7 @@ namespace Paramore.Brighter
         private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
-            if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute> transformAttributes))
+            if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute>? transformAttributes))
             {
                 transformAttributes = FindMapToRequest(messageMapper)
                     .GetOtherUnwrapsInPipeline()
