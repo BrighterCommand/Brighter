@@ -128,8 +128,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             
             requeuedMessage.Id.Should().Be(message.Id);
             requeuedMessage.Redelivered.Should().BeFalse();
-            requeuedMessage.Header.Id.Should().Be(message.Id);
-            requeuedMessage.Header.Topic.Value.Should().Contain(_topicName);
+            requeuedMessage.Header.MessageId.Should().Be(message.Id);
+            requeuedMessage.Header.Topic.Should().Contain(_topicName);
             requeuedMessage.Header.CorrelationId.Should().Be(_correlationId);
             requeuedMessage.Header.ContentType.Should().Be(_contentType);
             requeuedMessage.Header.HandledCount.Should().Be(1);

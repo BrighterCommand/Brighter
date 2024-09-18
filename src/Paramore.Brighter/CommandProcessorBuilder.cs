@@ -22,8 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.FeatureSwitch.Providers;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
 
@@ -82,7 +84,9 @@ namespace Paramore.Brighter
         private IAmASubscriberRegistry? _registry;
         private IAmAHandlerFactory? _handlerFactory;
         private IPolicyRegistry<string>? _policyRegistry;
-        private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
+
+        private IAmAFeatureSwitchRegistry? _featureSwitchRegistry =
+            new FluentConfigRegistry(new Dictionary<Type, FeatureSwitchStatus>());
         private IAmAnExternalBusService? _bus;
         private bool _useRequestReplyQueues;
         private IAmAChannelFactory? _responseChannelFactory;

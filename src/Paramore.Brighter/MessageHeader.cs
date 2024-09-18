@@ -137,7 +137,7 @@ namespace Paramore.Brighter
         /// Consumers MAY assume that Events with identical source and id are duplicates.
         /// </summary>
         /// <value>The identifier.</value>
-        public string Id { get; init; }
+        public string MessageId { get; init; }
         
         /// <summary>
         /// REQUIRED
@@ -241,11 +241,6 @@ namespace Paramore.Brighter
         public string Type { get; set; }
 
         /// <summary>
-        /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'
-        /// </summary>
-        // public MessageHeader() { }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
         /// </summary>
         /// <param name="messageId">Identifies the event. Producers MUST ensure that source + id is unique for each distinct event.</param>
@@ -276,10 +271,14 @@ namespace Paramore.Brighter
             Uri? dataSchema = null,
             string? subject = null,
             int handledCount = 0,
-            int delayedMilliseconds = 0
-            )
+            int delayedMilliseconds = 0,
+            Dictionary<string,object>? bag = null,
+            string specVersion = "1.0",
+            string? traceParent = null,
+            string? traceState = null,
+            string? dataRef = null)
         {
-            Id = messageId;
+            MessageId = messageId;
             Topic = topic;
             MessageType = messageType;
             if (source != null) Source = source;
@@ -297,6 +296,12 @@ namespace Paramore.Brighter
             
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;
+
+            Bag = bag ?? new Dictionary<string, object>();
+            SpecVersion = specVersion;
+            TraceParent = traceParent;
+            TraceState = traceState;
+            DataRef = dataRef;
         }
 
         /// <summary>
@@ -305,7 +310,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public MessageHeader Copy()
         {
-            var newHeader = new MessageHeader(Id,
+            var newHeader = new MessageHeader(MessageId,
                 new RoutingKey($"{Topic}"),
                 MessageType,
                 timeStamp : TimeStamp,
@@ -333,7 +338,7 @@ namespace Paramore.Brighter
         public bool Equals(MessageHeader? other)
         {
             if (ReferenceEquals(null, other)) return false;
-            return Id == other.Id && Topic == other.Topic && MessageType == other.MessageType;
+            return MessageId == other.MessageId && Topic == other.Topic && MessageType == other.MessageType;
         }
 
         /// <summary>
@@ -357,7 +362,7 @@ namespace Paramore.Brighter
         {
             unchecked
             {
-                var hashCode = Id.GetHashCode();
+                var hashCode = MessageId.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Topic != null ? Topic.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)MessageType;
                 return hashCode;

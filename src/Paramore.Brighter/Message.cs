@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         /// <value>The identifier.</value>
         public string Id
         {
-            get { return Header.Id; }
+            get { return Header.MessageId; }
         }
         
         /// <summary>

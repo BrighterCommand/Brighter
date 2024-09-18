@@ -248,7 +248,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             if(message.Header.CorrelationId is not null)
                 azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
             azureServiceBusMessage.ContentType = message.Header.ContentType;
-            azureServiceBusMessage.MessageId = message.Header.Id;
+            azureServiceBusMessage.MessageId = message.Header.MessageId;
             if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
                 azureServiceBusMessage.SessionId = value.ToString();
 

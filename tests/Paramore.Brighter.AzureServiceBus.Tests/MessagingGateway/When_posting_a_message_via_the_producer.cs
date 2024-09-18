@@ -106,7 +106,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             message.Id.Should().Be(_command.Id);
             message.Redelivered.Should().BeFalse();
-            message.Header.Id.Should().Be(_command.Id);
+            message.Header.MessageId.Should().Be(_command.Id);
             message.Header.Topic.Value.Should().Contain(testQueues ? _queueName : _topicName);
             message.Header.CorrelationId.Should().Be(_correlationId);
             message.Header.ContentType.Should().Be(_contentType);
