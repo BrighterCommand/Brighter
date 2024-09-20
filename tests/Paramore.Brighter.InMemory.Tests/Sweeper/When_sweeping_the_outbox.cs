@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
-using Paramore.Brighter.InMemory.Tests.Builders;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
@@ -12,147 +15,311 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
     [Trait("Category", "InMemory")]
     public class SweeperTests
     {
+        private const string MyTopic = "MyTopic";
+
         [Fact]
         public async Task When_outstanding_in_outbox_sweep_clears_them()
         {
             //Arrange
-            const int milliSecondsSinceSent = 500;
+            var timeSinceSent = TimeSpan.FromMilliseconds(6000);
+
 
             var timeProvider = new FakeTimeProvider();
+            var tracer = new BrighterTracer(timeProvider);
+            var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
-            var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
 
-            var messages = new Message[]
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()
+                { 
+                    MyTopic, new InMemoryProducer(internalBus, timeProvider)
+                    {
+                        Publication =
+                        {
+                            RequestType = typeof(MyEvent), 
+                            Topic = new RoutingKey(MyTopic)
+                        }
+                    }
+                }
+            });
+
+            var mapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
+            );
+            
+            mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            
+            var bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry,
+                new DefaultPolicy(),
+                mapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                tracer,
+                outbox
+            ); 
+            
+            CommandProcessor.ClearServiceBus();
+
+            var commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry(),
+                bus);
+
+            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+
+            var events = new[]
+            {
+                new MyEvent{Value = "one"}, new MyEvent{Value = "two"}, new MyEvent{Value = "three"}
             };
-
-            foreach (var message in messages)
+            
+            foreach (var e in events)
             {
-                outbox.Add(message, new RequestContext());
-                commandProcessor.Post(message.ToStubRequest());
+                commandProcessor.Post(e);
             }
 
             //Act
-            timeProvider.Advance(TimeSpan.FromMilliseconds(1000)); // -- let the messages expire
+            timeProvider.Advance(timeSinceSent); // -- let the messages expire
 
             sweeper.Sweep();
 
-            await Task.Delay(200); //Give the sweep time to run
+            await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            outbox.EntryCount.Should().Be(3);
-            commandProcessor.Dispatched.Count.Should().Be(3);
-            commandProcessor.Deposited.Count.Should().Be(3);
+            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(3);
+            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(0);
         }
 
         [Fact]
         public async Task When_outstanding_in_outbox_sweep_clears_them_async()
         {
             //Arrange
-            const int milliSecondsSinceSent = 500;
+            var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
             var timeProvider = new FakeTimeProvider();
+            
+            var tracer = new BrighterTracer(timeProvider);
+            var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
-            var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
 
-            var messages = new Message[]
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()
+                { MyTopic, new InMemoryProducer(internalBus, timeProvider)
+                {
+                    Publication =
+                    {
+                        RequestType = typeof(MyEvent), 
+                        Topic = new RoutingKey(MyTopic)
+                    }
+                } }
+            });
+
+            var mapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
+            );
+            
+            mapperRegistry.Register<MyEvent, MyEventMessageMapper>();            
+            
+            var bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry,
+                new DefaultPolicy(),
+                mapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                tracer,
+                outbox
+            ); 
+            
+            CommandProcessor.ClearServiceBus();
+
+            var commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry(),
+                bus);
+            
+            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+
+            var events = new[]
+            {
+                new MyEvent{Value = "one"}, new MyEvent{Value = "two"}, new MyEvent{Value = "three"}
             };
-
-            foreach (var message in messages)
+            
+            foreach (var e in events)
             {
-                outbox.Add(message, new RequestContext());
-                commandProcessor.Post(message.ToStubRequest());
+                commandProcessor.Post(e);
             }
 
             //Act
-            timeProvider.Advance(TimeSpan.FromMilliseconds(milliSecondsSinceSent * 2)); // -- let the messages expire
+            timeProvider.Advance(timeSinceSent); // -- let the messages expire
 
             sweeper.SweepAsyncOutbox();
 
-            await Task.Delay(200); //Give the sweep time to run
+            await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            outbox.EntryCount.Should().Be(3);
-            commandProcessor.Dispatched.Count.Should().Be(3);
-            commandProcessor.Deposited.Count.Should().Be(3);
+            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(3);
+            (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())).Count().Should().Be(0);
         }
 
         [Fact]
         public async Task When_too_new_to_sweep_leaves_them()
         {
             //Arrange
-            const int milliSecondsSinceSent = 500;
+            var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
             var timeProvider = new FakeTimeProvider();
-            var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
+            var tracer = new BrighterTracer(timeProvider);
+            var internalBus = new InternalBus();
+            var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
-            Message oldMessage = new MessageTestDataBuilder();
-            commandProcessor.DepositPost(oldMessage.ToStubRequest());
-
-            var messages = new Message[]
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()
+                { 
+                    MyTopic, new InMemoryProducer(internalBus, timeProvider)
+                    {
+                        Publication =
+                        {
+                            RequestType = typeof(MyEvent), 
+                            Topic = new RoutingKey(MyTopic)
+                        } 
+                    } 
+                }
+            });
+            
+            var mapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
+            );
+            
+            mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+
+            var bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry,
+                new DefaultPolicy(),
+                mapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                tracer,
+                outbox
+            ); 
+            
+            CommandProcessor.ClearServiceBus();
+
+            var commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry(),
+                bus);
+            
+            var sweeper = new OutboxSweeper(
+                timeSinceSent, 
+                commandProcessor, 
+                new InMemoryRequestContextFactory());
+
+            var oldEvent = new MyEvent{Value = "old"};
+            commandProcessor.DepositPost(oldEvent);
+            
+            //delay so the previous message is old enough to sweep 
+            timeProvider.Advance(timeSinceSent); 
+
+            var events = new[]
+            {
+                new MyEvent{Value = "one"}, new MyEvent{Value = "two"}, new MyEvent{Value = "three"}
             };
-
-            //Thread.Sleep(milliSecondsSinceSent * 2);
-            timeProvider.Advance(
-                TimeSpan.FromMilliseconds(milliSecondsSinceSent * 2)); //-- allow the messages to be old enough to sweep
-
-            foreach (var message in messages)
+            
+            foreach (var e in events)
             {
-                commandProcessor.DepositPost(message.ToStubRequest());
+                commandProcessor.DepositPost(e);
             }
 
             //Act
+            
             sweeper.Sweep();
 
-            await Task.Delay(200); //Give the sweep time to run
+            await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            commandProcessor.Dispatched.Count.Should().Be(1);
-            commandProcessor.Deposited.Count.Should().Be(4);
+            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(1);
+            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(3);
         }
 
         [Fact]
         public async Task When_too_new_to_sweep_leaves_them_async()
         {
             //Arrange
-            const int milliSecondsSinceSent = 500;
+            var timeSinceSent = TimeSpan.FromMilliseconds(6000);
 
             var timeProvider = new FakeTimeProvider();
-            var commandProcessor = new FakeCommandProcessor(timeProvider);
-            var sweeper = new OutboxSweeper(TimeSpan.FromMilliseconds(milliSecondsSinceSent), commandProcessor, new InMemoryRequestContextFactory());
+            
+            var tracer = new BrighterTracer(timeProvider);
+            var internalBus = new InternalBus();
+            var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
-            Message oldMessage = new MessageTestDataBuilder();
-            commandProcessor.DepositPost(oldMessage.ToStubRequest());
-
-            var messages = new Message[]
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
             {
-                new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()
+                { 
+                    MyTopic, new InMemoryProducer(internalBus, timeProvider)
+                    {
+                        Publication =
+                        {
+                            RequestType = typeof(MyEvent), 
+                            Topic = new RoutingKey(MyTopic)
+                        }
+                    } 
+                }
+            });
+            
+            var mapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
+                new SimpleMessageMapperFactoryAsync(_ =>  new MyEventMessageMapperAsync())
+            );
+            
+            mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+
+            var bus = new ExternalBusService<Message, CommittableTransaction>(
+                producerRegistry,
+                new DefaultPolicy(),
+                mapperRegistry,
+                new EmptyMessageTransformerFactory(),
+                new EmptyMessageTransformerFactoryAsync(),
+                tracer,
+                outbox
+            ); 
+            
+            CommandProcessor.ClearServiceBus();
+
+            var commandProcessor = new CommandProcessor(
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry(),
+                bus);           
+            
+            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+
+            var oldEvent = new MyEvent{Value = "old"};
+            commandProcessor.DepositPost(oldEvent);
+
+            //-- allow the messages to be old enough to sweep
+            timeProvider.Advance(timeSinceSent); 
+
+            var events = new[]
+            {
+                new MyEvent{Value = "one"}, new MyEvent{Value = "two"}, new MyEvent{Value = "three"}
             };
-
-            timeProvider.Advance(
-                TimeSpan.FromMilliseconds(milliSecondsSinceSent * 2)); //-- allow the messages to be old enough to sweep
-
-            foreach (var message in messages)
+            
+            foreach (var e in events)
             {
-                commandProcessor.DepositPost(message.ToStubRequest());
+                commandProcessor.DepositPost(e);
             }
 
             //Act
             sweeper.SweepAsyncOutbox();
 
-            await Task.Delay(200); //Give the sweep time to run
+            await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            commandProcessor.Deposited.Count.Should().Be(4);
-            commandProcessor.Dispatched.Count.Should().Be(1);
+            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(1);
+            outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(3);
         }
     }
 }

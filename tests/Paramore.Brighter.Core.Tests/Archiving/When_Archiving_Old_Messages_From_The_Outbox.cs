@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -16,13 +17,14 @@ public class ServiceBusMessageStoreArchiverTests
     private readonly InMemoryOutbox _outbox;
     private readonly InMemoryArchiveProvider _archiveProvider;
     private readonly ExternalBusService<Message,CommittableTransaction> _bus;
+    private readonly FakeTimeProvider _timeProvider;
 
     public ServiceBusMessageStoreArchiverTests()
     {
         const string topic = "MyTopic";
 
-        var timeProvider = new FakeTimeProvider();
-        var producer = new InMemoryProducer(new InternalBus(), timeProvider){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+        _timeProvider = new FakeTimeProvider();
+        var producer = new InMemoryProducer(new InternalBus(), _timeProvider){Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
 
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -48,7 +50,7 @@ public class ServiceBusMessageStoreArchiverTests
         }; 
         
         var tracer = new BrighterTracer();
-        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
+        _outbox = new InMemoryOutbox(_timeProvider){Tracer = tracer};
         _archiveProvider = new InMemoryArchiveProvider();
         
         _bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -84,7 +86,9 @@ public class ServiceBusMessageStoreArchiverTests
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(TimeSpan.FromMilliseconds(20000), context);
+       _timeProvider.Advance(TimeSpan.FromMinutes(15)); 
+       
+        _bus.Archive(TimeSpan.FromMilliseconds(500), context);
         
         //assert
         _outbox.EntryCount.Should().Be(0);
@@ -112,7 +116,9 @@ public class ServiceBusMessageStoreArchiverTests
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        _bus.Archive(TimeSpan.FromMilliseconds(20000), context);
+        _timeProvider.Advance(TimeSpan.FromSeconds(30));
+        
+        _bus.Archive(TimeSpan.FromSeconds(30), context);
         
         //assert
         _outbox.EntryCount.Should().Be(1);

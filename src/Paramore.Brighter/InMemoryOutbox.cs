@@ -287,7 +287,7 @@ namespace Paramore.Brighter
             var age =
                 _timeProvider.GetUtcNow() - dispatchedSince;
             return Requests.Values
-                .Where(oe => (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= age))
+                .Where(oe => (oe.TimeFlushed != DateTimeOffset.MinValue) && (oe.TimeFlushed <= age))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
@@ -474,7 +474,7 @@ namespace Paramore.Brighter
                 var now = _timeProvider.GetUtcNow();
                 var sentBefore = now - dispatchedSince;
                 var outstandingMessages = Requests.Values
-                    .Where(oe => oe.TimeFlushed == DateTime.MinValue && oe.WriteTime <= sentBefore.DateTime)
+                    .Where(oe => oe.TimeFlushed == DateTimeOffset.MinValue && oe.WriteTime <= sentBefore.DateTime)
                     .Take(pageSize)
                     .Select(oe => oe.Message).ToArray();
                 return outstandingMessages;

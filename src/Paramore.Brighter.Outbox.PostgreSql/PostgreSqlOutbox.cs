@@ -349,7 +349,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var messageType = GetMessageType(dr);
             var topic = GetTopic(dr);
 
-            DateTime timeStamp = GetTimeStamp(dr);
+            DateTimeOffset timeStamp = GetTimeStamp(dr);
             var correlationId = GetCorrelationId(dr);
             var replyTo = GetReplyTo(dr);
             var contentType = GetContentType(dr);
@@ -446,11 +446,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return replyTo;
         }
 
-        private static DateTime GetTimeStamp(DbDataReader dr)
+        private static DateTimeOffset GetTimeStamp(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Timestamp");
             var timeStamp = dr.IsDBNull(ordinal)
-                ? DateTime.MinValue
+                ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }

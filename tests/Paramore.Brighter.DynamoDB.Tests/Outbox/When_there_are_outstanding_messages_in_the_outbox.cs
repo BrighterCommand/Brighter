@@ -42,7 +42,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_outstanding_messages_in_the_outbox()
+    public void When_there_are_outstanding_messages_in_the_outbox()
     {
         var context = new RequestContext();
         _dynamoDbOutbox.Add(_message, context);
@@ -87,7 +87,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_outstanding_messages_for_multiple_topics()
+    public void When_there_are_outstanding_messages_for_multiple_topics()
     {
         var messages = new List<Message>();
         var context = new RequestContext();
@@ -149,7 +149,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_outstanding_messages_for_a_topic()
+    public void When_there_are_multiple_pages_of_outstanding_messages_for_a_topic()
     {
         var context = new RequestContext();
         var messages = new List<Message>();
@@ -227,7 +227,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_multiple_pages_of_outstanding_messages_for_all_topics()
+    public void When_there_are_multiple_pages_of_outstanding_messages_for_all_topics()
     {
         var context = new RequestContext();
         var messages = new List<Message>();
@@ -267,6 +267,56 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
             outstandingMessage.Body.Value.Should().Be(message.Body.Value);
             outstandingMessage.Header.Topic.Should().Be(message.Header.Topic);
         }
+    }
+
+    [Fact]
+    public async Task When_an_outstanding_message_is_dispatched_async()
+    {
+        var context = new RequestContext();
+        await _dynamoDbOutbox.AddAsync(_message, context);
+
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
+
+        var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
+
+        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 100, 1, args);
+
+        //Other tests may leave messages, so make sure that we grab ours
+        var message = messages.Single(m => m.Id == _message.Id);
+        message.Should().NotBeNull();
+
+        await _dynamoDbOutbox.MarkDispatchedAsync(_message.Id, context);
+
+        // Give the GSI a second to catch up
+        await Task.Delay(1000);
+
+        messages = await _dynamoDbOutbox.OutstandingMessagesAsync(TimeSpan.Zero, context, 100, 1, args);
+        messages.All(m => m.Id != _message.Id);
+    }
+
+    [Fact]
+    public async Task When_an_outstanding_message_is_dispatched()
+    {
+        var context = new RequestContext(); 
+        _dynamoDbOutbox.Add(_message, context);
+
+        _fakeTimeProvider.Advance(TimeSpan.FromSeconds(1));
+
+        var args = new Dictionary<string, object> { { "Topic", "test_topic" } };
+
+        var messages = _dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 100, 1, args);
+
+        //Other tests may leave messages, so make sure that we grab ours
+        var message = messages.Single(m => m.Id == _message.Id);
+        message.Should().NotBeNull();
+
+        _dynamoDbOutbox.MarkDispatched(_message.Id, context);
+
+        // Give the GSI a second to catch up
+        await Task.Delay(1000);
+
+        messages = _dynamoDbOutbox.OutstandingMessages(TimeSpan.Zero, context, 100, 1, args);
+        messages.All(m => m.Id != _message.Id);
     }
 
     private Message CreateMessage(string topic)
