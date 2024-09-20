@@ -41,20 +41,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private const string Channel = "MyChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly Channel _channel;
-        private readonly SpyExceptionCommandProcessor _commandProcessor;
         private readonly int _requeueCount = 5;
-        private readonly RoutingKey _routingKey = new RoutingKey(Topic);
-        private readonly InternalBus _bus;
-        private FakeTimeProvider _timeProvider = new FakeTimeProvider();
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly FakeTimeProvider _timeProvider = new();
 
         public MessagePumpEventProcessingExceptionTestsAsync()
         {
-            _commandProcessor = new SpyExceptionCommandProcessor();
-            var commandProcessorProvider = new CommandProcessorProvider(_commandProcessor);
+            SpyExceptionCommandProcessor commandProcessor = new();
+            var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 
-            _bus = new InternalBus();
+            var bus = new InternalBus();
 
-            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -63,14 +61,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
             var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyEvent>()
                 .WrapAsync(new MyEvent(), new RequestContext(), new Publication{Topic = _routingKey})
                 .Result;
-            _bus.Enqueue(msg);
+            bus.Enqueue(msg);
         }
 
         [Fact]
@@ -83,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 
                 _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-                var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT),
+                var quitMessage = new Message(new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT),
                     new MessageBody(""));
                 _channel.Enqueue(quitMessage);
 

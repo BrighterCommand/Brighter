@@ -40,20 +40,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class CommandProcessorPostCommandAsyncTests : IDisposable
     {
-        private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
+        private readonly RoutingKey _routingKey;
 
         public CommandProcessorPostCommandAsyncTests()
         {
             _myCommand.Value = "Hello World";
+            _routingKey = new RoutingKey("MyCommand");
 
             var timeProvider = new FakeTimeProvider();
             InMemoryProducer producer = new(_internalBus, timeProvider)
             {
-                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+                Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
             };
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -70,8 +71,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{Topic, producer},});
+            var policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
+            };
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{_routingKey, producer},});
            
             var tracer = new BrighterTracer(timeProvider); 
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
@@ -103,7 +107,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .Get(_myCommand.Id, new RequestContext())
                 .Should().NotBeNull();
             
-            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+            _internalBus.Stream(_routingKey).Any().Should().BeTrue();
             
         }
 

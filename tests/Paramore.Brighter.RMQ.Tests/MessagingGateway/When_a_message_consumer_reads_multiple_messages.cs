@@ -11,7 +11,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     {
         private readonly IAmAMessageProducerSync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private string _topic = Guid.NewGuid().ToString();
+        private readonly ChannelName _channelName = new(Guid.NewGuid().ToString());
+        private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
         private const int BatchSize = 3;
 
         public RMQBufferedConsumerTests()
@@ -23,30 +24,30 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
-            _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_topic, routingKey:_topic, isDurable:false, highAvailability:false, batchSize:BatchSize);
+            _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_channelName, routingKey:_routingKey, isDurable:false, highAvailability:false, batchSize:BatchSize);
             
             //create the queue, so that we can receive messages posted to it
-            new QueueFactory(rmqConnection, _topic).Create(3000);
+            new QueueFactory(rmqConnection, _channelName, new RoutingKeys([_routingKey])).Create(TimeSpan.FromMilliseconds(3000));
         }
 
         [Fact]
         public void When_a_message_consumer_reads_multiple_messages()
         {
             //Post one more than batch size messages
-             var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND), new MessageBody("test content One"));
+            var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content One"));
             _messageProducer.Send(messageOne);
-             var messageTwo= new Message(new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Two"));
+             var messageTwo= new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content Two"));
             _messageProducer.Send(messageTwo);
-             var messageThree= new Message(new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Three"));
+             var messageThree= new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content Three"));
             _messageProducer.Send(messageThree);
-             var messageFour= new Message(new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Four"));
+             var messageFour= new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content Four"));
             _messageProducer.Send(messageFour);
             
             //let them arrive
             Task.Delay(5000);
             
             //Now retrieve messages from the consumer
-            var messages = _messageConsumer.Receive(1000);
+            var messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000));
             
             //We should only have three messages
             messages.Length.Should().Be(3);
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             Task.Delay(1000);
             
             //Now retrieve again
-            messages = _messageConsumer.Receive(500);
+            messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(500));
 
             //This time, just the one message
             messages.Length.Should().Be(1);

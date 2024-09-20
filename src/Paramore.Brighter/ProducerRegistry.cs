@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Paramore.Brighter
 {
-    public class ProducerRegistry(Dictionary<string, IAmAMessageProducer> messageProducers) : IAmAProducerRegistry
+    public class ProducerRegistry(Dictionary<RoutingKey, IAmAMessageProducer> messageProducers) : IAmAProducerRegistry
     {
         private readonly bool _hasProducers = messageProducers != null && messageProducers.Any();
 
@@ -39,9 +39,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
         /// </summary>
-        /// <param name="topic">The topic we want to find the producer for</param>
+        /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
         /// <returns>A producer</returns>
-        public IAmAMessageProducer LookupBy(string topic)
+        public IAmAMessageProducer LookupBy(RoutingKey topic)
         {
             return messageProducers[topic];
         }

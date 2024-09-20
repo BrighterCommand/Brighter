@@ -44,15 +44,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            var replySubscriptions = new List<Subscription>();
-
-            const string topic = "MyRequest";
             var timeProvider = new FakeTimeProvider();
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var routingKey = new RoutingKey("MyRequest");
+            
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { topic, new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
                 {
-                    Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}
+                    Publication = {Topic = routingKey, RequestType = typeof(MyRequest)}
                 } },
             });
 
@@ -81,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
                 bus,
-                replySubscriptions:replySubscriptions,
+                replySubscriptions:new List<Subscription>(),
                 responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System)
             );
             
@@ -91,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Out_Mapper()
         {
-            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, new RequestContext(), 500));
+            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, new RequestContext(), TimeSpan.FromMilliseconds(500)));
             
             //should throw an exception as we require a mapper for the outgoing request 
             exception.Should().BeOfType<ArgumentOutOfRangeException>();

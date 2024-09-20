@@ -50,31 +50,31 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
         public CommandProcessorPostBoxBulkClearAsyncTests()
         {
-            var topic = "MyCommand";
-            var topic2 = "MyCommand2";
-            
             var myCommand = new MyCommand{ Value = "Hello World"};
             var myCommand2 = new MyCommand { Value = "Hello World 2" };
 
             var timeProvider = new FakeTimeProvider();
 
+            var routingKey = new RoutingKey("MyCommand");
+            
             InMemoryProducer producer = new(_internalBus, timeProvider)
             {
-                Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+                Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
             };
-            
+
+            var routingKeyTwo = new RoutingKey("MyCommand2");
             InMemoryProducer producerTwo = new(_internalBus, timeProvider)
             {
-                Publication = {Topic = new RoutingKey(topic2), RequestType = typeof(MyCommand)}
+                Publication = {Topic = routingKeyTwo, RequestType = typeof(MyCommand)}
             };
 
             _messageOne = new Message(
-                new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
+                new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
             _messageTwo = new Message(
-                new MessageHeader(myCommand.Id, topic2, MessageType.MT_COMMAND),
+                new MessageHeader(myCommand.Id, routingKeyTwo, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand2, JsonSerialisationOptions.Options))
             );
 
@@ -92,10 +92,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
             
             var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { topic, producer },
-                { topic2, producerTwo }
+                { routingKey, producer },
+                { routingKeyTwo, producerTwo }
             });
             
             var tracer = new BrighterTracer();

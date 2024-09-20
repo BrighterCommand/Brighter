@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
     [Collection("CommandProcessor")]
     public class CommandProcessorPostBoxImplicitClearTests : IDisposable
     {
-        private const string Topic = "MyCommand";
+        private readonly RoutingKey Topic = new("MyCommand");
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly Message _message2;
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { Topic, producer },
             }); 

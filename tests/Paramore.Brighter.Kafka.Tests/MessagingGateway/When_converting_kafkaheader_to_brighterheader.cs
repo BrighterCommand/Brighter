@@ -18,11 +18,11 @@ public class KafkaHeaderToBrighterTests
         var message = new Message(
             new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
-                topic: "test",
+                topic: new RoutingKey("test"),
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "test",
+                replyTo: new RoutingKey("test"),
                 contentType: "application/octet",
                 partitionKey: "mykey"
             ),

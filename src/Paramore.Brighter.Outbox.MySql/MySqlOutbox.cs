@@ -356,7 +356,7 @@ namespace Paramore.Brighter.Outbox.MySql
                     handledCount: 0,
                     delayedMilliseconds: 0,
                     correlationId: correlationId,
-                    replyTo: replyTo,
+                    replyTo: new RoutingKey(replyTo),
                     contentType: contentType,
                     partitionKey: partitionKey);
 
@@ -456,9 +456,9 @@ namespace Paramore.Brighter.Outbox.MySql
             return replyTo;
         }
 
-        private static string GetTopic(IDataReader dr)
+        private static RoutingKey GetTopic(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
         }
 
         private static DateTimeOffset GetTimeStamp(IDataReader dr)

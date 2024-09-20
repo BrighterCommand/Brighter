@@ -28,7 +28,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
         
         var clientConfig = new ClientConfig
         {
-            Acks = (Confluent.Kafka.Acks)((int)Acks.All),
+            Acks = (Acks)((int)Acks.All),
             BootstrapServers = string.Join(",", new[] { "localhost:9092" }),
             ClientId = "Kafka Producer Send with Missing Header Tests", 
         };
@@ -79,9 +79,9 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
         //vanilla i.e. no Kafka specific bytes at the beginning
         var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
         var value = Encoding.UTF8.GetBytes(body);
-        var kafkaMessage = new Confluent.Kafka.Message<string, byte[]>
+        var kafkaMessage = new Message<string, byte[]>
         {
-            Key = command.Id.ToString(), 
+            Key = command.Id, 
             Value = value
         };
 
@@ -90,7 +90,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
         var receivedMessage = GetMessage();
 
         //Where we lack a partition key header, assume non-Brighter header and set to message key
-        receivedMessage.Header.PartitionKey.Should().Be(command.Id.ToString());
+        receivedMessage.Header.PartitionKey.Should().Be(command.Id);
         receivedMessage.Body.Bytes.Should().Equal(value);
     }
 
@@ -104,7 +104,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
             {
                 maxTries++;
                 Task.Delay(500).Wait(); //Let topic propagate in the broker
-                messages = _consumer.Receive(1000);
+                messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {

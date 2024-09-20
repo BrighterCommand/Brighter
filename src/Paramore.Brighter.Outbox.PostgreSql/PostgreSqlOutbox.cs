@@ -363,7 +363,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 handledCount: 0,
                 delayedMilliseconds: 0,
                 correlationId: correlationId,
-                replyTo: replyTo,
+                replyTo: new RoutingKey(replyTo),
                 contentType: contentType,
                 partitionKey: partitionKey);
 
@@ -412,9 +412,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return correlationId;
         }
 
-        private static string GetTopic(DbDataReader dr)
+        private static RoutingKey GetTopic(DbDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
         }
 
         private static MessageType GetMessageType(DbDataReader dr)

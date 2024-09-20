@@ -41,30 +41,31 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
     [Collection("CommandProcessor")]
     public class CommandProcessorPostBoxImplicitClearAsyncTests : IDisposable
     {
-        private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly Message _message2;
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _bus = new();
+        private readonly RoutingKey _routingKey = new("MyCommand");
 
         public CommandProcessorPostBoxImplicitClearAsyncTests()
         {
             var myCommand = new MyCommand{ Value = "Hello World"};
 
             var timeProvider = new FakeTimeProvider();
+
             InMemoryProducer producer = new(_bus, timeProvider)
             {
-                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+                Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
             };
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, Topic, MessageType.MT_COMMAND),
+                new MessageHeader(myCommand.Id, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
             _message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -81,9 +82,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { Topic, producer },
+                { _routingKey, producer },
             });
 
             var policyRegistry = new PolicyRegistry
@@ -123,7 +124,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
 
             for (var i = 1; i <= 10; i++)
             {
-                if (_bus.Stream(new RoutingKey(Topic)).Count() == 1) break;
+                if (_bus.Stream(_routingKey).Count() == 1) break;
                 await Task.Delay(i * 100);
             }
 
@@ -132,14 +133,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             //Try again and kick off another background thread
             for (var i = 1; i <= 10; i++)
             {
-                if (_bus.Stream(new RoutingKey(Topic)).Count() == 2)
+                if (_bus.Stream(_routingKey).Count() == 2)
                     break;
                 await Task.Delay(i * 100);
                 _commandProcessor.ClearOutstandingFromOutbox(1, TimeSpan.FromMilliseconds(1));
             }
 
             //_should_send_a_message_via_the_messaging_gateway
-            var messages = _bus.Stream(new RoutingKey(Topic)).ToArray();
+            var messages = _bus.Stream(_routingKey).ToArray();
             messages.Any().Should().BeTrue();
 
             var sentMessage = messages.FirstOrDefault(m => m.Id == _message.Id);

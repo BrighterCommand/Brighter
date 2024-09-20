@@ -29,7 +29,7 @@ public class CommandProcessorDepositObservabilityTests
 
     public CommandProcessorDepositObservabilityTests()
     {
-        const string topic = "MyEvent";
+        var routingKey = new RoutingKey("MyEvent");
         
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -61,12 +61,14 @@ public class CommandProcessorDepositObservabilityTests
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {topic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
             {
-                Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}
-            }}
+                routingKey, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+                {
+                    Publication = { Topic = routingKey, RequestType = typeof(MyEvent)}
+                }
+            }
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -132,7 +134,7 @@ public class CommandProcessorDepositObservabilityTests
         depositEvent.Tags.Any(a => a is { Value: not null, Key: BrighterSemanticConventions.OutboxSharedTransaction } && (bool)a.Value == false).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.OutboxType && (string)a.Value == "sync" ).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id ).Should().BeTrue();
-        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic).Should().BeTrue();
+        depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && (RoutingKey)a.Value == message.Header.Topic).Should().BeTrue();
         depositEvent.Tags.Any(a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value).Should().BeTrue();
         depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString()).Should().BeTrue();

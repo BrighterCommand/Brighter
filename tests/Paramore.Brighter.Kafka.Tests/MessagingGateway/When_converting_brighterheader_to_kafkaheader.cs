@@ -19,11 +19,11 @@ public class KafkaDefaultMessageHeaderBuilderTests
         var message = new Message(
             new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
-                topic: "test",
+                topic: new RoutingKey("test"),
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "test",
+                replyTo: new RoutingKey("test"),
                 contentType: "application/octet",
                 partitionKey: "mykey"
             ),
@@ -49,7 +49,7 @@ public class KafkaDefaultMessageHeaderBuilderTests
         //known properties
         headers.GetLastBytes(HeaderNames.MESSAGE_TYPE).Should().Equal(message.Header.MessageType.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.MESSAGE_ID).Should().Equal(message.Header.Id.ToString().ToByteArray());
-        headers.GetLastBytes(HeaderNames.TOPIC).Should().Equal(message.Header.Topic.ToByteArray());
+        headers.GetLastBytes(HeaderNames.TOPIC).Should().Equal(message.Header.Topic.Value.ToByteArray());
         headers.GetLastBytes(HeaderNames.TIMESTAMP).Should()
             .Equal(message.Header.TimeStamp.ToUnixTimeMilliseconds().ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.CORRELATION_ID).Should()

@@ -48,7 +48,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _contentType = "application/json";
 
             _message = new Message(
-                new MessageHeader(command.Id, _topicName, MessageType.MT_COMMAND, correlationId:_correlationId, 
+                new MessageHeader(command.Id, new RoutingKey(_topicName), MessageType.MT_COMMAND, correlationId:_correlationId, 
                     contentType: _contentType
                 ),
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 clientProvider,
-                new AzureServiceBusPublication[]
+                new[]
                     {
                         new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
                     }
@@ -92,18 +92,18 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 SubQueue = SubQueue.DeadLetter
             });
 
-            var producer = _producerRegistry.LookupBy(_topicName) as IAmAMessageProducerAsync;
+            var producer = _producerRegistry.LookupBy(new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
             
             await producer.SendAsync(_message);
     
-            var message = _channel.Receive(5000);
+            var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             
             _channel.Reject(message);
 
             var deadLetter = await deadLetterReceiver.ReceiveMessageAsync();
 
-            deadLetter.MessageId.Should().Be(message.Id.ToString());
-            deadLetter.CorrelationId.Should().Be(_correlationId.ToString());
+            deadLetter.MessageId.Should().Be(message.Id);
+            deadLetter.CorrelationId.Should().Be(_correlationId);
             deadLetter.ContentType.Should().Be(_contentType);
             deadLetter.ApplicationProperties["HandledCount"].Should().Be(0);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
@@ -114,22 +114,22 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         public async Task When_Requeueing_a_message_via_the_consumer()
         {
             //arrange
-            var producer = _producerRegistry.LookupBy(_topicName) as IAmAMessageProducerAsync;
+            var producer = _producerRegistry.LookupBy(new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
             
             await producer.SendAsync(_message);
 
-            var message = _channel.Receive(5000);
+            var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
 
             message.Header.HandledCount++;
             
             _channel.Requeue(message);
 
-            var requeuedMessage = _channel.Receive(5000);
+            var requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             
             requeuedMessage.Id.Should().Be(message.Id);
             requeuedMessage.Redelivered.Should().BeFalse();
             requeuedMessage.Header.Id.Should().Be(message.Id);
-            requeuedMessage.Header.Topic.Should().Contain(_topicName);
+            requeuedMessage.Header.Topic.Value.Should().Contain(_topicName);
             requeuedMessage.Header.CorrelationId.Should().Be(_correlationId);
             requeuedMessage.Header.ContentType.Should().Be(_contentType);
             requeuedMessage.Header.HandledCount.Should().Be(1);

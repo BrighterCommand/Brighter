@@ -280,7 +280,7 @@ public class DynamoDbOutboxDispatchedMessageTests : DynamoDBOutboxBaseTest
     private Message CreateMessage(string topic)
     {
         return new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_DOCUMENT),
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(topic), MessageType.MT_DOCUMENT),
             new MessageBody("message body")
         );
     }

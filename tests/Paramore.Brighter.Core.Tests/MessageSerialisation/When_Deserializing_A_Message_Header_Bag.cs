@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
              //Arrange
              var header = new MessageHeader(
                  messageId: Guid.NewGuid().ToString(),
-                 topic: "MyTopic",
+                 topic: new RoutingKey("MyTopic"),
                  messageType: MessageType.MT_EVENT,
                  timeStamp: DateTime.UtcNow,
                  correlationId: Guid.NewGuid().ToString()

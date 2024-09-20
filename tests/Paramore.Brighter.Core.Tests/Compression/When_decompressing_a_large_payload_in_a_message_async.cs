@@ -12,6 +12,8 @@ namespace Paramore.Brighter.Core.Tests.Compression;
 
 public class AsyncUncompressLargePayloadTests
 {
+    private readonly RoutingKey _routingKey = new RoutingKey("test_topic");
+
     [Fact]
     public async Task When_decompressing_a_large_gzip_payload_in_a_message()
     {
@@ -33,7 +35,7 @@ public class AsyncUncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, 
                 timeStamp:DateTime.UtcNow, contentType: mimeType
             ),
             body
@@ -72,7 +74,7 @@ public class AsyncUncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, 
                 timeStamp: DateTime.UtcNow, contentType: mimeType
             ),
             body
@@ -111,7 +113,7 @@ public class AsyncUncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT, 
                 timeStamp: DateTime.UtcNow, contentType: mimeType
             ),
             body

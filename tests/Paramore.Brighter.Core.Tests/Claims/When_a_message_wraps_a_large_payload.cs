@@ -15,7 +15,7 @@ public class ClaimCheckLargePayloadTests
     private readonly Message _message;
     private readonly string _body;
     private readonly InMemoryStorageProvider _store;
-    private string _topic;
+    private readonly RoutingKey _topic = new("test_topic");
 
     public ClaimCheckLargePayloadTests()
     {
@@ -25,7 +25,6 @@ public class ClaimCheckLargePayloadTests
         _transformer.InitializeWrapFromAttributeParams(5);
 
         _body = DataGenerator.CreateString(6000);
-        _topic = "test_topic";
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(_body));

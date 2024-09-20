@@ -50,15 +50,17 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         /// <param name="message">The Message</param>
         /// <param name="topic">The topic name</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        public void Send(T message, string topic, int timeoutInMilliseconds = -1)
+        /// <param name="timeOut">Timeout for the send operation; MsSQL commands use seconds for timeout; -1 or null for default MSSQL timeout</param>
+        public void Send(T message, string topic, TimeSpan? timeOut = null)
         {
+            timeOut ??= TimeSpan.FromMilliseconds(-1);
+            
             if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("Send<{CommandType}>(..., {Topic})", typeof(T).FullName, topic);
 
             var parameters = InitAddDbParameters(topic, message);
 
             using var connection = _connectionProvider.GetConnection();
-            var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
+            var sqlCmd = InitAddDbCommand(timeOut.Value, connection, parameters);
             sqlCmd.ExecuteNonQuery();
         }
 
@@ -67,17 +69,19 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         /// <param name="message">The Message</param>
         /// <param name="topic">The topic name</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">The active CancellationToken</param>
+        /// <param name="timeOut">Timeout for the send operation; MsSQL commands use seconds for timeout; -1 or null for default MSSQL timeout</param>
+        /// /// <param name="cancellationToken">The active CancellationToken</param>
         /// <returns></returns>
-        public async Task SendAsync(T message, string topic, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
+        public async Task SendAsync(T message, string topic, TimeSpan? timeOut, CancellationToken cancellationToken = default)
         {
             if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("SendAsync<{CommandType}>(..., {Topic})", typeof(T).FullName, topic);
 
+            timeOut ??= TimeSpan.FromMilliseconds(-1);
+            
             var parameters = InitAddDbParameters(topic, message);
 
             using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
+            var sqlCmd = InitAddDbCommand(timeOut.Value, connection, parameters);
             await sqlCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
@@ -85,14 +89,17 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         ///     Try receiving a message
         /// </summary>
         /// <param name="topic">The topic name</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="timeOut">Timeout for reading a message of the queue; -1 or null for default timeout</param>
         /// <returns>The message received -or- ReceivedResult&lt;T&gt;.Empty when no message arrives within the timeout period</returns>
-        public ReceivedResult<T> TryReceive(string topic, int timeoutInMilliseconds)
+        public ReceivedResult<T> TryReceive(string topic, TimeSpan? timeout = null)
         {
+            timeout ??= TimeSpan.FromMilliseconds(-1);
+            
             if (s_logger.IsEnabled(LogLevel.Debug))
-                s_logger.LogDebug("TryReceive<{CommandType}>(..., {Timeout})", typeof(T).FullName, timeoutInMilliseconds);
+                s_logger.LogDebug("TryReceive<{CommandType}>(..., {Timeout})", typeof(T).FullName, timeout.Value.TotalMilliseconds);
+            
             var rc = TryReceive(topic);
-            var timeLeft = timeoutInMilliseconds;
+            var timeLeft = timeout.Value.Milliseconds;
             while (!rc.IsDataValid && timeLeft > 0)
             {
                 Task.Delay(RetryDelay).Wait();
@@ -194,12 +201,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             return parameters;
         }
 
-        private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, IDbDataParameter[] parameters)
+        private DbCommand InitAddDbCommand(TimeSpan timeOut, DbConnection connection, IDbDataParameter[] parameters)
         {
             var sql =
                 $"set nocount on;insert into [{_configuration.QueueStoreTable}] (Topic, MessageType, Payload) values(@topic, @messageType, @payload);";
             var sqlCmd = connection.CreateCommand();
-            if (timeoutInMilliseconds != -1) sqlCmd.CommandTimeout = timeoutInMilliseconds;
+            if (timeOut != TimeSpan.FromSeconds(-1)) sqlCmd.CommandTimeout = timeOut.Seconds;
 
             sqlCmd.CommandText = sql;
             sqlCmd.Parameters.AddRange(parameters);

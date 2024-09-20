@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             throw new Exception();
         }
         
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
             Send(message);
         }

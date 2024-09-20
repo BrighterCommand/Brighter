@@ -32,18 +32,18 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class ChannelRequeueWithoutDelayTest
     {
         private readonly IAmAChannel _channel;
-        private const string Topic = "myTopic";
+        private readonly RoutingKey _routingKey = new("myTopic");
         private const string ChannelName = "myChannel";
         private readonly InternalBus _bus = new();
 
         public ChannelRequeueWithoutDelayTest()
         {
-            var consumer = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, new FakeTimeProvider(), 1000); 
+            var consumer = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, new FakeTimeProvider(), TimeSpan.FromMilliseconds(1000)); 
 
-            _channel = new Channel(new(ChannelName),new (Topic), consumer);
+            _channel = new Channel(new(ChannelName),new (_routingKey), consumer);
 
             var sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
             
             _bus.Enqueue(sentMessage);
@@ -53,11 +53,11 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         [Fact]
         public void When_Requeuing_A_Message_With_No_Delay()
         {
-            var requeueMessage = _channel.Receive(1000);
+            var requeueMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Requeue(requeueMessage);
 
-            _bus.Stream(new RoutingKey(Topic)).Should().HaveCount(1);
-            _bus.Stream(new RoutingKey(Topic)).Should().Contain(requeueMessage);
+            _bus.Stream(new RoutingKey(_routingKey)).Should().HaveCount(1);
+            _bus.Stream(new RoutingKey(_routingKey)).Should().Contain(requeueMessage);
         }
     }
 }

@@ -48,7 +48,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly IAmAMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
-        private readonly ISchemaRegistryClient _schemaRegistryClient;
         private readonly ISerializer<MyKafkaCommand> _serializer;
         private readonly IDeserializer<MyKafkaCommand> _deserializer;
         private readonly SerializationContext _serializationContext;
@@ -64,7 +63,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication[] {new KafkaPublication
+                new[] {new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -93,9 +92,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 );
             
             var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
-            _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+            ISchemaRegistryClient schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
   
-            _serializer = new JsonSerializer<MyKafkaCommand>(_schemaRegistryClient, ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(), ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()).AsSyncOverAsync();
+            _serializer = new JsonSerializer<MyKafkaCommand>(schemaRegistryClient, ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(), ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()).AsSyncOverAsync();
             _deserializer = new JsonDeserializer<MyKafkaCommand>().AsSyncOverAsync();
             _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
         }
@@ -113,8 +112,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             //grab the schema id that was written to the message by the serializer
             var schemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(body.Skip(1).Take(4).ToArray()));
 
+            var routingKey = new RoutingKey(_topic);
+            
             var sent = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
@@ -122,7 +123,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             
             //act
             
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(sent);
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(sent);
 
             var received = GetMessage();
 
@@ -152,7 +153,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     maxTries++;
                     Task.Delay(500).Wait(); //Let topic propagate in the broker
-                    messages = _consumer.Receive(1000);
+                    messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
                     
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     {

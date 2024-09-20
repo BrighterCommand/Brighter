@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,7 @@ namespace GreetingsReceiverConsole
         public async static Task Main(string[] args)
         {
             var host = new HostBuilder()
-                .ConfigureServices((hostContext, services) =>
+                .ConfigureServices((_, services) =>
 
                 {
                     services.AddLogging();
@@ -32,7 +33,7 @@ namespace GreetingsReceiverConsole
                             new SubscriptionName("Async Event"),
                             new ChannelName("paramore.example.greeting"),
                             new RoutingKey("greeting.Asyncevent"),
-                            timeoutInMilliseconds: 400,
+                            timeOut: TimeSpan.FromMilliseconds(400),
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
                             isAsync: true),
@@ -41,7 +42,7 @@ namespace GreetingsReceiverConsole
                             new SubscriptionName("Event"),
                             new ChannelName("paramore.example.greeting"),
                             new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 400,
+                            timeOut: TimeSpan.FromMilliseconds(400),
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
                             isAsync: false)
@@ -61,7 +62,7 @@ namespace GreetingsReceiverConsole
 
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })
-                .ConfigureLogging((hostingContext, logging) => {
+                .ConfigureLogging((_, logging) => {
                     logging.SetMinimumLevel(LogLevel.Information);
                     logging.AddConsole();
                 })

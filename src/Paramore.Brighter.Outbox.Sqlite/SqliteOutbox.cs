@@ -369,7 +369,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     handledCount: 0,
                     delayedMilliseconds: 0,
                     correlationId: correlationId,
-                    replyTo: replyTo,
+                    replyTo: new RoutingKey(replyTo),
                     contentType: contentType,
                     partitionKey: partitionKey);
 
@@ -458,9 +458,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return replyTo;
         }
 
-        private static string GetTopic(IDataReader dr)
+        private static RoutingKey GetTopic(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
         }
 
 

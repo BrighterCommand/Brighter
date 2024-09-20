@@ -36,15 +36,15 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         private readonly IAmAMessageProducerSync _sender;
         private readonly IAmAMessageConsumer _receiver;
         private readonly IAmAMessageConsumer _badReceiver;
-        private readonly Message _sentMessage;
         private Exception _firstException;
 
         public RmqMessageConsumerChannelFailureTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), 
+                new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
-            _sentMessage = new Message(messageHeader, new MessageBody("test content"));
+            Message sentMessage = new(messageHeader, new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -53,16 +53,16 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _sender = new RmqMessageProducer(rmqConnection);
-            _receiver = new RmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, false);
-            _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
+            _receiver = new RmqMessageConsumer(rmqConnection, sentMessage.Header.Topic, sentMessage.Header.Topic, false, false);
+            _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection, sentMessage.Header.Topic, sentMessage.Header.Topic, false, 1, false);
 
-            _sender.Send(_sentMessage);
+            _sender.Send(sentMessage);
         }
 
         [Fact]
         public void When_a_message_consumer_throws_an_not_supported_exception_when_connecting()
         {
-            _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
+            _firstException = Catch.Exception(() => _badReceiver.Receive(TimeSpan.FromMilliseconds(2000)));
 
             //_should_return_a_channel_failure_exception
             _firstException.Should().BeOfType<ChannelFailureException>();

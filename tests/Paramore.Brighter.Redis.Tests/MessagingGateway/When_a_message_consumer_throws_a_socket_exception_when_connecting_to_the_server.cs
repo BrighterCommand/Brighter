@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         [Fact]
         public void When_a_message_consumer_throws_a_socket_exception_when_connecting_to_the_server()
         {
-            _exception = Catch.Exception(() => _messageConsumer.Receive(1000)); 
+            _exception = Catch.Exception(() => _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000))); 
             
             //_should_return_a_channel_failure_exception
             _exception.Should().BeOfType<ChannelFailureException>();

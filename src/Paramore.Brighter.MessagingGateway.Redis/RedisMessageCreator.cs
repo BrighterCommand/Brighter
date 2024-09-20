@@ -148,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     type: "",
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                     correlationId: "",
-                    replyTo: replyTo.Result,
+                    replyTo: new RoutingKey(replyTo.Result),
                     contentType: "",
                     handledCount: handledCount.Result,
                     dataSchema: null,
@@ -189,11 +189,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="topic"></param>
         /// <param name="messageId"></param>
         /// <returns></returns>
-        private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<string> messageId)
+        private MessageHeader FailureMessageHeader(HeaderResult<RoutingKey> topic, HeaderResult<string> messageId)
         {
             return new MessageHeader(
                 messageId.Success ? messageId.Result : string.Empty,
-                topic.Success ? topic.Result : string.Empty,
+                topic.Success ? topic.Result : RoutingKey.Empty,
                 MessageType.MT_UNACCEPTABLE);
         }
         
@@ -312,14 +312,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
         }
 
-        private HeaderResult<string> ReadTopic(Dictionary<string, string> headers)
+        private HeaderResult<RoutingKey> ReadTopic(Dictionary<string, string> headers)
         {
             var topic = string.Empty;
             if (headers.TryGetValue(HeaderNames.TOPIC, out string header))
             {
-                return new HeaderResult<string>(header, false);
+                return new HeaderResult<RoutingKey>(new RoutingKey(header), false);
             }
-            return new HeaderResult<string>(String.Empty, false);
+            return new HeaderResult<RoutingKey>(RoutingKey.Empty, false);
         }
 
      }

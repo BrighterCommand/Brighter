@@ -96,12 +96,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                         new SubscriptionName("foo"),
                         new ChannelName("mary"),
                         new RoutingKey("bob"),
-                        timeoutInMilliseconds: 200),
+                        timeOut: TimeSpan.FromMilliseconds(200)),
                     new RmqSubscription<MyEvent>(
                         new SubscriptionName("bar"),
                         new ChannelName("alice"),
                         new RoutingKey("simon"),
-                        timeoutInMilliseconds: 200)
+                        timeOut: TimeSpan.FromMilliseconds(200))
                 })
                 .ConfigureInstrumentation(tracer, instrumentationOptions);
         }

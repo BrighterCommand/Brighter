@@ -19,8 +19,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         private readonly FakeMessageProducer _fakeMessageProducer;
         private readonly FakeServiceBusReceiverProvider _fakeMessageReceiver;
 
-        private readonly AzureServiceBusSubscriptionConfiguration _subConfig =
-            new AzureServiceBusSubscriptionConfiguration();
+        private readonly AzureServiceBusSubscriptionConfiguration _subConfig = new();
 
         public AzureServiceBusConsumerTests()
         {
@@ -61,7 +60,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             Assert.Equal("somebody", result[0].Body.Value);
             Assert.Equal("topic", result[0].Header.Topic);
@@ -87,7 +86,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
             
             _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription");
             //A.CallTo(() => _nameSpaceManagerWrapper.f => f.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened();
@@ -110,7 +109,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             Assert.Equal("somebody", result[0].Body.Value);
             Assert.Equal("topic", result[0].Header.Topic);
@@ -133,7 +132,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             Assert.Equal("somebody", result[0].Body.Value);
             Assert.Equal("topic", result[0].Header.Topic);
@@ -156,7 +155,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             Assert.Equal(MessageType.MT_EVENT, result[0].Header.MessageType);
         }
@@ -177,7 +176,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             Assert.Equal("somebody", result[0].Body.Value);
             Assert.Equal("topic", result[0].Header.Topic);
@@ -201,7 +200,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             Assert.Equal("somebody", result[0].Body.Value);
             Assert.Equal("topic", result[0].Header.Topic);
@@ -217,7 +216,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
             Assert.Empty(result);
         }
 
@@ -238,7 +237,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
             
             Assert.Equal("somebody", result[0].Body.Value);
         }
@@ -248,7 +247,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
-            _azureServiceBusConsumer.Receive(0);
+            _azureServiceBusConsumer.Receive(TimeSpan.Zero);
             _azureServiceBusConsumer.Dispose();
 
             Assert.True(_messageReceiver.IsClosedOrClosing);
@@ -261,11 +260,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             _fakeMessageProducer.SentMessages.Clear();
             var messageLockTokenOne = Guid.NewGuid();
-            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
             var message = new Message(messageHeader, new MessageBody("body"));
             message.Header.Bag.Add("LockToken", messageLockTokenOne);
 
-            _azureServiceBusConsumer.Requeue(message, 0);
+            _azureServiceBusConsumer.Requeue(message, TimeSpan.Zero);
 
             Assert.Single(_fakeMessageProducer.SentMessages);
         }
@@ -278,11 +277,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _fakeMessageProducer.SentMessages.Clear();
             
             var messageLockTokenOne = Guid.NewGuid();
-            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT);
             var message = new Message(messageHeader, new MessageBody("body"));
             message.Header.Bag.Add("LockToken", messageLockTokenOne);
 
-            _azureServiceBusConsumer.Requeue(message, 100);
+            _azureServiceBusConsumer.Requeue(message, TimeSpan.FromMilliseconds(100));
 
             Assert.Single(_fakeMessageProducer.SentMessages);
         }
@@ -294,7 +293,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.CreateSubscriptionException = new Exception();
 
-            Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
+            Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400)));
         }
 
         [Fact]
@@ -303,7 +302,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.CreateSubscriptionException = new Exception();
 
-            Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
+            Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400)));
             Assert.Equal(1, _nameSpaceManagerWrapper.ResetCount);
         }
 
@@ -319,7 +318,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _messageReceiver.MessageQueue.Clear();
             _messageReceiver.ReceiveException = new Exception();
 
-            Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
+            Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400)));
             Assert.Equal(2, _fakeMessageReceiver.CreationCount);
         }
 
@@ -342,8 +341,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            _azureServiceBusConsumer.Receive(400);
-            _azureServiceBusConsumer.Receive(400);
+            _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
+            _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
             
             //Subscription is only created once
             Assert.Equal(1, _nameSpaceManagerWrapper.Topics["topic"].Count(s => s.Equals("subscription")));
@@ -370,8 +369,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
-            _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
+            _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
             
             Assert.Equal("somebody", result[0].Body.Value);
 
@@ -389,7 +388,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new BrokeredMessage()
             {
-                MessageBodyValue = (byte[])null,
+                MessageBodyValue = null,
                 ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } }
             }; 
 
@@ -397,7 +396,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver.MessageQueue = brokeredMessageList;
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             Assert.Equal(string.Empty, result[0].Body.Value);
         }
@@ -408,7 +407,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             _messageReceiver.Close();
 
-            Message[] result = _azureServiceBusConsumer.Receive(400);
+            Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             Assert.Equal(MessageType.MT_QUIT, result[0].Header.MessageType);
 
@@ -425,7 +424,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var azureServiceBusConsumerValidate = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
                 _nameSpaceManagerWrapper, _fakeMessageReceiver);
 
-            Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(400));
+            Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(TimeSpan.FromMilliseconds(400)));
         }
 
         [Fact]
@@ -437,7 +436,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new BrokeredMessage()
             {
-                MessageBodyValue = (byte[])null,
+                MessageBodyValue = null,
                 ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } },
                 LockToken = Guid.NewGuid().ToString()
             }; 
@@ -453,7 +452,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
                 _nameSpaceManagerWrapper, _fakeMessageReceiver);
 
-            Message[] result = azureServiceBusConsumer.Receive(400);
+            Message[] result = azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             var msg = result.First();
 
@@ -468,7 +467,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new BrokeredMessage()
             {
-                MessageBodyValue = (byte[])null,
+                MessageBodyValue = null,
                 ApplicationProperties = new Dictionary<string, object> { { "MessageType", "MT_EVENT" } },
                 LockToken = Guid.NewGuid().ToString()
             }; 
@@ -484,7 +483,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var azureServiceBusConsumer = new AzureServiceBusTopicConsumer(sub, _fakeMessageProducer,
                 _nameSpaceManagerWrapper, _fakeMessageReceiver);
 
-            Message[] result = azureServiceBusConsumer.Receive(400);
+            Message[] result = azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
 
             var msg = result.First();
 

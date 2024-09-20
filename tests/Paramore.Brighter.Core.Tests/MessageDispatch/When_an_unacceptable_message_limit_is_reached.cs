@@ -35,12 +35,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpUnacceptableMessageLimitBreachedTests
     {
-        private const string Topic = "MyTopic";
         private const string Channel = "MyChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly InternalBus _bus;
         private readonly FakeTimeProvider _timeProvider = new();
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("MyTopic");
 
         public MessagePumpUnacceptableMessageLimitBreachedTests()
         {
@@ -49,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _bus = new InternalBus();
             
-            var channel = new Channel(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 3);
+            var channel = new Channel(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 3);
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
@@ -57,23 +56,23 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
-                Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
             };
 
             var unacceptableMessage1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
                 new MessageBody("")
             );
             var unacceptableMessage2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
                 new MessageBody("")
             );
             var unacceptableMessage3 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
                 new MessageBody("")
             );
             var unacceptableMessage4 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_UNACCEPTABLE), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_UNACCEPTABLE), 
                 new MessageBody("")
             );
 

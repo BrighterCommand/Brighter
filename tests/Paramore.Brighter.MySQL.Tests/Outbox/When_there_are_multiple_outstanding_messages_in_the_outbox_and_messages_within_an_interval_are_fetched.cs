@@ -13,8 +13,9 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutbox _mySqlOutbox;
-        private readonly string _topicFirstMessage = "test_topic";
-        private readonly string _topicLastMessage = "test_topic3";
+        private readonly RoutingKey _routingKeyOne = new("test_topic");
+        private readonly RoutingKey _routingKeyTwo = new("test_topic2"); 
+        private readonly RoutingKey _routingKeyThree = new("test_topic3");
         private readonly RequestContext _context;
 
         public MySqlOutboxFetchOutstandingMessageTests()
@@ -25,15 +26,15 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _context = new RequestContext();
 
             Message messageEarliest = new(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicFirstMessage, MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKeyOne, MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
             Message message1 = new(
-                new MessageHeader(Guid.NewGuid().ToString(), "test_topic2", MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKeyTwo, MessageType.MT_DOCUMENT), 
                 new MessageBody("message body2")
             );
             Message message2 = new(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicLastMessage, MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKeyThree, MessageType.MT_DOCUMENT), 
                 new MessageBody("message body3")
             );
             _mySqlOutbox.Add(messageEarliest, _context);

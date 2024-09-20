@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
 
-            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), "test_topic", 
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), 
                 MessageType.MT_DOCUMENT,timeStamp: DateTime.UtcNow.AddDays(-1), handledCount:5, delayedMilliseconds:5
             );
             messageHeader.Bag.Add(_key1, _value1);

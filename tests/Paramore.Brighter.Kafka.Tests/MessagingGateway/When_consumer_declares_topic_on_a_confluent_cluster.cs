@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -73,14 +72,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     Name = "Kafka Producer Send Test",
                     BootStrapServers = new[] {bootStrapServer},
-                    SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol.SaslSsl,
-                    SaslMechanisms = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism.Plain,
+                    SecurityProtocol = SecurityProtocol.SaslSsl,
+                    SaslMechanisms = SaslMechanism.Plain,
                     SaslUsername = userName,
                     SaslPassword = password,
                     SslCaLocation = SupplyCertificateLocation()
                     
                 },
-                new KafkaPublication[] {new KafkaPublication
+                new[] {new KafkaPublication
                     {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -120,15 +119,17 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         [Fact]
         public async Task When_a_consumer_declares_topics_on_a_confluent_cluster()
         {
+            var routingKey = new RoutingKey(_topic);
+            
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
                 new MessageBody($"test content [{_queueName}]"));
             
             //This should fail, if consumer can't create the topic as set to Assume
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
 
             Message[] messages = new Message[0];
             int maxTries = 0;
@@ -138,7 +139,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     maxTries++;
                     await Task.Delay(500); //Let topic propagate in the broker
-                    messages = _consumer.Receive(10000);
+                    messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                     _consumer.Acknowledge(messages[0]);
                     
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)

@@ -14,7 +14,7 @@ namespace Paramore.Brighter.ServiceActivator
         private IAmAChannelFactory _channelFactory;
         private Type _type;
         private string _channelName;
-        private int _milliseconds = 300;
+        private TimeSpan? _timeOut = null;
         private string _routingKey;
         private int _buffersize = 1;
         private int _unacceptableMessageLimit = 0;
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.ServiceActivator
         private OnMissingChannel _makeChannel = OnMissingChannel.Create;
         private int _noOfPeformers = 1;
         private int _requeueCount = -1;
-        private int _requeueDelayInMilliseconds = 0;
+        private TimeSpan _requeueDelay = TimeSpan.Zero;
         private ConnectionBuilder() {}
 
         public static IConnectionBuilderName With => new ConnectionBuilder();
@@ -85,11 +85,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// The timeout for waiting for a message when polling a queue
         /// </summary>
-        /// <param name="millisecondTimeout">The number of milliseconds to timeout (defaults to 300)</param>
+        /// <param name="timeOut">The number of milliseconds to timeout (defaults to 300)</param>
         /// <returns></returns>
-        public IConnectionBuilderOptionalBuild Timeout(int millisecondTimeout)
+        public IConnectionBuilderOptionalBuild TimeOut(TimeSpan? timeOut = null)
         {
-            _milliseconds = millisecondTimeout;
+            timeOut ??= TimeSpan.FromMilliseconds(300);
+            _timeOut = timeOut;
             return this;
         }
 
@@ -160,10 +161,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// How long to delay before re-queuing a failed message
         /// </summary>
-        /// <param name="millisecondsDelay">The delay in milliseconds before requeueing. Default is 0, or no delay</param>
-        public IConnectionBuilderOptionalBuild RequeueDelayInMilliseconds(int millisecondsDelay)
+        /// <param name="delay">The delay before requeueing. Default is 0, or no delay</param>
+        public IConnectionBuilderOptionalBuild RequeueDelay(TimeSpan? delay = null)
         {
-            _requeueDelayInMilliseconds = millisecondsDelay;
+            delay ??= TimeSpan.Zero;
+            _requeueDelay = delay.Value;
             return this;
         }
 
@@ -174,11 +176,11 @@ namespace Paramore.Brighter.ServiceActivator
                 new ChannelName(_channelName),
                 new RoutingKey(_routingKey),
                 channelFactory:_channelFactory,
-                timeoutInMilliseconds: _milliseconds,
+                timeOut: _timeOut,
                 bufferSize: _buffersize,
                 noOfPerformers: _noOfPeformers,
                 requeueCount: _requeueCount,
-                requeueDelayInMilliseconds: _requeueDelayInMilliseconds,
+                requeueDelay: _requeueDelay,
                 unacceptableMessageLimit: _unacceptableMessageLimit,
                 runAsync: _isAsync,
                 makeChannels:_makeChannel);
@@ -218,7 +220,7 @@ namespace Paramore.Brighter.ServiceActivator
             /// or busy
             /// </summary>
             /// <value>The timeout in milliseconds.</value>
-            IConnectionBuilderOptionalBuild Timeout(int millisecondTimeout);
+            IConnectionBuilderOptionalBuild TimeOut(TimeSpan? timeOut);
 
             /// <summary>
             /// How many messages do we store in the channel at any one time. When we read from a broker we need to balance
@@ -260,7 +262,7 @@ namespace Paramore.Brighter.ServiceActivator
             /// <summary>
             /// Gets or sets number of milliseconds to delay delivery of re-queued messages.
             /// </summary>
-            IConnectionBuilderOptionalBuild RequeueDelayInMilliseconds(int millisecondsDelay);
+            IConnectionBuilderOptionalBuild RequeueDelay(TimeSpan? delay);
         }
     }
 }

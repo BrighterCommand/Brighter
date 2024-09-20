@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
             _sqlOutbox.Add(_messageEarliest, new RequestContext());

@@ -16,7 +16,7 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
     {
         // arrange
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
             new MessageBody("message body")
             );
         
@@ -36,7 +36,9 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
     public async Task When_deleting_a_message_in_the_outbox_async()
     {
         // arrange
-        var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+        var message = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), 
+                MessageType.MT_DOCUMENT), new MessageBody("message body"));
         var context = new RequestContext();
         var dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), _fakeTimeProvider);
         await dynamoDbOutbox.AddAsync(message, context);

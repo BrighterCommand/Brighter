@@ -137,14 +137,14 @@ namespace Paramore.Brighter
         /// Consumers MAY assume that Events with identical source and id are duplicates.
         /// </summary>
         /// <value>The identifier.</value>
-        public string Id { get; set; }
+        public string Id { get; init; }
         
         /// <summary>
         /// REQUIRED
         /// Gets the type of the message (command, event). Internal usage, Used when routing the message to a handler
         /// </summary>
         /// <value>The type of the message.</value>
-        public MessageType MessageType { get; set; }
+        public MessageType MessageType { get; init; }
         
         /// <summary>
         /// OPTIONAL
@@ -197,14 +197,14 @@ namespace Paramore.Brighter
         /// used internally when we send the message to its destination
         /// </summary>
         /// <value>The topic.</value>
-        public string Topic { get; set; }
+        public RoutingKey Topic { get; init; }
 
         /// <summary>
         /// REQUIRED
         /// Internal usage. The date the message was created.
         /// Defaults to now in UTC
         /// </summary>
-        public DateTimeOffset TimeStamp { get; set; }
+        public DateTimeOffset TimeStamp { get; init; }
         
         /// <summary>
         /// REQUIRED (for OTel support, OPTIONAL in Cloud Events)
@@ -264,13 +264,13 @@ namespace Paramore.Brighter
         /// <param name="delayedMilliseconds">The delay in milliseconds to this message (usually to retry)</param>
         public MessageHeader(
             string messageId,
-            string topic,
+            RoutingKey topic,
             MessageType messageType,
             Uri source = null,
             string type = "goparamore.io.Paramore.Brighter.Message",
             DateTimeOffset? timeStamp = null,
             string correlationId = null,
-            string replyTo = null,
+            RoutingKey replyTo = null,
             string contentType = "text/plain",
             string partitionKey = "",
             Uri dataSchema = null,
@@ -284,11 +284,11 @@ namespace Paramore.Brighter
             MessageType = messageType;
             if (source != null) Source = source;
             Type = type;
-            TimeStamp = timeStamp ?? DateTime.UtcNow;
+            TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
             HandledCount = 0;
             DelayedMilliseconds = 0;
             CorrelationId = correlationId ?? string.Empty;
-            ReplyTo = replyTo;
+            ReplyTo = replyTo ?? RoutingKey.Empty;
             ContentType = contentType;
             PartitionKey = partitionKey;
             ReplyTo = replyTo ?? string.Empty;
@@ -308,7 +308,7 @@ namespace Paramore.Brighter
             var newHeader = new MessageHeader
             {
                 Id = Id,
-                Topic = $"{Topic}",
+                Topic = new RoutingKey($"{Topic}"),
                 MessageType = MessageType,
                 TimeStamp = TimeStamp,
                 HandledCount = 0,

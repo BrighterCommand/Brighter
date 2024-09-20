@@ -10,9 +10,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
     public class MessagePumpFailingMessageTranslationTests
     {
-        private const string Topic = "MyTopic";
         private const string Channel = "MyChannel";
-        private readonly RoutingKey _routingKey = new RoutingKey(Topic);
+        private readonly RoutingKey _routingKey = new RoutingKey("MyTopic");
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
         private readonly Channel _channel;
@@ -22,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            _channel = new Channel(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
                 null);
@@ -30,11 +29,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
              
             _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
             };
 
             var unmappableMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
                 new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }")
                 );
 
@@ -50,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            _channel.Stop(new RoutingKey(Topic));
+            _channel.Stop(_routingKey);
 
             await Task.WhenAll(task);
 

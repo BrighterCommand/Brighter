@@ -90,13 +90,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             var commandMessage = GenerateMessage(testQueues ? _queueName : _topicName);
             commandMessage.Header.Bag.Add(testHeader, testHeaderValue);
             
-            var producer = _producerRegistry.LookupBy(testQueues ? _queueName : _topicName) as IAmAMessageProducerAsync;
+            var producer = _producerRegistry.LookupBy(testQueues 
+                ? new RoutingKey(_queueName) : new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
            
             await producer.SendAsync(commandMessage);
 
             var channel = testQueues ? _queueChannel : _topicChannel;
             
-            var message = channel.Receive(5000);
+            var message = channel.Receive(TimeSpan.FromMilliseconds(5000));
 
             //clear the queue
             channel.Acknowledge(message);
@@ -106,7 +107,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             message.Id.Should().Be(_command.Id);
             message.Redelivered.Should().BeFalse();
             message.Header.Id.Should().Be(_command.Id);
-            message.Header.Topic.Should().Contain(testQueues ? _queueName : _topicName);
+            message.Header.Topic.Value.Should().Contain(testQueues ? _queueName : _topicName);
             message.Header.CorrelationId.Should().Be(_correlationId);
             message.Header.ContentType.Should().Be(_contentType);
             message.Header.HandledCount.Should().Be(0);
@@ -119,7 +120,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         }
         
         private Message GenerateMessage(string topicName) => new Message(
-            new MessageHeader(_command.Id, topicName, MessageType.MT_COMMAND, correlationId:_correlationId, 
+            new MessageHeader(_command.Id, new RoutingKey( topicName), MessageType.MT_COMMAND, correlationId:_correlationId, 
                 contentType: _contentType
             ),
             new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))

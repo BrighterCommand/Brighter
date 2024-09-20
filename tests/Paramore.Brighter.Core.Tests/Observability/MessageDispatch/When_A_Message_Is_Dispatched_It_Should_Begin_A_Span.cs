@@ -42,9 +42,8 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
 {
     public class MessagePumpDispatchObservabilityTests
     {
-        private const string Topic = "MyTopic";
         private const string ChannelName = "myChannel";
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("MyTopic");
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
@@ -88,7 +87,11 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var channel = new Channel(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            var channel = new Channel(
+                new(ChannelName),_routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+                );
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -98,12 +101,12 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), tracer, instrumentationOptions)
             {
-                Channel = channel, TimeoutInMilliseconds = 5000
+                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)
             };
             
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
 
-            var header = new MessageHeader(_myEvent.Id, Topic, MessageType.MT_EVENT)
+            var header = new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT)
             {
                 TraceParent = externalActivity?.Id, TraceState = externalActivity?.TraceStateString
             };
@@ -116,7 +119,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             );
             
             channel.Enqueue(_message);
-            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
             channel.Enqueue(quitMessage);
         }
 
@@ -138,7 +141,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             createActivity.Should().NotBeNull();
             createActivity!.ParentId.Should().Be(_message.Header.TraceParent);
             createActivity.Tags.Any(t => t is { Key: BrighterSemanticConventions.MessagingOperationType, Value: "receive" }).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic).Should().BeTrue();
+            createActivity.TagObjects.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value == _message.Header.Topic).Should().BeTrue();
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && t.Value == _message.Header.PartitionKey).Should().BeTrue();
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && t.Value == _message.Id).Should().BeTrue();
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageType && t.Value == _message.Header.MessageType.ToString()).Should().BeTrue();

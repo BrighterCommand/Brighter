@@ -15,9 +15,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
         /// </summary>
-        /// <param name="topic">The topic we want to find the producer for</param>
+        /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
         /// <returns>A producer</returns>
-        IAmAMessageProducer LookupBy(string topic);
+        IAmAMessageProducer LookupBy(RoutingKey topic);
 
         /// <summary>
         /// Looks up the Publication used to build a given producer; useful for obtaining CloudEvents metadata

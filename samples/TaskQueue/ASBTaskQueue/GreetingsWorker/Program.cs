@@ -33,7 +33,7 @@ var subscriptions = new Subscription[]
         new SubscriptionName("Greeting Event"),
         new ChannelName(subscriptionName),
         new RoutingKey("greeting.event"),
-        timeoutInMilliseconds: 400,
+        timeOut: TimeSpan.FromMilliseconds(400),
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
@@ -42,7 +42,7 @@ var subscriptions = new Subscription[]
         new SubscriptionName("Greeting Async Event"),
         new ChannelName(subscriptionName),
         new RoutingKey("greeting.Asyncevent"),
-        timeoutInMilliseconds: 400,
+        timeOut: TimeSpan.FromMilliseconds(400),
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: false,
@@ -51,7 +51,7 @@ var subscriptions = new Subscription[]
         new SubscriptionName("Greeting Command"),
         new ChannelName(subscriptionName),
         new RoutingKey("greeting.addGreetingCommand"),
-        timeoutInMilliseconds: 400,
+        timeOut: TimeSpan.FromMilliseconds(400),
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
         isAsync: true,
@@ -65,8 +65,6 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
 {
     o.UseSqlServer(dbConnString);
 });
-
-var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
@@ -113,10 +111,10 @@ app.MapHealthChecks("/health/detail", new HealthCheckOptions
             Results = report.Entries.ToDictionary(e => e.Key, e => new
             {
                 Status = e.Value.Status.ToString(),
-                Description = e.Value.Description,
-                Duration = e.Value.Duration
+                e.Value.Description,
+                e.Value.Duration
             }),
-            TotalDuration = report.TotalDuration
+            report.TotalDuration
         };
 
         context.Response.ContentType = "application/json";

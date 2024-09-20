@@ -37,12 +37,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpCommandProcessingExceptionTestsAsync
     {
-        private const string Topic = "MyCommand";
-        private const string ChannelName = "myChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly Channel _channel;
         private readonly int _requeueCount = 5;
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("MyCommand");
         private readonly FakeTimeProvider _timeProvider = new();
 
         public MessagePumpCommandProcessingExceptionTestsAsync()
@@ -52,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             InternalBus bus = new();
             
-            _channel = new Channel(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, 1000));
+            _channel = new Channel(new("myChannel"),_routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -63,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 null, new InMemoryRequestContextFactory()
                 )
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
             var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
@@ -83,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
                 _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
                 
-                var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT),
+                var quitMessage = new Message(new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT),
                     new MessageBody(""));
                 _channel.Enqueue(quitMessage);
 

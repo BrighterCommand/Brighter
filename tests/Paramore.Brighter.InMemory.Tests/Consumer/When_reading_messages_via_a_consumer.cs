@@ -19,14 +19,14 @@ public class InMemoryConsumerRecieveTests
         var routingKey = new RoutingKey(myTopic);
         
         var expectedMessage = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), myTopic, MessageType.MT_EVENT),
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_EVENT),
             new MessageBody("a test body"));
 
 
         var bus = new InternalBus();
         bus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), 1000);
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), TimeSpan.FromMilliseconds(1000));
         
         //act
         var receivedMessage = consumer.Receive().Single();

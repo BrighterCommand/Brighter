@@ -37,7 +37,7 @@ public class RetrieveClaimLargePayloadTests
         var id = _store.Store(stream);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
         message.Header.DataRef = id;
         

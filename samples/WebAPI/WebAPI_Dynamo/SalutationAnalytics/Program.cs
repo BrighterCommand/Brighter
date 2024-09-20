@@ -64,7 +64,7 @@ static void ConfigureBrighter(
             new ChannelName("SalutationAnalytics"),
             new RoutingKey("GreetingMade"),
             runAsync: true,
-            timeoutInMilliseconds: 200,
+            timeOut: TimeSpan.FromMilliseconds(200),
             isDurable: true,
             makeChannels: OnMissingChannel
                 .Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
@@ -142,7 +142,7 @@ static IAmazonDynamoDB CreateAndRegisterClient(AWSCredentials credentials, HostB
         return CreateAndRegisterLocalClient(credentials, services);
     }
 
-    return CreateAndRegisterRemoteClient(services);
+    return CreateAndRegisterRemoteClient();
 }
 
 static AWSCredentials CreateCredentials()
@@ -163,7 +163,7 @@ static IAmazonDynamoDB CreateAndRegisterLocalClient(AWSCredentials credentials, 
     return dynamoDb;
 }
 
-static IAmazonDynamoDB CreateAndRegisterRemoteClient(IServiceCollection services)
+static IAmazonDynamoDB CreateAndRegisterRemoteClient()
 {
     throw new NotImplementedException();
 }

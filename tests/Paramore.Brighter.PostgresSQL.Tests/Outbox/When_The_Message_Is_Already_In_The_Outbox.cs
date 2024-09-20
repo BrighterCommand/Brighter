@@ -45,7 +45,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
             _messageEarliest = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
             _sqlOutbox.Add(_messageEarliest, new RequestContext());

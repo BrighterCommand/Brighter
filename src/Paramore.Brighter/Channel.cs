@@ -123,15 +123,17 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///  Receives the specified timeout in milliseconds.
+        ///  The timeout to recieve wihtin.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeout">The <see cref="TimeSpan"/>"> timeout. If null default to 1s</param>
         /// <returns>Message.</returns>
-        public virtual Message Receive(int timeoutInMilliseconds)
+        public virtual Message Receive(TimeSpan? timeout = null)
         {
+            timeout ??= TimeSpan.FromSeconds(1);
+            
             if (!_queue.TryDequeue(out Message message))
             {
-                Enqueue(_messageConsumer.Receive(timeoutInMilliseconds));
+                Enqueue(_messageConsumer.Receive(timeout));
                 if (!_queue.TryDequeue(out message))
                 {
                     message = s_noneMessage; //Will be MT_NONE
@@ -154,11 +156,11 @@ namespace Paramore.Brighter
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">How long should we delay before requeueing</param>
+        /// <param name="timeOut">How long should we delay before requeueing</param>
         /// <returns>True if the message was re-queued false otherwise </returns>
-        public virtual bool Requeue(Message message, int delayMilliseconds = 0)
+        public virtual bool Requeue(Message message, TimeSpan? timeOut = null)
         {
-            return _messageConsumer.Requeue(message, delayMilliseconds);
+            return _messageConsumer.Requeue(message, timeOut);
         }
 
         /// <summary>

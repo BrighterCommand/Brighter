@@ -15,7 +15,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         protected abstract ILogger Logger { get; }
 
         protected readonly AzureServiceBusSubscription Subscription;
-        protected readonly string RoutingKey;
+        protected readonly string Topic;
         private readonly IAmAMessageProducerSync _messageProducerSync;
         protected readonly IAdministrationClientWrapper AdministrationClientWrapper;
         private readonly int _batchSize;
@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             IAdministrationClientWrapper administrationClientWrapper)
         {
             Subscription = subscription;
-            RoutingKey = subscription.RoutingKey;
+            Topic = subscription.RoutingKey;
             _batchSize = subscription.BufferSize;
             SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
             _messageProducerSync = messageProducerSync;
@@ -35,16 +35,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         /// <summary>
         /// Receives the specified queue name.
-        /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
+        /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
+        /// the processing of those messages or requeue them.
         /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
         /// <returns>Message.</returns>
-        public Message[] Receive(int timeoutInMilliseconds)
+        public Message[] Receive(TimeSpan? timeOut = null)
         {
             Logger.LogDebug(
                 "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}",
-                RoutingKey, SubscriptionName, timeoutInMilliseconds, _batchSize);
+                Topic, SubscriptionName, timeOut, _batchSize);
 
             IEnumerable<IBrokeredMessageWrapper> messages;
             EnsureChannel();
@@ -59,12 +60,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     if (ServiceBusReceiver == null)
                     {
                         Logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}",
-                            RoutingKey);
+                            Topic);
                         return messagesToReturn.ToArray();   
                     }
                 }
 
-                messages = ServiceBusReceiver.Receive(_batchSize, TimeSpan.FromMilliseconds(timeoutInMilliseconds))
+                timeOut ??= TimeSpan.FromMilliseconds(300);
+                
+                messages = ServiceBusReceiver.Receive(_batchSize, timeOut.Value)
                     .GetAwaiter().GetResult();
             }
             catch (Exception e)
@@ -73,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 {
                     Logger.LogDebug("Message Receiver is closing...");
                     var message = new Message(
-                        new MessageHeader(string.Empty, RoutingKey, MessageType.MT_QUIT), 
+                        new MessageHeader(string.Empty, new RoutingKey(Topic), MessageType.MT_QUIT), 
                         new MessageBody(string.Empty));
                     messagesToReturn.Add(message);
                     return messagesToReturn.ToArray();
@@ -101,17 +104,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
         /// <returns>True if the message should be acked, false otherwise</returns>
-        public bool Requeue(Message message, int delayMilliseconds)
+        public bool Requeue(Message message, TimeSpan? delay = null)
         {
             var topic = message.Header.Topic;
+            delay ??= TimeSpan.Zero;
 
             Logger.LogInformation("Requeuing message with topic {Topic} and id {Id}", topic, message.Id);
 
-            if (delayMilliseconds > 0)
+            if (delay.Value > TimeSpan.Zero)
             {
-                _messageProducerSync.SendWithDelay(message, delayMilliseconds);
+                _messageProducerSync.SendWithDelay(message, delay.Value);
             }
             else
             {
@@ -141,9 +145,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if(ServiceBusReceiver == null)
                     GetMessageReceiverProvider();
 
-                ServiceBusReceiver.Complete(lockToken).Wait();
+                ServiceBusReceiver?.Complete(lockToken).Wait();
                 if (SubscriptionConfiguration.RequireSession)
-                    ServiceBusReceiver.Close();
+                    ServiceBusReceiver?.Close();
             }
             catch (AggregateException ex)
             {
@@ -184,9 +188,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if(ServiceBusReceiver == null)
                     GetMessageReceiverProvider();
                 
-                ServiceBusReceiver.DeadLetter(lockToken).Wait();
+                ServiceBusReceiver?.DeadLetter(lockToken).Wait();
                 if (SubscriptionConfiguration.RequireSession)
-                    ServiceBusReceiver.Close();
+                    ServiceBusReceiver?.Close();
             }
             catch (Exception ex)
             {
@@ -218,13 +222,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 Logger.LogWarning(
                     "Null message body received from topic {Topic} via subscription {ChannelName}",
-                    RoutingKey, SubscriptionName);
+                    Topic, SubscriptionName);
             }
 
             var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
             
             Logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}",
-                RoutingKey, SubscriptionName, messageBody);
+                Topic, SubscriptionName, messageBody);
             
             MessageType messageType = GetMessageType(azureServiceBusMessage);
             var replyAddress = GetReplyAddress(azureServiceBusMessage);
@@ -234,13 +238,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             
             var headers = new MessageHeader(
                 messageId: azureServiceBusMessage.Id, 
-                topic:RoutingKey, 
+                topic: new RoutingKey(Topic), 
                 messageType: messageType, 
                 source: null,
                 type: "",
                 timeStamp: DateTime.UtcNow,
                 correlationId: azureServiceBusMessage.CorrelationId,
-                replyTo: replyAddress,
+                replyTo: new RoutingKey(replyAddress),
                 contentType: azureServiceBusMessage.ContentType,
                 handledCount:handledCount, 
                 dataSchema: null,

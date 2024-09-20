@@ -33,17 +33,17 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
-        private const string Topic = "myTopic";
+        private readonly RoutingKey _routingKey = new("myTopic");
         private const string ChannelName = "myChannel";
 
         public ChannelNackTests()
         {
-            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _timeProvider, 1000);
+            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _timeProvider, TimeSpan.FromMilliseconds(1000));
 
-            _channel = new Channel(new(ChannelName), new(Topic), gateway);
+            _channel = new Channel(new(ChannelName), _routingKey, gateway);
 
             var sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
             
             _bus.Enqueue(sentMessage);
@@ -53,12 +53,12 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         [Fact]
         public void When_No_Acknowledge_Is_Called_On_A_Channel()
         {
-            var receivedMessage = _channel.Receive(1000);
+            var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Reject(receivedMessage);
             
             _timeProvider.Advance(TimeSpan.FromSeconds(2)); //allow for message to timeout if not rejected 
 
-            Assert.Empty(_bus.Stream(new RoutingKey(Topic)));
+            Assert.Empty(_bus.Stream(new RoutingKey(_routingKey)));
         }
     }
 }

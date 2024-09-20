@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class CommandProcessorWithInMemoryOutboxTests : IDisposable
     {
-        private const string Topic = "MyCommand";
+        private readonly RoutingKey _routingKey = new("MyCommand");
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
@@ -53,11 +53,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var timeProvider = new FakeTimeProvider();
             InMemoryProducer producer = new(_internalBus, timeProvider)
             {
-                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+                Publication = {Topic = new RoutingKey(_routingKey), RequestType = typeof(MyCommand)}
             };
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
             
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{Topic, producer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{_routingKey, producer},});
             
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _commandProcessor.Post(_myCommand, context);
 
             _outbox.Get(_myCommand.Id, context).Should().NotBeNull();
-            _internalBus.Stream(new RoutingKey(Topic)).Should().NotBeEmpty();
+            _internalBus.Stream(new RoutingKey(_routingKey)).Should().NotBeEmpty();
             _outbox.Get(_myCommand.Id, context).Should().Be(_message);
         }
 

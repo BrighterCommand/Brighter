@@ -40,7 +40,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqMessageProducerSendMessageTests()
         {
             _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+                    MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
@@ -50,9 +51,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false, false);
+            _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false);
 
-            new QueueFactory(rmqConnection, _message.Header.Topic).Create(3000);
+            new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_message.Header.Topic))
+                .Create(TimeSpan.FromMilliseconds(3000));
         }
 
         [Fact]
@@ -60,7 +62,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             _messageProducer.Send(_message);
 
-            var result = _messageConsumer.Receive(10000).First(); 
+            var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
 
             //_should_send_a_message_via_rmq_with_the_matching_body
             result.Body.Value.Should().Be(_message.Body.Value);

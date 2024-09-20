@@ -66,10 +66,13 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        /// <param name="delayMilliseconds">Delay to delivery of the message.</param>
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            Task.Delay(delayMilliseconds);
+            delay ??= TimeSpan.Zero;
+            
+            //TODO: This is a blocking call, we should replace with a Time call
+            Task.Delay(delay.Value);
             Send(message);
         }
     }

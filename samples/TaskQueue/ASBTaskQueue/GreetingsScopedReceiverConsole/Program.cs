@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Events;
-using Greetings.Ports.Mappers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -23,7 +20,7 @@ namespace GreetingsScopedReceiverConsole
         public static async Task Main(string[] args)
         {
             var host = new HostBuilder()
-                .ConfigureServices((hostContext, services) =>
+                .ConfigureServices((_, services) =>
 
                 {
                     services.AddLogging();
@@ -38,7 +35,7 @@ namespace GreetingsScopedReceiverConsole
                             new SubscriptionName("Async Event"),
                             new ChannelName("paramore.example.greeting"),
                             new RoutingKey("greeting.Asyncevent"),
-                            timeoutInMilliseconds: 400,
+                            timeOut: TimeSpan.FromMilliseconds(400),
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
                             isAsync: true),
@@ -47,7 +44,7 @@ namespace GreetingsScopedReceiverConsole
                             new SubscriptionName("Event"),
                             new ChannelName("paramore.example.greeting"),
                             new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 400,
+                            timeOut: TimeSpan.FromMilliseconds(400),
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
                             isAsync: false)
@@ -67,7 +64,7 @@ namespace GreetingsScopedReceiverConsole
 
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })
-                .ConfigureLogging((hostingContext, logging) => {
+                .ConfigureLogging((_, logging) => {
                     logging.SetMinimumLevel(LogLevel.Information);
                     logging.AddConsole();
                 })

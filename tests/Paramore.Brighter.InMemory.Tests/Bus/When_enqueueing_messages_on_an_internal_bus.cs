@@ -13,17 +13,17 @@ public class InternalBusEnqueueTests
         //arrange
         var internalBus = new InternalBus();
         var messageId = Guid.NewGuid().ToString();
-        const string topic = "test";
+        var routingKey = new RoutingKey("test");
          
         //act
-       internalBus.Enqueue(new Message(new MessageHeader(messageId, topic, MessageType.MT_COMMAND), new MessageBody("test_content")));
+        internalBus.Enqueue(new Message(new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND), new MessageBody("test_content")));
         
         //assert
-        var message = internalBus.Stream(new RoutingKey(topic)).Single();
+        var message = internalBus.Stream(routingKey).Single();
         message.Should().NotBeNull();
         message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
         message.Body.Value.Should().Be("test_content");
-        message.Header.Topic.Should().Be(topic);
+        message.Header.Topic.Should().Be(routingKey);
         message.Header.Id.Should().Be(messageId);
     }
 }

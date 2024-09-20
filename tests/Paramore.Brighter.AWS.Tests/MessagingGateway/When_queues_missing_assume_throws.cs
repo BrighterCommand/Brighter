@@ -52,7 +52,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public void When_queues_missing_assume_throws()
         {
             //we will try to get the queue url, and fail because it does not exist
-            Assert.Throws<QueueDoesNotExistException>(() => _consumer.Receive(1000));
+            Assert.Throws<QueueDoesNotExistException>(() => _consumer.Receive(TimeSpan.FromMilliseconds(1000)));
         }
  
         public void Dispose()

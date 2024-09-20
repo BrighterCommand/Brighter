@@ -37,7 +37,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     [Collection("CommandProcessor")]
     public class MessageDispatcherRoutingTests : IDisposable
     {
-        private const string ChannelName = "myChannel";
         private readonly Dispatcher _dispatcher;
         private readonly SpyCommandProcessor _commandProcessor;
         private readonly RoutingKey _routingKey = new("myTopic");
@@ -56,9 +55,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var subscription = new Subscription<MyEvent>(
                 new SubscriptionName("test"), 
                 noOfPerformers: 1, 
-                timeoutInMilliseconds: 1000, 
+                timeOut: TimeSpan.FromMilliseconds(1000), 
                 channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
-                channelName: new ChannelName(ChannelName), 
+                channelName: new ChannelName("myChannel"), 
                 routingKey: _routingKey
             );
             

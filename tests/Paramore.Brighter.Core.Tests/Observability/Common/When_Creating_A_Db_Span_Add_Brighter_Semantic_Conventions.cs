@@ -39,7 +39,7 @@ public class BrighterSemanticConventionsDbSpanTests
     {
         //arrange
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new("MyTopic"), MessageType.MT_COMMAND), 
             new MessageBody("test content")
         );
 

@@ -151,7 +151,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 attributes.Add("DelaySeconds", _subscription.DelaySeconds.ToString());
                 attributes.Add("MessageRetentionPeriod", _subscription.MessageRetentionPeriod.ToString());
                 if (_subscription.IAMPolicy != null )attributes.Add("Policy", _subscription.IAMPolicy);
-                attributes.Add("ReceiveMessageWaitTimeSeconds", ToSecondsAsString(_subscription.TimeoutInMilliseconds));
+                attributes.Add("ReceiveMessageWaitTimeSeconds", _subscription.TimeOut.Seconds.ToString());
                 attributes.Add("VisibilityTimeout", _subscription.LockTimeout.ToString());
 
                 var tags = new Dictionary<string, string>();
@@ -307,17 +307,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 throw new InvalidOperationException(
                     $"Could not subscribe to topic: {ChannelTopicArn} from queue: {_queueUrl} in region {_awsConnection.Region}");
             }
-        }
-
-        private string ToSecondsAsString(int timeoutInMilliseconds)
-        {
-            int timeOutInSeconds = 0;
-            if (timeoutInMilliseconds >= 1000)
-                timeOutInSeconds = timeoutInMilliseconds / 1000;
-            else if (timeoutInMilliseconds > 0)
-                timeOutInSeconds = 1;
-
-            return Convert.ToString(timeOutInSeconds);
         }
 
         private (bool, string) QueueExists(AmazonSQSClient client, string channelName)
