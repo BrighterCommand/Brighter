@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class ChannelMessageReceiveTests
     {
         private readonly IAmAChannel _channel;
-        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new("MyTopic");
         private const string ChannelName = "myChannel";
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _fakeTimeProvider = new();
@@ -40,12 +40,12 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
         public ChannelMessageReceiveTests()
         {
-            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, 1000);
+            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _fakeTimeProvider, TimeSpan.FromMilliseconds(1000));
 
-            _channel = new Channel(new(ChannelName),new(Topic), gateway);
+            _channel = new Channel(new(ChannelName),new(_routingKey), gateway);
 
             _sentMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
             
             _bus.Enqueue(_sentMessage);
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         [Fact]
         public void When_Listening_To_Messages_On_A_Channel()
         {
-            var receivedMessage = _channel.Receive(1000);
+            var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Acknowledge(receivedMessage);
             
             receivedMessage.Should().NotBeNull();

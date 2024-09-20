@@ -96,7 +96,7 @@ namespace GreetingsSender
                 {
                     Name = "Ian", Language = "en-gb"
                 }, 
-                timeOutInMilliseconds: 2000
+                timeOut: TimeSpan.FromMilliseconds(2000)
             );
 
             Console.WriteLine("Done...");

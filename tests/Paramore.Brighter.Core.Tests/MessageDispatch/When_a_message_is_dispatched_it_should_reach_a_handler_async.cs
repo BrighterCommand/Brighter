@@ -11,9 +11,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
   public class MessagePumpDispatchAsyncTests
     {
-        private const string Topic = "MyTopic";
         private const string ChannelName = "myChannel";
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("MyTopic");
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
@@ -35,18 +34,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            var channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
              _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
-                { Channel = channel, TimeoutInMilliseconds = 5000 };
+                { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
-            var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
+            var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
             channel.Enqueue(message);
-            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
+            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
         }
 

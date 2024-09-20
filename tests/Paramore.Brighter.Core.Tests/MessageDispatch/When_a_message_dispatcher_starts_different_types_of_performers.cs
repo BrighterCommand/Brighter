@@ -63,12 +63,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
 
             var myEventConnection = new Subscription<MyEvent>(
-                new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: 
+                new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), channelFactory: 
                 new InMemoryChannelFactory(_bus, _timeProvider), channelName: new ChannelName("fakeEventChannel"), 
                 routingKey: _eventRoutingKey
             );
             var myCommandConnection = new Subscription<MyCommand>(
-                new SubscriptionName("anothertest"), noOfPerformers: 1, timeoutInMilliseconds: 1000, 
+                new SubscriptionName("anothertest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
                 channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
                 channelName: new ChannelName("fakeCommandChannel"), routingKey: _commandRoutingKey
                 );

@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _message = _mapper.MapToMessage(_request, _publication);
 
             //_should_put_the_reply_to_as_the_topic
-            _message.Header.Topic.Should().Be(TOPIC);
+            _message.Header.Topic.Should().Be(new RoutingKey(TOPIC));
             //_should_put_the_correlation_id_in_the_header
             _message.Header.CorrelationId.Should().Be(_correlationId);
             //_should_put_the_connections_into_the_body

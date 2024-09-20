@@ -10,14 +10,14 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly IAmAMessageConsumer _gateway;
         private const int BufferLimit = 2;
-        private const string Topic = "MyTopic";
+        private readonly RoutingKey _routingKey = new("MyTopic");
         private const string Channel = "MyChannel";
         private readonly InternalBus _bus = new();
 
         public BufferedChannelTests()
         {
-            _gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus,new FakeTimeProvider(), 1000); 
-            _channel = new Channel(new (Channel), new (Topic), _gateway, BufferLimit);
+            _gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus,new FakeTimeProvider(), TimeSpan.FromMilliseconds(1000)); 
+            _channel = new Channel(new (Channel), new (_routingKey), _gateway, BufferLimit);
         }
 
         [Fact]
@@ -25,27 +25,27 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
             //arrange
             var messageOne = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("FirstMessage"));
            
             var messageTwo = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("SecondMessage"));
             
             //put BufferLimit messages on the channel first
             _channel.Enqueue(messageOne, messageTwo);
             
             var messageThree = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("ThirdMessage"));
             
             //put a message on the bus, to pull once the buffer is empty
             _bus.Enqueue(messageThree);
             
             //act
-            var msgOne = _channel.Receive(10);
-            var msgTwo = _channel.Receive(10);
-            var msgThree = _channel.Receive(10);
+            var msgOne = _channel.Receive(TimeSpan.FromMilliseconds(10));
+            var msgTwo = _channel.Receive(TimeSpan.FromMilliseconds(10));
+            var msgThree = _channel.Receive(TimeSpan.FromMilliseconds(10));
             
             //assert
             msgOne.Id.Should().Be(messageOne.Id);
@@ -58,15 +58,15 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
             //put BufferLimit messages on the queue first
             var messageOne = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("FirstMessage"));
             
             var messageTwo = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("SecondMessage"));
             
             var messageThree = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "key", MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("ThirdMessage"));
             
             // This should be fine
@@ -80,13 +80,13 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         [Fact]
         public void When_we_try_to_create_with_too_small_a_buffer()
         {
-              Assert.Throws<ConfigurationException>(() => new Channel(new(Channel), new (Topic), _gateway, 0));
+              Assert.Throws<ConfigurationException>(() => new Channel(new(Channel), new (_routingKey), _gateway, 0));
         }
 
         [Fact]
         public void When_we_try_to_create_with_too_large_a_buffer()
         {
-              Assert.Throws<ConfigurationException>(() => new Channel(new(Channel), new (Topic), _gateway, 11));
+              Assert.Throws<ConfigurationException>(() => new Channel(new(Channel), new (_routingKey), _gateway, 11));
         }
     }
 }

@@ -44,10 +44,12 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
     /// Enqueue a message to tbe bus
     /// </summary>
     /// <param name="message">The message to enqueue</param>
-    /// <param name="millisecondsTimeout">How long to wait for an item; -1 is forever; default is -1</param>
-    public void Enqueue(Message message, int millisecondsTimeout = -1)
+    /// <param name="timeout">How long to wait for an item; -1 or null is forever; default is null</param>
+    public void Enqueue(Message message, TimeSpan? timeout = null)
     {
-        ValidateMillisecondsTimeout(millisecondsTimeout);
+        timeout ??= TimeSpan.FromMilliseconds(-1);
+        
+        ValidateMillisecondsTimeout(timeout.Value);
         
         var topic = new RoutingKey(message.Header.Topic);
         
@@ -60,7 +62,7 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
                 throw new InvalidOperationException("Failed to add topic to the bus");
         }
         
-        if (!_messages[topic].TryAdd(message, millisecondsTimeout, CancellationToken.None))
+        if (!_messages[topic].TryAdd(message, timeout.Value.Milliseconds, CancellationToken.None))
             throw new InvalidOperationException("Failed to add message to the bus");
     }
 
@@ -68,18 +70,20 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
     /// Dequeue a message from the bus
     /// </summary>
     /// <param name="topic">The topic to pull the message from</param>
-    /// <param name="millisecondsTimeout">How long to wait for an item; -1 is forever; default is -1</param>
+    /// <param name="timeout">How long to wait for an item; -1ms or null is forever; default is -1ms</param>
     /// <returns></returns>
-    public Message Dequeue(RoutingKey topic, int millisecondsTimeout = -1)
+    public Message Dequeue(RoutingKey topic, TimeSpan? timeout = null)
     {
-        ValidateMillisecondsTimeout(millisecondsTimeout);
+        timeout ??=TimeSpan.FromMilliseconds(-1);
+        
+        ValidateMillisecondsTimeout(timeout.Value);
         
         var found = _messages.TryGetValue(topic, out var messages);
         
         if (!found || !messages.Any())
             return MessageFactory.CreateEmptyMessage(topic);
 
-        if (!messages.TryTake(out Message message, millisecondsTimeout, CancellationToken.None))
+        if (!messages.TryTake(out Message message, timeout.Value.Milliseconds, CancellationToken.None))
             message = MessageFactory.CreateEmptyMessage(topic);
         
         return message;
@@ -97,9 +101,9 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
         return messages != null ? messages.ToArray() : Array.Empty<Message>();
     }   
     
-    private static void ValidateMillisecondsTimeout(int millisecondsTimeout)
+    private static void ValidateMillisecondsTimeout(TimeSpan timeout)
     {
-        if (millisecondsTimeout < 0 && millisecondsTimeout != -1)
-            throw new ArgumentOutOfRangeException(nameof(millisecondsTimeout), millisecondsTimeout, string.Format(CultureInfo.CurrentCulture, "Timeout must be greater than or equal to -1, was {0}", millisecondsTimeout));
+        if (timeout < TimeSpan.Zero && timeout != TimeSpan.FromMilliseconds(-1))
+            throw new ArgumentOutOfRangeException(nameof(timeout), timeout.Milliseconds, string.Format(CultureInfo.CurrentCulture, "Timeout must be greater than or equal to -1ms, was {0}", timeout.Milliseconds));
     }
 }

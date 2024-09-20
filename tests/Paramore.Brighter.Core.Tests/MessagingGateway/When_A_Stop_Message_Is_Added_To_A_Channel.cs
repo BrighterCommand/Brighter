@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
     public class ChannelStopTests
     {
-        private const string Topic = "myTopic";
+        private readonly RoutingKey _routingKey = new("myTopic");
         private const string ChannelName = "myChannel";
         private readonly IAmAChannel _channel;
         private readonly InternalBus _bus;
@@ -37,27 +37,26 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         public ChannelStopTests()
         {
             _bus = new InternalBus();
-            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, TimeProvider.System, 1000); 
+            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000)); 
 
-            _channel = new Channel(new(ChannelName), new(Topic), gateway);
+            _channel = new Channel(new(ChannelName),_routingKey, gateway);
 
             Message sentMessage = new(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT),
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT),
                 new MessageBody("a test body"));
             
             _bus.Enqueue(sentMessage);
 
-            _channel.Stop(new RoutingKey(Topic));
-
+            _channel.Stop(_routingKey);
         }
 
         [Fact]
         public void When_A_Stop_Message_Is_Added_To_A_Channel()
         {
-            var stopMessage = _channel.Receive(1000);
+            var stopMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             Assert.Equal(MessageType.MT_QUIT, stopMessage.Header.MessageType);
             
-            Assert.Single(_bus.Stream(new RoutingKey(Topic)));
+            Assert.Single(_bus.Stream(new RoutingKey(_routingKey)));
         }
     }
 }

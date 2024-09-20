@@ -41,7 +41,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqMessageProducerConfirmationsSendMessageTests ()
         {
             _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+                    MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
@@ -66,7 +67,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             //we need a queue to avoid a discard
-            new QueueFactory(rmqConnection, _message.Header.Topic).Create(3000);
+            new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_message.Header.Topic))
+                .Create(TimeSpan.FromMilliseconds(3000));
         }
 
         [Fact]

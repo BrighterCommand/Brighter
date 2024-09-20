@@ -23,7 +23,7 @@ public class AsyncUncompressedPayloadTests
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, 
                 timeStamp: DateTime.UtcNow, contentType: mimeType
             ),
             body
@@ -50,7 +50,7 @@ public class AsyncUncompressedPayloadTests
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, 
                 timeStamp:DateTime.UtcNow, contentType: mimeType
             ),
             body
@@ -77,7 +77,7 @@ public class AsyncUncompressedPayloadTests
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, 
                 timeStamp: DateTime.UtcNow, contentType: mimeType
             ),
             body

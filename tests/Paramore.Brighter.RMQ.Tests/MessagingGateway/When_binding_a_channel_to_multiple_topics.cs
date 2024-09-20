@@ -15,11 +15,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageConsumerMultipleTopicTests()
         {
+            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            
             _messageTopic1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
                 new MessageBody("test content for topic test 1"));
             _messageTopic2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
                 new MessageBody("test content for topic test 2"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
@@ -28,13 +30,16 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-            var topics = new[] {_messageTopic1.Header.Topic, _messageTopic2.Header.Topic};
+            var topics = new RoutingKeys([
+                new RoutingKey(_messageTopic1.Header.Topic), 
+                new RoutingKey(_messageTopic2.Header.Topic)
+            ]);
             var queueName = Guid.NewGuid().ToString();
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
             _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, false, false);
 
-             new QueueFactory(rmqConnection, queueName, topics).Create(3000);
+             new QueueFactory(rmqConnection, queueName, topics).Create(TimeSpan.FromMilliseconds(3000));
         }
 
         [Fact]
@@ -43,9 +48,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageProducer.Send(_messageTopic1);
             _messageProducer.Send(_messageTopic2);
 
-            var topic1Result = _messageConsumer.Receive(10000).First();
+            var topic1Result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             _messageConsumer.Acknowledge(topic1Result);
-            var topic2Result = _messageConsumer.Receive(10000).First();
+            var topic2Result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             _messageConsumer.Acknowledge(topic2Result);
 
             // should_received_a_message_from_test1_with_same_topic_and_body

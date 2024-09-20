@@ -28,7 +28,10 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _sender = _senderFactory.Create<Message, CommittableTransaction>(
                 _outbox, 
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", _gateway},}),
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
+                {
+                    {new RoutingKey("MyTopic"), _gateway},
+                }),
                 tracer: new BrighterTracer());
 
             _sender.Should().NotBeNull();

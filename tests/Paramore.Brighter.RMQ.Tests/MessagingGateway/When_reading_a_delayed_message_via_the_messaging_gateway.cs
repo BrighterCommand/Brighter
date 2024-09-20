@@ -39,10 +39,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageProducerDelayedMessageTests()
         {
-            var header = new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
+            var header = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+                MessageType.MT_COMMAND);
             var originalMessage = new Message(header, new MessageBody("test3 content"));
 
-            var mutatedHeader = new MessageHeader(header.Id, Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
+            var mutatedHeader = new MessageHeader(header.Id, new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
             mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
             _message = new Message(mutatedHeader, originalMessage.Body);
 
@@ -53,17 +54,18 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false, false);
+            _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false);
 
-            new QueueFactory(rmqConnection, _message.Header.Topic).Create(3000);
+            new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys([_message.Header.Topic]))
+                .Create(TimeSpan.FromMilliseconds(3000));
         }
 
         [Fact]
         public void When_reading_a_delayed_message_via_the_messaging_gateway()
         {
-            _messageProducer.SendWithDelay(_message, 3000);
+            _messageProducer.SendWithDelay(_message, TimeSpan.FromMilliseconds(3000));
 
-            var immediateResult = _messageConsumer.Receive(0).First();
+            var immediateResult = _messageConsumer.Receive(TimeSpan.Zero).First();
             var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
             immediateResult.Header.HandledCount.Should().Be(0);
             immediateResult.Header.DelayedMilliseconds.Should().Be(0);
@@ -71,7 +73,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             //_should_have_not_been_able_get_message_before_delay
             deliveredWithoutWait.Should().BeTrue();
             
-            var delayedResult = _messageConsumer.Receive(10000).First();
+            var delayedResult = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
              
 
            //_should_send_a_message_via_rmq_with_the_matching_body
@@ -88,7 +90,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             //send & receive a message
             _messageProducer.Send(_message);
-            var message = _messageConsumer.Receive(1000).Single();
+            var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
             message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             message.Header.HandledCount.Should().Be(0);
             message.Header.DelayedMilliseconds.Should().Be(0);
@@ -97,10 +99,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //now requeue with a delay
             _message.Header.UpdateHandledCount();
-            _messageConsumer.Requeue(_message, 1000);
+            _messageConsumer.Requeue(_message, TimeSpan.FromMilliseconds(1000));
 
             //receive and assert
-            var message2 = _messageConsumer.Receive(5000).Single();
+            var message2 = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
             message2.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             message2.Header.HandledCount.Should().Be(1);
             message2.Header.DelayedMilliseconds.Should().Be(1000);

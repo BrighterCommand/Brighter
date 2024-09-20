@@ -36,9 +36,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
-        private const string Topic = "MyTopic";
         private const string ChannelName = "myChannel";
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("MyTopic");
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
@@ -48,7 +47,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            var channel = new FailingChannel(new ChannelName(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2)
+            var channel = new FailingChannel(
+                new ChannelName(ChannelName), _routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 
+                2)
             {
                 NumberOfRetries = 1
             };
@@ -58,25 +60,25 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
-                Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1
+                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(500), RequeueCount = -1
             };
 
             var command = new MyCommand();
 
             //two command, will be received when subscription restored
             var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
             var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
             channel.Enqueue(message1);
             channel.Enqueue(message2);
             
             //end the pump
-            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey(Topic));
+            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
         }
 

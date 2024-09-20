@@ -29,15 +29,17 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var routingKey = new RoutingKey(MyTopic);
+            
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    MyTopic, new InMemoryProducer(internalBus, timeProvider)
+                    routingKey, new InMemoryProducer(internalBus, timeProvider)
                     {
                         Publication =
                         {
                             RequestType = typeof(MyEvent), 
-                            Topic = new RoutingKey(MyTopic)
+                            Topic = routingKey
                         }
                     }
                 }
@@ -87,7 +89,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(3);
+            internalBus.Stream(routingKey).Count().Should().Be(3);
             outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(0);
         }
 
@@ -103,16 +105,20 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var routingKey = new RoutingKey(MyTopic);
+            
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { MyTopic, new InMemoryProducer(internalBus, timeProvider)
-                {
-                    Publication =
+                { 
+                    routingKey, new InMemoryProducer(internalBus, timeProvider)
                     {
-                        RequestType = typeof(MyEvent), 
-                        Topic = new RoutingKey(MyTopic)
-                    }
-                } }
+                        Publication =
+                        {
+                            RequestType = typeof(MyEvent), 
+                            Topic = routingKey
+                        }
+                    } 
+                }
             });
 
             var mapperRegistry = new MessageMapperRegistry(
@@ -159,7 +165,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(3);
+            internalBus.Stream(routingKey).Count().Should().Be(3);
             (await outbox.OutstandingMessagesAsync(TimeSpan.Zero, new RequestContext())).Count().Should().Be(0);
         }
 
@@ -174,15 +180,17 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var routingKey = new RoutingKey(MyTopic);
+            
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    MyTopic, new InMemoryProducer(internalBus, timeProvider)
+                    routingKey, new InMemoryProducer(internalBus, timeProvider)
                     {
                         Publication =
                         {
                             RequestType = typeof(MyEvent), 
-                            Topic = new RoutingKey(MyTopic)
+                            Topic = routingKey
                         } 
                     } 
                 }
@@ -240,7 +248,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(1);
+            internalBus.Stream(routingKey).Count().Should().Be(1);
             outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(3);
         }
 
@@ -256,15 +264,17 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var internalBus = new InternalBus();
             var outbox = new InMemoryOutbox(timeProvider) { Tracer = new BrighterTracer(timeProvider) };
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var routingKey = new RoutingKey(MyTopic);
+            
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { 
-                    MyTopic, new InMemoryProducer(internalBus, timeProvider)
+                    routingKey, new InMemoryProducer(internalBus, timeProvider)
                     {
                         Publication =
                         {
                             RequestType = typeof(MyEvent), 
-                            Topic = new RoutingKey(MyTopic)
+                            Topic = routingKey
                         }
                     } 
                 }
@@ -318,7 +328,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             await Task.Delay(1000); //Give the sweep time to run
 
             //Assert
-            internalBus.Stream(new RoutingKey(MyTopic)).Count().Should().Be(1);
+            internalBus.Stream(routingKey).Count().Should().Be(1);
             outbox.OutstandingMessages(TimeSpan.Zero, new RequestContext()).Count().Should().Be(3);
         }
     }

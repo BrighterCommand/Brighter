@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <inheritdoc />
         public Dictionary<RoutingKey,IAmAMessageProducer> Create()
         {
-            var producers = new Dictionary<string, IAmAMessageProducer>();
+            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
 
             foreach (var publication in _publications)
             {

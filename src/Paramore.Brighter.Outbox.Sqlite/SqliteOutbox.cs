@@ -369,7 +369,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     handledCount: 0,
                     delayedMilliseconds: 0,
                     correlationId: correlationId,
-                    replyTo: replyTo,
+                    replyTo: new RoutingKey(replyTo),
                     contentType: contentType,
                     partitionKey: partitionKey);
 

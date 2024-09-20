@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -75,10 +74,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="deadLetterQueueName">The dead letter queue</param>
         /// <param name="deadLetterRoutingKey">The routing key for dead letter messages</param>
         /// <param name="ttl">How long before a message on the queue expires in milliseconds. Defaults to infinite</param>
+        /// <param name="maxQueueLength">How lare can the buffer grow before we stop accepting new work?</param>
         /// <param name="makeChannels">Should we validate, or create missing channels</param>
         public RmqMessageConsumer(RmqMessagingGatewayConnection connection,
             string queueName,
-            string routingKey,
+            RoutingKey routingKey,
             bool isDurable,
             bool highAvailability = false,
             int batchSize = 1,
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             int? ttl = null,
             int? maxQueueLength = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : this(connection, queueName, new string[] {routingKey}, isDurable, highAvailability, 
+            : this(connection, queueName, new RoutingKeys([routingKey]), isDurable, highAvailability, 
                 batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels)
         {
         }
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="makeChannels">Should we validate or create missing channels</param>
         public RmqMessageConsumer(RmqMessagingGatewayConnection connection,
             string queueName,
-            string[] routingKeys,
+            RoutingKeys routingKeys,
             bool isDurable,
             bool highAvailability = false,
             int batchSize = 1,
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             : base(connection)
         {
             _queueName = queueName;
-            _routingKeys = new RoutingKeys(routingKeys);
+            _routingKeys = routingKeys;
             _isDurable = isDurable;
             _highAvailability = highAvailability;
             _messageCreator = new RmqMessageCreator();
@@ -184,24 +184,26 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="timeout">Time to delay delivery of the message.</param>
         /// <returns>True if message deleted, false otherwise</returns>
-        public bool Requeue(Message message, int delayMilliseconds)
+        public bool Requeue(Message message, TimeSpan? timeout = null)
         {
+            timeout ??= TimeSpan.Zero;
+            
             try
             {
-                s_logger.LogDebug("RmqMessageConsumer: Re-queueing message {Id} with a delay of {Delay} milliseconds", message.Id, delayMilliseconds);
+                s_logger.LogDebug("RmqMessageConsumer: Re-queueing message {Id} with a delay of {Delay} milliseconds", message.Id, timeout.Value.Milliseconds);
                 EnsureBroker(_queueName);
                 
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
                 if (DelaySupported)
                 {
-                    rmqMessagePublisher.RequeueMessage(message, _queueName, delayMilliseconds);
+                    rmqMessagePublisher.RequeueMessage(message, _queueName, timeout.Value);
                 }
                 else
                 {
-                    Task.Delay(delayMilliseconds).Wait();
-                    rmqMessagePublisher.RequeueMessage(message, _queueName, 0);
+                    if (timeout > TimeSpan.Zero) Task.Delay(timeout.Value).Wait();
+                    rmqMessagePublisher.RequeueMessage(message, _queueName, TimeSpan.Zero);
                 }
 
                 //ack the original message to remove it from the queue
@@ -241,19 +243,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds. We retry at timeout /5 ms intervals, with a min of 5ms
+        /// <param name="timeOut">The timeout in milliseconds. We retry on timeout 5 ms intervals, with a min of 5ms
         /// until the timeout value is reached. </param>
         /// <returns>Message.</returns>
-        public Message[] Receive(int timeoutInMilliseconds)
+        public Message[] Receive(TimeSpan? timeOut = null)
         {
             s_logger.LogDebug("RmqMessageConsumer: Preparing to retrieve next message from queue {ChannelName} with routing key {RoutingKeys} via exchange {ExchangeName} on subscription {URL}", _queueName,
                 _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+            
+            timeOut ??= TimeSpan.FromMilliseconds(5);
 
             try
             {
                 EnsureChannel();
 
-                var (resultCount, results) = _consumer.DeQueue(timeoutInMilliseconds, _batchSize);
+                var (resultCount, results) = _consumer.DeQueue(timeOut.Value, _batchSize);
 
                 if (results != null && results.Length != 0)
                 {
@@ -382,7 +386,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
                 s_logger.LogInformation(
                     "RmqMessageConsumer: Created rabbitmq channel {ConsumerNumber} for queue {ChannelName} with routing key/s {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                    Channel.ChannelNumber,
+                    Channel?.ChannelNumber,
                     _queueName,
                     _routingKeys,
                     Connection.Exchange.Name,
@@ -506,31 +510,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         ~RmqMessageConsumer()
         {
             Dispose(false);
-        }
-    }
-
-    internal class RoutingKeys : IEnumerable<string>
-    {
-        private readonly IEnumerable<string> _routingKeys;
-
-        public RoutingKeys(params string[] routingKeys)
-        {
-            _routingKeys = routingKeys;
-        }
-
-        public IEnumerator<string> GetEnumerator()
-        {
-            return _routingKeys.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public override string ToString()
-        {
-            return $"[{string.Join(", ", _routingKeys)}]";
         }
     }
 }

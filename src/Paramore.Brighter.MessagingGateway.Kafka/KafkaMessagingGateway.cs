@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         protected RoutingKey Topic;
         protected int NumPartitions;
         protected short ReplicationFactor;
-        protected int TopicFindTimeoutMs;
+        protected TimeSpan TopicFindTimeout;
 
         protected void EnsureTopic()
         {
@@ -99,15 +99,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 bool found = false;
 
-                var metadata = adminClient.GetMetadata(Topic.Value, TimeSpan.FromMilliseconds(TopicFindTimeoutMs));
+                var metadata = adminClient.GetMetadata(Topic.Value, TopicFindTimeout);
                 //confirm we are in the list
                 var matchingTopics = metadata.Topics.Where(tp => tp.Topic == Topic.Value).ToArray();
                 if (matchingTopics.Length > 0)
                 {
-                    found = true;
                     var matchingTopic = matchingTopics[0];
                         
-                    //was it really found?
+                    //was it found?
                     found = matchingTopic.Error != null && matchingTopic.Error.Code != ErrorCode.UnknownTopicOrPart;
                     if (found)
                     {

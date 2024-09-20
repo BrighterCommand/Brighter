@@ -98,7 +98,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             new ChannelName("SalutationAnalytics"),
             new RoutingKey("GreetingMade"),
             runAsync: true,
-            timeoutInMilliseconds: 200,
+            timeOut: TimeSpan.FromMilliseconds(200),
             isDurable: true,
             makeChannels: OnMissingChannel
                 .Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere

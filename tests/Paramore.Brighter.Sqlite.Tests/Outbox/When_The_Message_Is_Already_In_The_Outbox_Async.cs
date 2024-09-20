@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _messageEarliest = new Message(
                 new MessageHeader(
                     Guid.NewGuid().ToString(), 
-                    "test_topic", 
+                    new RoutingKey("test_topic"), 
                     MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
         }

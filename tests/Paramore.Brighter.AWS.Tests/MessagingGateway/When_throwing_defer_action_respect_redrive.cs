@@ -47,7 +47,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 //don't block the redrive policy from owning retry management
                 requeueCount: -1,
                 //delay before requeuing
-                requeueDelayInMs: 50,
+                requeueDelay: TimeSpan.FromMilliseconds(50),
                 //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
                 redrivePolicy: new RedrivePolicy
                 (
@@ -58,8 +58,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId,
-                    replyTo: replyTo, contentType: contentType),
+                new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: new RoutingKey(replyTo), contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 _awsConnection, 
                 new SnsPublication 
                     { 
-                        Topic = new RoutingKey(topicName), 
+                        Topic = routingKey, 
                         RequestType = typeof(MyDeferredCommand), 
                         MakeChannels = OnMissingChannel.Create 
                     }
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
                 null, new InMemoryRequestContextFactory())
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
             };
         }
 

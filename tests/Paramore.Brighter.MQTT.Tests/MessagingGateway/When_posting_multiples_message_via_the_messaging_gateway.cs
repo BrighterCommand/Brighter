@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
                 sentMessages.Add(_message);
             }
 
-            Message[] recievedMessages = _messageConsumer.Receive(100);
+            Message[] recievedMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(100));
 
             recievedMessages.Should().NotBeEmpty()
             .And.HaveCount(messageCount)

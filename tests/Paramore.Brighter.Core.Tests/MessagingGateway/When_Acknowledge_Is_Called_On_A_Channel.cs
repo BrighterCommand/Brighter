@@ -31,15 +31,14 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     public class ChannelAcknowledgeTests
     {
         private readonly IAmAChannel _channel;
-        private readonly InternalBus _bus = new InternalBus();
-        private readonly FakeTimeProvider _fakeTimeProvider = new FakeTimeProvider();
-        private const string Topic = "myTopic";
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _fakeTimeProvider = new();
+        private readonly RoutingKey Topic = new("myTopic");
         private const string ChannelName = "myChannel";
 
         public ChannelAcknowledgeTests()
         {
-            const int ackTimeoutMs = 1000;
-            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, ackTimeoutMs); 
+            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(Topic), _bus, _fakeTimeProvider, TimeSpan.FromMilliseconds(1000)); 
 
             _channel = new  Channel(new (ChannelName), new(Topic), gateway);
 
@@ -53,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         [Fact]
         public void When_Acknowledge_Is_Called_On_A_Channel_Should_Be_Removed()
         {
-            var receivedMessage = _channel.Receive(1000);
+            var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Acknowledge(receivedMessage);
             
             _fakeTimeProvider.Advance(TimeSpan.FromSeconds(2)); //allow for message to timeout if not acked

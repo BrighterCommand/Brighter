@@ -19,15 +19,13 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     private readonly InMemoryArchiveProvider _archiveProvider;
     private readonly ExternalBusService<Message,CommittableTransaction> _bus;
     private readonly FakeTimeProvider _timeProvider;
+    private readonly RoutingKey _routingKey = new("MyTopic");
 
     public ServiceBusMessageStoreArchiverTestsAsync()
     {
-        const string topic = "MyTopic";
-
-        var routingKey = new RoutingKey(topic);
         var producer = new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
         {
-            Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
+            Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
         };
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -45,7 +43,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            { routingKey, producer },
+            { _routingKey, producer },
         });
 
         var policyRegistry = new PolicyRegistry
@@ -77,15 +75,15 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     {
         //arrange
         var context = new RequestContext();
-        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageOne, context);
         await _outbox.MarkDispatchedAsync(messageOne.Id, context);
         
-        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageTwo, context);
         await _outbox.MarkDispatchedAsync(messageTwo.Id, context);
         
-        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageThree, context);
         await _outbox.MarkDispatchedAsync(messageThree.Id, context);
 
@@ -108,15 +106,15 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     {
         //arrange
         var context = new RequestContext();
-        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageOne, context);
         await _outbox.MarkDispatchedAsync(messageOne.Id, context);
         
-        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageTwo, context);
         await _outbox.MarkDispatchedAsync(messageTwo.Id, context);
         
-        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageThree, context);
 
         //act
@@ -138,13 +136,13 @@ public class ServiceBusMessageStoreArchiverTestsAsync
     {
         //arrange
         var context = new RequestContext();
-        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageOne = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageOne, context);
         
-        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageTwo = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageTwo, context);
         
-        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var messageThree = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         await _outbox.AddAsync(messageThree, context);
 
         //act

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ;
@@ -34,16 +35,16 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     {
         private readonly RmqMessagingGatewayConnection _connection;
         private readonly string _channelName;
-        private readonly string[] _routingKeys;
+        private readonly RoutingKeys _routingKeys;
 
-        public QueueFactory(RmqMessagingGatewayConnection connection, string channelName, params string[] routingKeys)
+        public QueueFactory(RmqMessagingGatewayConnection connection, string channelName, RoutingKeys routingKeys)
         {
             _connection = connection;
             _channelName = channelName;
             _routingKeys = routingKeys;
         }
 
-        public void Create(int timeToDelayForCreationInMilliseconds)
+        public void Create(TimeSpan timeToDelayForCreation)
         {
             var connectionFactory = new ConnectionFactory {Uri = _connection.AmpqUri.Uri};
             using (var connection = connectionFactory.CreateConnection())
@@ -54,7 +55,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                     channel.QueueDeclare(_channelName, false, false, false, null);
                     if (_routingKeys.Any())
                     {
-                        foreach (var routingKey in _routingKeys)
+                        foreach (RoutingKey routingKey in _routingKeys)
                             channel.QueueBind(_channelName, _connection.Exchange.Name, routingKey);
                     }
                     else
@@ -66,7 +67,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             }
 
             //We need to delay to actually create these queues before we send to them
-            Task.Delay(timeToDelayForCreationInMilliseconds).Wait();
+            Task.Delay(timeToDelayForCreation).Wait();
         }
     }
 }    

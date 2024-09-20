@@ -50,12 +50,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly KafkaMessageCreator _creator;
         private readonly ConsumerConfig _consumerConfig;
         private List<TopicPartition> _partitions = new List<TopicPartition>();
-        private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = new ConcurrentBag<TopicPartitionOffset>();
+        private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = new();
         private readonly long _maxBatchSize;
-        private readonly int _readCommittedOffsetsTimeoutMs;
+        private readonly TimeSpan _readCommittedOffsetsTimeout;
         private DateTime _lastFlushAt = DateTime.UtcNow;
         private readonly TimeSpan _sweepUncommittedInterval;
-        private readonly SemaphoreSlim _flushToken = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _flushToken = new(1, 1);
         private bool _disposedValue;
         private bool _hasFatalError;
 
@@ -69,23 +69,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="groupId">The id of the consumer group we belong to. Required.</param>
         /// <param name="offsetDefault">When connecting to a stream, and we have not offset stored, where do we begin reading?
         /// Earliest - beginning of the stream; latest - anything after we connect. Defaults to Earliest</param>
-        /// <param name="sessionTimeoutMs">If we don't send a heartbeat within this interval, the broker terminates our session. Defaults to 1000ms</param>
-        /// <param name="maxPollIntervalMs">Maximum interval between consumer polls, Failing to poll at this interval marks the client as failed triggering a
-        /// re-balance of the group. Defaults to 1000ms.  Note that we set the Confluent clients auto store offsets and auto commit to false and handle this
+        /// <param name="sessionTimeout">If we don't send a heartbeat within this interval, the broker terminates our session. Defaults to 10s</param>
+        /// <param name="maxPollInterval">Maximum interval between consumer polls, Failing to poll at this interval marks the client as failed triggering a
+        /// re-balance of the group. Defaults to 10s.  Note that we set the Confluent clients auto store offsets and auto commit to false and handle this
         /// within Brighter. We store an offset following an Ack, and we commit offsets at a batch or sweeper interval, whichever is first.</param>
         /// <param name="isolationLevel">Affects reading of transactionally written messages. Committed only reads those committed to all nodes,
         /// uncommitted reads messages that have been written to *some* node. Defaults to ReadCommitted</param>
         /// <param name="commitBatchSize">What size does a batch grow before we write commits that we have stored. Defaults to 10. If a consumer crashes,
         /// uncommitted offsets will not have been written and will be processed by the consumer group again. Conversely a low batch size increases writes
         /// and lowers performance.</param>
-        /// <param name="sweepUncommittedOffsetsIntervalMs">The sweeper ensures that partially complete batches, particularly on low throughput queues
-        /// will be written. It runs after the interval and commits anything currently in the store and not committed. Defaults to 30000</param>
-        /// <param name="readCommittedOffsetsTimeoutMs">Timeout when reading the committed offsets, used when closing a consumer to log where it reached.
+        /// <param name="sweepUncommittedOffsetsInterval">The sweeper ensures that partially complete batches, particularly on low throughput queues
+        /// will be written. It runs after the interval and commits anything currently in the store and not committed. Defaults to 30s</param>
+        /// <param name="readCommittedOffsetsTimeout">Timeout when reading the committed offsets, used when closing a consumer to log where it reached.
         /// Defaults to 5000</param>
         /// <param name="numPartitions">If we are creating missing infrastructure, How many partitions should the topic have. Defaults to 1</param>
         /// <param name="partitionAssignmentStrategy">What is the strategy for assigning partitions to consumers?</param>
         /// <param name="replicationFactor">If we are creating missing infrastructure, how many in-sync replicas do we need. Defaults to 1</param>
-        /// <param name="topicFindTimeoutMs">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
+        /// <param name="topicFindTimeout">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
@@ -93,33 +93,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             RoutingKey routingKey,
             string groupId,
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
-            int sessionTimeoutMs = 10000,
-            int maxPollIntervalMs = 10000,
+            TimeSpan? sessionTimeout = null,
+            TimeSpan? maxPollInterval = null,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
             long commitBatchSize = 10,
-            int sweepUncommittedOffsetsIntervalMs = 30000,
-            int readCommittedOffsetsTimeoutMs = 5000,
+            TimeSpan? sweepUncommittedOffsetsInterval = null,
+            TimeSpan? readCommittedOffsetsTimeout = null,
             int numPartitions = 1,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
             short replicationFactor = 1,
-            int topicFindTimeoutMs = 10000,
+            TimeSpan? topicFindTimeout = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
             )
         {
             if (configuration is null)
-            {
                 throw new ConfigurationException("You must set a KafkaMessagingGatewayConfiguration to connect to a broker");
-            }
             
             if (routingKey is null)
-            {
                 throw new ConfigurationException("You must set a RoutingKey as the Topic for the consumer");
-            }
             
             if (groupId is null)
-            {
                 throw new ConfigurationException("You must set a GroupId for the consumer");
-            }
+            
+            sessionTimeout ??= TimeSpan.FromSeconds(10);
+            maxPollInterval ??= TimeSpan.FromSeconds(10);
+            sweepUncommittedOffsetsInterval ??= TimeSpan.FromSeconds(30);
+            readCommittedOffsetsTimeout ??= TimeSpan.FromMilliseconds(5000);
+            topicFindTimeout ??= TimeSpan.FromMilliseconds(10000);
             
             Topic = routingKey;
 
@@ -151,8 +151,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SslCaLocation = configuration.SslCaLocation,
                 GroupId = groupId,
                 AutoOffsetReset = offsetDefault,
-                SessionTimeoutMs = sessionTimeoutMs,
-                MaxPollIntervalMs = maxPollIntervalMs,
+                SessionTimeoutMs = sessionTimeout.Value.Milliseconds,
+                MaxPollIntervalMs = maxPollInterval.Value.Milliseconds,
                 EnablePartitionEof = true,
                 AllowAutoCreateTopics = false, //We will do this explicit always so as to allow us to set parameters for the topic
                 IsolationLevel = isolationLevel,
@@ -164,11 +164,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
 
             _maxBatchSize = commitBatchSize;
-            _sweepUncommittedInterval = TimeSpan.FromMilliseconds(sweepUncommittedOffsetsIntervalMs);
-            _readCommittedOffsetsTimeoutMs = readCommittedOffsetsTimeoutMs;
+            _sweepUncommittedInterval = TimeSpan.FromMilliseconds(sweepUncommittedOffsetsInterval.Value.Milliseconds);
+            _readCommittedOffsetsTimeout = readCommittedOffsetsTimeout.Value;
 
             _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
-                .SetPartitionsAssignedHandler((consumer, list) =>
+                .SetPartitionsAssignedHandler((_, list) =>
                 {
                     var partitions = list.Select(p => $"{p.Topic} : {p.Partition.Value}");
                     
@@ -176,7 +176,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     
                     _partitions.AddRange(list);
                 })
-                .SetPartitionsRevokedHandler((consumer, list) =>
+                .SetPartitionsRevokedHandler((_, list) =>
                 {
                     //We should commit any offsets we have stored for these partitions
                     CommitOffsetsFor(list);
@@ -187,7 +187,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
-                .SetPartitionsLostHandler((consumer, list) =>
+                .SetPartitionsLostHandler((_, list) =>
                 {
                     var lostPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
@@ -195,7 +195,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
-                .SetErrorHandler((consumer, error) =>
+                .SetErrorHandler((_, error) =>
                 {
                     _hasFatalError = error.IsFatal;
                     
@@ -215,7 +215,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Topic = routingKey;
             NumPartitions = numPartitions;
             ReplicationFactor = replicationFactor;
-            TopicFindTimeoutMs = topicFindTimeoutMs;
+            TopicFindTimeout = topicFindTimeout.Value;
             
             EnsureTopic();
         }
@@ -281,22 +281,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
         /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message. 
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The timeout for receiving a message. Defaults to 300ms</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
         /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
-        public Message[] Receive(int timeoutInMilliseconds)
+        public Message[] Receive(TimeSpan? timeOut = null)
         {
             if (_hasFatalError)
                 throw new ChannelFailureException("Fatal error on Kafka consumer, see logs for details");
+            
+            timeOut ??= TimeSpan.FromMilliseconds(300);
             
             try
             {
                 
                 LogOffSets();
 
-                s_logger.LogDebug(
-                    "Consuming messages from Kafka stream, will wait for {Timeout}", timeoutInMilliseconds);
-                var consumeResult = _consumer.Consume(new TimeSpan(0, 0, 0, 0, timeoutInMilliseconds));
+                s_logger.LogDebug("Consuming messages from Kafka stream, will wait for {Timeout}", timeOut.Value.Milliseconds);
+                var consumeResult = _consumer.Consume(timeOut.Value);
 
                 if (consumeResult == null)
                 {
@@ -359,9 +360,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Requeues the specified message. A no-op on Kafka as the stream is immutable
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="delay">Number of seconds to delay delivery of the message.</param>
         /// <returns>False as no requeue support on Kafka</returns>
-        public bool Requeue(Message message, int delayMilliseconds)
+        public bool Requeue(Message message, TimeSpan? delay = null)
         {
             return false;
         }
@@ -381,7 +382,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 var highestReadOffset = new Dictionary<TopicPartition, long>();
             
-                var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(_readCommittedOffsetsTimeoutMs));
+                var committedOffsets = _consumer.Committed(_partitions, _readCommittedOffsetsTimeout);
                 foreach (var committedOffset in committedOffsets)
                 {
                     if (highestReadOffset.TryGetValue(committedOffset.TopicPartition, out long offset))
@@ -589,7 +590,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 _consumer.Commit();
                 
-                var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(_readCommittedOffsetsTimeoutMs));
+                var committedOffsets = _consumer.Committed(_partitions, _readCommittedOffsetsTimeout);
                 foreach (var committedOffset in committedOffsets)
                     s_logger.LogInformation("Committed offset: {Offset} on partition: {ChannelName} for topic: {Topic}", committedOffset.Offset.Value.ToString(), committedOffset.Partition.Value.ToString(), committedOffset.Topic);
 

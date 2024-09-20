@@ -22,19 +22,17 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
-using Amazon.S3;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-using Paramore.Brighter.Tranformers.AWS;
 using Serilog;
 
 namespace GreetingsReceiverConsole
@@ -50,7 +48,7 @@ namespace GreetingsReceiverConsole
                 .CreateLogger();
 
             var host = new HostBuilder()
-                .ConfigureServices((hostContext, services) =>
+                .ConfigureServices((_, services) =>
 
                 {
                     var subscriptions = new Subscription[]
@@ -60,7 +58,7 @@ namespace GreetingsReceiverConsole
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             bufferSize: 10,
-                            timeoutInMs: 20, 
+                            timeOut: TimeSpan.FromMilliseconds(20), 
                             lockTimeout: 30,
                             findTopicBy: TopicFindBy.Convention,
                             makeChannels: OnMissingChannel.Create)

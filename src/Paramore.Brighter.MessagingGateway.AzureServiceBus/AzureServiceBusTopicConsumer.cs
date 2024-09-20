@@ -40,17 +40,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             s_logger.LogInformation(
                 "Getting message receiver provider for topic {Topic} and subscription {ChannelName}...",
-                RoutingKey, _subscriptionName);
+                Topic, _subscriptionName);
             try
             {
-                ServiceBusReceiver = _serviceBusReceiverProvider.Get(RoutingKey, _subscriptionName,
+                ServiceBusReceiver = _serviceBusReceiverProvider.Get(Topic, _subscriptionName,
                     SubscriptionConfiguration.RequireSession);
             }
             catch (Exception e)
             {
                 s_logger.LogError(e,
                     "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}",
-                    RoutingKey, _subscriptionName);
+                    Topic, _subscriptionName);
             }
         }
 
@@ -60,9 +60,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         public override void Purge()
         {
             Logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}",
-                SubscriptionName, RoutingKey);
+                SubscriptionName, Topic);
 
-            AdministrationClientWrapper.DeleteTopicAsync(RoutingKey);
+            AdministrationClientWrapper.DeleteTopicAsync(Topic);
             EnsureChannel();
         }
 
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
-                if (AdministrationClientWrapper.SubscriptionExists(RoutingKey, _subscriptionName))
+                if (AdministrationClientWrapper.SubscriptionExists(Topic, _subscriptionName))
                 {
                     _subscriptionCreated = true;
                     return;
@@ -82,10 +82,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if (Subscription.MakeChannels.Equals(OnMissingChannel.Validate))
                 {
                     throw new ChannelFailureException(
-                        $"Subscription {_subscriptionName} does not exist on topic {RoutingKey} and missing channel mode set to Validate.");
+                        $"Subscription {_subscriptionName} does not exist on topic {Topic} and missing channel mode set to Validate.");
                 }
 
-                AdministrationClientWrapper.CreateSubscription(RoutingKey, _subscriptionName,
+                AdministrationClientWrapper.CreateSubscription(Topic, _subscriptionName,
                     SubscriptionConfiguration);
                 _subscriptionCreated = true;
             }
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
                 {
                     s_logger.LogWarning(
-                        "Message entity already exists with topic {Topic} and subscription {ChannelName}", RoutingKey,
+                        "Message entity already exists with topic {Topic} and subscription {ChannelName}", Topic,
                         _subscriptionName);
                     _subscriptionCreated = true;
                 }

@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public int NumberOfRetries { get; set; } = 0;
         private int _attempts = 0;
 
-        public override Message Receive(int timeoutinMilliseconds)
+        public override Message Receive(TimeSpan? timeOut = null)
         {
             if (_attempts <= NumberOfRetries)
             {
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
                 throw channelFailureException;
             }
 
-            return base.Receive(timeoutinMilliseconds);
+            return base.Receive(timeOut);
         }
     }
 }

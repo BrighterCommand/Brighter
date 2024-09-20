@@ -12,7 +12,7 @@ public class ClaimCheckSmallPayloadTests
 {
     private readonly ClaimCheckTransformer _transformer;
     private readonly Message _message;
-    private string _topic;
+    private readonly RoutingKey _topic = new("test_topic");
 
     public ClaimCheckSmallPayloadTests()
     {
@@ -25,7 +25,6 @@ public class ClaimCheckSmallPayloadTests
 
         //but create a string that is just under 5K long - assuming string is 26 + length *2 to allow for 64-bit platform
         string body = DataGenerator.CreateString(2485);
-        _topic = "test_topic";
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(body));

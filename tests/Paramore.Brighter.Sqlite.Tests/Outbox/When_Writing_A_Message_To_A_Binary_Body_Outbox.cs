@@ -57,13 +57,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid().ToString(),
-                topic: "test_topic", 
+                topic: new RoutingKey("test_topic"), 
                 messageType:MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1), 
                 handledCount:5,
                 delayedMilliseconds:5,
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "ReplyTo",
+                replyTo: new RoutingKey("ReplyTo"),
                 contentType: "application/octet-stream",
                 partitionKey: "123456789");
             messageHeader.Bag.Add(_key1, _value1);

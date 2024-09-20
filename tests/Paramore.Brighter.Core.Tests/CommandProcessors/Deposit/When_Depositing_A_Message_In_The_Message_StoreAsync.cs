@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
     [Collection("CommandProcessor")]
     public class CommandProcessorDepositPostTestsAsync: IDisposable
     {
-        private const string Topic = "MyCommand";
+        private readonly RoutingKey _routingKey = new("MyCommand");
 
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -33,11 +33,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var timeProvider = new FakeTimeProvider();
             InMemoryProducer producer = new(_internalBus, timeProvider)
             {
-                Publication = { Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand) }
+                Publication = { Topic = _routingKey, RequestType = typeof(MyCommand) }
             };
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -61,9 +61,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
             };
             
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { Topic, producer },
+                { _routingKey, producer },
             });
 
             var tracer = new BrighterTracer();
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             //assert
             //message should not be posted
-            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
+            _internalBus.Stream(_routingKey).Any().Should().BeFalse();
             
             //message should be in the store
             var depositedPost = _outbox

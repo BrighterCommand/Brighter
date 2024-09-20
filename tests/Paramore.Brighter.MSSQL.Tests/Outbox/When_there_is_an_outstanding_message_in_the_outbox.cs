@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(msSqlTestHelper.OutboxConfiguration);
-            _dispatchedMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _dispatchedMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), new MessageBody("message body"));
             _sqlOutbox.Add(_dispatchedMessage, new RequestContext());
 
             //wait to create an outstanding period

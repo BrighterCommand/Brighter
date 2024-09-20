@@ -61,7 +61,10 @@ public class MessagePumpQuitOberservabilityTests
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            Channel channel = new(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(
+                new (Channel), _routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+            );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -71,7 +74,7 @@ public class MessagePumpQuitOberservabilityTests
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), tracer, instrumentationOptions)
             {
-                Channel = channel, TimeoutInMilliseconds = 5000, EmptyChannelDelay = 1000
+                Channel = channel, TimeOut= TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = 1000
             };
             
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);

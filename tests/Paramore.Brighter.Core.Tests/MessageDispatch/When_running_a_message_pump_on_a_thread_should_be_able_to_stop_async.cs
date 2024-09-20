@@ -36,9 +36,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class PerformerCanStopTestsAsync
     {
-        private const string Topic = "MyTopic";
         private const string Channel = "MyChannel";
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("MyTopic");
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly Task _performerTask;
@@ -47,7 +46,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             SpyCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            Channel channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(
+                new(Channel), _routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+            );
+            
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
@@ -55,18 +58,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             var messagePump = new MessagePumpAsync<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory());
             messagePump.Channel = channel;
-            messagePump.TimeoutInMilliseconds = 5000;
+            messagePump.TimeOut = TimeSpan.FromMilliseconds(5000);
 
             var @event = new MyEvent();
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
                 new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
             );
             channel.Enqueue(message);
 
             Performer performer = new(channel, messagePump);
             _performerTask = performer.Run();
-            performer.Stop(new RoutingKey(Topic));
+            performer.Stop(_routingKey);
         }
         
 #pragma warning disable xUnit1031

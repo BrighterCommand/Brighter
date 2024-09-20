@@ -21,14 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Collections.Generic;
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
-using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -67,13 +66,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             var topic = message.Header.Topic;
 
-            s_logger.LogDebug("MsSqlMessageProducer: send message with topic {Topic} and id {Id}", topic,
-                message.Id.ToString());
+            s_logger.LogDebug("MsSqlMessageProducer: send message with topic {Topic} and id {Id}", topic, message.Id);
 
             _sqlQ.Send(message, topic);
         }
         
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
             //No delay support implemented
             Send(message);
@@ -85,10 +83,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             var topic = message.Header.Topic;
 
             s_logger.LogDebug(
-                "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}", topic,
-                message.Id.ToString());
+                "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}", topic, message.Id);
 
-            await _sqlQ.SendAsync(message, topic);
+            await _sqlQ.SendAsync(message, topic, TimeSpan.Zero);
         }
 
         public void Dispose()

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="configuration"></param>
         public MQTTMessageConsumer(MQTTMessagingGatewayConsumerConfiguration configuration)
         {
-            _topic = $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
+            _topic =  $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
             
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
                .WithTcpServer(configuration.Hostname)
@@ -71,7 +71,6 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
-            return;
         }
 
         public void Dispose()
@@ -90,15 +89,16 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <summary>
         /// Retrieves the current recieved messages from the internal buffer.
         /// </summary>
-        /// <param name="timeoutInMilliseconds"></param>
-        public Message[] Receive(int timeoutInMilliseconds)
+        /// <param name="timeOut">The time to delay retrieval. Defaults to 300ms</param>
+        public Message[] Receive(TimeSpan? timeOut = null)
         {
             if (_messageQueue.Count==0)
-                return new Message[] { _noopMessage };
+                return new[] { _noopMessage };
 
-            List<Message> messages = new List<Message>();
+            var messages = new List<Message>();
+            timeOut ??= TimeSpan.FromMilliseconds(300);
 
-            using (CancellationTokenSource cts = new CancellationTokenSource(timeoutInMilliseconds))
+            using (var cts = new CancellationTokenSource(timeOut.Value))
             {
                 cts.Token.Register(() => { throw new TimeoutException(); });
                 while (!cts.IsCancellationRequested && _messageQueue.Count > 0)
@@ -124,15 +124,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="message"></param>
         public void Reject(Message message)
         {
-            return;
         }
 
         /// <summary>
         /// Not implemented Requeue Method.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds"></param>
-        public bool Requeue(Message message, int delayMilliseconds)
+        /// <param name="delay"></param>
+        public bool Requeue(Message message, TimeSpan? delay = null)
         {
             return false;
         }

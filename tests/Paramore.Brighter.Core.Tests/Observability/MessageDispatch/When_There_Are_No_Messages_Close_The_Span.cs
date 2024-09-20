@@ -62,7 +62,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            Channel channel = new(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            Channel channel = new(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(
                     _ => new MyEventMessageMapper()),
@@ -72,7 +72,7 @@ public class MessagePumpEmptyQueueOberservabilityTests
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), tracer, instrumentationOptions)
             {
-                Channel = channel, TimeoutInMilliseconds = 5000, EmptyChannelDelay = 1000
+                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = 1000
             };
             
             //in theory the message pump should see this from the consumer when the queue is empty

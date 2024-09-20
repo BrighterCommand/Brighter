@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
@@ -47,18 +46,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
         public CommandProcessorNoMessageMapperAsyncTests()
         {
-            const string topic = "MyCommand";
+            var routingKey = new RoutingKey("MyCommand");
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
             InMemoryProducer producer = new(new InternalBus(), timeProvider)
             {
-                Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+                Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
             };
-
-            new Message(
-                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
-                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
@@ -73,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
             
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, producer},});
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, producer},});
 
             var tracer = new BrighterTracer(timeProvider);
             var outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};

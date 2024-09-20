@@ -46,15 +46,26 @@ namespace Paramore.Brighter
         /// <param name="correlationId">The correlation identifier.</param>
         public ReplyAddress(string topic, string correlationId)
         {
-            Topic = topic;
+            Topic = new RoutingKey(topic);
             CorrelationId = correlationId;
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="ReplyAddress"/> class.
+        /// </summary>
+        /// <param name="topic">The <see cref="Topic"/></param>
+        /// <param name="correlationId">The correlation identifier.</param>
+        public ReplyAddress(RoutingKey topic, string correlationId)
+        {
+            Topic = topic;
+            CorrelationId = correlationId;
+        }
+        
+        /// <summary>
         /// Gets the topic.
         /// </summary>
         /// <value>The topic.</value>
-        public string Topic { get; set; }
+        public RoutingKey Topic { get; set; }
 
         /// <summary>
         /// Gets the correlation identifier.

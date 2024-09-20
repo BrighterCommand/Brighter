@@ -41,8 +41,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// Create a null object or Empty routing key
         /// </summary>
-        /// <returns></returns>
-        public static RoutingKey CreateEmpty() => new RoutingKey(string.Empty);
+        /// <value></value>
+        public static RoutingKey Empty => new(string.Empty);
 
         /// <summary>
         /// Tests for an empty routing key

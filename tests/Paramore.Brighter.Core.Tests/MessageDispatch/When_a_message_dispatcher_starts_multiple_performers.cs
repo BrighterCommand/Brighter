@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             var routingKey = new RoutingKey(Topic);
             _bus = new InternalBus();
-            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, 1000);
+            var consumer = new InMemoryMessageConsumer(routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000));
             
             IAmAChannel channel = new Channel(new (ChannelName), new(Topic), consumer, 6);
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var connection = new Subscription<MyEvent>(
                 new SubscriptionName("test"), 
                 noOfPerformers: 3, 
-                timeoutInMilliseconds: 100, 
+                timeOut: TimeSpan.FromMilliseconds(100), 
                 channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), 
                 channelName: new ChannelName("fakeChannel"), 
                 routingKey: routingKey

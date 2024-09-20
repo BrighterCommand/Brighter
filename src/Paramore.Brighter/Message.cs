@@ -109,7 +109,7 @@ namespace Paramore.Brighter
         /// </summary>
         public Message()
         {
-            Header = new MessageHeader(messageId: string.Empty, topic: RoutingKey.CreateEmpty(), messageType: MessageType.MT_NONE);
+            Header = new MessageHeader(messageId: string.Empty, topic: RoutingKey.Empty, messageType: MessageType.MT_NONE);
             Body = new MessageBody(string.Empty);
         }
 

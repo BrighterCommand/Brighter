@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.IO;
 using Confluent.Kafka;
 using Greetings.Ports.Commands;
@@ -42,12 +43,12 @@ var host = Host.CreateDefaultBuilder(args)
         configurationBuilder.AddJsonFile("appsettings.json", optional: true);
         configurationBuilder.AddCommandLine(args);
     })
-    .ConfigureLogging((context, builder) =>
+    .ConfigureLogging((_, builder) =>
     {
         builder.AddConsole();
         builder.AddDebug();
     })
-    .ConfigureServices((hostContext, services) =>
+    .ConfigureServices((_, services) =>
     {
         var subscriptions = new KafkaSubscription[]
         {
@@ -57,10 +58,10 @@ var host = Host.CreateDefaultBuilder(args)
                 routingKey: new RoutingKey("greeting.event"),
                 groupId: "kafka-GreetingsReceiverConsole-Sample",
                 numOfPartitions: 3,
-                timeoutInMilliseconds: 100,
+                timeOut: TimeSpan.FromMilliseconds(100),
                 offsetDefault: AutoOffsetReset.Earliest,
                 commitBatchSize: 5,
-                sweepUncommittedOffsetsIntervalMs: 10000,
+                sweepUncommittedOffsetsInterval: TimeSpan.FromMilliseconds(10000),
                 runAsync:true)
         };
 

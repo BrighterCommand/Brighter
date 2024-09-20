@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <inheritdoc />
         public Dictionary<RoutingKey,IAmAMessageProducer> Create()
         {
-            var producers = new Dictionary<string, IAmAMessageProducer>();
+            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
             foreach (var publication in publications)
             {
                 producers[publication.Topic] = new RmqMessageProducer(connection, publication);

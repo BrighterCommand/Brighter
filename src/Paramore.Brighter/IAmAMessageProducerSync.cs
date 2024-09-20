@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -46,7 +48,7 @@ namespace Paramore.Brighter
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        void SendWithDelay(Message message, int delayMilliseconds = 0);
+        /// <param name="delay">Delay delivery of the message. 0 is no delay. Defaults to 0</param>
+        void SendWithDelay(Message message, TimeSpan? delay);
      }
 }

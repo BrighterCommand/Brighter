@@ -25,14 +25,11 @@ public class CommandProcessorMultipleClearObservabilityTests
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
-    private readonly InMemoryOutbox _outbox;
-    private readonly string _topic;
-    private readonly InMemoryProducer _producer;
-    private InternalBus _internalBus = new InternalBus();
+    private readonly InternalBus _internalBus = new();
 
     public CommandProcessorMultipleClearObservabilityTests()
     {
-        _topic = "MyEvent";
+        var routingKey = new RoutingKey("MyEvent");
         
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -57,27 +54,28 @@ public class CommandProcessorMultipleClearObservabilityTests
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
-        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
+        InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        _producer = new InMemoryProducer(_internalBus, timeProvider)
+        
+        InMemoryProducer producer = new(_internalBus, timeProvider)
         {
             Publication =
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
-                Topic = new RoutingKey(_topic),
+                Topic = routingKey,
                 Type = nameof(MyEvent),
             }
         };
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {_topic, _producer}
+            {routingKey, producer}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -87,7 +85,7 @@ public class CommandProcessorMultipleClearObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
-            _outbox,
+            outbox,
             maxOutStandingMessages: -1
         );
         
@@ -143,7 +141,7 @@ public class CommandProcessorMultipleClearObservabilityTests
         outBoxActivity.Count().Should().Be(3);
 
         //there should be a span for publishing the message via the producer
-        var producerActivity = _exportedActivities.Where(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
+        var producerActivity = _exportedActivities.Where(a => a.DisplayName == $"{"MyEvent"} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
         producerActivity.Count().Should().Be(3);
     }
 }

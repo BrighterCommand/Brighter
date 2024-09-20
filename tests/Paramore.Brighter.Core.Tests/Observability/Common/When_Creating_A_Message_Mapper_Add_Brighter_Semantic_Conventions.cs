@@ -38,14 +38,15 @@ public class BrighterSemanticConventionsMessageMapperTests
     public void When_Creating_A_Message_Mapper_Add_Brighter_Semantic_Conventions()
     {
         //arrange
-        const string topic = "MyTopic";
         const string paritionKey = "MyPartitionKey";
+        var routingKey = new RoutingKey("MyTopic");
+        
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_COMMAND, partitionKey: paritionKey), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, partitionKey: paritionKey), 
             new MessageBody("test content")
         );
 
-        var publication = new Publication() { Topic = new RoutingKey(topic) };
+        var publication = new Publication() { Topic = routingKey };
         
         //act
         BrighterTracer.WriteMapperEvent(message, publication, _parentActivity, "MyMessageMapper", false, true);
@@ -63,7 +64,7 @@ public class BrighterSemanticConventionsMessageMapperTests
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperName && (string)t.Value == "MyMessageMapper").Should().BeTrue();
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MapperType && (string)t.Value == "sync").Should().BeTrue();
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value == true).Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value?.ToString() == topic.ToString()).Should().BeTrue();
+        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestination && t.Value?.ToString() == "MyTopic".ToString()).Should().BeTrue();
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageId && (string)t.Value == message.Id).Should().BeTrue();
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == paritionKey).Should().BeTrue();
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBody && (string)t.Value == message.Body.Value).Should().BeTrue();

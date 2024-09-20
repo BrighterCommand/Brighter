@@ -11,9 +11,8 @@ namespace Paramore.Brighter.Core.Tests.Compression;
 public class AsyncCompressLargePayloadTests
 {
     private readonly CompressPayloadTransformerAsync _transformer;
-    private readonly string _body;
     private readonly Message _message;
-    private string _topic;
+    private readonly RoutingKey _topic = new("test_topic");
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
     private const byte ZLIB_LEAD_BYTE = 0x78;
 
@@ -21,11 +20,10 @@ public class AsyncCompressLargePayloadTests
     {
         _transformer = new CompressPayloadTransformerAsync();
         
-        _body = DataGenerator.CreateString(6000);
-        _topic = "test_topic";
+        string body = DataGenerator.CreateString(6000);
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
-            new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));        
+            new MessageBody(body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));        
     }
 
     [Fact]

@@ -18,9 +18,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer on the channel</param>
         /// <param name="noOfPerformers">The no of performers.</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The timeout to wait. Defaults to 300ms</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelay">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -35,9 +35,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int timeoutInMilliseconds = 400,
+            TimeSpan? timeOut = null,
             int requeueCount = -1,
-            int requeueDelayInMs = 0,
+            TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
@@ -45,8 +45,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
-                makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
+                requeueDelay, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, emptyChannelDelay, 
+                channelFailureDelay)
         {
             Configuration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
         }
@@ -66,9 +67,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer on the channel</param>
         /// <param name="noOfPerformers">The no of performers.</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The timeout to wait for messages; defaults to 300ms</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelay">The delay the delivery of a requeue message. 0 is no delay. Defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -76,16 +77,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        /// <param name="receiveMode">The mode in which to receive messages.</param>
         public AzureServiceBusSubscription(
             SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int timeoutInMilliseconds = 400,
+            TimeSpan? timeOut = null,
             int requeueCount = -1,
-            int requeueDelayInMs = 0,
+            TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
@@ -94,8 +94,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
-                timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
-                isAsync, channelFactory, makeChannels, subscriptionConfiguration, emptyChannelDelay, channelFailureDelay)
+                timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, 
+                subscriptionConfiguration, emptyChannelDelay, channelFailureDelay)
         {
         }
     }

@@ -42,8 +42,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: _correlationId,
-                    replyTo: _replyTo, contentType: _contentType),
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
+                    replyTo: new RoutingKey(_replyTo), contentType: _contentType),
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             await Task.Delay(1000);
             
-            var message = _channel.Receive(5000);
+            var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             
             //clear the queue
             _channel.Acknowledge(message);
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             message.Id.Should().Be(_myCommand.Id);
             message.Redelivered.Should().BeFalse();
             message.Header.Id.Should().Be(_myCommand.Id);
-            message.Header.Topic.Should().Contain(_topicName);
+            message.Header.Topic.Value.Should().Contain(_topicName);
             message.Header.CorrelationId.Should().Be(_correlationId);
             message.Header.ReplyTo.Should().Be(_replyTo);
             message.Header.ContentType.Should().Be(_contentType);

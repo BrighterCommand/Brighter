@@ -21,11 +21,11 @@ public class InMemoryConsumerRequeueTests
         var bus = new InternalBus();
         bus.Enqueue(expectedMessage);
 
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), 1000);
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), TimeSpan.FromMilliseconds(1000));
         
         //act
         var receivedMessage = consumer.Receive().Single();
-        consumer.Requeue(receivedMessage, 0);
+        consumer.Requeue(receivedMessage, TimeSpan.Zero);
         
         //assert
         Assert.Single(bus.Stream(routingKey));
@@ -47,11 +47,11 @@ public class InMemoryConsumerRequeueTests
         bus.Enqueue(expectedMessage);
 
         var timeProvider = new FakeTimeProvider();
-        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, 1000);
+        var consumer = new InMemoryMessageConsumer(routingKey, bus, timeProvider, TimeSpan.FromMilliseconds(1000));
         
         //act
         var receivedMessage = consumer.Receive().Single();
-        consumer.Requeue(receivedMessage, 1000);
+        consumer.Requeue(receivedMessage, TimeSpan.FromMilliseconds(1000));
         
         //assert
         Assert.Empty(bus.Stream(routingKey));

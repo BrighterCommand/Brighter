@@ -93,9 +93,9 @@ namespace Paramore.Brighter.ServiceActivator
                 _messageTransformerFactory, _requestContextFactory, _tracer, _instrumentationOptions)
             {
                 Channel = channel,
-                TimeoutInMilliseconds = _subscription.TimeoutInMilliseconds,
+                TimeOut = _subscription.TimeOut,
                 RequeueCount = _subscription.RequeueCount,
-                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                RequeueDelay = _subscription.RequeueDelay,
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
             };
 
@@ -109,9 +109,9 @@ namespace Paramore.Brighter.ServiceActivator
                 _messageTransformerFactoryAsync, _requestContextFactory, _tracer, _instrumentationOptions)
             {
                 Channel = channel,
-                TimeoutInMilliseconds = _subscription.TimeoutInMilliseconds,
+                TimeOut = _subscription.TimeOut,
                 RequeueCount = _subscription.RequeueCount,
-                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                RequeueDelay = _subscription.RequeueDelay,
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit,
                 EmptyChannelDelay = _subscription.EmptyChannelDelay,
                 ChannelFailureDelay = _subscription.ChannelFailureDelay

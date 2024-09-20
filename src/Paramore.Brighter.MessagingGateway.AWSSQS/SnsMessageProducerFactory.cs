@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <inheritdoc />
         public Dictionary<RoutingKey,IAmAMessageProducer> Create()
         {
-            var producers = new Dictionary<string, IAmAMessageProducer>();
+            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
             foreach (var p in _snsPublications)
             {
                 var producer = new SqsMessageProducer(_connection, p);

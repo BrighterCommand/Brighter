@@ -46,7 +46,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Topics.Add("topic", []);
             
             _producer.Send(new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT), 
                 new MessageBody(messageBody, "JSON"))
             );
             
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var producer = useQueues ? _queueProducer : _producer;
             
             producer.Send(new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_COMMAND), 
                 new MessageBody(messageBody, "JSON"))
             );
             
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var producer = useQueues ? _queueProducer : _producer;
             
             producer.Send(new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_NONE), 
                 new MessageBody(messageBody, "JSON")));
             
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
@@ -119,7 +119,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 var producer = useQueues ? _queueProducer : _producer;
                 
                 producer.Send(new Message(
-                    new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                    new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_NONE), 
                     new MessageBody("Message", "JSON")));
             }
             catch (Exception)
@@ -146,8 +146,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             
             producer.SendWithDelay(
                 new Message(
-                    new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_EVENT),
-                    new MessageBody(messageBody, "JSON")), 1);
+                    new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_EVENT),
+                    new MessageBody(messageBody, "JSON")), TimeSpan.FromSeconds(1));
             
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
@@ -172,8 +172,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var producer = useQueues ? _queueProducer : _producer;
 
             producer.SendWithDelay(new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_COMMAND),
-                new MessageBody(messageBody, "JSON")), 1);
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_COMMAND),
+                new MessageBody(messageBody, "JSON")), TimeSpan.FromSeconds(1));
             
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
@@ -196,8 +196,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var producer = useQueues ? _queueProducer : _producer;
 
             producer.SendWithDelay(new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE),
-                new MessageBody(messageBody, "JSON")), 1);
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_NONE),
+                new MessageBody(messageBody, "JSON")), TimeSpan.FromSeconds(1));
             
             ServiceBusMessage sentMessage = _topicClient.SentMessages.First();
 
@@ -224,13 +224,15 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             }
 
             var producer = useQueues ? _queueProducer : _producer;
+
+            var routingKey = new RoutingKey("topic");
             
             producer.SendWithDelay(new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
-                new MessageBody(messageBody, "JSON")), 1);
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_NONE), 
+                new MessageBody(messageBody, "JSON")), TimeSpan.FromSeconds(1));
             producer.SendWithDelay(new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
-                new MessageBody(messageBody, "JSON")), 1);
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_NONE), 
+                new MessageBody(messageBody, "JSON")), TimeSpan.FromSeconds(1));
 
             if (topicExists == false)
                 Assert.Equal(1, _nameSpaceManagerWrapper.CreateCount);
@@ -251,8 +253,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             
             await Assert.ThrowsAsync<Exception>(() => producer.SendWithDelayAsync(
                 new Message(
-                    new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
-                    new MessageBody(messageBody, "JSON")), 1)
+                    new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_NONE), 
+                    new MessageBody(messageBody, "JSON")), TimeSpan.FromSeconds(1))
             );
             Assert.Equal(1, _nameSpaceManagerWrapper.ResetCount);
         }
@@ -274,7 +276,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var producer = useQueues ? _queueProducer : _producer;
             
             producer.SendWithDelay(new Message(
-               new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+               new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_NONE), 
                new MessageBody(messageBody, "JSON"))
            );
 
@@ -294,7 +296,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             await Assert.ThrowsAsync<ChannelFailureException>(() => producerValidate.SendAsync(
                 new Message(
-                    new MessageHeader(Guid.NewGuid().ToString(), "topic", MessageType.MT_NONE), 
+                    new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("topic"), MessageType.MT_NONE), 
                     new MessageBody(messageBody, "JSON")))
             );
         }

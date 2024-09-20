@@ -59,13 +59,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             var messageHeader = new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
-                topic: "test_topic",
+                topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
                 delayedMilliseconds: 5,
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "ReplyAddress",
+                replyTo: new RoutingKey("ReplyAddress"),
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
