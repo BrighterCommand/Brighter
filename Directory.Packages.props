@@ -4,18 +4,18 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.400.13" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.400.21" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
     <PackageVersion Include="AWSSDK.S3" Version="3.7.402.4" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.400.13" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.13" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.13" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.21" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.21" />
     <PackageVersion Include="Azure.Identity" Version="1.12.0" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.1" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.21.2" />
-    <PackageVersion Include="Confluent.Kafka" Version="2.5.2" />
-    <PackageVersion Include="Confluent.SchemaRegistry" Version="2.5.2" />
-    <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.5.2" />
+    <PackageVersion Include="Confluent.Kafka" Version="2.5.3" />
+    <PackageVersion Include="Confluent.SchemaRegistry" Version="2.5.3" />
+    <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.5.3" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -24,7 +24,7 @@
     <PackageVersion Include="Dapper.Contrib" Version="2.0.78" />
     <PackageVersion Include="DapperExtensions" Version="1.7.0" />
     <PackageVersion Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
-    <PackageVersion Include="FluentAssertions" Version="6.12.0" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.1" />
     <PackageVersion Include="FluentMigrator" Version="5.2.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="5.2.0" />
     <PackageVersion Include="FluentMigrator.Runner.Core" Version="5.2.0" />
@@ -48,13 +48,13 @@
     <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.8.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="8.9.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageVersion Include="MQTTnet" Version="3.1.2" />
     <PackageVersion Include="MySqlConnector" Version="2.3.7" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
-    <PackageVersion Include="Npgsql" Version="8.0.3" />
+    <PackageVersion Include="Npgsql" Version="8.0.4" />
     <PackageVersion Include="NUnit" Version="4.2.2" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.3.0">
       <PrivateAssets>all</PrivateAssets>
@@ -123,7 +123,7 @@
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <GlobalPackageReference Include="MinVer" Version="5.0.0" />
+    <GlobalPackageReference Include="MinVer" Version="6.0.0" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
   </ItemGroup>
 </Project>
