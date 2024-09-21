@@ -331,7 +331,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/></param>
         /// <param name="timeOut">The call blocks, so we must time out; defaults to 500 ms if null</param>
         /// <exception cref="NotImplementedException"></exception>
-        TResponse? Call<T, TResponse>(T request, RequestContext requestContext = null, TimeSpan? timeOut = null)
+        TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
             where T : class, ICall where TResponse : class, IResponse;
     }
 }

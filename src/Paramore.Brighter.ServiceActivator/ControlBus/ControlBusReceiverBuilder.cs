@@ -232,7 +232,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
             {
-                 return new Message(){Header = new MessageHeader("","", MessageType.MT_NONE)};
+                 return new Message(){Header = new MessageHeader("",new RoutingKey(""), MessageType.MT_NONE)};
             }
 
             public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)

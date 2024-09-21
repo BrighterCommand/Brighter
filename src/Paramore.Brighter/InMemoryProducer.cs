@@ -42,7 +42,7 @@ namespace Paramore.Brighter
     public class InMemoryProducer(IAmABus bus, TimeProvider timeProvider)
         : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
-        private ITimer _requeueTimer;
+        private ITimer? _requeueTimer;
 
         /// <summary>
         /// The publication that describes what the Producer is for
@@ -126,7 +126,7 @@ namespace Paramore.Brighter
 
             //we don't want to block, so we use a timer to invoke the requeue after a delay
             _requeueTimer = timeProvider.CreateTimer(
-                msg => Send((Message)msg),
+                msg => Send((Message)msg!),
                 message,
                 delay.Value,
                 TimeSpan.Zero

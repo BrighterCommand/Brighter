@@ -317,7 +317,7 @@ namespace Paramore.Brighter
                 handledCount : 0,
                 delayedMilliseconds : 0,
                 correlationId: CorrelationId,
-                replyTo : $"{ReplyTo}",
+                replyTo : new RoutingKey($"{ReplyTo}"),
                 contentType : $"{ContentType}",
                 partitionKey : $"{PartitionKey}"
             );
@@ -363,7 +363,7 @@ namespace Paramore.Brighter
             unchecked
             {
                 var hashCode = MessageId.GetHashCode();
-                hashCode = (hashCode * 397) ^ (Topic != null ? Topic.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ Topic.GetHashCode();
                 hashCode = (hashCode * 397) ^ (int)MessageType;
                 return hashCode;
             }

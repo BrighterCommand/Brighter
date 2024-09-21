@@ -140,7 +140,7 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
 
         //we don't want to block, so we use a timer to invoke the requeue after a delay
         _requeueTimer = _timeProvider.CreateTimer(
-            msg => RequeueNoDelay((Message)msg), 
+            msg => RequeueNoDelay((Message)msg!), 
             message, 
             timeOut.Value, 
             TimeSpan.Zero

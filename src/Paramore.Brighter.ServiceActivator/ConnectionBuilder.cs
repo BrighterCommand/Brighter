@@ -10,12 +10,12 @@ namespace Paramore.Brighter.ServiceActivator
         ConnectionBuilder.IConnectionBuilderRoutingKey,
         ConnectionBuilder.IConnectionBuilderOptionalBuild
     {
-        private string _name;
-        private IAmAChannelFactory _channelFactory;
-        private Type _type;
-        private string _channelName;
+        private string? _name;
+        private IAmAChannelFactory? _channelFactory;
+        private Type? _type;
+        private string? _channelName;
         private TimeSpan? _timeOut = null;
-        private string _routingKey;
+        private string? _routingKey;
         private int _buffersize = 1;
         private int _unacceptableMessageLimit = 0;
         private bool _isAsync = false;

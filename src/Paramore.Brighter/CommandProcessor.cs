@@ -980,7 +980,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="timeOut">The call blocks, so we must time out</param>
         /// <exception cref="NotImplementedException"></exception>
-        public TResponse? Call<T, TResponse>(T request, RequestContext requestContext = null, TimeSpan? timeOut = null)
+        public TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
             where T : class, ICall where TResponse : class, IResponse
         {
             timeOut ??= TimeSpan.FromMilliseconds(500);
@@ -1031,8 +1031,7 @@ namespace Paramore.Brighter
             //now we block on the receiver to try and get the message, until timeout.
             s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
             Retry(() => responseMessage = responseChannel.Receive(timeOut));
-
-                TResponse response = default(TResponse);
+            
                 if (responseMessage is not null && responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
                     s_logger.LogDebug("Reply received from {ChannelName}", channelName);

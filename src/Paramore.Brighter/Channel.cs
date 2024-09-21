@@ -131,7 +131,7 @@ namespace Paramore.Brighter
         {
             timeout ??= TimeSpan.FromSeconds(1);
             
-            if (!_queue.TryDequeue(out Message message))
+            if (!_queue.TryDequeue(out Message? message))
             {
                 Enqueue(_messageConsumer.Receive(timeout));
                 if (!_queue.TryDequeue(out message))

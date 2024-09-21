@@ -49,9 +49,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="routingKey">The routing key to test</param>
         /// <returns></returns>
-        public static bool IsNullOrEmpty(RoutingKey routingKey)
+        public static bool IsNullOrEmpty(RoutingKey? routingKey)
         {
-            return routingKey == null || string.IsNullOrEmpty(routingKey.Value);
+            return routingKey is null || string.IsNullOrEmpty(routingKey.Value);
         }
 
         /// <summary>

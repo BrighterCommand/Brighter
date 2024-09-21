@@ -113,7 +113,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             );
             
             var messagePump = new MessagePumpBlocking<MyRequest>(provider, _messageMapperRegistry, 
-                    null, new InMemoryRequestContextFactory()) 
+                    new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
             //Run the pump on a new thread
