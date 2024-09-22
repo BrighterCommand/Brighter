@@ -189,8 +189,4 @@ code, so it could go out in a minor release.
 
 ## Consequences
 
-We can support common behaviours for transformations, and we, or others can publish libraries of common transforms.
-
-
-
-
+We can support common behaviors for transformations, and we, or others can publish libraries of common transforms.
