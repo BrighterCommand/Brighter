@@ -79,7 +79,7 @@ namespace Paramore.Brighter
         /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();
         
         /// <summary>
         /// OPTIONAL [Cloud Events] REQUIRED [Brighter]
@@ -91,13 +91,13 @@ namespace Paramore.Brighter
         /// Default value is "text/plain"
         /// </summary>
         public string? ContentType { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the correlation identifier. Used when doing Request-Reply instead of Publish-Subscribe,
         /// allows the originator to match responses to requests
         /// </summary>
         /// <value>The correlation identifier.</value>
-        public string CorrelationId { get; set; }
+        public string CorrelationId { get; set; } = string.Empty;
         
         /// <summary>
         /// OPTIONAL
@@ -128,7 +128,7 @@ namespace Paramore.Brighter
         /// Internal usage. Gets the number of times this message has been seen 
         /// </summary>
         public int HandledCount { get; set; }
-        
+
         /// <summary>
         /// REQUIRED
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Cloud Events Spec</see>
@@ -137,7 +137,7 @@ namespace Paramore.Brighter
         /// Consumers MAY assume that Events with identical source and id are duplicates.
         /// </summary>
         /// <value>The identifier.</value>
-        public string MessageId { get; init; }
+        public string MessageId { get; init; } = string.Empty;
         
         /// <summary>
         /// REQUIRED
@@ -145,14 +145,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The type of the message.</value>
         public MessageType MessageType { get; init; }
-        
+
         /// <summary>
         /// OPTIONAL
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/extensions/partitioning.md">Cloud Events Spec</see>       
         /// If we are working with consistent hashing to distribute writes across multiple channels according to the
         /// hash value of a partition key then we need to be able to set that key, so that we can distribute writes effectively.
         /// </summary>
-        public string PartitionKey { get; set; }
+        public string PartitionKey { get; set; } = "";
         
         /// <summary>
         /// OPTIONAL
@@ -190,14 +190,14 @@ namespace Paramore.Brighter
         /// Default: "http://goparamore.io" for backward compatibility as required
         /// </summary>
         public Uri Source { get; set; } = new Uri("http://goparamore.io");
-        
+
         /// <summary>
         /// REQUIRED for sending. OPTIONAL for receiving
         /// Gets the name of the channel that the message is on. Whilst this can be inferred from the message type, it is
         /// used internally when we send the message to its destination
         /// </summary>
         /// <value>The topic.</value>
-        public RoutingKey Topic { get; init; }
+        public RoutingKey Topic { get; init; } = new RoutingKey(string.Empty);
 
         /// <summary>
         /// REQUIRED
@@ -229,7 +229,7 @@ namespace Paramore.Brighter
         /// The tracestate HTTP header MUST NOT be used for any properties that are not defined by a tracing system. 
         /// </summary>
         public string? TraceState { get; set; }
-        
+
         /// <summary>
         /// REQUIRED
         /// From <see href="https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md#context-attributes">Clode Events Spec</see>
@@ -238,8 +238,13 @@ namespace Paramore.Brighter
         /// SHOULD be prefixed with a reverse-DNS name. The prefixed domain dictates the organization which defines the semantics of this event type.
         /// Default: "goparamore.io.Paramore.Brighter.Message" for backward compatibility as required
         /// </summary>
-        public string Type { get; set; }
+        public string Type { get; set; } = "goparamore.io.Paramore.Brighter.Message";
 
+        /// <summary>
+        /// Intended for serialization, prefer the parameterized constructor in application code as a better 'pit of success'
+        /// </summary>
+        public MessageHeader() { }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
         /// </summary>
@@ -262,7 +267,7 @@ namespace Paramore.Brighter
             RoutingKey topic,
             MessageType messageType,
             Uri? source = null,
-            string type = "goparamore.io.Paramore.Brighter.Message",
+            string? type = null,
             DateTimeOffset? timeStamp = null,
             string? correlationId = null,
             RoutingKey? replyTo = null,
@@ -271,18 +276,13 @@ namespace Paramore.Brighter
             Uri? dataSchema = null,
             string? subject = null,
             int handledCount = 0,
-            int delayedMilliseconds = 0,
-            Dictionary<string,object>? bag = null,
-            string specVersion = "1.0",
-            string? traceParent = null,
-            string? traceState = null,
-            string? dataRef = null)
+            int delayedMilliseconds = 0)
         {
             MessageId = messageId;
             Topic = topic;
             MessageType = messageType;
             if (source != null) Source = source;
-            Type = type;
+            Type = type  ?? "goparamore.io.Paramore.Brighter.Message";
             TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
             HandledCount = 0;
             DelayedMilliseconds = 0;
@@ -296,12 +296,6 @@ namespace Paramore.Brighter
             
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;
-
-            Bag = bag ?? new Dictionary<string, object>();
-            SpecVersion = specVersion;
-            TraceParent = traceParent;
-            TraceState = traceState;
-            DataRef = dataRef;
         }
 
         /// <summary>

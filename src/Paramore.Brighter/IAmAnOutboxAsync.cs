@@ -126,7 +126,7 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
-        Task<Message> GetAsync(
+        Task<Message?> GetAsync(
             string messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,

@@ -30,7 +30,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -323,7 +322,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1,
+        public Message? Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
@@ -336,7 +335,8 @@ namespace Paramore.Brighter
 
             try
             {
-                return Requests.TryGetValue(messageId, out OutboxEntry? entry) ? entry.Message : new Message();
+                Requests.TryGetValue(messageId, out OutboxEntry? entry);
+                return entry?.Message;
             }
             finally
             {
@@ -354,7 +354,7 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">A cancellation token for the async operation</param>
         /// <returns></returns>
-        public Task<Message> GetAsync(
+        public Task<Message?> GetAsync(
             string messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
@@ -363,7 +363,7 @@ namespace Paramore.Brighter
         {
             //NOTE: We don't create a span here as we just call the sync method
             
-            var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<Message?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             if (cancellationToken.IsCancellationRequested)
             {

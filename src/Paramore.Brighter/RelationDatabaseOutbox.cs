@@ -234,10 +234,12 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
-        public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
+        public Message? Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
         {
-            return ReadFromStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
+            var message = ReadFromStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
                 dr => MapFunction(dr));
+            
+            return message.Header.MessageType == MessageType.MT_NONE ? null : message;
         }
 
         /// <summary>
@@ -249,15 +251,17 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
-        public Task<Message> GetAsync(
+        public async Task<Message?> GetAsync(
             string messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            return ReadFromStoreAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
+            var message = await ReadFromStoreAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
                 dr => MapFunctionAsync(dr, cancellationToken), cancellationToken);
+
+            return message.Header.MessageType == MessageType.MT_NONE ? null : message;
         }
 
         /// <summary>
