@@ -11,7 +11,7 @@ public class InMemoryProducerTests
    {
        // arrange
        const string topic = "test_topic";
-       var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), topic, MessageType.MT_DOCUMENT), new MessageBody("test_content"));
+       var message = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(topic), MessageType.MT_DOCUMENT), new MessageBody("test_content"));
        var bus = new InternalBus();
        var producer = new InMemoryProducer(bus, new FakeTimeProvider());
 

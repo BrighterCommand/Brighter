@@ -43,11 +43,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqMessageProducerTTLTests ()
         {
            _messageOne = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), 
+                    new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
            
            _messageTwo = new Message(
-               new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+               new MessageHeader(Guid.NewGuid().ToString(), 
+                   new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND), 
                new MessageBody("test content"));
 
              var rmqConnection = new RmqMessagingGatewayConnection
@@ -69,7 +71,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 );
 
             //create the infrastructure
-            _messageConsumer.Receive(0); 
+            _messageConsumer.Receive(TimeSpan.Zero); 
              
         }
 
@@ -80,13 +82,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageProducer.Send(_messageTwo);
 
             //check messages are flowing - absence needs to be expiry
-            var messageOne = _messageConsumer.Receive(5000).First();
+            var messageOne = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).First();
             messageOne.Id.Should().Be(_messageOne.Id);
 
             //Let it expire
             await Task.Delay(11000);
 
-            var dlqMessage = _messageConsumer.Receive(10000).First();
+            var dlqMessage = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             
             //assert this is our message
             dlqMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

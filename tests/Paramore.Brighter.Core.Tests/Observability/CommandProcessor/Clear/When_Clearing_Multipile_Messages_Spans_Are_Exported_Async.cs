@@ -25,11 +25,8 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
-    private readonly InMemoryOutbox _outbox;
     private readonly string _topic;
-    private readonly InMemoryProducer _producer;
-    private InternalBus _internalBus = new InternalBus();
-    private Dictionary<string, string> _receivedMessages = new Dictionary<string, string>();
+    private readonly InternalBus _internalBus = new();
 
     public AsyncCommandProcessorMultipleClearObservabilityTests()
     {
@@ -58,27 +55,29 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
 
         var timeProvider  = new FakeTimeProvider();
         var tracer = new BrighterTracer(timeProvider);
-        _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
+        InMemoryOutbox outbox = new(timeProvider){Tracer = tracer};
         
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-        _producer = new InMemoryProducer(_internalBus, timeProvider)
+        var routingKey = new RoutingKey(_topic);
+        
+        InMemoryProducer producer = new(_internalBus, timeProvider)
         {
             Publication =
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
-                Topic = new RoutingKey(_topic),
+                Topic = routingKey,
                 Type = nameof(MyEvent),
             }
         };
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {_topic, _producer}
+            {routingKey, producer}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -88,7 +87,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
             new EmptyMessageTransformerFactory(), 
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
-            _outbox,
+            outbox,
             maxOutStandingMessages: -1
         );
         

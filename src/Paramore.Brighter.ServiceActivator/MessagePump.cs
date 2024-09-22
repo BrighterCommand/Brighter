@@ -84,7 +84,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// How long to wait for a message before timing out
         /// </summary>
-        public int TimeoutInMilliseconds { get; set; }
+        public TimeSpan TimeOut { get; set; }
 
         /// <summary>
         /// How many times to requeue a message before discarding it
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// How long to wait before requeuing a message
         /// </summary>
-        public int RequeueDelayInMilliseconds { get; set; }
+        public TimeSpan RequeueDelay { get; set; }
 
         /// <summary>
         /// The number of unacceptable messages to receive before stopping the message pump
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.ServiceActivator
                 Message message = null;
                 try
                 {
-                    message = Channel.Receive(TimeoutInMilliseconds);
+                    message = Channel.Receive(TimeOut);
                     span = _tracer?.CreateSpan(MessagePumpSpanOperation.Receive, message, MessagingSystem.InternalBus, _instrumentationOptions);
                 }
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
@@ -385,7 +385,7 @@ namespace Paramore.Brighter.ServiceActivator
                 "MessagePump: Re-queueing message {Id} from {ManagementThreadId} on thread # {ChannelName} with {RoutingKey}", message.Id,
                 Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
-            return Channel.Requeue(message, RequeueDelayInMilliseconds);
+            return Channel.Requeue(message, RequeueDelay);
         }
 
         protected abstract TRequest TranslateMessage(Message message, RequestContext requestContext);

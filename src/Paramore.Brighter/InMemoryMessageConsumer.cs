@@ -31,7 +31,7 @@ namespace Paramore.Brighter;
 /// <summary>
 /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="Paramore.Brighter.InMemoryProducer"/>
 /// and <see cref="Paramore.Brighter.InternalBus"/> to provide an in-memory message bus for a modular monolith.
-/// If you set an <paramref name="ackTimeoutMs"/> then the consumer will requeue the message if it is not acknowledged
+/// If you set an ackTimeout then the consumer will requeue the message if it is not acknowledged
 /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
 /// and requeues them if they have been locked for longer than the timeout.
 /// </summary>
@@ -41,33 +41,34 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     private readonly RoutingKey _topic;
     private readonly InternalBus _bus;
     private readonly TimeProvider _timeProvider;
-    private readonly int _ackTimeoutMs;
+    private readonly TimeSpan _ackTimeout;
     private readonly ITimer _lockTimer;
     private ITimer _requeueTimer;
 
     /// <summary>
     /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="Paramore.Brighter.InMemoryProducer"/>
     /// and <see cref="Paramore.Brighter.InternalBus"/> to provide an in-memory message bus for a modular monolith.
-    /// If you set an <paramref name="ackTimeoutMs"/> then the consumer will requeue the message if it is not acknowledged
+    /// If you set an <paramref name="ackTimeout"/> then the consumer will requeue the message if it is not acknowledged
     /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
     /// and requeues them if they have been locked for longer than the timeout.
     /// </summary>
     /// <param name="topic">The <see cref="Paramore.Brighter.RoutingKey"/> that we want to consume from</param>
     /// <param name="bus">The <see cref="Paramore.Brighter.InternalBus"/> that we want to read the messages from</param>
     /// <param name="timeProvider">Allows us to use a timer that can be controlled from tests</param>
-    /// <param name="ackTimeoutMs">The period before we requeue an unacknowledged message; defaults to -1 or infinite</param>
-    public InMemoryMessageConsumer(RoutingKey topic, InternalBus bus, TimeProvider timeProvider, int ackTimeoutMs = -1)
+    /// <param name="ackTimeout">The period before we requeue an unacknowledged message; defaults to -1ms or infinite</param>
+    public InMemoryMessageConsumer(RoutingKey topic, InternalBus bus, TimeProvider timeProvider, TimeSpan? ackTimeout = null)
     {
         _topic = topic;
         _bus = bus;
         _timeProvider = timeProvider;
-        _ackTimeoutMs = ackTimeoutMs;
+        ackTimeout ??= TimeSpan.FromMilliseconds(-1);
+        _ackTimeout = ackTimeout.Value;
         
         _lockTimer = _timeProvider.CreateTimer(
             _ => CheckLockedMessages(), 
             null, 
-            TimeSpan.FromMilliseconds(_ackTimeoutMs), 
-            TimeSpan.FromMilliseconds(_ackTimeoutMs)
+            _ackTimeout, 
+            _ackTimeout
         );
 
     }
@@ -106,11 +107,13 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
     /// Used by a <see cref="Paramore.Brighter.Channel"/> to provide access to a third-party message queue.
     /// </summary>
-    /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+    /// <param name="timeOut">The <see cref="TimeSpan"/> timeout</param>
     /// <returns>An array of Messages from middleware</returns>
-    public Message[] Receive(int timeoutInMilliseconds = 1000)
+    public Message[] Receive(TimeSpan? timeOut = null)
     {
-        var messages = new[] {_bus.Dequeue(_topic)};
+        timeOut ??= TimeSpan.FromSeconds(1);
+        
+        var messages = new[] {_bus.Dequeue(_topic, timeOut)};
         foreach (var message in messages)
         {
             //don't lock empty messages
@@ -126,18 +129,20 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     /// Requeues the specified message.
     /// </summary>
     /// <param name="message"></param>
-    /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+    /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
-    public bool Requeue(Message message, int delayMilliseconds)
+    public bool Requeue(Message message, TimeSpan? timeOut = null)
     {
-        if (delayMilliseconds <= 0)
-            return Requeue(message);
+        timeOut ??= TimeSpan.Zero;
+        
+        if (timeOut <= TimeSpan.Zero)
+            return RequeueNoDelay(message);
 
         //we don't want to block, so we use a timer to invoke the requeue after a delay
         _requeueTimer = _timeProvider.CreateTimer(
-            msg => Requeue((Message)msg), 
+            msg => RequeueNoDelay((Message)msg), 
             message, 
-            TimeSpan.FromMilliseconds(delayMilliseconds), 
+            timeOut.Value, 
             TimeSpan.Zero
         );
 
@@ -154,14 +159,14 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
         var now = _timeProvider.GetUtcNow();
         foreach (var lockedMessage in _lockedMessages)
         {
-            if (now - lockedMessage.Value.LockedAt > TimeSpan.FromMilliseconds(_ackTimeoutMs))
+            if (now - lockedMessage.Value.LockedAt > _ackTimeout)
             {
-                Requeue(lockedMessage.Value.Message);
+                RequeueNoDelay(lockedMessage.Value.Message);
             }
         }
     }
     
-    private bool Requeue(Message message)
+    private bool RequeueNoDelay(Message message)
     {
         try
         {

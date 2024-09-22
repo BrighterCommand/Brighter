@@ -257,7 +257,7 @@ namespace Paramore.Brighter
         {
            /*allows setting of properties one-by-one, we default the required values here*/
 
-           ProducerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>());
+           ProducerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>());
         }
 
     }

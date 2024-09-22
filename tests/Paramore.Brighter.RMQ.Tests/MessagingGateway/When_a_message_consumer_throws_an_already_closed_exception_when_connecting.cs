@@ -42,7 +42,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageConsumerConnectionClosedTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),  Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
+            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),  
+                new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
             _sentMessage = new Message(messageHeader, new MessageBody("test content"));
@@ -63,7 +64,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         [Fact]
         public void When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
         {
-            _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
+            _firstException = Catch.Exception(() => _badReceiver.Receive(TimeSpan.FromMilliseconds(2000)));
 
             //_should_return_a_channel_failure_exception
             _firstException.Should().BeOfType<ChannelFailureException>();

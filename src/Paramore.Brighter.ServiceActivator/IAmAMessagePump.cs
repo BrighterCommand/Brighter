@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -41,10 +42,10 @@ namespace Paramore.Brighter.ServiceActivator
         void Run();
 
         /// <summary>
-        /// Gets or sets the timeout in milliseconds, that the pump waits for a message on the queue before it yields control for an interval, prior to resuming.
+        /// Gets or sets the timeout that the pump waits for a message on the queue before it yields control for an interval, prior to resuming.
         /// </summary>
         /// <value>The timeout in milliseconds.</value>
-        int TimeoutInMilliseconds { get; set; }
+        TimeSpan TimeOut { get; set; }
 
         /// <summary>
         /// Gets or sets the channel to read messages from.

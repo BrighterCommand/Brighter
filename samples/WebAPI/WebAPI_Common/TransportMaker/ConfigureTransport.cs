@@ -178,7 +178,7 @@ public static class ConfigureTransport
                 new ChannelName(typeof(T).Name),
                 new RoutingKey(typeof(T).Name),
                 runAsync: true,
-                timeoutInMilliseconds: 200,
+                timeOut: TimeSpan.FromMilliseconds(200),
                 isDurable: true,
                 makeChannels: OnMissingChannel.Create)
         };
@@ -194,10 +194,10 @@ public static class ConfigureTransport
                 new ChannelName(typeof(T).Name),
                 new RoutingKey(typeof(T).Name),
                 "kafka-GreetingsReceiverConsole-Sample",
-                timeoutInMilliseconds: 100,
+                timeOut: TimeSpan.FromMilliseconds(100),
                 offsetDefault: AutoOffsetReset.Earliest,
                 commitBatchSize: 5,
-                sweepUncommittedOffsetsIntervalMs: 10000,
+                sweepUncommittedOffsetsInterval: TimeSpan.FromMilliseconds(10000),
                 runAsync: true,
                 makeChannels: OnMissingChannel.Create)
         };

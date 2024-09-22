@@ -33,7 +33,7 @@ namespace CompetingReceiverConsole
                         new SubscriptionName("paramore.example.multipleconsumer.command"),
                         new ChannelName("multipleconsumer.command"),
                         new RoutingKey("multipleconsumer.command"),
-                        timeoutInMilliseconds: 200)
+                        timeOut: TimeSpan.FromMilliseconds(200))
                     };
 
                     var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");

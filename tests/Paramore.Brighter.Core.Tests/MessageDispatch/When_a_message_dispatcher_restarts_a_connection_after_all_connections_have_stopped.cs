@@ -37,11 +37,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
    [Collection("CommandProcessor")]
     public class DispatcherRestartConnectionTests : IDisposable
     {
-        private const string Topic = "fakekey";
         private const string ChannelName = "fakeChannel";
         private readonly Dispatcher _dispatcher;
         private readonly Publication _publication;
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("fakekey");
         private readonly ChannelName _channelName = new(ChannelName);
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
@@ -58,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             Subscription subscription = new Subscription<MyEvent>(
                 new SubscriptionName("test"), 
                 noOfPerformers: 1, 
-                timeoutInMilliseconds: 100, 
+                timeOut: TimeSpan.FromMilliseconds(100), 
                 channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
                 channelName: _channelName, 
                 routingKey: _routingKey
@@ -66,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             Subscription newSubscription = new Subscription<MyEvent>(
                 new SubscriptionName("newTest"), 
-                noOfPerformers: 1, timeoutInMilliseconds: 100, 
+                noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(100), 
                 channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
                 channelName: _channelName, 
                 routingKey: _routingKey

@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 
             _bus = new InternalBus();
-            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
              
             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
+                { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount };
 
             var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyEvent>()

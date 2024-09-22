@@ -44,11 +44,11 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _mapper = new HeartbeatRequestCommandMessageMapper();
             var messageHeader = new MessageHeader(
                 Guid.NewGuid().ToString(),
-                "Heartbeat",
+                new("Heartbeat"),
                 MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
                 correlationId:_correlationId,
-                replyTo:TOPIC);
+                replyTo:new RoutingKey(TOPIC));
 
             var body = String.Format("\"Id\": \"{0}\"", _commandId);
             var messageBody = new MessageBody("{" + body + "}");
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _request = _mapper.MapToRequest(_message);
 
             //_should_put_the_message_reply_topic_into_the_address
-            _request.ReplyAddress.Topic.Should().Be(TOPIC);
+            _request.ReplyAddress.Topic.Should().Be(new RoutingKey(TOPIC));
             //_should_put_the_message_correlation_id_into_the_address
             _request.ReplyAddress.CorrelationId.Should().Be(_correlationId);
             //_should_set_the_id_of_the_request

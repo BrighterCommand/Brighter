@@ -50,7 +50,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             var messageId = Guid.NewGuid().ToString();
             var messageToAdd = new Message(
-                new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageHeader(messageId, new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
                 new MessageBody("message body"));
             
             
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                
                var messageId = Guid.NewGuid().ToString();
                var messageToAdd = new Message(
-                   new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
+                   new MessageHeader(messageId, new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
                    new MessageBody("message body"));
                
                

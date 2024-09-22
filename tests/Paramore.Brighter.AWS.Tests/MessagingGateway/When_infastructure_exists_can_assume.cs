@@ -38,8 +38,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId, 
-                    replyTo: replyTo, contentType: contentType),
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId, 
+                    replyTo: new RoutingKey(replyTo), contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //arrange
             _messageProducer.Send(_message);
             
-            var messages = _consumer.Receive(5000);
+            var messages = _consumer.Receive(TimeSpan.FromMilliseconds(5000));
             
             //Assert
             var message = messages.First();

@@ -37,9 +37,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelay">The delay the delivery of a requeue message. 0 is no delay. Defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -53,17 +53,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             RoutingKey routingKey = null, 
             int bufferSize = 1, 
             int noOfPerformers = 1, 
-            int timeoutInMilliseconds = 300, 
+            TimeSpan? timeOut = null, 
             int requeueCount = -1, 
-            int requeueDelayInMilliseconds = 0, 
+            TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
             bool runAsync = false, 
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
+                requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, 
+                emptyChannelDelay, channelFailureDelay)
         {
         }
     }
@@ -78,9 +79,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The timeout to wait for messages</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelay">The Delay to the requeue of a message. 0 is no delay. Defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -93,17 +94,17 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             RoutingKey routingKey = null, 
             int bufferSize = 1, 
             int noOfPerformers = 1, 
-            int timeoutInMilliseconds = 300, 
+            TimeSpan? timeOut = null, 
             int requeueCount = -1, 
-            int requeueDelayInMilliseconds = 0, 
+            TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
             bool runAsync = false, 
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000) 
-            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
+                requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
        

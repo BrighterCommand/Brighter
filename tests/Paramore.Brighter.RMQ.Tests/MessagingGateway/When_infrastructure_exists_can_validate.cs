@@ -14,7 +14,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqValidateExistingInfrastructureTests() 
         {
             _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+                    MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
@@ -33,7 +34,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 makeChannels: OnMissingChannel.Validate);
 
             //This creates the infrastructure we want
-            new QueueFactory(rmqConnection, _message.Header.Topic).Create(3000);
+            new QueueFactory(rmqConnection,new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys( _message.Header.Topic))
+                .Create(TimeSpan.FromMilliseconds(3000));
         }
         
         [Fact]
@@ -44,7 +46,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             {
                 //As we validate and don't create, this would throw due to lack of infrastructure if not already created
                 _messageProducer.Send(_message);
-                _messageConsumer.Receive(10000);
+                _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000));
             }
             catch (ChannelFailureException)
             {

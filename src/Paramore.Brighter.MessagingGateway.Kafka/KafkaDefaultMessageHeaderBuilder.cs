@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var headers = new Headers
             {
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
-                new Header(HeaderNames.TOPIC, message.Header.Topic.ToByteArray()),
+                new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()),
                 new Header(HeaderNames.MESSAGE_ID, message.Header.Id.ToByteArray()),
             };
 

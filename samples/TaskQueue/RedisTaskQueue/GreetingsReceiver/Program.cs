@@ -32,7 +32,7 @@ namespace GreetingsReceiver
                             new SubscriptionName("paramore.example.greeting"),
                             new ChannelName("greeting.event"),
                             new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 200)
+                            timeOut: TimeSpan.FromMilliseconds(200))
                     };
 
                     //create the gateway

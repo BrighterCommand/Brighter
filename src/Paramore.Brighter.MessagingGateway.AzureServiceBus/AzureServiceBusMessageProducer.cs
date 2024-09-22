@@ -103,11 +103,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="messages">The messages to send.</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
-        /// <param name="batchSize">The size of batches to send messages in.</param>
         /// <returns>List of Messages successfully sent.</returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<string[]> SendAsync(
+            IEnumerable<Message> messages,
+            [EnumeratorCancellation] CancellationToken cancellationToken
+            )
         {
             var topics = messages.Select(m => m.Header.Topic).Distinct();
             if (topics.Count() != 1)
@@ -149,20 +150,23 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        /// <param name="delay">Delay to delivery of the message.</param>
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            SendWithDelayAsync(message, delayMilliseconds).Wait();
+            delay ??= TimeSpan.Zero;
+            SendWithDelayAsync(message, delay).Wait();
         }
 
         /// <summary>
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public async Task SendWithDelayAsync(Message message, int delayMilliseconds = 0)
+        /// <param name="delay">Delay delivery of the message.</param>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay = null)
         {
             Logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
+            
+            delay ??= TimeSpan.Zero;
 
             var serviceBusSenderWrapper = GetSender(message.Header.Topic);
 
@@ -170,21 +174,21 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 Logger.LogDebug(
                     "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}",
-                    message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
+                    message.Header.Topic, delay, message.Body.Value, message.Id);
 
                 var azureServiceBusMessage = ConvertToServiceBusMessage(message);
-                if (delayMilliseconds == 0)
+                if (delay == TimeSpan.Zero)
                 {
                     await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage);
                 }
                 else
                 {
-                    var dateTimeOffset = new DateTimeOffset(DateTime.UtcNow.AddMilliseconds(delayMilliseconds));
+                    var dateTimeOffset = new DateTimeOffset(DateTime.UtcNow.Add(delay.Value));
                     await serviceBusSenderWrapper.ScheduleMessageAsync(azureServiceBusMessage, dateTimeOffset);
                 }
 
                 Logger.LogDebug(
-                    "Published message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}", message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
+                    "Published message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}", message.Header.Topic, delay, message.Body.Value, message.Id);
             }
             catch (Exception e)
             {
@@ -239,9 +243,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
             }
             
-            azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
+            azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
             azureServiceBusMessage.ContentType = message.Header.ContentType;
-            azureServiceBusMessage.MessageId = message.Header.Id.ToString();
+            azureServiceBusMessage.MessageId = message.Header.Id;
             if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object value))
                 azureServiceBusMessage.SessionId = value.ToString();
 

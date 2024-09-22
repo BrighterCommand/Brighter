@@ -34,13 +34,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpCommandProcessingDeferMessageActionTests
     {
-        private const string Topic = "MyCommand";
-        private const string ChannelName = "myChannel";
         private readonly IAmAMessagePump _messagePump;
         private readonly Channel _channel;
         private readonly int _requeueCount = 5;
         private readonly InternalBus _bus = new();
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("MyCommand");
         private readonly FakeTimeProvider _timeProvider = new();
 
         public MessagePumpCommandProcessingDeferMessageActionTests()
@@ -48,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
 
-            _channel = new Channel(new(ChannelName), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(new("myChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
@@ -57,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             
             _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
             var msg = new TransformPipelineBuilder(messageMapperRegistry, null)

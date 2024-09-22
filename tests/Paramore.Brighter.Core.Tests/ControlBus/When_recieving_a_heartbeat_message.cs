@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             //_should_have_diagnostic_information_in_the_response
             var heartbeatEvent = _spyCommandProcessor.Observe<HeartbeatReply>();
             heartbeatEvent.HostName.Should().Be(_hostName);
-            heartbeatEvent.SendersAddress.Topic.Should().Be(TEST_ROUTING_KEY);
+            heartbeatEvent.SendersAddress.Topic.Should().Be(new RoutingKey(TEST_ROUTING_KEY));
             heartbeatEvent.SendersAddress.CorrelationId.Should().Be(_correlationId);
             heartbeatEvent.Consumers[0].ConsumerName.ToString().Should().Be(TEST_FIRST_CONNECTION_NAME);
             heartbeatEvent.Consumers[0].State.Should().Be(ConsumerState.Open);

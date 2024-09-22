@@ -13,7 +13,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var factory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(new AzureServiceBusConfiguration("Endpoint=sb://someString.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=oUWJw7777s7ydjdafqFqhk9O7TOs=")));
 
             var subscription = new AzureServiceBusSubscription(typeof(object), new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
-                1, 1, timeoutInMilliseconds: 399);
+                1, 1, timeOut: TimeSpan.FromMilliseconds(399));
             
             ArgumentException exception = Assert.Throws<ArgumentException>(() => factory.CreateChannel(subscription));
 

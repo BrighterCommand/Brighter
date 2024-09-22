@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,19 +50,19 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _outbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             
             _firstMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test"), MessageType.MT_COMMAND, 
                     timeStamp: DateTime.UtcNow.AddHours(-3)
                 ), 
                 new MessageBody("Body")
             );
             _secondMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test2"), MessageType.MT_COMMAND, 
                     timeStamp: DateTime.UtcNow.AddHours(-2)
                 ), 
                 new MessageBody("Body2")
             );
             _thirdMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test3"), MessageType.MT_COMMAND, 
                     timeStamp:DateTime.UtcNow.AddHours(-1)
                 ), 
                 new MessageBody("Body3")

@@ -36,9 +36,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpCommandRequeueTests
     {
-        private const string Topic = "MyTopic";
         private const string Channel = "MyChannel";
-        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly RoutingKey _routingKey = new("MyTopic");
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
@@ -49,28 +48,28 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            Channel channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000), 2);
+            Channel channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 2);
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
              messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
              _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
-                { Channel = channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+                { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = -1 };
 
             var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
             );
             
             var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Topic, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
             );
             
             channel.Enqueue(message1);
             channel.Enqueue(message2);
             var quitMessage = new Message(
-                new MessageHeader(string.Empty, "", MessageType.MT_QUIT), 
+                new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT), 
                 new MessageBody("")
             );
             channel.Enqueue(quitMessage);

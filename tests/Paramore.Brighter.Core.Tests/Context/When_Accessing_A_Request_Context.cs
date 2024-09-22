@@ -32,7 +32,7 @@ public class RequestContextTests
         var span = activitySource.StartActivity();
 
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test", MessageType.MT_COMMAND),
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test"), MessageType.MT_COMMAND),
             new MessageBody("test content"));
         
         //act

@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
-            var topic = HeaderResult<string>.Empty();
+            var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
             var contentType = HeaderResult<string>.Empty();
             var correlationId = HeaderResult<string>.Empty();
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     type: "",
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                     correlationId: correlationId.Success ? correlationId.Result : "",
-                    replyTo: replyTo.Result,
+                    replyTo: new RoutingKey(replyTo.Result),
                     contentType: contentType.Result,
                     handledCount: handledCount.Result,
                     dataSchema: null,
@@ -225,7 +225,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<string>(string.Empty, true);
         }
 
-        private HeaderResult<string> ReadTopic()
+        private HeaderResult<RoutingKey> ReadTopic()
         {
             if (_messageAttributes.TryGetValue(HeaderNames.Topic, out var topicArn))
             {
@@ -233,10 +233,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var arnElements = topicArn.GetValueInString().Split(':');
                 var topic = arnElements[(int)ARNAmazonSNS.TopicName];
 
-                return new HeaderResult<string>(topic, true);
+                return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
             }
 
-            return new HeaderResult<string>(string.Empty, true);
+            return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
         }
 
         private static HeaderResult<string> ReadMessageSubject(JsonDocument jsonDocument)

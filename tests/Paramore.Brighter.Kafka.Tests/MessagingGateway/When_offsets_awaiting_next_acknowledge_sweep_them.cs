@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -20,7 +19,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly KafkaMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
-        private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
 
         public KafkaMessageConsumerSweepOffsets(ITestOutputHelper output)
         {
@@ -32,7 +30,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication[] {new KafkaPublication
+                new[] {new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -55,7 +53,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                         routingKey: new RoutingKey(_topic),
                         groupId: groupId,
                         commitBatchSize: 20,  //This large commit batch size may never be sent
-                        sweepUncommittedOffsetsIntervalMs: 10000,
+                        sweepUncommittedOffsetsInterval: TimeSpan.FromMilliseconds(10000),
                         numOfPartitions: 1,
                         replicationFactor: 1,
                         makeChannels: OnMissingChannel.Create
@@ -66,8 +64,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         [Fact]
         public async Task When_a_message_is_acknowldeged_but_no_batch_sent_sweep_offsets()
         {
-            var groupId = Guid.NewGuid().ToString();
-            
             //send x messages to Kafka
             var sentMessages = new string[10];
             for (int i = 0; i < 10; i++)
@@ -109,7 +105,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     {
                         maxTries++;
                         await Task.Delay(500); //Let topic propagate in the broker
-                        messages = _consumer.Receive(1000);
+                        messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                         if (messages[0].Header.MessageType != MessageType.MT_NONE)
                         {
@@ -131,8 +127,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         private void SendMessage(string messageId)
         {
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
-                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
+            var routingKey = new RoutingKey(_topic);
+            
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
+                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
                 new MessageBody($"test content [{_queueName}]")));
         }
 

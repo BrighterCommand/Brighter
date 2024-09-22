@@ -37,13 +37,13 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private readonly Message _message;
         private HeartbeatReply _request;
         private const string MESSAGE_BODY = "{\r\n  \"HostName\": \"Test.Hostname\",\r\n  \"Consumers\": [\r\n    {\r\n      \"ConsumerName\": \"Test.Subscription\",\r\n      \"State\": 1\r\n    },\r\n    {\r\n      \"ConsumerName\": \"More.Consumers\",\r\n      \"State\": 0\r\n    }\r\n  ]\r\n}";
-        private const string TOPIC = "test.topic";
+        private readonly RoutingKey _routingKey = new("test.topic");
         private readonly string _correlationId = Guid.NewGuid().ToString();
 
         public HeartbeatMessageToReplyTests()
         {
             _mapper = new HeartbeatReplyCommandMessageMapper();
-            var header = new MessageHeader(Guid.NewGuid().ToString(), TOPIC, MessageType.MT_COMMAND, 
+            var header = new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND, 
                 timeStamp: DateTime.UtcNow, correlationId:_correlationId
             );
             var body = new MessageBody(MESSAGE_BODY);
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _request = _mapper.MapToRequest(_message);
 
             // _should_set_the_sender_address_topic
-            _request.SendersAddress.Topic.Should().Be(TOPIC);
+            _request.SendersAddress.Topic.Should().Be(_routingKey);
             // _should_set_the_sender_correlation_id
             _request.SendersAddress.CorrelationId.Should().Be(_correlationId);
             // _should_set_the_hostName

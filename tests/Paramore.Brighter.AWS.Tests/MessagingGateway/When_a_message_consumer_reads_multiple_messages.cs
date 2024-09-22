@@ -57,26 +57,28 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         [Fact]
         public async Task When_a_message_consumer_reads_multiple_messages()
         {
+            var routingKey = new RoutingKey(_topicName);
+            
             var messageOne = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
                     correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content one")
                 );
             
             var messageTwo= new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
                     correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content two")
                 );
            
             var messageThree= new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
                     correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content three")
                 );
              
             var messageFour= new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicName, MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
                     correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
                 new MessageBody("test content four")
                 );
@@ -97,7 +99,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 var outstandingMessageCount = _messageCount - messagesReceivedCount;
 
                 //retrieve  messages
-                var messages = _consumer.Receive(10000);
+                var messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                 
                 messages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
                 

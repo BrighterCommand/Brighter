@@ -19,9 +19,8 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch;
 
 public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
 {
-    private const string Topic = "MyTopic";
     private const string ChannelName = "myChannel";
-    private readonly RoutingKey _routingKey = new(Topic);
+    private readonly RoutingKey _routingKey = new("MyTopic");
     private readonly InternalBus _bus = new();
     private readonly FakeTimeProvider _timeProvider = new();
     private readonly IAmAMessagePump _messagePump;
@@ -68,7 +67,7 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
             FailingChannel channel = new(
                 new (ChannelName), 
                 _routingKey,
-                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000),
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)),
                 brokenCircuit: true);
             
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -80,12 +79,12 @@ public class MessagePumpBrokenCircuitChannelFailureOberservabilityTests
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), tracer, instrumentationOptions)
             {
-                Channel = channel, TimeoutInMilliseconds = 5000, EmptyChannelDelay = 1000
+                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = 1000
             };
             
             var externalActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("MessagePumpSpanTests");
             
-            var header = new MessageHeader(_myEvent.Id, Topic, MessageType.MT_EVENT)
+            var header = new MessageHeader(_myEvent.Id, _routingKey, MessageType.MT_EVENT)
             {
                 TraceParent = externalActivity?.Id, TraceState = externalActivity?.TraceStateString
             };

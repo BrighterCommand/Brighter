@@ -11,7 +11,7 @@ public class NodeStatusEventMessageMapper : IAmAMessageMapper<NodeStatusEvent>
 
     public Message MapToMessage(NodeStatusEvent request, Publication publication)
     {
-        var header = new MessageHeader(messageId: request.Id, topic: topicName, messageType: MessageType.MT_EVENT);
+        var header = new MessageHeader(messageId: request.Id, topic: new RoutingKey(topicName), messageType: MessageType.MT_EVENT);
         header.Bag["NodeName"] = request.NodeName;
         var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
         var message = new Message(header, body);

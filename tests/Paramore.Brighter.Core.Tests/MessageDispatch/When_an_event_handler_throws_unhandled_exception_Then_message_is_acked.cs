@@ -53,7 +53,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _bus = new InternalBus();
             
-            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, 1000));
+            _channel = new Channel(
+                new (Channel), _routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
+            );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null); 
@@ -62,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var requestContextFactory = new InMemoryRequestContextFactory();
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, requestContextFactory)
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
             var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null);
@@ -83,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 
                 _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-                var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT),
+                var quitMessage = new Message(new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT),
                     new MessageBody(""));
                 _channel.Enqueue(quitMessage);
 

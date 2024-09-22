@@ -57,7 +57,6 @@ internal class RmqMessagePublisher
         /// </summary>
         /// <param name="channel">The channel.</param>
         /// <param name="connection">The exchange we want to talk to.</param>
-        /// <param name="makeChannel">Do we create the exchange, if it does not exist? Note that without a bound consumer, messages are discarded</param>
         /// <exception cref="System.ArgumentNullException">
         /// channel
         /// or
@@ -83,8 +82,8 @@ internal class RmqMessagePublisher
         /// Publishes the message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">The delay in ms.</param>
-        public void PublishMessage(Message message, int delayMilliseconds)
+        /// <param name="delay">The delay in ms. 0 is no delay. Defaults to 0</param>
+        public void PublishMessage(Message message, TimeSpan? delay = null)
         {
             var messageId = message.Id;
             var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG) ? message.DeliveryTag.ToString() : null;
@@ -107,8 +106,8 @@ internal class RmqMessagePublisher
             if (!string.IsNullOrEmpty(deliveryTag))
                 headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
 
-            if (delayMilliseconds > 0)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, delayMilliseconds);
+            if (delay > TimeSpan.Zero)
+                headers.Add(HeaderNames.DELAY_MILLISECONDS, delay);
 
             _channel.BasicPublish(
                 _connection.Exchange.Name,
@@ -130,8 +129,8 @@ internal class RmqMessagePublisher
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="queueName">The queue name.</param>
-        /// <param name="delayMilliseconds">Delay in ms.</param>
-        public void RequeueMessage(Message message, string queueName, int delayMilliseconds)
+        /// <param name="timeOut">Delay. Set to TimeSpan.Zero for not delay</param>
+        public void RequeueMessage(Message message, string queueName, TimeSpan timeOut)
         {
             var messageId = Guid.NewGuid().ToString() ;
             const string deliveryTag = "1";
@@ -155,11 +154,11 @@ internal class RmqMessagePublisher
 
             headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
 
-            if (delayMilliseconds > 0)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, delayMilliseconds);
+            if (timeOut > TimeSpan.Zero)
+                headers.Add(HeaderNames.DELAY_MILLISECONDS, timeOut.Milliseconds);
 
             if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
-                headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id.ToString());
+                headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id);
 
             // To send it to the right queue use the default (empty) exchange
             _channel.BasicPublish(

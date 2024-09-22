@@ -34,7 +34,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Creates message producers.
         /// </summary>
-        /// <returns>A dictionary of middleware clients by topic, for sending messages to the middleware</returns>
-        Dictionary<string,IAmAMessageProducer> Create();
+        /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
+        Dictionary<RoutingKey, IAmAMessageProducer> Create();
     }
 }

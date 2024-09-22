@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var subscription = new Subscription<MyEvent>(
                 new SubscriptionName("test"),
                 noOfPerformers: 1, 
-                timeoutInMilliseconds: 1000, 
+                timeOut: TimeSpan.FromMilliseconds(1000), 
                 channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
                 channelName: new ChannelName(ChannelName), 
                 routingKey: _routingKey,

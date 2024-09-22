@@ -966,12 +966,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">What message do we want a reply to</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
+        /// <param name="timeOut">The call blocks, so we must time out</param>
         /// <exception cref="NotImplementedException"></exception>
-        public TResponse Call<T, TResponse>(T request, RequestContext requestContext = null, int timeOutInMilliseconds = 500)
+        public TResponse Call<T, TResponse>(T request, RequestContext requestContext = null, TimeSpan? timeOut = null)
             where T : class, ICall where TResponse : class, IResponse
         {
-            if (timeOutInMilliseconds <= 0)
+            timeOut ??= TimeSpan.FromMilliseconds(500);
+            
+            if (timeOut <= TimeSpan.Zero)
             {
                 throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
             }
@@ -990,7 +992,7 @@ namespace Paramore.Brighter
 
             using var responseChannel = _responseChannelFactory.CreateChannel(subscription);
             s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
-            request.ReplyAddress.Topic = routingKey;
+            request.ReplyAddress.Topic = subscription.RoutingKey;
             request.ReplyAddress.CorrelationId = channelName.ToString();
 
             //we do this to create the channel on the broker, or we won't have anything to send to; we 
@@ -1013,7 +1015,7 @@ namespace Paramore.Brighter
 
             //now we block on the receiver to try and get the message, until timeout.
             s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
-            Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+            Retry(() => responseMessage = responseChannel.Receive(timeOut));
 
                 TResponse response = default(TResponse);
                 if (responseMessage.Header.MessageType != MessageType.MT_NONE)

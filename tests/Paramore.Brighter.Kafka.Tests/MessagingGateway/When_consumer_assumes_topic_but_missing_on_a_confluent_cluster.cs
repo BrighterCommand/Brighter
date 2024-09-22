@@ -95,8 +95,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         [Fact]
         public void When_a_consumer_declares_topics_on_a_confluent_cluster()
         {
+            var routingKey = new RoutingKey(_topic);
+            
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
@@ -106,7 +108,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             bool messagePublished = false;
             
             
-            var producer = _producerRegistry.LookupBy(_topic);
+            var producer = _producerRegistry.LookupBy(routingKey);
             var producerConfirm = producer as ISupportPublishConfirmation;
             producerConfirm.OnMessagePublished += delegate(bool success, string id)
             {

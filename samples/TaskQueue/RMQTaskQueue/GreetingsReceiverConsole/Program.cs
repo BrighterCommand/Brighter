@@ -28,7 +28,6 @@ using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
@@ -47,7 +46,7 @@ namespace GreetingsReceiverConsole
                 .CreateLogger();
 
             var host = new HostBuilder()
-                .ConfigureServices((hostContext, services) =>
+                .ConfigureServices((_, services) =>
 
                 {
                     var subscriptions = new Subscription[]
@@ -56,7 +55,7 @@ namespace GreetingsReceiverConsole
                             new SubscriptionName("paramore.example.greeting"),
                             new ChannelName("greeting.event"),
                             new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 200,
+                            timeOut: TimeSpan.FromMilliseconds(2000),
                             isDurable: true,
                             highAvailability: true,
                             makeChannels: OnMissingChannel.Create),   //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
@@ -64,7 +63,7 @@ namespace GreetingsReceiverConsole
                             new SubscriptionName("paramore.example.farewell"), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
                             new ChannelName("farewell.event"),
                             new RoutingKey("farewell.event"),
-                            timeoutInMilliseconds: 200,
+                            timeOut: TimeSpan.FromMilliseconds(200),
                             isDurable: true,
                             highAvailability: true,
                             makeChannels: OnMissingChannel.Create)

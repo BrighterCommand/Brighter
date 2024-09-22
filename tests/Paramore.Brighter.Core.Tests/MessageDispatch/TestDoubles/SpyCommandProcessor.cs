@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         private readonly Dictionary<string, IRequest> _postBox = new();
 
         public IList<CommandType> Commands { get; } = new List<CommandType>();
-        public List<ClearParams> ClearParamsList { get; } = new List<ClearParams>();
+        public List<ClearParams> ClearParamsList { get; } = new();
 
         public virtual void Send<T>(T command, RequestContext requestContext = null) where T : class, IRequest
         {
@@ -276,7 +276,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public TResponse Call<T, TResponse>(
             T request, 
             RequestContext requestContext = null,
-            int timeOutInMilliseconds = 500)
+            TimeSpan? timeOut = null)
             where T : class, ICall where TResponse : class, IResponse
         {
             _requests.Enqueue(request);

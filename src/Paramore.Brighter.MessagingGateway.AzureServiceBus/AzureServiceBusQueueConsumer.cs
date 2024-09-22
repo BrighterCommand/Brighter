@@ -38,15 +38,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             s_logger.LogInformation(
                 "Getting message receiver provider for queue {Queue}...",
-                RoutingKey);
+                Topic);
             try
             {
-                ServiceBusReceiver = _serviceBusReceiverProvider.Get(RoutingKey,
+                ServiceBusReceiver = _serviceBusReceiverProvider.Get(Topic,
                         SubscriptionConfiguration.RequireSession);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "Failed to get message receiver provider for queue {Queue}", RoutingKey);
+                s_logger.LogError(e, "Failed to get message receiver provider for queue {Queue}", Topic);
             }
         }
         
@@ -56,9 +56,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         public override void Purge()
         {
             Logger.LogInformation("Purging messages from Queue {Queue}", 
-                RoutingKey);
+                Topic);
 
-            AdministrationClientWrapper.DeleteQueueAsync(RoutingKey);
+            AdministrationClientWrapper.DeleteQueueAsync(Topic);
             EnsureChannel();
         }
 
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
-                if (AdministrationClientWrapper.QueueExists(RoutingKey))
+                if (AdministrationClientWrapper.QueueExists(Topic))
                 {
                     _queueCreated = true;
                     return;
@@ -78,10 +78,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if (Subscription.MakeChannels.Equals(OnMissingChannel.Validate))
                 {
                     throw new ChannelFailureException(
-                        $"Queue {RoutingKey} does not exist and missing channel mode set to Validate.");
+                        $"Queue {Topic} does not exist and missing channel mode set to Validate.");
                 }
 
-                AdministrationClientWrapper.CreateQueue(RoutingKey, SubscriptionConfiguration.QueueIdleBeforeDelete);
+                AdministrationClientWrapper.CreateQueue(Topic, SubscriptionConfiguration.QueueIdleBeforeDelete);
                 _queueCreated = true;
             }
             catch (ServiceBusException ex)
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
                 {
                     s_logger.LogWarning(
-                        "Message entity already exists with queue {Queue}", RoutingKey);
+                        "Message entity already exists with queue {Queue}", Topic);
                     _queueCreated = true;
                 }
                 else

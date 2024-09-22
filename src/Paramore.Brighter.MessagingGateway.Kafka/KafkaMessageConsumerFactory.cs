@@ -58,16 +58,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 routingKey:kafkaSubscription.RoutingKey, //topic
                 groupId: kafkaSubscription.GroupId, 
                 offsetDefault: kafkaSubscription.OffsetDefault,
-                sessionTimeoutMs: kafkaSubscription.SessionTimeoutMs,
-                maxPollIntervalMs: kafkaSubscription.MaxPollIntervalMs,
+                sessionTimeout: kafkaSubscription.SessionTimeout,
+                maxPollInterval: kafkaSubscription.MaxPollInterval,
                 isolationLevel: kafkaSubscription.IsolationLevel,
                 commitBatchSize: kafkaSubscription.CommitBatchSize,
-                sweepUncommittedOffsetsIntervalMs: kafkaSubscription.SweepUncommittedOffsetsIntervalMs,
-                readCommittedOffsetsTimeoutMs: kafkaSubscription.ReadCommittedOffsetsTimeOutMs,
+                sweepUncommittedOffsetsInterval: kafkaSubscription.SweepUncommittedOffsetsInterval,
+                readCommittedOffsetsTimeout: kafkaSubscription.ReadCommittedOffsetsTimeOut,
                 numPartitions: kafkaSubscription.NumPartitions,
                 partitionAssignmentStrategy: kafkaSubscription.PartitionAssignmentStrategy,
                 replicationFactor: kafkaSubscription.ReplicationFactor,
-                topicFindTimeoutMs: kafkaSubscription.TopicFindTimeoutMs,
+                topicFindTimeout: kafkaSubscription.TopicFindTimeout,
                 makeChannels: kafkaSubscription.MakeChannels
                 );
         }

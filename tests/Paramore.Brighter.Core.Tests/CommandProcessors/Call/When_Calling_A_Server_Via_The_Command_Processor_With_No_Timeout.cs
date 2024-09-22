@@ -59,14 +59,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             };
 
             const string topic = "MyRequest";
+            var routingKey = new RoutingKey(topic);
             var fakeTimeProvider = new FakeTimeProvider();
-            
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { topic, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
-                {
-                    Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}
-                } }
+                { 
+                    routingKey, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
+                    {
+                        Publication = {Topic = routingKey, RequestType = typeof(MyRequest)}
+                    } 
+                }
             });
 
             var timeProvider = fakeTimeProvider;
@@ -100,7 +103,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Timeout()
         {
-            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOutInMilliseconds: 0));
+            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(
+                _myRequest, timeOut: TimeSpan.FromMilliseconds(0))
+            );
             
             //should throw an exception as we require a timeout to be set
             exception.Should().BeOfType<InvalidOperationException>();

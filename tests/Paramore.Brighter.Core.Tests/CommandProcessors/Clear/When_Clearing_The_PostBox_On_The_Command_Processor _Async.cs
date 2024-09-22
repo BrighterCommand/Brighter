@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
     [Collection("CommandProcessor")]
     public class CommandProcessorPostBoxClearAsyncTests : IDisposable
     {
-        private const string Topic = "MyCommand";
+        private readonly RoutingKey _routingKey = new("MyCommand");
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly InMemoryOutbox _outbox;
@@ -52,10 +52,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var myCommand = new MyCommand{ Value = "Hello World"};
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(_internalBus, timeProvider){Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}};
+            InMemoryProducer producer = new(_internalBus, timeProvider){Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}};
 
             _message = new Message(
-                new MessageHeader(myCommand.Id, Topic, MessageType.MT_COMMAND),
+                new MessageHeader(myCommand.Id, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -73,9 +73,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { Topic, producer },
+                    { _routingKey, producer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             await _commandProcessor.ClearOutboxAsync(new []{_message.Id});
 
             //_should_send_a_message_via_the_messaging_gateway
-            var topic = new RoutingKey(Topic);
+            var topic = new RoutingKey(_routingKey);
             
             _internalBus.Stream(topic).Any().Should().BeTrue();
 

@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public Message CreateMessage(ConsumeResult<string, byte[]> consumeResult)
         {
-            var topic = HeaderResult<string>.Empty();
+            var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var messageType = HeaderResult<MessageType>.Empty();
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         type: "",
                         timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                         correlationId: correlationId.Success ? correlationId.Result : "",
-                        replyTo: replyTo.Success ? replyTo.Result : "",
+                        replyTo: replyTo.Success ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
                         contentType: contentType.Success ? contentType.Result : "plain/text",
                         partitionKey: partitionKey.Success ? partitionKey.Result : consumeResult.Message.Key,
                         handledCount: handledCount.Success ? handledCount.Result : 0,
@@ -115,11 +115,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return message;
         }
 
-        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<string> messageId)
+        private Message FailureMessage(HeaderResult<RoutingKey> topic, HeaderResult<string> messageId)
         {
             var header = new MessageHeader(
                 messageId.Success ? messageId.Result : string.Empty,
-                topic.Success ? topic.Result : string.Empty,
+                topic.Success ? topic.Result : RoutingKey.Empty,
                 MessageType.MT_UNACCEPTABLE);
             var message = new Message(header, new MessageBody(string.Empty));
             return message;
@@ -243,9 +243,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<string> ReadTopic(string topic)
+        private HeaderResult<RoutingKey> ReadTopic(string topic)
         {
-            return new HeaderResult<string>(topic, true);
+            return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }
 
         private HeaderResult<string> ReadMessageId(Headers headers)

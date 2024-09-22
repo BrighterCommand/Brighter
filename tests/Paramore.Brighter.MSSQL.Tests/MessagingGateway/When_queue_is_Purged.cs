@@ -12,7 +12,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     [Trait("Category", "MSSQL")]
     public class PurgeTest
     {
-        private readonly string _topic = Guid.NewGuid().ToString();
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry; 
         private readonly IAmAMessageConsumer _consumer;
@@ -22,11 +21,13 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             var testHelper = new MsSqlTestHelper();
             testHelper.SetupQueueDb();
 
+            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            
             var sub = new Subscription<MyCommand>(new SubscriptionName(_queueName),
-                new ChannelName(_topic), new RoutingKey(_topic));
+                new ChannelName(Guid.NewGuid().ToString()), routingKey);
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration, 
-                new Publication[] {new Publication {Topic = new RoutingKey(_topic)}}
+                new Publication[] {new() {Topic = routingKey}}
             ).Create();
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
@@ -39,9 +40,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             {
                 //Send a sequence of messages to Kafka
                 var msgId = SendMessage();
-                var msgId2 = SendMessage();
-                var msgId3 = SendMessage();
-                var msgId4 = SendMessage();
                 
                 //Now read those messages in order
 
@@ -68,8 +66,9 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         {
             var messageId = Guid.NewGuid().ToString();
 
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
-                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND),
+            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
+                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND),
                 new MessageBody($"test content [{_queueName}]")));
 
             return messageId;
@@ -83,7 +82,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 try
                 {
                     maxTries++;
-                    messages = consumer.Receive(1000);
+                    messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                         break;

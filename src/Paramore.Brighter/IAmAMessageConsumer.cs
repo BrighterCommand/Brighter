@@ -53,17 +53,17 @@ namespace Paramore.Brighter
         /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
         /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The <see cref="TimeSpan"/> timeout. If null default to 1000</param>
         /// <returns>An array of Messages from middleware</returns>
-        Message[] Receive(int timeoutInMilliseconds);
+        Message[] Receive(TimeSpan? timeOut = null);
 
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="delay">Time to delay delivery of the message, default to 0ms or no delay</param>
         /// <returns>True if the message should be acked, false otherwise</returns>
-        bool Requeue(Message message, int delayMilliseconds);
+        bool Requeue(Message message, TimeSpan? delay = null);
     }
 }
 

@@ -35,7 +35,8 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 
     internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
     {
-        public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+        public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
+            : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
 
         protected override void ConnectToBroker(OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
@@ -45,7 +46,8 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 
     internal class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
     {
-        public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+        public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
+            : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
 
         protected override void EnsureChannel()
         {
@@ -55,7 +57,8 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 
     internal class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
     {
-        public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable,isHighAvailability) { }
+        public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
+            : base(connection, queueName, routingKey, isDurable,isHighAvailability) { }
 
         protected override void EnsureChannel()
         {
@@ -65,7 +68,8 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 
     internal class NotSupportedRmqMessageConsumer : RmqMessageConsumer
     {
-        public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+        public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
+            : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
 
         protected override void EnsureChannel()
         {

@@ -23,7 +23,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
-        private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
         private readonly string _bootStrapServer;
         private readonly string _userName;
         private readonly string _password;
@@ -52,7 +51,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     SslCaLocation = SupplyCertificateLocation()
                     
                 },
-                new KafkaPublication[] {new KafkaPublication
+                new[] {new KafkaPublication
                     {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -113,9 +112,11 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         {
             var messageId = Guid.NewGuid().ToString();
 
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(
+            var routingKey = new RoutingKey(_topic);
+            
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(
                 new Message(
-                    new MessageHeader(messageId, _topic, MessageType.MT_COMMAND)
+                    new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND)
                     {
                         PartitionKey = _partitionKey
                     },
@@ -136,7 +137,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     maxTries++;
                     Task.Delay(500).Wait(); //Let topic propagate in the broker
-                    messages = consumer.Receive(1000);
+                    messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                         break;

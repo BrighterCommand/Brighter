@@ -24,7 +24,7 @@ public class CloudEventsTransformerTests
         _dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerTests/schema");
         _subject = "CloudEventsTransformerTests";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "Test Topic", MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND), 
             new MessageBody("test content")
         );
     }

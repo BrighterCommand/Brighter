@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
-            var topic = HeaderResult<string>.Empty();
+            var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
             var contentType = HeaderResult<string>.Empty();
             var correlationId = HeaderResult<string>.Empty();
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     type: "",
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                     correlationId:correlationId.Success ? correlationId.Result : "",
-                    replyTo: replyTo.Success ? replyTo.Result : "",
+                    replyTo: replyTo.Success ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
                     contentType: contentType.Success ? contentType.Result : "",
                     handledCount: handledCount.Result,
                     dataSchema: null,
@@ -211,16 +211,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<string>(string.Empty, true);
         }
 
-        private HeaderResult<string> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
+        private HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue value))
             {
                 //we have an arn, and we want the topic
                 var arnElements = value.StringValue.Split(':');
                 var topic = arnElements[(int)ARNAmazonSNS.TopicName];
-                return new HeaderResult<string>(topic, true);
+                return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
             }
-            return new HeaderResult<string>(String.Empty, true);
+            return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Paramore.Brighter.InMemory.Tests.Builders
 
         public MessageTestDataBuilder()
         {
-            _specification.Header = new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT); 
+            _specification.Header = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT); 
             _specification.Body = new MessageBody("message body");
         }
 

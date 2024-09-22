@@ -29,7 +29,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
 
     public AsyncCommandProcessorMultipleDepositObservabilityTests()
     {
-        const string topic = "MyEvent";
+        var routingKey = new RoutingKey("MyEvent");
         
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -61,12 +61,14 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {topic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
             {
-                Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}
-            }}
+                routingKey, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+                {
+                    Publication = { Topic = routingKey, RequestType = typeof(MyEvent)}
+                }
+            }
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(

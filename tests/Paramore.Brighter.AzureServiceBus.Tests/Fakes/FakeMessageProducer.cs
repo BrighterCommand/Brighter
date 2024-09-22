@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -18,7 +19,7 @@ public class FakeMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducer
     public void Send(Message message)
         => SentMessages.Add(message);
 
-    public void SendWithDelay(Message message, int delayMilliseconds = 0)
+    public void SendWithDelay(Message message, TimeSpan? delay = null)
         => Send(message);
     
     public void Dispose()

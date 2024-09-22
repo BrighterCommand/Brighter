@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" }
                 },
-                new KafkaPublication[]
+                new[]
                 {
                     new KafkaPublication
                     {
@@ -95,8 +94,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             //vanilla i.e. no Kafka specific bytes at the beginning
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
+            var routingKey = new RoutingKey(_topic);
+            
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey,
                     ContentType = "application/json",
@@ -109,7 +110,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 },
                 new MessageBody(body));
 
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
 
             var receivedMessage = GetMessage();
 
@@ -127,7 +128,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         private Message GetMessage()
         {
-            Message[] messages = new Message[0];
+            Message[] messages = [];
             int maxTries = 0;
             do
             {
@@ -135,7 +136,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     maxTries++;
                     Task.Delay(500).Wait(); //Let topic propagate in the broker
-                    messages = _consumer.Receive(1000);
+                    messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     {

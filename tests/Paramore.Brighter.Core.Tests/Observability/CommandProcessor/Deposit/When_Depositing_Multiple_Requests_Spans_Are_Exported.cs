@@ -28,7 +28,7 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
 
     public CommandProcessorMultipleDepositObservabilityTests()
     {
-        const string topic = "MyEvent";
+        var routingKey = new RoutingKey("MyEvent");
         
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -60,12 +60,14 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
             null);
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {topic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
             {
-                Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyEvent)}
-            }}
+               routingKey, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+               {
+                    Publication = { Topic = routingKey, RequestType = typeof(MyEvent)}
+               }
+            }
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(

@@ -73,6 +73,16 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>HeaderResult&lt;TResult&gt;.</returns>
         public static HeaderResult<TResult> Empty()
         {
+            if (typeof(TResult) == typeof(string))
+            {
+                return new HeaderResult<TResult>((TResult)(object)string.Empty, false);
+            }
+            
+            if (typeof(TResult) == typeof(RoutingKey))
+            {
+                return new HeaderResult<TResult>((TResult)(object)RoutingKey.Empty, false);
+            }
+            
             return new HeaderResult<TResult>(default(TResult), false);
         }
     }

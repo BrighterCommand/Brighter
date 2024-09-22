@@ -51,14 +51,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Used to pull from the buffer of messages delivered to us via BasicConsumer
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The total time to spend waiting for the buffer to fill up to bufferSize</param>
+        /// <param name="timeOut">The total time to spend waiting for the buffer to fill up to bufferSize</param>
         /// <param name="bufferSize">The size of the buffer we want to fill wit messages</param>
         /// <returns>A tuple containing: the number of messages in the buffer, and the buffer itself</returns>
-        public (int, BasicDeliverEventArgs[]) DeQueue(int timeoutInMilliseconds, int bufferSize)
+        public (int, BasicDeliverEventArgs[]) DeQueue(TimeSpan timeOut, int bufferSize)
         {
             var now = DateTime.UtcNow;
-            var end = now.AddMilliseconds(timeoutInMilliseconds);
-            var pause = ((timeoutInMilliseconds > 25) && (timeoutInMilliseconds / 5 > 5)) ? timeoutInMilliseconds / 5 : 5;
+            var end = now.Add(timeOut);
+            var pause = (timeOut > TimeSpan.FromMilliseconds(25)) ? timeOut.Milliseconds / 5 : 5;
  
             
             var buffer = new BasicDeliverEventArgs[bufferSize];

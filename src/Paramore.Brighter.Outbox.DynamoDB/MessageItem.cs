@@ -154,11 +154,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             var header = new MessageHeader(
                 messageId: messageId,
-                topic: Topic,
+                topic: new RoutingKey(Topic),
                 messageType: messageType,
                 timeStamp: timestamp,
                 correlationId: correlationId,
-                replyTo: ReplyTo,
+                replyTo: new RoutingKey(ReplyTo),
                 contentType: ContentType, partitionKey: PartitionKey);
 
             foreach (var key in bag.Keys)
