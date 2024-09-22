@@ -48,7 +48,7 @@ public class KafkaDefaultMessageHeaderBuilderTests
         
         //known properties
         headers.GetLastBytes(HeaderNames.MESSAGE_TYPE).Should().Equal(message.Header.MessageType.ToString().ToByteArray());
-        headers.GetLastBytes(HeaderNames.MESSAGE_ID).Should().Equal(message.Header.Id.ToString().ToByteArray());
+        headers.GetLastBytes(HeaderNames.MESSAGE_ID).Should().Equal(message.Header.MessageId.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.TOPIC).Should().Equal(message.Header.Topic.Value.ToByteArray());
         headers.GetLastBytes(HeaderNames.TIMESTAMP).Should()
             .Equal(message.Header.TimeStamp.ToUnixTimeMilliseconds().ToString().ToByteArray());

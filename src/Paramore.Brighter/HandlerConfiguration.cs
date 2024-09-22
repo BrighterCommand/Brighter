@@ -33,12 +33,12 @@ namespace Paramore.Brighter
         /// Gets the subscriber registry.
         /// </summary>
         /// <value>The subscriber registry.</value>
-        public IAmASubscriberRegistry? SubscriberRegistry { get; private set; }
+        public IAmASubscriberRegistry SubscriberRegistry { get; private set; }
         /// <summary>
         /// Gets the handler factory.
         /// </summary>
         /// <value>The handler factory.</value>
-        public IAmAHandlerFactory? HandlerFactory { get; private set; }
+        public IAmAHandlerFactory HandlerFactory { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="HandlerConfiguration"/> class.
@@ -62,6 +62,7 @@ namespace Paramore.Brighter
         /// As you cannot see the HandlerFactory and SubscriberRegistry post-creation, don't use
         /// this constructor in uses cases where you want anything other than an empty configuration.
         /// </summary>
-        public HandlerConfiguration() {}
+        public HandlerConfiguration() : this(new SubscriberRegistry(), new SimpleHandlerFactorySync(_ => throw new ConfigurationException("No Handlers have been configured.")))
+        { }
     }
 }

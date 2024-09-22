@@ -43,7 +43,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 MessageType.MT_COMMAND);
             var originalMessage = new Message(header, new MessageBody("test3 content"));
 
-            var mutatedHeader = new MessageHeader(header.Id, new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
+            var mutatedHeader = new MessageHeader(header.MessageId, new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
             mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
             _message = new Message(mutatedHeader, originalMessage.Body);
 

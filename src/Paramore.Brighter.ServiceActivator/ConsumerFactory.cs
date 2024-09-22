@@ -44,7 +44,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmACommandProcessorProvider commandProcessorProvider,
             Subscription subscription,
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactory? messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.ServiceActivator
             _commandProcessorProvider = commandProcessorProvider;
             _messageMapperRegistry = messageMapperRegistry;
             _subscription = subscription;
-            _messageTransformerFactory = messageTransformerFactory;
+            _messageTransformerFactory = messageTransformerFactory ?? new EmptyMessageTransformerFactory();
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmACommandProcessorProvider commandProcessorProvider,
             Subscription subscription,
             IAmAMessageMapperRegistryAsync messageMapperRegistryAsync,
-            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
+            IAmAMessageTransformerFactoryAsync? messageTransformerFactoryAsync,
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.ServiceActivator
             _commandProcessorProvider = commandProcessorProvider;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
             _subscription = subscription;
-            _messageTransformerFactoryAsync = messageTransformerFactoryAsync;
+            _messageTransformerFactoryAsync = messageTransformerFactoryAsync ?? new EmptyMessageTransformerFactoryAsync();
             _requestContextFactory = requestContextFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;

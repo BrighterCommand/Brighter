@@ -85,8 +85,7 @@ namespace Paramore.Brighter
         private IAmAHandlerFactory? _handlerFactory;
         private IPolicyRegistry<string>? _policyRegistry;
 
-        private IAmAFeatureSwitchRegistry? _featureSwitchRegistry =
-            new FluentConfigRegistry(new Dictionary<Type, FeatureSwitchStatus>());
+        private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private IAmAnExternalBusService? _bus;
         private bool _useRequestReplyQueues;
         private IAmAChannelFactory? _responseChannelFactory;
@@ -270,9 +269,6 @@ namespace Paramore.Brighter
             if(_policyRegistry == null)
                 throw new ConfigurationException(
                     "A PolicyRegistry must be provided to construct a command processor");
-            if(_featureSwitchRegistry == null)
-                throw new ConfigurationException(
-                    "A FeatureSwitchRegistry must be provided to construct a command processor");
             if(_instrumetationOptions == null)
                 throw new ConfigurationException(
                     "InstrumentationOptions must be provided to construct a command processor");
@@ -284,11 +280,6 @@ namespace Paramore.Brighter
                     featureSwitchRegistry: _featureSwitchRegistry, instrumentationOptions: _instrumetationOptions.Value);
             }
             
-            if(_inboxConfiguration == null)
-                throw new ConfigurationException(
-                    "InboxConfiguration must be provided to construct a command processor");
-            if(_tracer == null)
-
             if (!_useRequestReplyQueues)
                 return new CommandProcessor(
                     subscriberRegistry: _registry, 
