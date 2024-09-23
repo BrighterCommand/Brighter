@@ -7,7 +7,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
 {
     public class HeartbeatReplyCommandMessageMapper : IAmAMessageMapper<HeartbeatReply>
     {
-        public IRequestContext Context { get; set; }
+        public IRequestContext? Context { get; set; }
 
         public Message MapToMessage(HeartbeatReply request, Publication publication)
         {
@@ -30,6 +30,13 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
         public HeartbeatReply MapToRequest(Message message)
         {
             var messageBody = JsonSerializer.Deserialize<HeartBeatResponseBody>(message.Body.Value, JsonSerialisationOptions.Options);
+
+            if (messageBody is null)
+                throw new ArgumentException("Request body must not be null.");
+            
+            if (message.Header.Topic is null || message.Header.CorrelationId is null)
+                throw new ArgumentException("Reply To and Correlation Id must be set");
+            
             var replyAddress = new ReplyAddress(message.Header.Topic, message.Header.CorrelationId);
 
             var reply = new HeartbeatReply(messageBody.HostName, replyAddress);

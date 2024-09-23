@@ -51,13 +51,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <param name="message">The Message</param>
         /// <param name="topic">The topic name</param>
         /// <param name="timeOut">Timeout for the send operation; MsSQL commands use seconds for timeout; -1 or null for default MSSQL timeout</param>
-        public void Send(T message, string topic, TimeSpan? timeOut = null)
+        public void Send(T message, RoutingKey topic, TimeSpan? timeOut = null)
         {
             timeOut ??= TimeSpan.FromMilliseconds(-1);
             
             if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("Send<{CommandType}>(..., {Topic})", typeof(T).FullName, topic);
 
-            var parameters = InitAddDbParameters(topic, message);
+            var parameters = InitAddDbParameters(topic.Value, message);
 
             using var connection = _connectionProvider.GetConnection();
             var sqlCmd = InitAddDbCommand(timeOut.Value, connection, parameters);
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
                 s_logger.LogDebug("TryReceive<{CommandType}>(..., {Timeout})", typeof(T).FullName, timeout.Value.TotalMilliseconds);
             
             var rc = TryReceive(topic);
-            var timeLeft = timeout.Value.Milliseconds;
+            var timeLeft = timeout.Value.TotalMilliseconds;
             while (!rc.IsDataValid && timeLeft > 0)
             {
                 Task.Delay(RetryDelay).Wait();

@@ -43,7 +43,7 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _ackTimeout;
     private readonly ITimer _lockTimer;
-    private ITimer _requeueTimer;
+    private ITimer? _requeueTimer;
 
     /// <summary>
     /// An in memory consumer that reads from the Internal Bus. Mostly used for testing. Can be used with <see cref="Paramore.Brighter.InMemoryProducer"/>
@@ -140,7 +140,7 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
 
         //we don't want to block, so we use a timer to invoke the requeue after a delay
         _requeueTimer = _timeProvider.CreateTimer(
-            msg => RequeueNoDelay((Message)msg), 
+            msg => RequeueNoDelay((Message)msg!), 
             message, 
             timeOut.Value, 
             TimeSpan.Zero

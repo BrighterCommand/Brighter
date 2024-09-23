@@ -96,7 +96,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
             _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
-                null, new InMemoryRequestContextFactory())
+                null, new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
             };

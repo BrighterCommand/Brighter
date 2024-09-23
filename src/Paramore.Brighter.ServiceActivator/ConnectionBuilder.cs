@@ -10,12 +10,12 @@ namespace Paramore.Brighter.ServiceActivator
         ConnectionBuilder.IConnectionBuilderRoutingKey,
         ConnectionBuilder.IConnectionBuilderOptionalBuild
     {
-        private string _name;
-        private IAmAChannelFactory _channelFactory;
-        private Type _type;
-        private string _channelName;
+        private string? _name;
+        private IAmAChannelFactory? _channelFactory;
+        private Type? _type;
+        private string? _channelName;
         private TimeSpan? _timeOut = null;
-        private string _routingKey;
+        private string? _routingKey;
         private int _buffersize = 1;
         private int _unacceptableMessageLimit = 0;
         private bool _isAsync = false;
@@ -171,6 +171,11 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Subscription Build()
         {
+            if (_type is null) throw new ArgumentException("Cannot build connection without a Type");
+            if (_name is null) throw new ArgumentException("Cannot build connection without a Name");
+            if (_channelName is null) throw new ArgumentException("Cannot build connection without a Channel Name");
+            if (_routingKey is null) throw new ArgumentException("Cannot build connection without a Routing Key");
+            
             return new Subscription(_type,
                 new SubscriptionName(_name),
                 new ChannelName(_channelName),

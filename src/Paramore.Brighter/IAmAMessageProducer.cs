@@ -38,6 +38,6 @@ namespace Paramore.Brighter
         /// <summary>
         /// Allows us to set a <see cref="BrighterTracer"/> to let a Producer participate in our telemetry
         /// </summary>
-        Activity Span { get; set; }
+        Activity? Span { get; set; }
     }
 }

@@ -61,7 +61,7 @@ namespace Paramore.Brighter
             T message,
             RequestContext requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default
         );
 
@@ -76,9 +76,9 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task"/>.</returns>
         Task AddAsync(
             IEnumerable<T> messages,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default
         );
 
@@ -92,7 +92,7 @@ namespace Paramore.Brighter
         Task DeleteAsync(
             string[] messageIds,
             RequestContext requestContext,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         );
 
@@ -113,7 +113,7 @@ namespace Paramore.Brighter
             int pageSize = 100,
             int pageNumber = 1,
             int outboxTimeout = -1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         );
 
@@ -130,7 +130,7 @@ namespace Paramore.Brighter
             string messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         );
 
@@ -146,7 +146,7 @@ namespace Paramore.Brighter
             string id,
             RequestContext requestContext,
             DateTimeOffset? dispatchedAt = null,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace Paramore.Brighter
             IEnumerable<string> ids,
             RequestContext requestContext,
             DateTimeOffset? dispatchedAt = null,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -179,7 +179,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
     }
 }

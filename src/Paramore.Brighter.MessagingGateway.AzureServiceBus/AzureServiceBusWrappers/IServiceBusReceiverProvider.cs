@@ -11,7 +11,7 @@
         /// <param name="queueName">The name of the Topic.</param>
         /// <param name="sessionEnabled">Use Sessions for Processing</param>
         /// <returns>A ServiceBusReceiverWrapper.</returns>
-        IServiceBusReceiverWrapper Get(string queueName,bool sessionEnabled);
+        IServiceBusReceiverWrapper? Get(string queueName,bool sessionEnabled);
         
         /// <summary>
         /// Gets a <see cref="IServiceBusReceiverWrapper"/> for a Service Bus Topic
@@ -20,6 +20,6 @@
         /// <param name="subscriptionName">The name of the Subscription on the Topic.</param>
         /// <param name="sessionEnabled">Use Sessions for Processing</param>
         /// <returns>A ServiceBusReceiverWrapper.</returns>
-        IServiceBusReceiverWrapper Get(string topicName, string subscriptionName, bool sessionEnabled);
+        IServiceBusReceiverWrapper? Get(string topicName, string subscriptionName, bool sessionEnabled);
     }
 }

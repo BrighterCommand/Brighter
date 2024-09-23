@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
                 new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()),
-                new Header(HeaderNames.MESSAGE_ID, message.Header.Id.ToByteArray()),
+                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
             };
 
             if (message.Header.TimeStamp != default)

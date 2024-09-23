@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Inbox.Attributes
     /// </summary>
     public class UseInboxAttribute : RequestHandlerAttribute
     {
-        public string ContextKey { get; }
+        public string? ContextKey { get; }
         public bool OnceOnly { get; }
         public OnceOnlyAction OnceOnlyAction { get; set; }
 
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Inbox.Attributes
         /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
         /// <param name="timing">The timing.</param>
         /// <param name="onceOnlyAction">Action to take if prevent duplicate messages, and we receive a duplicate message</param>
-        public UseInboxAttribute(int step, string contextKey = null, bool onceOnly=false, HandlerTiming timing = HandlerTiming.Before, OnceOnlyAction onceOnlyAction = OnceOnlyAction.Throw) 
+        public UseInboxAttribute(int step, string? contextKey = null, bool onceOnly=false, HandlerTiming timing = HandlerTiming.Before, OnceOnlyAction onceOnlyAction = OnceOnlyAction.Throw) 
             : base(step, timing)
         {
             ContextKey = contextKey;
@@ -67,9 +67,9 @@ namespace Paramore.Brighter.Inbox.Attributes
         {
         }
 
-        public override object[] InitializerParams()
+        public override object?[] InitializerParams()
         {
-            return new object[] {OnceOnly, ContextKey, OnceOnlyAction};
+            return new object?[] {OnceOnly, ContextKey, OnceOnlyAction};
         }
 
         /// <summary>

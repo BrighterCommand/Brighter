@@ -39,7 +39,7 @@ namespace Paramore.Brighter
     public class MessageMapperRegistry : IAmAMessageMapperRegistry, IAmAMessageMapperRegistryAsync 
     {
         private readonly IAmAMessageMapperFactory _messageMapperFactory;
-        private readonly IAmAMessageMapperFactoryAsync _messageMapperFactoryAsync;
+        private readonly IAmAMessageMapperFactoryAsync? _messageMapperFactoryAsync;
         private readonly Dictionary<Type, Type> _messageMappers = new Dictionary<Type, Type>();
         private readonly Dictionary<Type, Type> _asyncMessageMappers = new Dictionary<Type, Type>();
 
@@ -48,7 +48,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageMapperFactory">The message mapper factory.</param>
         /// <param name="messageMapperFactoryAsync">The async message mapper factory</param>
-        public MessageMapperRegistry(IAmAMessageMapperFactory messageMapperFactory, IAmAMessageMapperFactoryAsync messageMapperFactoryAsync)
+        public MessageMapperRegistry(IAmAMessageMapperFactory messageMapperFactory, IAmAMessageMapperFactoryAsync? messageMapperFactoryAsync)
         {
             _messageMapperFactory = messageMapperFactory;
             _messageMapperFactoryAsync = messageMapperFactoryAsync;
@@ -62,7 +62,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <returns>IAmAMessageMapper&lt;TRequest&gt;.</returns>
-        public IAmAMessageMapper<TRequest> Get<TRequest>() where TRequest : class, IRequest
+        public IAmAMessageMapper<TRequest>? Get<TRequest>() where TRequest : class, IRequest
         {
             if (_messageMappers.ContainsKey(typeof(TRequest)))
             {
@@ -80,9 +80,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the t request.</typeparam>
         /// <returns>IAmAMessageMapperAsync&lt;TRequest&gt;.</returns>
-        public IAmAMessageMapperAsync<TRequest> GetAsync<TRequest>() where TRequest : class, IRequest
+        public IAmAMessageMapperAsync<TRequest>? GetAsync<TRequest>() where TRequest : class, IRequest
         {
-            if (_asyncMessageMappers.ContainsKey(typeof(TRequest)))
+            if (_messageMapperFactoryAsync is not null && _asyncMessageMappers.ContainsKey(typeof(TRequest)))
             {
                 var messageMapperType = _asyncMessageMappers[typeof(TRequest)];
                 return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);

@@ -45,6 +45,6 @@ namespace Paramore.Brighter
         /// Releases the specified async handler.
         /// </summary>
         /// <param name="handler">The handler.</param>
-        void Release(IHandleRequestsAsync handler);
+        void Release(IHandleRequestsAsync? handler);
     }
 }

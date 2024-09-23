@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
         /// </summary>
         /// <value>The context.</value>
-        public IRequestContext Context { get; set; }
+        public IRequestContext? Context { get; set; }
 
         /// <summary>
         /// Dispose of this transform; a no-op
@@ -94,6 +94,8 @@ namespace Paramore.Brighter.Transforms.Transformers
         {
             var bytes = message.Body.Bytes;
 
+            if (bytes is null) throw new ArgumentException("Cannot transform and empty body");
+            
             //don't transform it too small
             if (bytes.Length < _thresholdInBytes) return message;
             

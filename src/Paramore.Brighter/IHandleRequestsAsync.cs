@@ -42,7 +42,7 @@ namespace Paramore.Brighter
         /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
         /// </summary>
         /// <value>The context.</value>
-        IRequestContext Context { get; set; }
+        IRequestContext? Context { get; set; }
 
         /// <summary>
         /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
@@ -67,7 +67,7 @@ namespace Paramore.Brighter
         /// for an attribute-handler pair used to provide orthogonal QoS to the pipeline.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        void InitializeFromAttributeParams(params object[] initializerList);
+        void InitializeFromAttributeParams(params object?[] initializerList);
 
         /// <summary>
         /// Gets the name of the Handler. Useful for diagnostic purposes

@@ -30,9 +30,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public AzureServiceBusSubscription(
             Type dataType,
-            SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -40,9 +40,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null,
+            AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
@@ -78,9 +78,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public AzureServiceBusSubscription(
-            SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -88,9 +88,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null,
+            AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,

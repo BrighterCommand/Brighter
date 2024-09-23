@@ -47,10 +47,8 @@ namespace Paramore.Brighter
             IEnumerable<IAmAMessageTransformAsync> transforms, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactory, 
             IAmAMessageMapperAsync<TRequest> messageMapperAsync
-            )
+            ) : base(messageMapperAsync, transforms)
         {
-            MessageMapper = messageMapperAsync;
-            Transforms = transforms;
             if (messageTransformerFactory != null)
             {
                 InstanceScope = new TransformLifetimeScopeAsync(messageTransformerFactory);
@@ -77,9 +75,10 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>a request</returns>
-        public async Task<TRequest> UnwrapAsync(Message message,RequestContext requestContext, CancellationToken cancellationToken = default)
+        public async Task<TRequest> UnwrapAsync(Message message,RequestContext? requestContext, CancellationToken cancellationToken = default)
         {
-            requestContext.Span ??= Activity.Current;
+            if(requestContext is not null)
+                requestContext.Span ??= Activity.Current;
             
             var msg = message;
             await Transforms.EachAsync(async transform => {

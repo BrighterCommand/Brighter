@@ -33,7 +33,7 @@ namespace Greetings.Ports.Commands
         public string Language { get; set; }
         
         
-        public GreetingRequest() : base(new ReplyAddress()) { }
+        public GreetingRequest() : base(new ReplyAddress("","")) { }
 
         public  GreetingRequest(ReplyAddress replyAddress) : base(replyAddress)
         {

@@ -45,10 +45,8 @@ namespace Paramore.Brighter
             IEnumerable<IAmAMessageTransform> transforms, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
             IAmAMessageMapper<TRequest> messageMapper
-            )
+            ) : base(messageMapper, transforms)
         {
-            MessageMapper = messageMapper;
-            Transforms = transforms;
             if (messageTransformerFactory != null)
             {
                 InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
@@ -74,9 +72,10 @@ namespace Paramore.Brighter
         /// <param name="message">The message to unwrap</param>
         /// <param name="requestContext">The context of the request in this pipeline</param>
         /// <returns>a request</returns>
-        public TRequest Unwrap(Message message, RequestContext requestContext)
+        public TRequest Unwrap(Message message, RequestContext? requestContext)
         {
-            requestContext.Span ??= Activity.Current;
+            if(requestContext is not null)
+                requestContext.Span ??= Activity.Current;
             
             var msg = message;
             Transforms.Each(transform =>

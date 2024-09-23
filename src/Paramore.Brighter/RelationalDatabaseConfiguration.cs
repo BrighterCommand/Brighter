@@ -4,6 +4,7 @@
     {
         private const string OUTBOX_TABLE_NAME = "Outbox";
         private const string INBOX_TABLE_NAME = "Inbox";
+        private const string QUEUE_TABLE_NAME = "Queue";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RelationalDatabaseConfiguration"/> class. 
@@ -15,16 +16,16 @@
         /// <param name="binaryMessagePayload">Is the message payload binary, or a UTF-8 string, default is false or UTF-8</param>
         public RelationalDatabaseConfiguration(
             string connectionString,
-            string outBoxTableName = null,
-            string inboxTableName = null,
-            string queueStoreTable = null,
+            string? outBoxTableName = null,
+            string? inboxTableName = null,
+            string? queueStoreTable = null,
             bool binaryMessagePayload = false
         )
         {
             OutBoxTableName = outBoxTableName ?? OUTBOX_TABLE_NAME;
             InBoxTableName = inboxTableName ?? INBOX_TABLE_NAME;
             ConnectionString = connectionString;
-            QueueStoreTable = queueStoreTable;
+            QueueStoreTable = queueStoreTable ?? QUEUE_TABLE_NAME;
             BinaryMessagePayload = binaryMessagePayload;
         }
 

@@ -15,12 +15,12 @@ public class InMemoryArchiveProvider: IAmAnArchiveProvider
     
     public void ArchiveMessage(Message message)
     {
-        ArchivedMessages.Add(message.Id, message);
+        ArchivedMessages.Add(message.Id!, message);
     }
 
     public Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
     {
-        ArchivedMessages.Add(message.Id, message);
+        ArchivedMessages.Add(message.Id!, message);
         return Task.CompletedTask;
     }
 
@@ -28,9 +28,9 @@ public class InMemoryArchiveProvider: IAmAnArchiveProvider
     {
         foreach (var message in messages)
         {
-            ArchivedMessages.Add(message.Id, message);
+            ArchivedMessages.Add(message.Id!, message);
         }
 
-        return Task.FromResult(messages.Select(m => m.Id).ToArray());
+        return Task.FromResult(messages.Select(m => m.Id!).ToArray());
     }
 }

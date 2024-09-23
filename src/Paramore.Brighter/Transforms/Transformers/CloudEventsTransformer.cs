@@ -23,17 +23,17 @@ namespace Paramore.Brighter.Transforms.Transformers;
 /// </summary>
 public class CloudEventsTransformer : IAmAMessageTransform
 {
-    private Uri _source;
-    private string _type;
-    private string _datacontenttype;
-    private Uri _dataschema;
-    private string _subject;
+    private Uri? _source;
+    private string? _type;
+    private string? _datacontenttype;
+    private Uri? _dataschema;
+    private string? _subject;
     
     /// <summary>
     /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
     /// </summary>
     /// <value>The context.</value>
-    public IRequestContext Context { get; set; }
+    public IRequestContext? Context { get; set; }
     
     public void Dispose()
     {
@@ -43,10 +43,10 @@ public class CloudEventsTransformer : IAmAMessageTransform
     public void InitializeWrapFromAttributeParams(params object[] initializerList)
     {
         
-        _source = initializerList.ElementAtOrDefault(0) == null ? null : (Uri) initializerList.ElementAtOrDefault(0); 
+        _source = initializerList.ElementAtOrDefault(0) == null ? null : (Uri) initializerList.ElementAtOrDefault(0)!; 
         _type = initializerList.ElementAtOrDefault(1)?.ToString(); 
         _datacontenttype = initializerList.ElementAtOrDefault(2)?.ToString();
-        _dataschema = initializerList.ElementAtOrDefault(3) == null ? null : (Uri)initializerList.ElementAtOrDefault(3); 
+        _dataschema = initializerList.ElementAtOrDefault(3) == null ? null : (Uri)initializerList.ElementAtOrDefault(3)!; 
         _subject = initializerList.ElementAtOrDefault(4)?.ToString();
     }
 
@@ -57,11 +57,11 @@ public class CloudEventsTransformer : IAmAMessageTransform
 
     public Message Wrap(Message message, Publication publication)
     {
-        message.Header.Source = _source ?? publication?.Source;
-        message.Header.Type = _type ?? publication?.Type;
-        message.Header.ContentType = _datacontenttype ?? publication?.ContentType;
-        message.Header.DataSchema = _dataschema ?? publication?.DataSchema;
-        message.Header.Subject = _subject ?? publication?.Subject;
+        message.Header.Source = _source ?? publication.Source;
+        message.Header.Type = _type ?? publication.Type;
+        message.Header.ContentType = _datacontenttype ?? publication.ContentType;
+        message.Header.DataSchema = _dataschema ?? publication.DataSchema;
+        message.Header.Subject = _subject ?? publication.Subject;
         return message;
     }
 

@@ -61,7 +61,7 @@ namespace Paramore.Brighter
         /// <example>
         /// mynewfile.jpg
         /// </example>
-        public string Subject { get;}
+        public string? Subject { get;}
 
         /// <summary>
         /// Telemetry properties
@@ -70,7 +70,7 @@ namespace Paramore.Brighter
         /// <param name="source">The source identifies the context in which an event happened.</param>
         /// <param name="eventType">The event_type contains a value describing the type of event related to the originating occurrence.</param>
         /// <param name="subject">The subject of the event in the context of the event producer (identified by source).</param>
-        public MessageTelemetry(string eventId, string source, string eventType, string subject = null)
+        public MessageTelemetry(string eventId, string source, string eventType, string? subject = null)
         {
             EventId = eventId;
             Source = source;

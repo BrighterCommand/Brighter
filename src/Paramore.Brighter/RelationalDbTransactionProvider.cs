@@ -9,8 +9,8 @@ namespace Paramore.Brighter
     public abstract class RelationalDbTransactionProvider : IAmATransactionConnectionProvider
     {
         private bool _disposed = false;
-        protected DbConnection Connection;
-        protected DbTransaction Transaction;
+        protected DbConnection? Connection;
+        protected DbTransaction? Transaction;
         
         /// <summary>
         /// Close any open connection or transaction
@@ -34,7 +34,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                Transaction.Commit();
+                Transaction?.Commit();
                 Transaction = null;
             }
         }
@@ -47,7 +47,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                Transaction.Commit();
+                Transaction?.Commit();
                 Transaction = null;
             }
             
@@ -86,7 +86,7 @@ namespace Paramore.Brighter
                 Connection.Open();
             if (!HasOpenTransaction)
                 Transaction = Connection.BeginTransaction();
-            return Transaction;
+            return Transaction!;
         }
         
         /// <summary>
@@ -122,7 +122,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                try { Transaction.Rollback(); } catch(Exception) { /*ignore*/ }
+                try { Transaction?.Rollback(); } catch(Exception) { /*ignore*/ }
                 Transaction = null;
             }
         }
@@ -134,7 +134,7 @@ namespace Paramore.Brighter
         {
             if (HasOpenTransaction)
             {
-                try { Transaction.Rollback(); } catch(Exception) { /*ignore*/ }
+                try { Transaction?.Rollback(); } catch(Exception) { /*ignore*/ }
                 Transaction = null;
             }
             

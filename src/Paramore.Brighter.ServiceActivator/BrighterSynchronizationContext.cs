@@ -9,7 +9,7 @@ namespace Paramore.Brighter.ServiceActivator
 {
     internal class BrighterSynchronizationContext : SynchronizationContext
     {
-       private readonly BlockingCollection<KeyValuePair<SendOrPostCallback, object>> _queue = new();
+       private readonly BlockingCollection<KeyValuePair<SendOrPostCallback, object?>> _queue = new();
        private int _operationCount;
        
        /// <summary>
@@ -32,14 +32,14 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>Dispatches an asynchronous message to the synchronization context.</summary>
         /// <param name="d">The System.Threading.SendOrPostCallback delegate to call.</param>
         /// <param name="state">The object passed to the delegate.</param>
-        public override void Post(SendOrPostCallback d, object state)
+        public override void Post(SendOrPostCallback d, object? state)
         {
             if (d == null) throw new ArgumentNullException(nameof(d));
-            _queue.Add(new KeyValuePair<SendOrPostCallback, object>(d, state));
+            _queue.Add(new KeyValuePair<SendOrPostCallback, object?>(d, state));
         }
 
         /// <summary>Not supported.</summary>
-        public override void Send(SendOrPostCallback d, object state)
+        public override void Send(SendOrPostCallback d, object? state)
         {
             throw new NotSupportedException("Synchronously sending is not supported.");
         }

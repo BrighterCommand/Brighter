@@ -41,6 +41,8 @@ public class InMemoryMessageProducerFactory(InternalBus bus, IEnumerable<Publica
         var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
         foreach (var publication in publications)
         {
+            if (publication.Topic is null)
+                throw new ArgumentException("A publication must have a Topic to be dispatched");
             var producer = new InMemoryProducer(bus, TimeProvider.System);
             producer.Publication = publication;
             producers[publication.Topic] = producer;

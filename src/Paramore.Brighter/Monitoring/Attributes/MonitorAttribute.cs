@@ -46,8 +46,8 @@ namespace Paramore.Brighter.Monitoring.Attributes
         public MonitorAttribute(int step, HandlerTiming timing, Type handlerType)
             : base(step, timing)
         {
-            _handlerName = handlerType.FullName;
-            _handlerFullAssemblyName = handlerType.AssemblyQualifiedName;
+            _handlerName = handlerType.FullName!;
+            _handlerFullAssemblyName = handlerType.AssemblyQualifiedName!;
         }
 
         /// <summary>

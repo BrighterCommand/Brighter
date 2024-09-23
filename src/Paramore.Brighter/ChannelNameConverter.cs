@@ -35,15 +35,15 @@ public class ChannelNameConverter : JsonConverter<ChannelName>
         switch (reader.TokenType)
         {
             case JsonTokenType.String:
-                return new ChannelName(reader.GetString());
+                return new ChannelName(reader.GetString()!);
             default:
                 throw new JsonException($"Unable to convert Json Type {reader.TokenType} to String, Supported Types are String, Number.");
         }        
     }
 
-    public override void Write(Utf8JsonWriter writer, ChannelName value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, ChannelName? value, JsonSerializerOptions options)
     {
-        if (value == null)
+        if (value is null)
         {
             writer.WriteNullValue();
         }

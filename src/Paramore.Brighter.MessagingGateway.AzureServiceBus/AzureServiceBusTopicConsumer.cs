@@ -32,7 +32,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
             messageProducerSync, administrationClientWrapper)
         {
-            _subscriptionName = subscription.ChannelName;
+            _subscriptionName = subscription.ChannelName.Value;
             _serviceBusReceiverProvider = serviceBusReceiverProvider;
         }
 

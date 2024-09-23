@@ -46,7 +46,7 @@ namespace Paramore.Brighter
         /// Dispose of the handler
         /// </summary>
         /// <param name="handler">The handler to dispose</param>
-        public void Release(IHandleRequestsAsync handler)
+        public void Release(IHandleRequestsAsync? handler)
         {
             if (handler is IDisposable disposable)
             {

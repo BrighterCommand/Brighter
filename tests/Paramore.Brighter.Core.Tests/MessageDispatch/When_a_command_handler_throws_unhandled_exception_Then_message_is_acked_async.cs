@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
              
             _messagePump = new MessagePumpAsync<MyCommand>(commandProcessorProvider, messageMapperRegistry, 
-                null, new InMemoryRequestContextFactory()
+                null, new InMemoryRequestContextFactory(), _channel
                 )
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount

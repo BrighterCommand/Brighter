@@ -37,21 +37,17 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="TMessage">The type of message to archive</typeparam>
     /// <typeparam name="TTransaction">The transaction type of the Db</typeparam>
-    public class OutboxArchiver<TMessage, TTransaction> where TMessage: Message
+    public class OutboxArchiver<TMessage, TTransaction>(
+        IAmAnExternalBusService bus,
+        IAmARequestContextFactory? requestContextFactory = null)
+        where TMessage : Message
     {
-        private readonly IAmAnExternalBusService _bus;
         private const string ARCHIVE_OUTBOX = "Archive Outbox";
         
         private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
-        private readonly IAmARequestContextFactory _requestContextFactory;
+        private readonly IAmARequestContextFactory _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
 
         private const string SUCCESS_MESSAGE = "Successfully archiver {NumberOfMessageArchived} out of {MessagesToArchive}, batch size : {BatchSize}";
-
-        public OutboxArchiver(IAmAnExternalBusService bus, IAmARequestContextFactory requestContextFactory = null)
-        {
-            _bus = bus;
-            _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
-        }
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
@@ -61,13 +57,15 @@ namespace Paramore.Brighter
         /// <param name="dispatchedSince">How stale is the message that we want archive</param>
         public void Archive(TimeSpan dispatchedSince)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
+#pragma warning restore CS0618 // Type or member is obsolete
             var requestContext = _requestContextFactory.Create();
             requestContext.Span = activity;
             
             try
             {
-                _bus.Archive(dispatchedSince, requestContext);  
+                bus.Archive(dispatchedSince, requestContext);  
             }
             catch (Exception e)
             {
@@ -90,12 +88,14 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token</param>
         public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext, CancellationToken cancellationToken)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
+#pragma warning restore CS0618 // Type or member is obsolete
             requestContext.Span = activity;
             
             try
             {
-                await _bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
+                await bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
             }
             catch (Exception e)
             {

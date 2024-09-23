@@ -57,7 +57,7 @@ public class KafkaHeaderToBrighterTests
         //assert
         readMessage.Id.Should().Be(message.Id);
         readMessage.Header.MessageType.Should().Be(message.Header.MessageType);
-        readMessage.Header.Id.Should().Be(message.Header.Id);
+        readMessage.Header.MessageId.Should().Be(message.Header.MessageId);
         readMessage.Header.CorrelationId.Should().Be(message.Header.CorrelationId);
         readMessage.Header.ContentType.Should().Be(message.Header.ContentType);
         readMessage.Header.Topic.Should().Be(message.Header.Topic);

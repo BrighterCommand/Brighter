@@ -35,7 +35,7 @@ namespace Paramore.Brighter
         private readonly int _batchSize;
         private readonly bool _useBulk;
         private readonly IAmARequestContextFactory _requestContextFactory;
-        private readonly Dictionary<string, object> _args;
+        private readonly Dictionary<string, object>? _args;
 
         private const string IMPLICITCLEAROUTBOX = "Implicit Clear Outbox";
 
@@ -54,7 +54,7 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             int batchSize = 100,
             bool useBulk = false,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object>? args = null)
         {
             _timeSinceSent = timeSinceSent;
             _commandProcessor = commandProcessor;
@@ -69,7 +69,9 @@ namespace Paramore.Brighter
         /// </summary>
         public void Sweep()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var span = ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
+#pragma warning restore CS0618 // Type or member is obsolete
             var context = _requestContextFactory.Create();
             context.Span = span;
             
@@ -81,7 +83,9 @@ namespace Paramore.Brighter
         /// </summary>
         public void SweepAsyncOutbox()
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var span = ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
+#pragma warning restore CS0618 // Type or member is obsolete
             var context = _requestContextFactory.Create();
             context.Span = span;
             

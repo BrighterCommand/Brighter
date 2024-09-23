@@ -36,7 +36,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //act && assert
             Assert.Throws<BrokerUnreachableException>(() => producer.Send(new Message(
-                new MessageHeader{Topic = _routingKey, ContentType = "plain/text"},
+                new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: "plain/text"),
                 new MessageBody("Test"))));
         }
    }

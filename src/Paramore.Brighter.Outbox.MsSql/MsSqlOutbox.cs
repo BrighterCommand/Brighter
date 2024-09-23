@@ -226,7 +226,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 {
                     ParameterName = $"{prefix}Topic", 
                     DbType = DbType.String,
-                    Value = (object)message.Header.Topic ?? DBNull.Value
+                    Value = (object)message.Header.Topic.Value ?? DBNull.Value
                 },
                 new SqlParameter
                 {

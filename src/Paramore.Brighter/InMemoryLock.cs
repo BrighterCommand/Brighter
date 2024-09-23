@@ -59,8 +59,8 @@ public class InMemoryLock : IDistributedLock
     public Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
     {
         var normalisedResourceName = resource.ToLower();
-        if (_semaphores.TryGetValue(normalisedResourceName, out SemaphoreSlim semaphore))
-            semaphore.Release();
+        if (_semaphores.TryGetValue(normalisedResourceName, out SemaphoreSlim? semaphore))
+            semaphore?.Release();
         return Task.CompletedTask;
     }
 }

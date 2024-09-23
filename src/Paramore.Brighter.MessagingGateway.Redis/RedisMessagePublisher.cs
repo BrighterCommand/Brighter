@@ -126,7 +126,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteMessageId(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.MESSAGE_ID, messageHeader.Id.ToString());
+            headers.Add(HeaderNames.MESSAGE_ID, messageHeader.MessageId.ToString());
         }
         
         private void WriteMessageType(MessageHeader messageHeader, Dictionary<string, string> headers)

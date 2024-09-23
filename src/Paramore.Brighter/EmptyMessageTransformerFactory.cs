@@ -42,7 +42,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class EmptyMessageTransform : IAmAMessageTransform
     {
-        public IRequestContext Context { get; set; }
+        public IRequestContext? Context { get; set; }
         public void Dispose() {GC.SuppressFinalize(this);}
         public void InitializeWrapFromAttributeParams(params object[] initializerList) { }
         public void InitializeUnwrapFromAttributeParams(params object[] initializerList) { }

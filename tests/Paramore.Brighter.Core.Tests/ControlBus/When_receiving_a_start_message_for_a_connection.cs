@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _dispatcher = A.Fake<IDispatcher>();
             _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher);
-            _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL) {SubscriptionName =  new SubscriptionName(SubscriptionName)};
+            _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL, new SubscriptionName(SubscriptionName));
         }
 
         [Fact]

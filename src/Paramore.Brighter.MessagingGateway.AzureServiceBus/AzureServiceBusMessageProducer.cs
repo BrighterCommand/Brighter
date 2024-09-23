@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         /// <summary>
         /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 Logger.LogError("Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested", topics.Count());
                 throw new Exception($"Cannot Bulk send for Multiple Topics, {topics.Count()} Topics Requested");
             }
-            var topic = topics.Single();
+            var topic = topics.First()!;
 
             var batches = Enumerable.Range(0, (int)Math.Ceiling(messages.Count() / (decimal)_bulkSendBatchSize))
                 .Select(i => new List<Message>(messages
@@ -167,6 +167,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             Logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
             
             delay ??= TimeSpan.Zero;
+
+            if (message.Header.Topic is null) throw new ArgumentException("Topic not be null");
 
             var serviceBusSenderWrapper = GetSender(message.Header.Topic);
 
@@ -243,10 +245,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
             }
             
-            azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
+            if(message.Header.CorrelationId is not null)
+                azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
             azureServiceBusMessage.ContentType = message.Header.ContentType;
-            azureServiceBusMessage.MessageId = message.Header.Id;
-            if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object value))
+            azureServiceBusMessage.MessageId = message.Header.MessageId;
+            if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
                 azureServiceBusMessage.SessionId = value.ToString();
 
             return azureServiceBusMessage;

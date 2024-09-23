@@ -18,7 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="queueName">The name of the Topic.</param>
         /// <param name="sessionEnabled">Use Sessions for Processing</param>
         /// <returns>A ServiceBusReceiverWrapper.</returns>
-        public IServiceBusReceiverWrapper Get(string queueName, bool sessionEnabled)
+        public IServiceBusReceiverWrapper? Get(string queueName, bool sessionEnabled)
         {
             if (sessionEnabled)
             {
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="subscriptionName">The name of the Subscription on the Topic.</param>
         /// <param name="sessionEnabled">Use Sessions for Processing</param>
         /// <returns>A ServiceBusReceiverWrapper.</returns>
-        public IServiceBusReceiverWrapper Get(string topicName, string subscriptionName, bool sessionEnabled)
+        public IServiceBusReceiverWrapper? Get(string topicName, string subscriptionName, bool sessionEnabled)
         {
             if (sessionEnabled)
             {

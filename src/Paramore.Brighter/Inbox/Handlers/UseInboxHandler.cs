@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Inbox.Handlers
 
         private readonly IAmAnInboxSync _inbox;
         private bool _onceOnly;
-        private string _contextKey;
+        private string? _contextKey;
         private OnceOnlyAction _onceOnlyAction;
 
         /// <summary>
@@ -57,11 +57,11 @@ namespace Paramore.Brighter.Inbox.Handlers
             _inbox = inbox;
         }
         
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _onceOnly = (bool) initializerList[0];
-            _contextKey = (string)initializerList[1];
-            _onceOnlyAction = (OnceOnlyAction)initializerList[2];
+            _onceOnly = (bool?) initializerList[0] ?? false;
+            _contextKey = (string?)initializerList[1];
+            _onceOnlyAction = (OnceOnlyAction?)initializerList[2] ?? OnceOnlyAction.Throw;
             
             base.InitializeFromAttributeParams(initializerList);
         }
@@ -72,8 +72,11 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// </summary>
         /// <param name="command">The command that we want to store.</param>
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
-        public override T Handle(T command) 
+        public override T Handle(T command)
         {
+            if (_contextKey is null)
+                throw new ArgumentException("ContextKey must be set before Handling");
+            
             if (_onceOnly)
             {
                  s_logger.LogDebug("Checking if command {Id} has already been seen", command.Id);

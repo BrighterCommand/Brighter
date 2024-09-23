@@ -6,8 +6,8 @@ namespace Paramore.Brighter
 {
     public class CommittableTransactionProvider : IAmABoxTransactionProvider<CommittableTransaction>
     {
-        private CommittableTransaction _transaction;
-        private Transaction _existingTransaction;
+        private CommittableTransaction? _transaction;
+        private Transaction? _existingTransaction;
 
         public void Close()
         {
@@ -23,6 +23,8 @@ namespace Paramore.Brighter
 
         public Task CommitAsync(CancellationToken cancellationToken = default)
         {
+            if (_transaction is null)
+                return Task.CompletedTask;
             return Task.Factory.FromAsync(_transaction.BeginCommit, _transaction.EndCommit, null, TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
@@ -49,7 +51,7 @@ namespace Paramore.Brighter
         
         public void Rollback()
         {
-            _transaction.Rollback();
+            _transaction?.Rollback();
             Close();
         }
 

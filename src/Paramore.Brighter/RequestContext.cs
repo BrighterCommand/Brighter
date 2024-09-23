@@ -50,7 +50,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the Feature Switches
         /// </summary>
-        public IAmAFeatureSwitchRegistry FeatureSwitches { get; set; }
+        public IAmAFeatureSwitchRegistry? FeatureSwitches { get; set; }
         
         /// <summary>
         /// When we pass a requestContext through a receiver pipeline, we may want to pass the original message that started the pipeline.
@@ -60,20 +60,20 @@ namespace Paramore.Brighter
         /// not intended to be set from multiple threads.
         ///</summary>
         /// <value>The originating message</value> 
-        public Message OriginatingMessage { get; set; }
+        public Message? OriginatingMessage { get; set; }
 
         /// <summary>
         /// Gets the policies.
         /// </summary>
         /// <value>The policies.</value>
-        public IPolicyRegistry<string>  Policies { get; set; }
+        public IPolicyRegistry<string>? Policies { get; set; }
 
         /// <summary>
         /// Gets the Span [Activity] associated with the request
         /// This is thread-safe, so that you can access the context from multiple threads
         /// This is mainly required for Publish, which uses the same context across multiple Publish handlers
         /// </summary>
-        public Activity Span
+        public Activity? Span
         {
             get
             {
@@ -82,7 +82,8 @@ namespace Paramore.Brighter
             }
             set
             {
-                _spans.AddOrUpdate(System.Threading.Thread.CurrentThread.ManagedThreadId, value, (key, oldValue) => value);
+                if(value is not null)
+                    _spans.AddOrUpdate(System.Threading.Thread.CurrentThread.ManagedThreadId, value, (key, oldValue) => value);
             }
         }
     }

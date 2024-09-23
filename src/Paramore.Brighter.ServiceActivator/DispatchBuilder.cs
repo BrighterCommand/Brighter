@@ -37,15 +37,15 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public class DispatchBuilder : INeedACommandProcessorFactory, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfSubcriptions, INeedObservability, IAmADispatchBuilder
     {
-        private Func<IAmACommandProcessorProvider> _commandProcessorFactory;
-        private IAmAMessageMapperRegistry _messageMapperRegistry;
-        private IAmAMessageMapperRegistryAsync _messageMapperRegistryAsync;
-        private IAmAChannelFactory _defaultChannelFactory;
-        private IEnumerable<Subscription> _subscriptions;
-        private IAmAMessageTransformerFactory _messageTransformerFactory;
-        private IAmAMessageTransformerFactoryAsync _messageTransformerFactoryAsync;
-        private IAmARequestContextFactory _requestContextFactory;
-        private IAmABrighterTracer _tracer;
+        private Func<IAmACommandProcessorProvider>? _commandProcessorFactory;
+        private IAmAMessageMapperRegistry? _messageMapperRegistry;
+        private IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
+        private IAmAChannelFactory? _defaultChannelFactory;
+        private IEnumerable<Subscription>? _subscriptions;
+        private IAmAMessageTransformerFactory? _messageTransformerFactory;
+        private IAmAMessageTransformerFactoryAsync? _messageTransformerFactoryAsync;
+        private IAmARequestContextFactory? _requestContextFactory;
+        private IAmABrighterTracer? _tracer;
         private InstrumentationOptions _instrumentationOptions;
 
         private DispatchBuilder() { }
@@ -86,9 +86,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
         public INeedAChannelFactory MessageMappers(
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageMapperRegistryAsync messageMapperRegistryAsync,
-            IAmAMessageTransformerFactory messageTransformerFactory,
-            IAmAMessageTransformerFactoryAsync  messageTransformFactoryAsync)
+            IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync,
+            IAmAMessageTransformerFactory? messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync?  messageTransformFactoryAsync)
         {
             _messageMapperRegistry = messageMapperRegistry;
             _messageMapperRegistryAsync = messageMapperRegistryAsync;
@@ -157,6 +157,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
+            if (_commandProcessorFactory is null || _subscriptions is null)
+                throw new ArgumentException("Command Processor Factory and Subscription are required.");
+            
             return new Dispatcher(_commandProcessorFactory, _subscriptions, _messageMapperRegistry, 
                 _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync, 
                 _requestContextFactory, _tracer, _instrumentationOptions
@@ -200,9 +203,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>INeedAChannelFactory.</returns>
         INeedAChannelFactory MessageMappers(
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageMapperRegistryAsync messageMapperRegistryAsync,
-            IAmAMessageTransformerFactory messageTransformerFactory,
-            IAmAMessageTransformerFactoryAsync  messageTransformFactoryAsync);
+            IAmAMessageMapperRegistryAsync? messageMapperRegistryAsync,
+            IAmAMessageTransformerFactory? messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync?  messageTransformFactoryAsync);
     }
     /// <summary>
     /// Interface INeedAChannelFactory

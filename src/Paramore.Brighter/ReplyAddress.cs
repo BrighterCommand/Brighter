@@ -32,13 +32,6 @@ namespace Paramore.Brighter
     /// </summary>
     public class ReplyAddress
     {
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ReplyAddress"/> class.
-        /// The default constructor is mainly intended to use for 
-        /// </summary>
-        public ReplyAddress() { }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplyAddress"/> class.
         /// </summary>

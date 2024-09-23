@@ -57,7 +57,7 @@ public class RequestContextTests
        Assert.NotNull(context.Policies["key"]);
        Assert.Equal(span?.Id, context.Span?.Id);  
        Assert.NotNull(context.OriginatingMessage);
-       Assert.Equal(context.OriginatingMessage.Header.Id, message.Header.Id);
+       Assert.Equal(context.OriginatingMessage.Header.MessageId, message.Header.MessageId);
         
     }
 }

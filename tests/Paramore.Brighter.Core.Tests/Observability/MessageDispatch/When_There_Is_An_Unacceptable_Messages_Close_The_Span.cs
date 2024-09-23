@@ -71,7 +71,7 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
-                new InMemoryRequestContextFactory(), tracer, instrumentationOptions)
+                new InMemoryRequestContextFactory(), _channel, tracer, instrumentationOptions)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = 1000
             };

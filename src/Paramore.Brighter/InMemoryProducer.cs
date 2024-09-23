@@ -42,7 +42,7 @@ namespace Paramore.Brighter
     public class InMemoryProducer(IAmABus bus, TimeProvider timeProvider)
         : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
-        private ITimer _requeueTimer;
+        private ITimer? _requeueTimer;
 
         /// <summary>
         /// The publication that describes what the Producer is for
@@ -54,12 +54,12 @@ namespace Paramore.Brighter
         /// The producer is being used within the context of a CommandProcessor pipeline which will have initiated the trace
         /// or be using one from a containing framework like ASP.NET Core
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
-        public event Action<bool, string> OnMessagePublished;
+        public event Action<bool, string>? OnMessagePublished;
 
         /// <summary>
         /// Dispsose of the producer; a no-op for the in-memory producer
@@ -126,7 +126,7 @@ namespace Paramore.Brighter
 
             //we don't want to block, so we use a timer to invoke the requeue after a delay
             _requeueTimer = timeProvider.CreateTimer(
-                msg => Send((Message)msg),
+                msg => Send((Message)msg!),
                 message,
                 delay.Value,
                 TimeSpan.Zero

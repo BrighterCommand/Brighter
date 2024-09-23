@@ -106,7 +106,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
-                null, new InMemoryRequestContextFactory())
+                null,  new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
             };

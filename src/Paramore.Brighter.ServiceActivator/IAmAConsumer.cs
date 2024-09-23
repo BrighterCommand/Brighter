@@ -32,7 +32,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets or sets the job.
         /// </summary>
         /// <value>The job.</value>
-        Task Job { get; set; }
+        Task? Job { get; set; }
 
         int JobId { get; set; }
 

@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);
 
             var messageAttributes = new Dictionary<string, MessageAttributeValue>();
-            messageAttributes.Add(HeaderNames.Id, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.Id), DataType = "String"});
+            messageAttributes.Add(HeaderNames.Id, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.MessageId), DataType = "String"});
             messageAttributes.Add(HeaderNames.Topic, new MessageAttributeValue{StringValue = _topicArn, DataType = "String"});
             messageAttributes.Add(HeaderNames.ContentType, new MessageAttributeValue {StringValue = message.Header.ContentType, DataType = "String"});
             messageAttributes.Add(HeaderNames.CorrelationId, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String"});

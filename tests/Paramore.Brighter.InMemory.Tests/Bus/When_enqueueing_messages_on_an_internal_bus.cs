@@ -24,6 +24,6 @@ public class InternalBusEnqueueTests
         message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
         message.Body.Value.Should().Be("test_content");
         message.Header.Topic.Should().Be(routingKey);
-        message.Header.Id.Should().Be(messageId);
+        message.Header.MessageId.Should().Be(messageId);
     }
 }

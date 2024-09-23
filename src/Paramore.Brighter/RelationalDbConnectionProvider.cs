@@ -55,13 +55,13 @@ namespace Paramore.Brighter
         /// Does not support shared transactions, create a transaction of the DbConnection instead
         /// </summary>
         /// <returns>A database transaction</returns>
-        public virtual DbTransaction GetTransaction() { return null; }
+        public virtual DbTransaction? GetTransaction() { return null; }
         
         /// <summary>
         /// Does not support shared transactions, create a transaction of the DbConnection instead
         /// </summary>
         /// <returns>A database transaction</returns>
-        public virtual Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
+        public virtual Task<DbTransaction>? GetTransactionAsync(CancellationToken cancellationToken = default)
         {
             return null;
         }

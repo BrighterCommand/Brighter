@@ -24,7 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public AdministrationClientWrapper(IServiceBusClientProvider clientProvider)
         {
             _clientProvider = clientProvider;
-            Initialise();
+            _administrationClient = _clientProvider.GetServiceBusAdministrationClient();
         }
 
         /// <summary>

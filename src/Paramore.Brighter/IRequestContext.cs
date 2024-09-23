@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the Span [Activity] associated with the request
         /// </summary>
-        Activity Span { get; set; }
+        Activity? Span { get; set; }
         
         /// <summary>
         /// Gets the bag.
@@ -52,11 +52,11 @@ namespace Paramore.Brighter
         /// Gets the policies.
         /// </summary>
         /// <value>The policies.</value>
-        IPolicyRegistry<string>  Policies { get; }
+        IPolicyRegistry<string>?  Policies { get; }
 
         /// <summary>
         /// Gets the Feature Switches
         /// </summary>
-        IAmAFeatureSwitchRegistry FeatureSwitches { get; }
+        IAmAFeatureSwitchRegistry? FeatureSwitches { get; }
     }
 }

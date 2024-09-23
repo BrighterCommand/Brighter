@@ -89,7 +89,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             message.Id.Should().Be(_myCommand.Id);
             message.Redelivered.Should().BeFalse();
-            message.Header.Id.Should().Be(_myCommand.Id);
+            message.Header.MessageId.Should().Be(_myCommand.Id);
             message.Header.Topic.Value.Should().Contain(_topicName);
             message.Header.CorrelationId.Should().Be(_correlationId);
             message.Header.ReplyTo.Should().Be(_replyTo);
