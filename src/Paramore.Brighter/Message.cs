@@ -55,6 +55,11 @@ namespace Paramore.Brighter
         public MessageBody Body { get; set; }
 
         /// <summary>
+        /// Returns true if this is an empty Message.
+        /// </summary>
+        public bool Empty => Header.MessageType == MessageType.MT_NONE;
+
+        /// <summary>
         /// Gets the identifier of the message.
         /// </summary>
         /// <value>The identifier.</value>

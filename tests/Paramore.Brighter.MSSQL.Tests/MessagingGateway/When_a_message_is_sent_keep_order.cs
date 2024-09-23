@@ -12,6 +12,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     public class OrderTest
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
+        private readonly string _topicName = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry; 
         private readonly IAmAMessageConsumer _consumer;
 
@@ -20,10 +21,10 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             var testHelper = new MsSqlTestHelper();
             testHelper.SetupQueueDb();
 
-            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            var routingKey = new RoutingKey(_topicName);
             
             var sub = new Subscription<MyCommand>(new SubscriptionName(_queueName),
-                new ChannelName(Guid.NewGuid().ToString()), routingKey);
+                new ChannelName(_topicName), routingKey);
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration, 
                 new Publication[] {new() {Topic = routingKey}}
@@ -47,18 +48,22 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
                 var firstMessage = ConsumeMessages(consumer);
                 var message = firstMessage.First();
+                message.Empty.Should().BeFalse("A message should be returned");
                 message.Id.Should().Be(msgId);
 
                 var secondMessage = ConsumeMessages(consumer);
                 message = secondMessage.First();
+                message.Empty.Should().BeFalse("A message should be returned");
                 message.Id.Should().Be(msgId2);
 
                 var thirdMessages = ConsumeMessages(consumer);
                 message = thirdMessages.First();
+                message.Empty.Should().BeFalse("A message should be returned");
                 message.Id.Should().Be(msgId3);
 
                 var fourthMessage = ConsumeMessages(consumer);
                 message = fourthMessage.First();
+                message.Empty.Should().BeFalse("A message should be returned");
                 message.Id.Should().Be(msgId4);
 
             }
@@ -72,7 +77,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         {
             var messageId = Guid.NewGuid().ToString();
 
-            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            var routingKey = new RoutingKey(_topicName);
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
                 new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND),
                 new MessageBody($"test content [{_queueName}]")));

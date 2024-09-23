@@ -15,19 +15,20 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry; 
         private readonly IAmAMessageConsumer _consumer;
+        private readonly RoutingKey _routingKey;
 
         public PurgeTest()
         {
             var testHelper = new MsSqlTestHelper();
             testHelper.SetupQueueDb();
 
-            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            _routingKey = new RoutingKey(Guid.NewGuid().ToString());
             
             var sub = new Subscription<MyCommand>(new SubscriptionName(_queueName),
-                new ChannelName(Guid.NewGuid().ToString()), routingKey);
+                new ChannelName(_routingKey.Value), _routingKey);
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration, 
-                new Publication[] {new() {Topic = routingKey}}
+                new Publication[] {new() {Topic = _routingKey}}
             ).Create();
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
@@ -65,10 +66,9 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         private string SendMessage()
         {
             var messageId = Guid.NewGuid().ToString();
-
-            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
-                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND),
+            
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_routingKey)).Send(new Message(
+                new MessageHeader(messageId, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody($"test content [{_queueName}]")));
 
             return messageId;

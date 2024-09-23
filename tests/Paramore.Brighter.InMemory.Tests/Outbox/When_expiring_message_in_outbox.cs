@@ -67,7 +67,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             var message = await outbox.GetAsync(messageId, new RequestContext());
             
             //Assert
-            message.Should().BeNull();
+            message.Empty.Should().BeTrue();
         }
 
         [Fact]

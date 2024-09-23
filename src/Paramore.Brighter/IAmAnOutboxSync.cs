@@ -89,7 +89,7 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        Message? Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null);
+        Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Update a message to show it is dispatched
