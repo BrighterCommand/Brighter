@@ -4,7 +4,7 @@ public static class MsSqlLockingQueries
 {
     public const string ObtainLockQuery = "declare @result int; " +
                                           "Exec @result = sp_getapplock " +
-                                          "@DbPrincipal = 'dbo' " +
+                                          "@DbPrincipal = 'public' " +
                                           ",@Resource = @Resource" +
                                           ",@LockMode = 'Exclusive'" +
                                           ",@LockTimeout = @LockTimeout" +
@@ -13,6 +13,6 @@ public static class MsSqlLockingQueries
 
     public const string ReleaseLockQuery = "EXEC sp_releaseapplock  " +
                                            "@Resource = @Resource " +
-                                           ",@DbPrincipal = 'dbo' " +
+                                           ",@DbPrincipal = 'public' " +
                                            ",@LockOwner = 'Session';";
 }
