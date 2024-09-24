@@ -34,7 +34,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 new RoutingKey(_messageTopic1.Header.Topic), 
                 new RoutingKey(_messageTopic2.Header.Topic)
             ]);
-            var queueName = Guid.NewGuid().ToString();
+            var queueName = new ChannelName(Guid.NewGuid().ToString());
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
             _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, false, false);

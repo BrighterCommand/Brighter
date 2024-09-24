@@ -27,7 +27,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
             _messageConsumer = new RmqMessageConsumer(
                 connection:rmqConnection, 
-                queueName:_message.Header.Topic, 
+                queueName: new ChannelName(Guid.NewGuid().ToString()), 
                 routingKey:_message.Header.Topic, 
                 isDurable: false, 
                 highAvailability:false, 

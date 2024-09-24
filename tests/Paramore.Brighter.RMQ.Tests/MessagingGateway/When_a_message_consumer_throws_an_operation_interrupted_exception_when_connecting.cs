@@ -56,8 +56,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _sender = new RmqMessageProducer(rmqConnection);
-            _receiver = new RmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, false);
-            _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
+            _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), _sentMessage.Header.Topic, false, false);
+            _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), _sentMessage.Header.Topic, false, 1, false);
 
             _sender.Send(_sentMessage);
         }

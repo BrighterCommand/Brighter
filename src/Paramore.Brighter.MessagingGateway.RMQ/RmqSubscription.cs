@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// The routing key for dead letter messages
         /// </summary>
-        public string DeadLetterRoutingKey { get; }
+        public RoutingKey DeadLetterRoutingKey { get; }
         
         /// <summary>
         /// Is the channel mirrored across node in the cluster
@@ -59,10 +59,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public int? MaxQueueLength { get; }
         
         /// <summary>
-        /// How long does a message live on the queue, in milliseconds, before expiring?
+        /// How long does a message live on the queue, before expiring?
         /// A null value, the default, is infinite
         /// </summary>
-        public int? TTL { get; }
+        public TimeSpan? Ttl { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -104,8 +104,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             IAmAChannelFactory channelFactory = null, 
             bool highAvailability = false, 
             ChannelName deadLetterChannelName = null, 
-            string deadLetterRoutingKey = null, 
-            int? ttl = null,
+            RoutingKey deadLetterRoutingKey = null, 
+            TimeSpan? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000,
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             DeadLetterChannelName = deadLetterChannelName;
             HighAvailability = highAvailability;
             IsDurable = isDurable;
-            TTL = ttl;
+            Ttl = ttl;
             MaxQueueLength = maxQueueLength;
         }
     }
@@ -160,7 +160,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             bool highAvailability = false,
             ChannelName deadLetterChannelName = null, 
             RoutingKey deadLetterRoutingKey = null, 
-            int? ttl = null,
+            TimeSpan? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)
