@@ -39,7 +39,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 
-            var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
+            var deadLetterQueueName = new ChannelName($"{Guid.NewGuid().ToString()}.DLQ");
             var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
 
             _subscription = new RmqSubscription<MyCommand>(
