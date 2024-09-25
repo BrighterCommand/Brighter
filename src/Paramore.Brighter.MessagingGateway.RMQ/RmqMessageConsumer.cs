@@ -301,37 +301,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     return new Message[] { _noopMessage };
                 }
             }
-            catch (EndOfStreamException endOfStreamException)
+            catch (Exception exception) when (exception is BrokerUnreachableException ||
+                                              exception is AlreadyClosedException ||
+                                              exception is TimeoutException)
             {
-                HandleEndOfStreamException(endOfStreamException);
+                HandleException(exception, true);
             }
-            catch (BrokerUnreachableException bue)
+            catch (Exception exception) when (exception is EndOfStreamException ||
+                                              exception is OperationInterruptedException ||
+                                              exception is NotSupportedException ||
+                                              exception is BrokenCircuitException)
             {
-                HandleBrokerUnreachableException(bue);
-            }
-            catch (AlreadyClosedException ace)
-            {
-                HandleAlreadyClosedException(ace);
-            }
-            catch (OperationInterruptedException oie)
-            {
-                HandleOperationInterruptedException(oie);
-            }
-            catch (TimeoutException te)
-            {
-                HandleTimeoutException(te);
-            }
-            catch (NotSupportedException nse)
-            {
-                HandleNotSupportedException(nse);
-            }
-            catch (BrokenCircuitException bce)
-            {
-                HandleBrokenCircuitException(bce);
+                HandleException(exception);
             }
             catch (Exception exception)
             {
-                HandleGeneralException(exception);
+                HandleException(exception);
             }
 
             return new Message[] { _noopMessage }; // Default return in case of exception
@@ -419,95 +404,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 Channel.QueueBind(_deadLetterQueueName.Value, GetDeadletterExchangeName(), _deadLetterRoutingKey.Value);
         }
 
-        private void HandleEndOfStreamException(EndOfStreamException endOfStreamException)
-        {
-            s_logger.LogDebug(endOfStreamException,
-                "RmqMessageConsumer: The model closed, or the subscription went away. Listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                _queueName.Value,
-                string.Join(";", _routingKeys.Select(rk => rk.Value)),
-                Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
-            throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details",
-                endOfStreamException);
-        }
-
-        private void HandleBrokerUnreachableException(BrokerUnreachableException bue)
-        {
-            s_logger.LogError(bue,
-                "RmqMessageConsumer: There broker was unreachable listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                _queueName.Value,
-                string.Join(";", _routingKeys.Select(rk => rk.Value)),
-                Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
-            ResetConnectionToBroker();
-            throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", bue);
-        }
-
-        private void HandleAlreadyClosedException(AlreadyClosedException ace)
-        {
-            s_logger.LogError(ace,
-                "RmqMessageConsumer: There subscription was already closed when listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                _queueName.Value,
-                string.Join(";", _routingKeys.Select(rk => rk.Value)),
-                Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
-            ResetConnectionToBroker();
-            throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", ace);
-        }
-
-        private void HandleOperationInterruptedException(OperationInterruptedException oie)
-        {
-            s_logger.LogError(oie,
-                "RmqMessageConsumer: There was an error listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                _queueName.Value,
-                string.Join(";", _routingKeys.Select(rk => rk.Value)),
-                Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
-            throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", oie);
-        }
-
-        private void HandleTimeoutException(TimeoutException te)
-        {
-            s_logger.LogError(te,
-                "RmqMessageConsumer: The socket timed out whilst listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                _queueName.Value,
-                string.Join(";", _routingKeys.Select(rk => rk.Value)),
-                Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
-            ResetConnectionToBroker();
-            throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", te);
-        }
-
-        private void HandleNotSupportedException(NotSupportedException nse)
-        {
-            s_logger.LogError(nse,
-                "RmqMessageConsumer: There was an error listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                _queueName.Value,
-                string.Join(";", _routingKeys.Select(rk => rk.Value)),
-                Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
-            throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", nse);
-        }
-
-        private void HandleBrokenCircuitException(BrokenCircuitException bce)
-        {
-            s_logger.LogWarning(bce,
-                "CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
-                _queueName.Value,
-                string.Join(";", _routingKeys.Select(rk => rk.Value)),
-                Connection.Exchange.Name,
-                Connection.AmpqUri.GetSanitizedUri()
-            );
-            throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", bce);
-        }
-
-        private void HandleGeneralException(Exception exception)
+        private void HandleException(Exception exception, bool resetConnection = false)
         {
             s_logger.LogError(exception,
                 "RmqMessageConsumer: There was an error listening to queue {ChannelName} via exchange {RoutingKeys} via exchange {ExchangeName} on subscription {URL}",
@@ -516,10 +413,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 Connection.Exchange.Name,
                 Connection.AmpqUri.GetSanitizedUri()
             );
-            throw exception;
+            if (resetConnection) ResetConnectionToBroker();
+            throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", exception);
         }
-
-
+        
         private void ValidateQueue()
         {
             s_logger.LogDebug("RmqMessageConsumer: Validating queue {ChannelName} on subscription {URL}",
