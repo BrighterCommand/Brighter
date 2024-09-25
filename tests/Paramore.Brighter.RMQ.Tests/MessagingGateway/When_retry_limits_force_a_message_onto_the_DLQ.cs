@@ -27,7 +27,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             string correlationId = Guid.NewGuid().ToString();
             string contentType = "text\\plain";
-            var channelName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
+            var channelName = new ChannelName($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
             var routingKey = new RoutingKey($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
 
             //what do we send
@@ -43,14 +43,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
 
             _subscription = new RmqSubscription<MyCommand>(
-                name: new SubscriptionName(channelName),
-                channelName: new ChannelName(channelName),
+                name: new SubscriptionName("DLQ Test Subscription"),
+                channelName: channelName,
                 routingKey: routingKey,
                 //after 2 retries, fail and move to the DLQ
                 requeueCount: 2,
                 //delay before re-queuing
                 requeueDelay: TimeSpan.FromMilliseconds(50),
-                deadLetterChannelName: new ChannelName(deadLetterQueueName),
+                deadLetterChannelName: deadLetterQueueName,
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 makeChannels: OnMissingChannel.Create
             );
@@ -92,11 +92,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
-                null);
+                null
+            );
+            
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
             _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
-                null, new InMemoryRequestContextFactory(), _channel)
+                new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
             };
@@ -139,6 +141,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
 
             //assert this is our message
+            dlqMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             dlqMessage.Body.Value.Should().Be(_message.Body.Value);
 
             _deadLetterConsumer.Acknowledge(dlqMessage);

@@ -40,11 +40,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageProducerDLQTests()
         {
-           _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            
+            _message = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
                     MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
 
+            var queueName = new ChannelName(Guid.NewGuid().ToString());
             var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
             var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
             
@@ -56,12 +59,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
             
             _messageProducer = new RmqMessageProducer(rmqConnection);
-            var queueName = new ChannelName(Guid.NewGuid().ToString());
 
             _messageConsumer = new RmqMessageConsumer(
                 connection: rmqConnection, 
                 queueName: queueName, 
-                routingKey: _message.Header.Topic, 
+                routingKey: routingKey, 
                 isDurable: false, 
                 highAvailability: false,
                 deadLetterQueueName: deadLetterQueueName,
@@ -71,7 +73,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             _deadLetterConsumer = new RmqMessageConsumer(
                 connection: rmqConnection,
-                queueName: queueName,
+                queueName: deadLetterQueueName,
                 routingKey: deadLetterRoutingKey,
                 isDurable:false,
                 makeChannels:OnMissingChannel.Assume

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
@@ -39,11 +40,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageProducerDelayedMessageTests()
         {
-            var header = new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                MessageType.MT_COMMAND);
+            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            
+            var header = new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND);
             var originalMessage = new Message(header, new MessageBody("test3 content"));
 
-            var mutatedHeader = new MessageHeader(header.MessageId, new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
+            var mutatedHeader = new MessageHeader(header.MessageId, routingKey, MessageType.MT_COMMAND);
             mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
             _message = new Message(mutatedHeader, originalMessage.Body);
 
@@ -54,11 +56,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
+            
             var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false);
+            _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey, false);
 
-            new QueueFactory(rmqConnection, queueName, new RoutingKeys([_message.Header.Topic]))
+            new QueueFactory(rmqConnection, queueName, new RoutingKeys([routingKey]))
                 .Create(TimeSpan.FromMilliseconds(3000));
         }
 
@@ -76,7 +79,6 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             deliveredWithoutWait.Should().BeTrue();
             
             var delayedResult = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
-             
 
            //_should_send_a_message_via_rmq_with_the_matching_body
             delayedResult.Body.Value.Should().Be(_message.Body.Value);
