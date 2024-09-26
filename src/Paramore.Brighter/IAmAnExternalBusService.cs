@@ -169,6 +169,12 @@ namespace Paramore.Brighter
         bool HasOutbox();
         
         /// <summary>
+        /// How many outstanding messages are there; Uses -1 to indicate no outbox and will thus force a throw on a failed publish
+        /// Updated by the <see cref="OutboxSync{TMessage,TTransaction}"/> 
+        /// </summary>
+        int OutStandingCount { get; set; }
+
+        /// <summary>
         /// Commence a batch of outbox messages to add
         /// </summary>
         /// <returns>The Id of the new batch</returns>

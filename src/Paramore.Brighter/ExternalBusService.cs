@@ -17,8 +17,7 @@ namespace Paramore.Brighter
     /// Provide services to CommandProcessor that persist across the lifetime of the application. Allows separation from
     /// elements that have a lifetime linked to the scope of a request, or are transient for DI purposes
     /// </summary>
-    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService,
-        IAmAnExternalBusService<TMessage, TTransaction>
+    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService, IAmAnExternalBusService<TMessage, TTransaction>
         where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
@@ -39,14 +38,11 @@ namespace Paramore.Brighter
 
         private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new(1, 1);
 
-        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
-        //bool should be made thread-safe by locking the object
-        private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
+        //REFACTOR: BELONGS TO OUTBOX CHECKER
+        //private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
 
         private DateTimeOffset _lastOutStandingMessageCheckAt;
-            
-        //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
-        private int _outStandingCount;
+        
         private bool _disposed;
         private int _maxOutStandingMessages;
         private TimeSpan _maxOutStandingCheckInterval;
@@ -59,6 +55,12 @@ namespace Paramore.Brighter
         private const string NoArchiveProviderError = "An Archive Provider must be defined.";
         private const string NoProducerRegistryError = "A Producer Registry must be defined.";
         private const string NoPolicyRegistry = "Missing Policy Registry for External Bus Services";
+        
+        /// <summary>
+        /// How many outstanding messages are there; Uses -1 to indicate no outbox and will thus force a throw on a failed publish
+        /// Updated by the <see cref="OutboxSync{TMessage,TTransaction}"/> 
+        /// </summary>
+        public int OutStandingCount { get; set; }
 
         /// <summary>
         /// Creates an instance of External Bus Services
@@ -757,10 +759,10 @@ namespace Paramore.Brighter
             if (!hasOutBox)
                 return;
 
-            s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", _outStandingCount);
+            s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", OutStandingCount);
             // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
             bool exceedsOutstandingMessageLimit =
-                _maxOutStandingMessages != -1 && _outStandingCount > _maxOutStandingMessages;
+                _maxOutStandingMessages != -1 && OutStandingCount > _maxOutStandingMessages;
 
             if (exceedsOutstandingMessageLimit)
                 throw new OutboxLimitReachedException(
@@ -1189,7 +1191,7 @@ namespace Paramore.Brighter
             {
                 if (_outBox != null)
                 {
-                    _outStandingCount = _outBox
+                    OutStandingCount = _outBox
                         .OutstandingMessages(
                             _maxOutStandingCheckInterval,
                             requestContext,
@@ -1199,18 +1201,18 @@ namespace Paramore.Brighter
                     return;
                 }
 
-                _outStandingCount = 0;
+                OutStandingCount = 0;
             }
             catch (Exception ex)
             {
                 //if we can't talk to the outbox, we would swallow the exception on this thread
                 //by setting the _outstandingCount to -1, we force an exception
                 s_logger.LogError(ex, "Error getting outstanding message count, reset count");
-                _outStandingCount = 0;
+                OutStandingCount = 0;
             }
             finally
             {
-                s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
+                s_logger.LogDebug("Current outstanding count is {OutStandingCount}", OutStandingCount);
                 s_checkOutstandingSemaphoreToken.Release();
             }
         }
