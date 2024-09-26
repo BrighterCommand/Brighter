@@ -62,7 +62,10 @@ We release the build artefacts (NuGet packages) to [NuGet](http://nuget.org) on 
   <img alt="Coverity Scan Build Status"
        src="https://scan.coverity.com/projects/2900/badge.svg"/>
 </a>
+
 ![CodeScene Code Health](https://codescene.io/projects/32198/status-badges/code-health)](https://codescene.io/projects/32198)
+
 ![CodeScene System Mastery](https://codescene.io/projects/32198/status-badges/system-mastery)](https://codescene.io/projects/32198)
+
 ![CI](https://github.com/BrighterCommand/Brighter/workflows/CI/badge.svg)
 
