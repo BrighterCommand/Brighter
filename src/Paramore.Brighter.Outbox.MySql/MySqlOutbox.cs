@@ -209,7 +209,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 },
                 new MySqlParameter
                 {
-                    ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic,
+                    ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic.Value,
                 },
                 new MySqlParameter
                 {

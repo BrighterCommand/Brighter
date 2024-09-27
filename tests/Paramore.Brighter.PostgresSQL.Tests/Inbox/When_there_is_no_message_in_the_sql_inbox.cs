@@ -33,7 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
 {
-    [Trait("Category", "MSSQL")]
+    [Trait("Category", "PostgresSql")]
     public class SqlInboxEmptyWhenSearchedTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _pgTestHelper;
