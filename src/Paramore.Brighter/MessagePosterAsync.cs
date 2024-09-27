@@ -12,7 +12,7 @@ using Polly.Registry;
 
 namespace Paramore.Brighter;
 
-internal class MessageDispatcherAsync<TMessage, TTransaction>(
+internal class MessagePosterAsync<TMessage, TTransaction>(
     IAmAProducerRegistry producerRegistry,
     OutboxAsync<TMessage, TTransaction> outBox,
     IAmABrighterTracer tracer,

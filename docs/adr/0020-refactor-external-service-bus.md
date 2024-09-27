@@ -43,10 +43,14 @@ Part of the problem here is that `ExternalServiceBus` has two responsibilities: 
 ## Decision
 
 We need to refactor two classes out of `ExternalServiceBus`:
-- MessageDispatcher - responsible for dispatching messages via a producer
+- MessagePoster - responsible for dispatching messages via a producer
 - Outbox - responsible for guaranteeing delivery of messages
 
-For now, we will keep ExternalServiceBus as a mediator between these two classes; it may be possible to remove this class in the future. We will create seperate Async, Bulk and Sync versions of these classes. We may be able to factor out a base class from these Sync and Async classes to hold common functionality.
+For now, we will keep ExternalServiceBus as a Mediator between these classes; it also provides scope management for the bus as a singleton. It may be possible to remove this class in the future, but this ADR believes it will be out-of-scope for this change. 
+
+We will create seperate Async, Bulk and Sync versions of these classes. We may be able to factor out a base class from these Sync and Async classes to hold common functionality.
+
+We will seek to lower the code complexity concerns identified by CodeScene by as a result of this change.
 
 ## Consequences
 
