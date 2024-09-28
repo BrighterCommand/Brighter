@@ -354,7 +354,7 @@ namespace Paramore.Brighter.Outbox.MySql
                     messageType: messageType,
                     timeStamp: timeStamp,
                     handledCount: 0,
-                    delayedMilliseconds: 0,
+                    delayed: TimeSpan.Zero,
                     correlationId: correlationId,
                     replyTo: new RoutingKey(replyTo),
                     contentType: contentType,

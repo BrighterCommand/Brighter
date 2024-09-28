@@ -62,7 +62,7 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
                 throw new InvalidOperationException("Failed to add topic to the bus");
         }
         
-        if (!_messages[topic].TryAdd(message, timeout.Value.Milliseconds, CancellationToken.None))
+        if (!_messages[topic].TryAdd(message, Convert.ToInt32(timeout.Value.TotalMilliseconds), CancellationToken.None))
             throw new InvalidOperationException("Failed to add message to the bus");
     }
 
@@ -83,7 +83,7 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
         if (!found || messages is null || !messages.Any())
             return MessageFactory.CreateEmptyMessage(topic);
 
-        if (!messages.TryTake(out Message? message, timeout.Value.Milliseconds, CancellationToken.None))
+        if (!messages.TryTake(out Message? message, Convert.ToInt32(timeout.Value.TotalMilliseconds), CancellationToken.None))
             message = MessageFactory.CreateEmptyMessage(topic);
         
         return message;
@@ -104,6 +104,6 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
     private static void ValidateMillisecondsTimeout(TimeSpan timeout)
     {
         if (timeout < TimeSpan.Zero && timeout != TimeSpan.FromMilliseconds(-1))
-            throw new ArgumentOutOfRangeException(nameof(timeout), timeout.Milliseconds, string.Format(CultureInfo.CurrentCulture, "Timeout must be greater than or equal to -1ms, was {0}", timeout.Milliseconds));
+            throw new ArgumentOutOfRangeException(nameof(timeout), Convert.ToInt32(timeout.TotalMilliseconds), string.Format(CultureInfo.CurrentCulture, "Timeout must be greater than or equal to -1ms, was {0}", Convert.ToInt32(timeout.TotalMilliseconds)));
     }
 }

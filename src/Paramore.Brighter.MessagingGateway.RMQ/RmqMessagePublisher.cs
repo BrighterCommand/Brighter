@@ -40,17 +40,17 @@ internal class RmqMessagePublisher
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessagePublisher>();
         private static readonly string[] _headersToReset =
-        {
+        [
             HeaderNames.DELAY_MILLISECONDS,
             HeaderNames.MESSAGE_TYPE,
             HeaderNames.TOPIC,
             HeaderNames.HANDLED_COUNT,
             HeaderNames.DELIVERY_TAG,
             HeaderNames.CORRELATION_ID
-        };
+        ];
 
         private readonly IModel _channel;
-        private RmqMessagingGatewayConnection _connection;
+        private readonly RmqMessagingGatewayConnection _connection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessagePublisher"/> class.
@@ -91,7 +91,7 @@ internal class RmqMessagePublisher
             var headers = new Dictionary<string, object>
             {
                 { HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString() },
-                { HeaderNames.TOPIC, message.Header.Topic },
+                { HeaderNames.TOPIC, message.Header.Topic.Value },
                 { HeaderNames.HANDLED_COUNT, message.Header.HandledCount }
             };
 
@@ -107,7 +107,7 @@ internal class RmqMessagePublisher
                 headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
 
             if (delay > TimeSpan.Zero)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, delay);
+                headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.TotalMilliseconds);
 
             _channel.BasicPublish(
                 _connection.Exchange.Name,
@@ -130,7 +130,7 @@ internal class RmqMessagePublisher
         /// <param name="message">The message.</param>
         /// <param name="queueName">The queue name.</param>
         /// <param name="timeOut">Delay. Set to TimeSpan.Zero for not delay</param>
-        public void RequeueMessage(Message message, string queueName, TimeSpan timeOut)
+        public void RequeueMessage(Message message, ChannelName queueName, TimeSpan timeOut)
         {
             var messageId = Guid.NewGuid().ToString() ;
             const string deliveryTag = "1";
@@ -140,7 +140,7 @@ internal class RmqMessagePublisher
             var headers = new Dictionary<string, object>
             {
                 {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
-                {HeaderNames.TOPIC, message.Header.Topic},
+                {HeaderNames.TOPIC, message.Header.Topic.Value},
                 {HeaderNames.HANDLED_COUNT, message.Header.HandledCount},
              };
 
@@ -155,7 +155,7 @@ internal class RmqMessagePublisher
             headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
 
             if (timeOut > TimeSpan.Zero)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, timeOut.Milliseconds);
+                headers.Add(HeaderNames.DELAY_MILLISECONDS, timeOut.TotalMilliseconds);
 
             if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
                 headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id);
@@ -163,7 +163,7 @@ internal class RmqMessagePublisher
             // To send it to the right queue use the default (empty) exchange
             _channel.BasicPublish(
                 string.Empty,
-                queueName,
+                queueName.Value,
                 false,
                 CreateBasicProperties(
                     messageId, 

@@ -103,19 +103,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
         /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected void EnsureBroker(string queueName = "Producer Channel", OnMissingChannel makeExchange = OnMissingChannel.Create)
+        protected void EnsureBroker(ChannelName queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
+            queueName ??= new ChannelName("Producer Channel");
+            
             ConnectWithCircuitBreaker(queueName, makeExchange);
         }
 
-        private void ConnectWithCircuitBreaker(string queueName, OnMissingChannel makeExchange)
+        private void ConnectWithCircuitBreaker(ChannelName queueName, OnMissingChannel makeExchange)
         {
             _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName, makeExchange));
         }
 
-        private void ConnectWithRetry(string queueName, OnMissingChannel makeExchange)
+        private void ConnectWithRetry(ChannelName queueName, OnMissingChannel makeExchange)
         {
-            _retryPolicy.Execute((ctx) => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName}});
+            _retryPolicy.Execute((ctx) => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName.Value}});
         }
 
         protected virtual void ConnectToBroker(OnMissingChannel makeExchange)

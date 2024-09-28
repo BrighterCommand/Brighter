@@ -53,8 +53,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _sender = new RmqMessageProducer(rmqConnection);
-            _receiver = new RmqMessageConsumer(rmqConnection, sentMessage.Header.Topic, sentMessage.Header.Topic, false, false);
-            _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection, sentMessage.Header.Topic, sentMessage.Header.Topic, false, 1, false);
+            var queueName = new ChannelName(Guid.NewGuid().ToString());
+            
+            _receiver = new RmqMessageConsumer(rmqConnection, queueName, sentMessage.Header.Topic, false, false);
+            _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection,queueName, sentMessage.Header.Topic, false, 1, false);
 
             _sender.Send(sentMessage);
         }

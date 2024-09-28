@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
@@ -89,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: null,
-                    delayedMilliseconds: 0
+                    delayed: TimeSpan.Zero
                 );
 
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage, messageHeader.ContentType));
@@ -119,7 +118,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if(contentType == CompressPayloadTransformerAsync.GZIP || contentType == CompressPayloadTransformerAsync.DEFLATE || contentType == CompressPayloadTransformerAsync.BROTLI)
                 return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
             
-            return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.UTF8);
+            return new MessageBody(sqsMessage.Body, contentType);
         }
 
         private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
@@ -164,7 +163,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue value))
             {
-                if (Enum.TryParse<MessageType>(value.StringValue, out MessageType messageType))
+                if (Enum.TryParse(value.StringValue, out MessageType messageType))
                 {
                     return new HeaderResult<MessageType>(messageType, true);
                 }

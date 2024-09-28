@@ -110,7 +110,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteDelayedMilliseconds(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.DELAYED_MILLISECONDS, messageHeader.DelayedMilliseconds.ToString());
+            headers.Add(HeaderNames.DELAYED_MILLISECONDS, messageHeader.Delayed.TotalMilliseconds.ToString());
         }
         
         private void WriteHandledCount(MessageHeader messageHeader, Dictionary<string, string> headers)

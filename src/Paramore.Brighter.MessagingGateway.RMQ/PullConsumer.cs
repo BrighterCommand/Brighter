@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             var now = DateTime.UtcNow;
             var end = now.Add(timeOut);
-            var pause = (timeOut > TimeSpan.FromMilliseconds(25)) ? timeOut.Milliseconds / 5 : 5;
+            var pause = (timeOut > TimeSpan.FromMilliseconds(25)) ? Convert.ToInt32(timeOut.TotalMilliseconds) / 5 : 5;
  
             
             var buffer = new BasicDeliverEventArgs[bufferSize];

@@ -25,16 +25,18 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Assume});
+            var queueName = new ChannelName(Guid.NewGuid().ToString());
+            
             _messageConsumer = new RmqMessageConsumer(
                 connection:rmqConnection, 
-                queueName:_message.Header.Topic, 
+                queueName: queueName, 
                 routingKey:_message.Header.Topic, 
                 isDurable: false, 
                 highAvailability:false, 
                 makeChannels: OnMissingChannel.Assume);
 
             //This creates the infrastructure we want
-            new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys( _message.Header.Topic))
+            new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))
                 .Create(TimeSpan.FromMilliseconds(3000));
         }
         

@@ -80,7 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: subject.Result,
-                    delayedMilliseconds: 0);
+                    delayed: TimeSpan.Zero);
 
                 message = new Message(messageHeader, ReadMessageBody(jsonDocument));
 

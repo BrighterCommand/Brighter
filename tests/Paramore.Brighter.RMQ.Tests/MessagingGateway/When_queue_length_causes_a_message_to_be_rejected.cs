@@ -37,7 +37,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _messageOne;
         private readonly Message _messageTwo;
-        private readonly string _queueName = Guid.NewGuid().ToString();
+        private readonly ChannelName _queueName = new(Guid.NewGuid().ToString());
 
         public RmqMessageProducerQueueLengthTests()
         {

@@ -62,11 +62,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             _messageConsumer = new RmqMessageConsumer(
                 connection: rmqConnection, 
-                queueName: _messageOne.Header.Topic, 
+                queueName: new ChannelName(Guid.NewGuid().ToString()), 
                 routingKey: _messageOne.Header.Topic, 
                 isDurable: false, 
                 highAvailability: false,
-                ttl: 10000,
+                ttl: TimeSpan.FromMilliseconds(10000),
                 makeChannels:OnMissingChannel.Create
                 );
 

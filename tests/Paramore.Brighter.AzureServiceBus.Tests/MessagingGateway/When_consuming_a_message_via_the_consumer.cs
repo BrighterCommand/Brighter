@@ -134,7 +134,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             requeuedMessage.Header.ContentType.Should().Be(_contentType);
             requeuedMessage.Header.HandledCount.Should().Be(1);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
-            requeuedMessage.Header.DelayedMilliseconds.Should().Be(0);
+            requeuedMessage.Header.Delayed.Should().Be(TimeSpan.Zero);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             requeuedMessage.Body.Value.Should().Be(message.Body.Value);
         }

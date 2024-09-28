@@ -28,9 +28,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false);
+            var queueName = new ChannelName(Guid.NewGuid().ToString());
+            
+            _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false);
 
-            new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys( _message.Header.Topic))
+            new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))
                 .Create(TimeSpan.FromMilliseconds(3000));
         }
 

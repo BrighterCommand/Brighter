@@ -60,7 +60,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             messageType: MessageType.MT_DOCUMENT,
             timeStamp: DateTime.UtcNow.AddDays(-1),
             handledCount: 5,
-            delayedMilliseconds: 5,
+            delayed: TimeSpan.FromMilliseconds(5),
             correlationId: Guid.NewGuid().ToString(),
             replyTo: new RoutingKey("ReplyAddress"),
             contentType: "text/plain");
