@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             {
                 new SqliteParameter("MessageId", message.Id.ToString()),
                 new SqliteParameter("MessageType", message.Header.MessageType.ToString()),
-                new SqliteParameter("Topic", message.Header.Topic),
+                new SqliteParameter("Topic", message.Header.Topic.Value),
                 new SqliteParameter("Timestamp", SqliteType.Text) { Value =message.Header.TimeStamp.ToString("s")},
                 new SqliteParameter("HeaderBag",SqliteType.Text) { Value = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options)},
                 new SqliteParameter("Body", message.Body.Value),

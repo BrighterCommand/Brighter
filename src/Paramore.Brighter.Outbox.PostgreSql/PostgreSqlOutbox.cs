@@ -231,13 +231,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     ParameterName = $"{prefix}Topic",
                     NpgsqlDbType = NpgsqlDbType.Text,
-                    Value = message.Header.Topic
+                    Value = message.Header.Topic.Value
                 },
                 new NpgsqlParameter
                 {
                     ParameterName = $"{prefix}Timestamp",
                     NpgsqlDbType = NpgsqlDbType.TimestampTz,
-                    Value = message.Header.TimeStamp.DateTime.ToUniversalTime()
+                    Value = message.Header.TimeStamp.ToUniversalTime()
                 },
                 new NpgsqlParameter
                 {

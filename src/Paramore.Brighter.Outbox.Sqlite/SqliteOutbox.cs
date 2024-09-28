@@ -225,7 +225,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 },
                 new SqliteParameter
                 {
-                    ParameterName = $"@{prefix}Topic", SqliteType = SqliteType.Text, Value = message.Header.Topic
+                    ParameterName = $"@{prefix}Topic", SqliteType = SqliteType.Text, Value = message.Header.Topic.Value
                 },
                 new SqliteParameter
                 {
