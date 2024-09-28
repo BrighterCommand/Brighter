@@ -32,7 +32,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Sqlite;
 
@@ -43,8 +42,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// </summary>
     public class SqliteOutbox : RelationDatabaseOutbox
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteOutbox>();
-
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
         private readonly IAmARelationalDatabaseConfiguration _configuration;
@@ -212,13 +209,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-            return new[]
+            return new IDbDataParameter[]
             {
                 new SqliteParameter
                 {
                     ParameterName = $"@{prefix}MessageId",
                     SqliteType = SqliteType.Text,
-                    Value = message.Id.ToString()
+                    Value = message.Id
                 },
                 new SqliteParameter
                 {
@@ -367,7 +364,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     messageType: messageType,
                     timeStamp: timeStamp,
                     handledCount: 0,
-                    delayedMilliseconds: 0,
+                    delayed: TimeSpan.Zero,
                     correlationId: correlationId,
                     replyTo: new RoutingKey(replyTo),
                     contentType: contentType,
@@ -386,7 +383,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var body = _configuration.BinaryMessagePayload
                 ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), "application/octet-stream",
                     CharacterEncoding.Raw)
-                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
+                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
 
             return new Message(header, body);

@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
                 messageType: MessageType.MT_DOCUMENT, 
                 timeStamp: DateTime.UtcNow.AddDays(-1), 
                 handledCount:5, 
-                delayedMilliseconds:5,
+                delayed:TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("ReplyAddress"),
                 contentType: "text/plain",
@@ -103,7 +103,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
                 .Should().Be(_message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
-            _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
+            _storedMessage.Header.Delayed.Should().Be(TimeSpan.Zero); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_message.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_message.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_message.Header.ContentType);

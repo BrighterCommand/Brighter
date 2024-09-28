@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
                             timeAfterHandle,
-                            (timeAfterHandle-timeBeforeHandle).Milliseconds));
+                            Convert.ToInt32((timeAfterHandle-timeBeforeHandle).TotalMilliseconds)));
                         
                     return command;
                 }
@@ -115,7 +115,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
                             timeOnException,
-                            (timeOnException - timeBeforeHandle).Milliseconds,
+                            Convert.ToInt32((timeOnException - timeBeforeHandle).TotalMilliseconds),
                             e));
                     throw;
                 }

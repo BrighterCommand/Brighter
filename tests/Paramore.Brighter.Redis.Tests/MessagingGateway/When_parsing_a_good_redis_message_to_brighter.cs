@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             message.Header.Topic.Should().Be("test");
             message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             message.Header.HandledCount.Should().Be(3);
-            message.Header.DelayedMilliseconds.Should().Be(200);
+            message.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(200));
             message.Header.CorrelationId.Should().Be("0AF88BBC-07FD-4FC3-9CA7-BF68415A2535");
             message.Header.ContentType.Should().Be("text/plain");
             message.Header.ReplyTo.Should().Be("reply.queue");

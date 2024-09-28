@@ -130,8 +130,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             catch (TimeoutException te)
             {
-                s_logger.LogError("Could not connect to Redis client within {Timeout} milliseconds", timeOut.Value.Milliseconds.ToString());
-                throw new ChannelFailureException($"Could not connect to Redis client within {timeOut.Value.Milliseconds.ToString()} milliseconds", te);
+                s_logger.LogError("Could not connect to Redis client within {Timeout} milliseconds", timeOut.Value.TotalMilliseconds.ToString());
+                throw new ChannelFailureException($"Could not connect to Redis client within {timeOut.Value.TotalMilliseconds.ToString()} milliseconds", te);
             }
             catch (RedisException re)
             {
@@ -170,7 +170,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
            if (delay > TimeSpan.Zero)
            {
                Task.Delay(delay.Value).Wait();
-               message.Header.DelayedMilliseconds = delay.Value.Milliseconds;
+               message.Header.Delayed = delay.Value;
            }
 
            message.Header.HandledCount++;

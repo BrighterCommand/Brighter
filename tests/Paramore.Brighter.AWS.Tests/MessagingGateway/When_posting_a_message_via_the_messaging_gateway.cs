@@ -98,7 +98,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             message.Header.Subject.Should().Be(subject);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
             message.Header.TimeStamp.Should().BeAfter(RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-            message.Header.DelayedMilliseconds.Should().Be(0);
+            message.Header.Delayed.Should().Be(TimeSpan.Zero);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             message.Body.Value.Should().Be(_message.Body.Value);
         }

@@ -495,7 +495,7 @@ namespace Paramore.Brighter
             int pageNumber)
             => CreateCommand(connection, GenerateSqlText(queries.PagedDispatchedCommand), 0,
                 CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize),
-                CreateSqlParameter("OutstandingSince", -1 * timeDispatchedSince.Milliseconds));
+                CreateSqlParameter("OutstandingSince", -1 * Convert.ToInt32(timeDispatchedSince.TotalMilliseconds)));
         
         private DbCommand CreateDispatchedCommand(DbConnection connection, int hoursDispatchedSince, int pageSize)
             => CreateCommand(connection, GenerateSqlText(queries.DispatchedCommand), 0,
@@ -517,7 +517,7 @@ namespace Paramore.Brighter
             int pageSize, 
             int pageNumber)
             => CreateCommand(connection, GenerateSqlText(queries.PagedOutstandingCommand), 0,
-                CreatePagedOutstandingParameters(timeSinceAdded.Milliseconds, pageSize, pageNumber));
+                CreatePagedOutstandingParameters(Convert.ToInt32(timeSinceAdded.Milliseconds), pageSize, pageNumber));
         
         private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
             => CreateCommand(connection, GenerateSqlText(queries.GetNumberOfOutstandingMessagesCommand), 0);

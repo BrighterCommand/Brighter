@@ -249,7 +249,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 handledCount:handledCount, 
                 dataSchema: null,
                 subject: null,
-                delayedMilliseconds: 0
+                delayed: TimeSpan.Zero
                 );
 
             headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);

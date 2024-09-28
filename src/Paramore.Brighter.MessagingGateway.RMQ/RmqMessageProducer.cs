@@ -126,7 +126,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
                     s_logger.LogDebug(
                         "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}",
-                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.Milliseconds,
+                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic, message.Persist, message.Id, message.Body.Value);
 
                     _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id);

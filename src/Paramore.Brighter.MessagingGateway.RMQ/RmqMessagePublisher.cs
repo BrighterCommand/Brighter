@@ -107,7 +107,7 @@ internal class RmqMessagePublisher
                 headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
 
             if (delay > TimeSpan.Zero)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.Milliseconds);
+                headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.TotalMilliseconds);
 
             _channel.BasicPublish(
                 _connection.Exchange.Name,
@@ -155,7 +155,7 @@ internal class RmqMessagePublisher
             headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
 
             if (timeOut > TimeSpan.Zero)
-                headers.Add(HeaderNames.DELAY_MILLISECONDS, timeOut.Milliseconds);
+                headers.Add(HeaderNames.DELAY_MILLISECONDS, timeOut.TotalMilliseconds);
 
             if (!message.Header.Bag.Any(h => h.Key.Equals(HeaderNames.ORIGINAL_MESSAGE_ID, StringComparison.CurrentCultureIgnoreCase)))
                 headers.Add(HeaderNames.ORIGINAL_MESSAGE_ID, message.Id);

@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             _redisFixture.MessageProducer.Send(_messageOne);
             var message = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
             message.Header.HandledCount.Should().Be(0);
-            message.Header.DelayedMilliseconds.Should().Be(0);
+            message.Header.Delayed.Should().Be(TimeSpan.Zero);
             
             //now requeue with a delay
             _redisFixture.MessageConsumer.Requeue(_messageOne, TimeSpan.FromMilliseconds(1000));
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             //receive and assert
             message = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
             message.Header.HandledCount.Should().Be(1);
-            message.Header.DelayedMilliseconds.Should().Be(1000);
+            message.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(1000));
         }
     }
 }

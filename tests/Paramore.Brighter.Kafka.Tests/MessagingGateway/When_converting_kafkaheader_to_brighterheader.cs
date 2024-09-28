@@ -29,7 +29,7 @@ public class KafkaHeaderToBrighterTests
             new MessageBody("test content")
         );
         
-        message.Header.DelayedMilliseconds = 500;
+        message.Header.Delayed = TimeSpan.FromMilliseconds(500);
         message.Header.HandledCount = 2;
 
         Dictionary<string,object> bag = message.Header.Bag;
@@ -61,7 +61,7 @@ public class KafkaHeaderToBrighterTests
         readMessage.Header.CorrelationId.Should().Be(message.Header.CorrelationId);
         readMessage.Header.ContentType.Should().Be(message.Header.ContentType);
         readMessage.Header.Topic.Should().Be(message.Header.Topic);
-        readMessage.Header.DelayedMilliseconds.Should().Be(message.Header.DelayedMilliseconds);
+        readMessage.Header.Delayed.Should().Be(message.Header.Delayed);
         readMessage.Header.HandledCount.Should().Be(message.Header.HandledCount);
         readMessage.Header.TimeStamp.ToString("u").Should().Be(message.Header.TimeStamp.ToString("u"));            
         

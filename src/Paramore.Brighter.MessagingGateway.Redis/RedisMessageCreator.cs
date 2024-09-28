@@ -122,7 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
            //Read HandledCount
             var handledCount = ReadHandledCount(headers);
             //Read DelayedMilliseconds
-            var delayedMilliseconds = ReadDelayedMilliseconds(headers);
+            var delayed = ReadDelay(headers);
             //Read MessageBag
             var bag = ReadMessageBag(headers);
             //reply to
@@ -153,7 +153,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: null,
-                    delayedMilliseconds: delayedMilliseconds.Result);
+                    delayed: delayed.Result);
 
                 if (replyTo.Success)
                 {
@@ -218,16 +218,16 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<string>(newCorrelationId, false);
         }
 
-         private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
+        private HeaderResult<TimeSpan> ReadDelay(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out string header))
             {
                 if (int.TryParse(header, out int delayedMilliseconds))
                 {
-                    return new HeaderResult<int>(delayedMilliseconds, true); 
+                    return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayedMilliseconds), true); 
                 }
             }
-            return new HeaderResult<int>(0, true);
+            return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
          }
         
         private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)

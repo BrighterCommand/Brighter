@@ -104,7 +104,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
                     ReplyTo = "com.brightercommand.replyto",
                     CorrelationId = Guid.NewGuid().ToString(),
-                    DelayedMilliseconds = 10,
+                    Delayed = TimeSpan.FromMilliseconds(10),
                     HandledCount = 2,
                     TimeStamp = DateTime.UtcNow
                 },

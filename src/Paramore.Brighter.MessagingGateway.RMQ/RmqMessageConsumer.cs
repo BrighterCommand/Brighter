@@ -200,8 +200,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             try
             {
-                s_logger.LogDebug("RmqMessageConsumer: Re-queueing message {Id} with a delay of {Delay} milliseconds",
-                    message.Id, timeout.Value.Milliseconds);
+                s_logger.LogDebug("RmqMessageConsumer: Re-queueing message {Id} with a delay of {Delay} milliseconds", message.Id, timeout.Value.TotalMilliseconds);
                 EnsureBroker(_queueName);
 
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);

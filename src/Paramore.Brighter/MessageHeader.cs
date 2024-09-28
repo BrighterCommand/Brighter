@@ -119,9 +119,9 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// OPTIONAL
-        /// Internal usage. Gets the number of milliseconds the message was instructed to be delayed for
+        /// Internal usage. Gets the period the message was instructed to be delayed for
         /// </summary>
-        public int DelayedMilliseconds { get; set; }
+        public TimeSpan Delayed { get; set; }
         
         /// <summary>
         /// OPTIONAL
@@ -261,7 +261,7 @@ namespace Paramore.Brighter
         /// <param name="dataSchema">A Uri that identifies the schema that data adheres to</param>
         /// <param name="subject">Describes the subject of the event in the context of the event producer</param>
         /// <param name="handledCount">The number of attempts to handle this message</param>
-        /// <param name="delayedMilliseconds">The delay in milliseconds to this message (usually to retry)</param>
+        /// <param name="delayed">The delay in milliseconds to this message (usually to retry)</param>
         public MessageHeader(
             string messageId,
             RoutingKey topic,
@@ -276,7 +276,7 @@ namespace Paramore.Brighter
             Uri? dataSchema = null,
             string? subject = null,
             int handledCount = 0,
-            int delayedMilliseconds = 0)
+            TimeSpan? delayed = null)
         {
             MessageId = messageId;
             Topic = topic;
@@ -284,8 +284,8 @@ namespace Paramore.Brighter
             if (source != null) Source = source;
             Type = type  ?? "goparamore.io.Paramore.Brighter.Message";
             TimeStamp = timeStamp ?? DateTimeOffset.UtcNow;
-            HandledCount = 0;
-            DelayedMilliseconds = 0;
+            HandledCount = handledCount;
+            Delayed = delayed ?? TimeSpan.Zero;
             CorrelationId = correlationId ?? string.Empty;
             ReplyTo = replyTo ?? RoutingKey.Empty;
             ContentType = contentType;
@@ -293,9 +293,6 @@ namespace Paramore.Brighter
             ReplyTo = replyTo ?? string.Empty;
             DataSchema = dataSchema;
             Subject = subject;
-            
-            HandledCount = handledCount;
-            DelayedMilliseconds = delayedMilliseconds;
         }
 
         /// <summary>
@@ -309,7 +306,7 @@ namespace Paramore.Brighter
                 MessageType,
                 timeStamp : TimeStamp,
                 handledCount : 0,
-                delayedMilliseconds : 0,
+                delayed : TimeSpan.Zero,
                 correlationId: CorrelationId,
                 replyTo : new RoutingKey($"{ReplyTo}"),
                 contentType : $"{ContentType}",

@@ -151,8 +151,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SslCaLocation = configuration.SslCaLocation,
                 GroupId = groupId,
                 AutoOffsetReset = offsetDefault,
-                SessionTimeoutMs = sessionTimeout.Value.Milliseconds,
-                MaxPollIntervalMs = maxPollInterval.Value.Milliseconds,
+                SessionTimeoutMs = Convert.ToInt32(sessionTimeout.Value.TotalMilliseconds),
+                MaxPollIntervalMs = Convert.ToInt32(maxPollInterval.Value.TotalMilliseconds),
                 EnablePartitionEof = true,
                 AllowAutoCreateTopics = false, //We will do this explicit always so as to allow us to set parameters for the topic
                 IsolationLevel = isolationLevel,
@@ -164,7 +164,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
 
             _maxBatchSize = commitBatchSize;
-            _sweepUncommittedInterval = TimeSpan.FromMilliseconds(sweepUncommittedOffsetsInterval.Value.Milliseconds);
+            _sweepUncommittedInterval = sweepUncommittedOffsetsInterval.Value;
             _readCommittedOffsetsTimeout = readCommittedOffsetsTimeout.Value;
 
             _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
@@ -296,7 +296,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 
                 LogOffSets();
 
-                s_logger.LogDebug("Consuming messages from Kafka stream, will wait for {Timeout}", timeOut.Value.Milliseconds);
+                s_logger.LogDebug("Consuming messages from Kafka stream, will wait for {Timeout}", timeOut.Value.TotalMilliseconds);
                 var consumeResult = _consumer.Consume(timeOut.Value);
 
                 if (consumeResult == null)

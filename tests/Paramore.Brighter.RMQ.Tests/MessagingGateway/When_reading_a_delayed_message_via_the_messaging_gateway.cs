@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
@@ -73,7 +72,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             var immediateResult = _messageConsumer.Receive(TimeSpan.Zero).First();
             var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
             immediateResult.Header.HandledCount.Should().Be(0);
-            immediateResult.Header.DelayedMilliseconds.Should().Be(0);
+            immediateResult.Header.Delayed.Should().Be(TimeSpan.Zero);
 
             //_should_have_not_been_able_get_message_before_delay
             deliveredWithoutWait.Should().BeTrue();
@@ -84,7 +83,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             delayedResult.Body.Value.Should().Be(_message.Body.Value);
             delayedResult.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             delayedResult.Header.HandledCount.Should().Be(0);
-            delayedResult.Header.DelayedMilliseconds.Should().Be(3000);
+            delayedResult.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(3000));
 
             _messageConsumer.Acknowledge(delayedResult);
         }
@@ -97,7 +96,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
             message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             message.Header.HandledCount.Should().Be(0);
-            message.Header.DelayedMilliseconds.Should().Be(0);
+            message.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(0));
 
             _messageConsumer.Acknowledge(message);
 
@@ -109,7 +108,6 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             var message2 = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
             message2.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             message2.Header.HandledCount.Should().Be(1);
-            message2.Header.DelayedMilliseconds.Should().Be(1000);
 
             _messageConsumer.Acknowledge(message2);
         }

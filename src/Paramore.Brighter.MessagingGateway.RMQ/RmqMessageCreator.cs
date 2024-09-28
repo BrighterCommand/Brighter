@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var messageId = HeaderResult<string>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var handledCount = HeaderResult<int>.Empty();
-            var delayedMilliseconds = HeaderResult<int>.Empty();
+            var delay = HeaderResult<TimeSpan>.Empty();
             var redelivered = HeaderResult<bool>.Empty();
             var deliveryTag = HeaderResult<ulong>.Empty();
             var messageType = HeaderResult<MessageType>.Empty();
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
                 timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
                 handledCount = ReadHandledCount(headers);
-                delayedMilliseconds = ReadDelayedMilliseconds(headers);
+                delay = ReadDelay(headers);
                 redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
                 deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
                 messageType = ReadMessageType(headers);
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         handledCount: handledCount.Result,
                         dataSchema: null,
                         subject: null,
-                        delayedMilliseconds: delayedMilliseconds.Result
+                        delayed: delay.Result
                         );
                         
 
@@ -205,11 +205,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-        private HeaderResult<int> ReadDelayedMilliseconds(IDictionary<string, object> headers)
+        private HeaderResult<TimeSpan> ReadDelay(IDictionary<string, object> headers)
         {
             if (headers.ContainsKey(HeaderNames.DELAYED_MILLISECONDS) == false)
             {
-                return new HeaderResult<int>(0, true);
+                return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
             }
 
             int delayedMilliseconds;
@@ -249,10 +249,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     break;
                 }
                 default:
-                    return new HeaderResult<int>(0, false);
+                    return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
             }
 
-            return new HeaderResult<int>(delayedMilliseconds, true);
+            return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds( delayedMilliseconds), true);
         }
 
         private HeaderResult<RoutingKey> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
