@@ -4,15 +4,15 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.401" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.401.4" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.403.1" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.400.22" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.22" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.22" />
-    <PackageVersion Include="Azure.Identity" Version="1.12.0" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.403.5" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.400.26" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.26" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.26" />
+    <PackageVersion Include="Azure.Identity" Version="1.12.1" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.1" />
-    <PackageVersion Include="Azure.Storage.Blobs" Version="12.22.0" />
+    <PackageVersion Include="Azure.Storage.Blobs" Version="12.22.1" />
     <PackageVersion Include="Confluent.Kafka" Version="2.5.3" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.5.3" />
     <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.5.3" />
@@ -25,13 +25,13 @@
     <PackageVersion Include="DapperExtensions" Version="1.7.0" />
     <PackageVersion Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
     <PackageVersion Include="FluentAssertions" Version="6.12.1" />
-    <PackageVersion Include="FluentMigrator" Version="5.2.0" />
-    <PackageVersion Include="FluentMigrator.Runner" Version="5.2.0" />
-    <PackageVersion Include="FluentMigrator.Runner.Core" Version="5.2.0" />
-    <PackageVersion Include="FluentMigrator.Runner.MySql" Version="5.2.0" />
-    <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="5.2.0" />
-    <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="5.2.0" />
-    <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="5.2.0" />
+    <PackageVersion Include="FluentMigrator" Version="6.0.0" />
+    <PackageVersion Include="FluentMigrator.Runner" Version="6.0.0" />
+    <PackageVersion Include="FluentMigrator.Runner.Core" Version="6.0.0" />
+    <PackageVersion Include="FluentMigrator.Runner.MySql" Version="6.0.0" />
+    <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="6.0.0" />
+    <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="6.0.0" />
+    <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="6.0.0" />
     <PackageVersion Include="MessagePack" Version="2.5.172" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
@@ -78,17 +78,17 @@
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
-    <PackageVersion Include="Serilog" Version="4.0.1" />
+    <PackageVersion Include="Serilog" Version="4.0.2" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.4.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.8.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.8.1" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageVersion Include="System.Text.Json" Version="8.0.4" />
-    <PackageVersion Include="xunit" Version="2.9.1" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
