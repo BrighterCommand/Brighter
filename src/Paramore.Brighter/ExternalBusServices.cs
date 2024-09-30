@@ -249,7 +249,8 @@ namespace Paramore.Brighter
         /// <param name="useAsync">Use the Async outbox and Producer</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-         internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk, Dictionary<string, object> args = null)
+        /// <param name="waitToFinish">Perform a blocking clear operation</param>
+        internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk, Dictionary<string, object> args = null, bool waitToFinish = false)
         {
             var span = Activity.Current;
             span?.AddTag("amountToClear", amountToClear);
@@ -261,6 +262,9 @@ namespace Paramore.Brighter
             {
                 if (!HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
+
+                if (waitToFinish)
+                    BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, args).Wait();
                 
                 Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, args), CancellationToken.None);
             }
@@ -269,6 +273,9 @@ namespace Paramore.Brighter
             {
                 if (!HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
+
+                if (waitToFinish)
+                    BackgroundDispatchUsingSync(amountToClear, minimumAge, args).Wait();
                 
                 Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, args));
             }

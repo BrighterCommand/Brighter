@@ -155,7 +155,8 @@ namespace Paramore.Brighter
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null);
+        /// <param name="waitToFinish">Perform a blocking clear operation</param>
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null, bool waitToFinish = false);
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
@@ -172,7 +173,9 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null);
+        /// <param name="waitToFinish">Perform a blocking clear operation</param>
+        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false,
+            Dictionary<string, object> args = null, bool waitToFinish = false);
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.

@@ -666,9 +666,10 @@ namespace Paramore.Brighter
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
+        /// <param name="waitToFinish">Perform a blocking clear operation</param>
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null, bool waitToFinish = false)
         {
-            _bus.ClearOutbox(amountToClear, minimumAge, false, false, args);
+            _bus.ClearOutbox(amountToClear, minimumAge, false, false, args, waitToFinish);
         }
 
         /// <summary>
@@ -693,14 +694,16 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        /// <param name="waitToFinish">Perform a blocking clear operation</param>
         public void ClearAsyncOutbox(
             int amountToClear = 100,
             int minimumAge = 5000,
             bool useBulk = false,
-            Dictionary<string, object> args = null
+            Dictionary<string, object> args = null,
+            bool waitToFinish = false
         )
         {
-            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, args);
+            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, args, waitToFinish);
         }
 
         /// <summary>

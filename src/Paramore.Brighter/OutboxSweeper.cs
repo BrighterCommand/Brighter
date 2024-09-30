@@ -41,7 +41,7 @@ namespace Paramore.Brighter
         public void Sweep()
         {
             ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
-            _commandProcessor.ClearOutbox(_batchSize, _millisecondsSinceSent, _args);
+            _commandProcessor.ClearOutbox(_batchSize, _millisecondsSinceSent, _args, true);
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace Paramore.Brighter
         public void SweepAsyncOutbox()
         {
             ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
-            _commandProcessor.ClearAsyncOutbox(_batchSize, _millisecondsSinceSent, _useBulk, _args);
+            _commandProcessor.ClearAsyncOutbox(_batchSize, _millisecondsSinceSent, _useBulk, _args, true);
         }
     }
 }

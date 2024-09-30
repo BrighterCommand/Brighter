@@ -125,7 +125,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             }
         }
 
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null, bool waitToFinish = false)
         {
             var depositedMessages = Deposited.Where(m =>
                 m.EnqueuedTime < DateTime.Now.AddMilliseconds(-1 * minimumAge) &&
@@ -151,7 +151,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
         }
 
-        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null)
+        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null, bool waitToFinish = false)
         {
             ClearOutbox(amountToClear, minimumAge);
         }
