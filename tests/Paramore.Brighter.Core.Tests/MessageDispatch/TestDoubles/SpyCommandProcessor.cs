@@ -171,6 +171,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             ClearParamsList.Add(new ClearParams { AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args });
         }
 
+        public Task ClearOutboxAsync(int amountToClear = 100, int minimumAge = 5000,
+            Dictionary<string, object> args = null)
+        {
+            ClearOutbox(amountToClear, minimumAge, args);
+            return Task.CompletedTask;
+        }
+
         public async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default)
         {
@@ -185,6 +192,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             Commands.Add(CommandType.Clear);
             ClearParamsList.Add(new ClearParams { AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args });
+        }
+
+        public Task ClearAsyncOutboxAsync(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false,
+            Dictionary<string, object> args = null)
+        {
+            ClearAsyncOutbox(amountToClear, minimumAge, useBulk, args);
+            return Task.CompletedTask;
         }
 
         public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,

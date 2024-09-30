@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -51,6 +52,24 @@ namespace Paramore.Brighter
         {
             ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
             _commandProcessor.ClearAsyncOutbox(_batchSize, _millisecondsSinceSent, _useBulk, _args);
+        }
+        
+        /// <summary>
+        /// Dispatches the oldest un-dispatched messages from the outbox in a background thread.
+        /// </summary>
+        public Task SweepAsync()
+        {
+            ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
+            return _commandProcessor.ClearOutboxAsync(_batchSize, _millisecondsSinceSent, _args);
+        }
+
+        /// <summary>
+        /// Dispatches the oldest un-dispatched messages from the asynchronous outbox in a background thread.
+        /// </summary>
+        public Task SweepAsyncOutboxAsync()
+        {
+            ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
+            return _commandProcessor.ClearAsyncOutboxAsync(_batchSize, _millisecondsSinceSent, _useBulk, _args);
         }
     }
 }

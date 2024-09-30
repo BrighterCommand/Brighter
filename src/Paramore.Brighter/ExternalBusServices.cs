@@ -273,6 +273,39 @@ namespace Paramore.Brighter
                 Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, args));
             }
         }
+        
+        /// <summary>
+        /// This is the clear outbox for implicit clearing of messages.
+        /// </summary>
+        /// <param name="amountToClear">Maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
+        /// <param name="useAsync">Use the Async outbox and Producer</param>
+        /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
+        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        internal Task ClearOutboxAsync(int amountToClear, int minimumAge, bool useAsync, bool useBulk, Dictionary<string, object> args = null)
+        {
+            var span = Activity.Current;
+            span?.AddTag("amountToClear", amountToClear);
+            span?.AddTag("minimumAge", minimumAge);
+            span?.AddTag("async", useAsync);
+            span?.AddTag("bulk", useBulk);
+            
+            if (useAsync)
+            {
+                if (!HasAsyncOutbox())
+                    throw new InvalidOperationException("No async outbox defined.");
+                
+                return BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, args);
+            }
+
+            else
+            {
+                if (!HasOutbox())
+                    throw new InvalidOperationException("No outbox defined.");
+                
+                return BackgroundDispatchUsingSync(amountToClear, minimumAge, args);
+            }
+        }
 
         private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge, Dictionary<string, object> args)
         {
