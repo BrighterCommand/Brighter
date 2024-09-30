@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Text.Json.Serialization;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -32,10 +34,11 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="RoutingKey"/> class.
         /// </summary>
-        /// <param name="name">The name.</param>
-        public RoutingKey(string name)
+        /// <param name="value">The routing key or topic.</param>
+        [JsonConstructor]
+        public RoutingKey(string value)
         {
-            Value = name;
+            Value = value;
         }
 
         /// <summary>
