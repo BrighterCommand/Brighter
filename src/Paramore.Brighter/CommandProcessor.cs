@@ -670,6 +670,19 @@ namespace Paramore.Brighter
         {
             _bus.ClearOutbox(amountToClear, minimumAge, false, false, args);
         }
+        
+        /// <summary>
+        /// Flushes any outstanding message box message to the broker.
+        /// This will be run on a background task.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// </summary>
+        /// <param name="amountToClear">The maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        public Task ClearOutboxAsync(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
+        {
+            return _bus.ClearOutboxAsync(amountToClear, minimumAge, false, false, args);
+        }
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
@@ -701,6 +714,25 @@ namespace Paramore.Brighter
         )
         {
             _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, args);
+        }
+        
+        /// <summary>
+        /// Flushes any outstanding message box message to the broker.
+        /// This will be run on a background task.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// </summary>
+        /// <param name="amountToClear">The maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        /// <param name="useBulk">Use the bulk send on the producer.</param>
+        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        public Task ClearAsyncOutboxAsync(
+            int amountToClear = 100,
+            int minimumAge = 5000,
+            bool useBulk = false,
+            Dictionary<string, object> args = null
+        )
+        {
+            return _bus.ClearOutboxAsync(amountToClear, minimumAge, true, useBulk, args);
         }
 
         /// <summary>

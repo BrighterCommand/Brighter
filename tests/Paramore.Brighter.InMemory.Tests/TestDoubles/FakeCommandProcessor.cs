@@ -136,6 +136,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
             ClearOutbox(depositedMessages);
         }
+        
+        public Task ClearOutboxAsync(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
+        {
+            ClearOutbox(amountToClear, minimumAge, args);
+            return Task.CompletedTask;
+        }
 
         public Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
         {
@@ -154,6 +160,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null)
         {
             ClearOutbox(amountToClear, minimumAge);
+        }
+        
+        public Task ClearAsyncOutboxAsync(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null)
+        {
+            ClearOutbox(amountToClear, minimumAge);
+            return Task.CompletedTask;
         }
 
         public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
