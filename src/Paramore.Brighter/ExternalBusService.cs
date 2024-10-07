@@ -28,18 +28,17 @@ namespace Paramore.Brighter
         private TransformPipelineBuilderAsync? _transformPipelineBuilderAsync;
         private IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
         private IAmAnOutboxAsync<TMessage, TTransaction>? _asyncOutbox;
-        private int _outboxTimeout;
+        private TimeSpan _outboxTimeout;
         private IAmAProducerRegistry? _producerRegistry;
         private int _archiveBatchSize;
         private InstrumentationOptions _instrumentationOptions;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
-        private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
+        private static readonly SemaphoreSlim s_clear = new(1, 1);
 
-        private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new(1, 1);
+        private static readonly SemaphoreSlim s_backgroundClear = new(1, 1);
 
-        //REFACTOR: BELONGS TO OUTBOX CHECKER
-        //private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
+        private static readonly SemaphoreSlim s_checkOutstanding = new(1, 1);
 
         private DateTimeOffset _lastOutStandingMessageCheckAt;
         
@@ -53,14 +52,24 @@ namespace Paramore.Brighter
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
         private const string NoArchiveProviderError = "An Archive Provider must be defined.";
-        private const string NoProducerRegistryError = "A Producer Registry must be defined.";
+        private const string NoProducerRegistryError = "A Producer Registry must be defined.";                                
         private const string NoPolicyRegistry = "Missing Policy Registry for External Bus Services";
+        
+        /// <summary>
+        /// How do we mark messages dispatched and clear them; required for access by <see cref="MessagePosterSync{TMessage,TTransaction}"/>
+        /// </summary>
+        public OutboxSync<TMessage, TTransaction> OutboxSync { get; private set; }
         
         /// <summary>
         /// How many outstanding messages are there; Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         /// Updated by the <see cref="OutboxSync{TMessage,TTransaction}"/> 
         /// </summary>
         public int OutStandingCount { get; set; }
+        
+        /// <summary>
+        /// How do we send messages via a producer; required for access by <see cref="OutboxSync{TMessage,TTransaction}"/>
+        /// </summary>
+        public MessagePosterSync<TMessage, TTransaction> Poster { get; private set; }
 
         /// <summary>
         /// Creates an instance of External Bus Services
@@ -90,7 +99,7 @@ namespace Paramore.Brighter
             IAmAnOutbox? outbox = null,
             IAmAnArchiveProvider? archiveProvider = null,
             IAmARequestContextFactory? requestContextFactory = null,
-            int outboxTimeout = 300,
+            TimeSpan? outboxTimeout = null,
             int maxOutStandingMessages = -1,
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
@@ -99,7 +108,8 @@ namespace Paramore.Brighter
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             requestContextFactory ??= new InMemoryRequestContextFactory();
-            _timeProvider = (timeProvider is null) ? TimeProvider.System : timeProvider;
+            _timeProvider = timeProvider ?? TimeProvider.System;
+            _outboxTimeout = outboxTimeout ?? TimeSpan.FromMilliseconds(300);
             
             InitializeProducer(producerRegistry);
             InitializePolicy(policyRegistry);
@@ -108,7 +118,7 @@ namespace Paramore.Brighter
             
             InitializeMappingPipeline(mapperRegistry, messageTransformerFactory, messageTransformerFactoryAsync);
 
-            InitializeOutbox(tracer, outbox, outboxTimeout, maxOutStandingMessages, maxOutStandingCheckInterval, 
+            InitializeOutbox(tracer, outbox, _outboxTimeout, maxOutStandingMessages, maxOutStandingCheckInterval, 
                 outBoxBag, archiveProvider, archiveBatchSize);
 
             ConfigureCallbacks(requestContextFactory.Create());
@@ -338,7 +348,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("No outbox defined.");
 
             // Only allow a single Clear to happen at a time
-            s_clearSemaphoreToken.Wait();
+            s_clear.Wait();
             var parentSpan = requestContext.Span;
 
             var childSpans = new ConcurrentDictionary<string, Activity>();
@@ -369,7 +379,7 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
-                s_clearSemaphoreToken.Release();
+                s_clear.Release();
             }
 
             CheckOutstandingMessages(requestContext);
@@ -396,7 +406,7 @@ namespace Paramore.Brighter
             if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            await s_clearSemaphoreToken.WaitAsync(cancellationToken);
+            await s_clear.WaitAsync(cancellationToken);
             var parentSpan = requestContext.Span;
 
             var childSpans = new ConcurrentDictionary<string, Activity>();
@@ -426,7 +436,7 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
-                s_clearSemaphoreToken.Release();
+                s_clear.Release();
             }
 
             CheckOutstandingMessages(requestContext);
@@ -615,6 +625,24 @@ namespace Paramore.Brighter
             return _outBox != null;
         }
 
+        /// <summary>
+        /// Locks the check of outstanding messages in an Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, so that if the check takes time we do not run two checks simultaneously
+        /// You must call <see cref="ReleaseCheckOutstanding"/> when done
+        /// </summary>
+        public void LockCheckOutStanding()
+        {
+            s_checkOutstanding.Wait();
+        }
+
+        /// <summary>
+        /// Locks an explicit clear of the outbox (as opposed to a background clear)
+        /// </summary>
+        public void LockClear()
+        {
+            s_clear.Wait();
+        }
+
         private Task BackgroundDispatchUsingSync(
             int amountToClear,
             TimeSpan timeSinceSent,
@@ -623,14 +651,14 @@ namespace Paramore.Brighter
         )
         {
             WaitHandle[] clearTokens = new WaitHandle[2];
-            clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
-            clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
+            clearTokens[0] = s_backgroundClear.AvailableWaitHandle;
+            clearTokens[1] = s_clear.AvailableWaitHandle;
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
                 //NOTE: The wait handle only signals availability, still need to increment the counter:
                 // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
-                s_backgroundClearSemaphoreToken.Wait();
-                s_clearSemaphoreToken.Wait();
+                s_backgroundClear.Wait();
+                s_clear.Wait();
                 
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
@@ -667,8 +695,8 @@ namespace Paramore.Brighter
                 finally
                 {
                     _tracer?.EndSpan(span);
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
+                    s_clear.Release();
+                    s_backgroundClear.Release();
                 }
 
                 CheckOutstandingMessages(requestContext);
@@ -691,14 +719,14 @@ namespace Paramore.Brighter
         )
         {
             WaitHandle[] clearTokens = new WaitHandle[2];
-            clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
-            clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
+            clearTokens[0] = s_backgroundClear.AvailableWaitHandle;
+            clearTokens[1] = s_clear.AvailableWaitHandle;
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
                 //NOTE: The wait handle only signals availability, still need to increment the counter:
                 // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
-                await s_backgroundClearSemaphoreToken.WaitAsync();
-                await s_clearSemaphoreToken.WaitAsync();
+                await s_backgroundClear.WaitAsync();
+                await s_clear.WaitAsync();
                 
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
@@ -740,8 +768,8 @@ namespace Paramore.Brighter
                 finally
                 {
                     _tracer?.EndSpan(span);
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
+                    s_clear.Release();
+                    s_backgroundClear.Release();
                 }
 
                 CheckOutstandingMessages(requestContext);
@@ -1091,7 +1119,7 @@ namespace Paramore.Brighter
 
         private void InitializeOutbox(IAmABrighterTracer tracer,
             IAmAnOutbox? outbox,
-            int outboxTimeout,
+            TimeSpan outboxTimeout,
             int maxOutStandingMessages,
             TimeSpan? maxOutStandingCheckInterval,
             Dictionary<string, object>? outBoxBag,
@@ -1183,7 +1211,7 @@ namespace Paramore.Brighter
 
         private void OutstandingMessagesCheck(RequestContext? requestContext)
         {
-            s_checkOutstandingSemaphoreToken.Wait();
+            LockCheckOutStanding();
 
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
             s_logger.LogDebug("Begin count of outstanding messages");
@@ -1213,8 +1241,27 @@ namespace Paramore.Brighter
             finally
             {
                 s_logger.LogDebug("Current outstanding count is {OutStandingCount}", OutStandingCount);
-                s_checkOutstandingSemaphoreToken.Release();
+                ReleaseCheckOutstanding();
             }
+        }
+        
+        /// <summary>
+        /// Unlocks the outstanding checks in an Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, if they lock the Outbox for an outstanding check.
+        /// </summary>
+        public void ReleaseCheckOutstanding()
+        {
+            s_checkOutstanding.Release();
+        }
+
+        
+        /// <summary>
+        /// Unleocks the explicit clear in the Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, if they lock the outbox for an explicit clear
+        /// </summary>
+        public void ReleaseClear()
+        {
+            s_clear.Release();
         }
 
         private bool Retry(Action action, RequestContext? requestContext)

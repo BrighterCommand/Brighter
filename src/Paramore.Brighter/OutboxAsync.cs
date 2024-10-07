@@ -18,11 +18,6 @@ internal class OutboxAsync<TMessage, TTransaction>(
     ) where TMessage : Message
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
-    
-    //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
-    //bool should be made thread-safe by locking the object
-    private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
-
 
     public void CheckOutstandingMessages(RequestContext? requestContext)
     {
@@ -54,7 +49,7 @@ internal class OutboxAsync<TMessage, TTransaction>(
     private void OutstandingMessagesCheck(RequestContext? requestContext)
     {
         //REFACTORING: THIS IS FOR THESE ACROSS THE WHOLE BUS
-        s_checkOutstandingSemaphoreToken.Wait();
+        bus.;
 
         lastOutStandingMessageCheckAt = timeProvider.GetUtcNow();
         s_logger.LogDebug("Begin count of outstanding messages");

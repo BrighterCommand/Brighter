@@ -34,55 +34,59 @@ internal class MessagePosterAsync<TMessage, TTransaction>(
             {
                 foreach (var message in posts)
                 {
-                    s_logger.LogInformation(
-                        "Decoupled invocation of message: Topic:{Topic} Id:{Id}",
-                        message.Header.Topic, message.Id
-                    );
-
-                    var producer = producerRegistry.LookupBy(message.Header.Topic);
-                    var span = tracer?.CreateProducerSpan(producer.Publication, message, parentSpan, instrumentationOptions);
-                    producer.Span = span;
-                    if (span != null) producerSpans.TryAdd(message.Id, span);
-
-                    if (producer is IAmAMessageProducerAsync producerAsync)
-                    {
-                        if (producer is ISupportPublishConfirmation)
-                        {
-                            //mark dispatch handled by a callback - set in constructor
-                            await RetryAsync(
-                                    async _ => await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
-                                    requestContext, 
-                                    continueOnCapturedContext,
-                                    cancellationToken)
-                                .ConfigureAwait(continueOnCapturedContext);
-                        }
-                        else
-                        {
-                            var sent = await RetryAsync(
-                                    async _ => await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
-                                    requestContext,
-                                    continueOnCapturedContext,
-                                    cancellationToken
-                                )
-                                .ConfigureAwait(continueOnCapturedContext
-                                );
-
-                            if (sent)
-                                await RetryAsync(
-                                    async _ => await outBox.MarkDispatchedAsync(message.Id, requestContext, cancellationToken),
-                                    requestContext,
-                                    cancellationToken: cancellationToken
-                                );
-                        }
-                    }
-                    else
-                        throw new InvalidOperationException("No async message producer defined.");
+                    await PostAsync(requestContext, continueOnCapturedContext, cancellationToken, message, parentSpan, producerSpans);
                 }
             }
             finally
             {
                 tracer?.EndSpans(producerSpans);
                 requestContext.Span = parentSpan;
+            }
+        }
+
+        private async Task PostAsync(RequestContext requestContext, bool continueOnCapturedContext,
+            CancellationToken cancellationToken, Message message, Activity? parentSpan, ConcurrentDictionary<string, Activity> producerSpans)
+        {
+            s_logger.LogInformation(
+                "Decoupled invocation of message: Topic:{Topic} Id:{Id}",
+                message.Header.Topic, message.Id
+            );
+
+            var producer = producerRegistry.LookupBy(message.Header.Topic);
+            var span = tracer?.CreateProducerSpan(producer.Publication, message, parentSpan, instrumentationOptions);
+            producer.Span = span;
+            if (span != null) producerSpans.TryAdd(message.Id, span);
+
+            if (producer is not IAmAMessageProducerAsync producerAsync)
+                throw new InvalidOperationException("No async message producer defined.");
+                
+            if (producer is ISupportPublishConfirmation)
+            {
+                //mark dispatch handled by a callback - set in constructor
+                await RetryAsync(
+                        async _ => await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                        requestContext, 
+                        continueOnCapturedContext,
+                        cancellationToken)
+                    .ConfigureAwait(continueOnCapturedContext);
+            }
+            else
+            {
+                var sent = await RetryAsync(
+                        async _ => await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                        requestContext,
+                        continueOnCapturedContext,
+                        cancellationToken
+                    )
+                    .ConfigureAwait(continueOnCapturedContext
+                    );
+
+                if (sent)
+                    await RetryAsync(
+                        async _ => await outBox.MarkDispatchedAsync(message.Id, requestContext, cancellationToken),
+                        requestContext,
+                        cancellationToken: cancellationToken
+                    );
             }
         }
 
@@ -96,17 +100,14 @@ internal class MessagePosterAsync<TMessage, TTransaction>(
                 .ExecuteAndCaptureAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
 
-            if (result.Outcome != OutcomeType.Successful)
-            {
-                if (result.FinalException != null)
-                {
-                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
-                    outBox.CheckOutstandingMessages(requestContext);
-                }
+            if (result.Outcome == OutcomeType.Successful) return true;
 
-                return false;
-            }
+            if (result.FinalException == null) return false;
+            
+            s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+            outBox.CheckOutstandingMessages(requestContext);
 
-            return true;
+            return false;
+
         }
 }

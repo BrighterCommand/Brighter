@@ -113,6 +113,7 @@ namespace Paramore.Brighter
         /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
         void CreateRequestFromMessage<TRequest>(Message message, RequestContext? requestContext, out TRequest request)
             where TRequest : class, IRequest;
+
     }
     
     /// <summary>
@@ -155,7 +156,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction>? overridingTransactionProvider = null,
             string? batchId = null);
-
+        
         /// <summary>
         /// Do we have an async outbox defined?
         /// </summary>
@@ -167,6 +168,20 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>true if defined</returns>
         bool HasOutbox();
+        
+        
+        /// <summary>
+        /// Locks the check of outstanding messages in an Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, so that if the check takes time we do not run two checks simultaneously
+        /// You must call <see cref="ReleaseCheckOutstanding"/> when done
+        /// </summary>
+        void LockCheckOutStanding();
+        
+        /// <summary>
+        /// Unlocks the outstanding checks in an Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, if they lock the Outbox for an outstanding check.
+        /// </summary>
+        void ReleaseCheckOutstanding();
         
         /// <summary>
         /// How many outstanding messages are there; Uses -1 to indicate no outbox and will thus force a throw on a failed publish
@@ -200,5 +215,16 @@ namespace Paramore.Brighter
         Task EndBatchAddToOutboxAsync(string batchId,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider, RequestContext requestContext,
             CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Locks an explicit clear of the outbox (as opposed to a background clear)
+        /// </summary>
+        void LockClear();
+
+        /// <summary>
+        /// Unleocks the explicit clear in the Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, if they lock the outbox for an explicit clear
+        /// </summary>
+        void ReleaseClear();
     }
 }

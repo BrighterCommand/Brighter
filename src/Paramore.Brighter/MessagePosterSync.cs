@@ -10,14 +10,25 @@ using Polly.Registry;
 
 namespace Paramore.Brighter;
 
-internal class MessagePosterSync<TMessage, TTransaction>(
+public class MessagePosterSync<TMessage, TTransaction>(
     IAmAProducerRegistry producerRegistry,
-    OutboxSync<TMessage, TTransaction> outBox,
     IAmABrighterTracer tracer,
     PolicyRegistry policyRegistry,
     InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) where TMessage : Message
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
+    
+    public void CallViaExternalBus<T, TResponse>(Message outMessage, RequestContext? requestContext)
+        where T : class, ICall where TResponse : class, IResponse
+    {
+        //We assume that this only occurs over a blocking producer
+        var producer = producerRegistry?.LookupBy(outMessage.Header.Topic);
+        if (producer is IAmAMessageProducerSync producerSync)
+            Retry(
+                () => producerSync.Send(outMessage),
+                requestContext
+            );
+    }
 
     public void Dispatch(IEnumerable<Message> posts, RequestContext requestContext, Dictionary<string, object>? args = null)
     {
@@ -70,17 +81,15 @@ internal class MessagePosterSync<TMessage, TTransaction>(
     {
         var policy = policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
         var result = policy.ExecuteAndCapture(action);
-        if (result.Outcome != OutcomeType.Successful)
-        {
-            if (result.FinalException != null)
-            {
-                s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
-                outBox.CheckOutstandingMessages(requestContext);
-            }
+        
+        if (result.Outcome == OutcomeType.Successful) return true;
+        
+        if (result.FinalException == null) return false;
+        
+        s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+        outBox.CheckOutstandingMessages(requestContext);
 
-            return false;
-        }
+        return false;
 
-        return true;
     }
 }
