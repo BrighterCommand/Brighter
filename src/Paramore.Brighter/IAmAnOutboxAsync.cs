@@ -60,7 +60,7 @@ namespace Paramore.Brighter
         Task AddAsync(
             T message,
             RequestContext requestContext,
-            int outBoxTimeout = -1,
+            TimeSpan outBoxTimeout,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default
         );
@@ -77,7 +77,7 @@ namespace Paramore.Brighter
         Task AddAsync(
             IEnumerable<T> messages,
             RequestContext? requestContext,
-            int outBoxTimeout = -1,
+            TimeSpan outBoxTimeout,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default
         );
@@ -129,7 +129,7 @@ namespace Paramore.Brighter
         Task<Message> GetAsync(
             string messageId,
             RequestContext requestContext,
-            int outBoxTimeout = -1,
+            TimeSpan outBoxTimeout,
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         );

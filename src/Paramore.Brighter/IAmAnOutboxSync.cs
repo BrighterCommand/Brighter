@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
-        void Add(T message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction>? transactionProvider = null);
+        void Add(T message, RequestContext requestContext, TimeSpan outBoxTimeout, IAmABoxTransactionProvider<TTransaction>? transactionProvider = null);
 
         /// <summary>
         /// Awaitable add the specified message.
@@ -53,7 +53,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
-        void Add(IEnumerable<T> messages, RequestContext? requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction>? transactionProvider = null);
+        void Add(IEnumerable<T> messages, RequestContext? requestContext, TimeSpan outBoxTimeout, IAmABoxTransactionProvider<TTransaction>? transactionProvider = null);
 
         /// <summary>
         /// Delete the specified messages

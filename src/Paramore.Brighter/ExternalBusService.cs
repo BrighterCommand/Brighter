@@ -17,46 +17,59 @@ namespace Paramore.Brighter
     /// Provide services to CommandProcessor that persist across the lifetime of the application. Allows separation from
     /// elements that have a lifetime linked to the scope of a request, or are transient for DI purposes
     /// </summary>
-    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService,
-        IAmAnExternalBusService<TMessage, TTransaction>
+    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService, IAmAnExternalBusService<TMessage, TTransaction>
         where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
-        private readonly IPolicyRegistry<string> _policyRegistry;
-        private readonly IAmAnArchiveProvider? _archiveProvider;
-        private readonly TransformPipelineBuilder _transformPipelineBuilder;
-        private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
-        private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
-        private readonly IAmAnOutboxAsync<TMessage, TTransaction>? _asyncOutbox;
-        private readonly int _outboxTimeout;
-        private readonly IAmAProducerRegistry _producerRegistry;
-        private readonly int _archiveBatchSize;
-        private readonly InstrumentationOptions _instrumentationOptions;
+        private IPolicyRegistry<string>? _policyRegistry;
+        private IAmAnArchiveProvider? _archiveProvider;
+        private TransformPipelineBuilder? _transformPipelineBuilder;
+        private TransformPipelineBuilderAsync? _transformPipelineBuilderAsync;
+        private IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
+        private IAmAnOutboxAsync<TMessage, TTransaction>? _asyncOutbox;
+        private TimeSpan _outboxTimeout;
+        private IAmAProducerRegistry? _producerRegistry;
+        private int _archiveBatchSize;
+        private InstrumentationOptions _instrumentationOptions;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
-        private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
+        private static readonly SemaphoreSlim s_clear = new(1, 1);
 
-        private static readonly SemaphoreSlim s_backgroundClearSemaphoreToken = new(1, 1);
+        private static readonly SemaphoreSlim s_backgroundClear = new(1, 1);
 
-        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static
-        //bool should be made thread-safe by locking the object
-        private static readonly SemaphoreSlim s_checkOutstandingSemaphoreToken = new(1, 1);
+        private static readonly SemaphoreSlim s_checkOutstanding = new(1, 1);
 
         private DateTimeOffset _lastOutStandingMessageCheckAt;
+        
+        private bool _disposed;
+        private int _maxOutStandingMessages;
+        private TimeSpan _maxOutStandingCheckInterval;
+        private Dictionary<string, object>? _outBoxBag;
+        private IAmABrighterTracer? _tracer;
+        private readonly TimeProvider _timeProvider;
 
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
         private const string NoArchiveProviderError = "An Archive Provider must be defined.";
-            
-        //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
-        private int _outStandingCount;
-        private bool _disposed;
-        private readonly int _maxOutStandingMessages;
-        private readonly TimeSpan _maxOutStandingCheckInterval;
-        private readonly Dictionary<string, object> _outBoxBag;
-        private readonly IAmABrighterTracer _tracer;
-        private readonly TimeProvider _timeProvider;
+        private const string NoProducerRegistryError = "A Producer Registry must be defined.";                                
+        private const string NoPolicyRegistry = "Missing Policy Registry for External Bus Services";
+        
+        /// <summary>
+        /// How do we mark messages dispatched and clear them; required for access by <see cref="MessagePosterSync{TMessage,TTransaction}"/>
+        /// </summary>
+        public OutboxSync<TMessage, TTransaction> OutboxSync { get; private set; }
+        
+        /// <summary>
+        /// How many outstanding messages are there; Uses -1 to indicate no outbox and will thus force a throw on a failed publish
+        /// Updated by the <see cref="OutboxSync{TMessage,TTransaction}"/> 
+        /// </summary>
+        public int OutStandingCount { get; set; }
+        
+        /// <summary>
+        /// How do we send messages via a producer; required for access by <see cref="OutboxSync{TMessage,TTransaction}"/>
+        /// </summary>
+        public MessagePosterSync<TMessage, TTransaction> Poster { get; private set; }
 
         /// <summary>
         /// Creates an instance of External Bus Services
@@ -86,7 +99,7 @@ namespace Paramore.Brighter
             IAmAnOutbox? outbox = null,
             IAmAnArchiveProvider? archiveProvider = null,
             IAmARequestContextFactory? requestContextFactory = null,
-            int outboxTimeout = 300,
+            TimeSpan? outboxTimeout = null,
             int maxOutStandingMessages = -1,
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
@@ -94,48 +107,24 @@ namespace Paramore.Brighter
             TimeProvider? timeProvider = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
-            _producerRegistry = producerRegistry ??
-                                throw new ConfigurationException("Missing Producer Registry for External Bus Services");
-            _policyRegistry = policyRegistry ??
-                              throw new ConfigurationException("Missing Policy Registry for External Bus Services");
-            _archiveProvider = archiveProvider;
-
             requestContextFactory ??= new InMemoryRequestContextFactory();
-
-            if (mapperRegistry is null)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
-            if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
-            if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
-                throw new ConfigurationException(
-                    "A Command Processor with an external bus must have a message transformer factory");
+            _timeProvider = timeProvider ?? TimeProvider.System;
+            _outboxTimeout = outboxTimeout ?? TimeSpan.FromMilliseconds(300);
             
-            _timeProvider = (timeProvider is null) ? TimeProvider.System : timeProvider;
-            _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
+            InitializeProducer(producerRegistry);
+            InitializePolicy(policyRegistry);
 
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            _transformPipelineBuilderAsync =
-                new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+            InitializeObservability(tracer, instrumentationOptions);
+            
+            InitializeMappingPipeline(mapperRegistry, messageTransformerFactory, messageTransformerFactoryAsync);
 
-            //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
-            outbox ??= new InMemoryOutbox(TimeProvider.System);
-            outbox.Tracer = tracer;
-
-            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
-            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
-
-            _outboxTimeout = outboxTimeout;
-            _maxOutStandingMessages = maxOutStandingMessages;
-            _maxOutStandingCheckInterval = maxOutStandingCheckInterval ?? TimeSpan.FromMilliseconds(1000);
-            _outBoxBag = outBoxBag ?? new Dictionary<string, object>();
-            _archiveBatchSize = archiveBatchSize;
-            _instrumentationOptions = instrumentationOptions;
-            _tracer = tracer;
+            InitializeOutbox(tracer, outbox, _outboxTimeout, maxOutStandingMessages, maxOutStandingCheckInterval, 
+                outBoxBag, archiveProvider, archiveBatchSize);
 
             ConfigureCallbacks(requestContextFactory.Create());
         }
+
+
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -333,7 +322,7 @@ namespace Paramore.Brighter
             where T : class, ICall where TResponse : class, IResponse
         {
             //We assume that this only occurs over a blocking producer
-            var producer = _producerRegistry.LookupBy(outMessage.Header.Topic);
+            var producer = _producerRegistry?.LookupBy(outMessage.Header.Topic);
             if (producer is IAmAMessageProducerSync producerSync)
                 Retry(
                     () => producerSync.Send(outMessage),
@@ -359,7 +348,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("No outbox defined.");
 
             // Only allow a single Clear to happen at a time
-            s_clearSemaphoreToken.Wait();
+            s_clear.Wait();
             var parentSpan = requestContext.Span;
 
             var childSpans = new ConcurrentDictionary<string, Activity>();
@@ -390,7 +379,7 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
-                s_clearSemaphoreToken.Release();
+                s_clear.Release();
             }
 
             CheckOutstandingMessages(requestContext);
@@ -417,7 +406,7 @@ namespace Paramore.Brighter
             if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            await s_clearSemaphoreToken.WaitAsync(cancellationToken);
+            await s_clear.WaitAsync(cancellationToken);
             var parentSpan = requestContext.Span;
 
             var childSpans = new ConcurrentDictionary<string, Activity>();
@@ -447,7 +436,7 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpans(childSpans);
                 requestContext.Span = parentSpan;
-                s_clearSemaphoreToken.Release();
+                s_clear.Release();
             }
 
             CheckOutstandingMessages(requestContext);
@@ -532,7 +521,7 @@ namespace Paramore.Brighter
             out TRequest request)
             where TRequest : class, IRequest
         {
-            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
+            if (_transformPipelineBuilderAsync is not null && _transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
                 request = _transformPipelineBuilderAsync
                     .BuildUnwrapPipeline<TRequest>()
@@ -540,7 +529,7 @@ namespace Paramore.Brighter
                     .GetAwaiter()
                     .GetResult();
             }
-            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
+            else if (_transformPipelineBuilder is not null && _transformPipelineBuilder.HasPipeline<TRequest>())
             {
                 request = _transformPipelineBuilder
                     .BuildUnwrapPipeline<TRequest>()
@@ -636,6 +625,24 @@ namespace Paramore.Brighter
             return _outBox != null;
         }
 
+        /// <summary>
+        /// Locks the check of outstanding messages in an Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, so that if the check takes time we do not run two checks simultaneously
+        /// You must call <see cref="ReleaseCheckOutstanding"/> when done
+        /// </summary>
+        public void LockCheckOutStanding()
+        {
+            s_checkOutstanding.Wait();
+        }
+
+        /// <summary>
+        /// Locks an explicit clear of the outbox (as opposed to a background clear)
+        /// </summary>
+        public void LockClear()
+        {
+            s_clear.Wait();
+        }
+
         private Task BackgroundDispatchUsingSync(
             int amountToClear,
             TimeSpan timeSinceSent,
@@ -644,14 +651,14 @@ namespace Paramore.Brighter
         )
         {
             WaitHandle[] clearTokens = new WaitHandle[2];
-            clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
-            clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
+            clearTokens[0] = s_backgroundClear.AvailableWaitHandle;
+            clearTokens[1] = s_clear.AvailableWaitHandle;
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
                 //NOTE: The wait handle only signals availability, still need to increment the counter:
                 // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
-                s_backgroundClearSemaphoreToken.Wait();
-                s_clearSemaphoreToken.Wait();
+                s_backgroundClear.Wait();
+                s_clear.Wait();
                 
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
@@ -688,8 +695,8 @@ namespace Paramore.Brighter
                 finally
                 {
                     _tracer?.EndSpan(span);
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
+                    s_clear.Release();
+                    s_backgroundClear.Release();
                 }
 
                 CheckOutstandingMessages(requestContext);
@@ -712,14 +719,14 @@ namespace Paramore.Brighter
         )
         {
             WaitHandle[] clearTokens = new WaitHandle[2];
-            clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
-            clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
+            clearTokens[0] = s_backgroundClear.AvailableWaitHandle;
+            clearTokens[1] = s_clear.AvailableWaitHandle;
             if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
             {
                 //NOTE: The wait handle only signals availability, still need to increment the counter:
                 // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
-                await s_backgroundClearSemaphoreToken.WaitAsync();
-                await s_clearSemaphoreToken.WaitAsync();
+                await s_backgroundClear.WaitAsync();
+                await s_clear.WaitAsync();
                 
                 var parentSpan = requestContext.Span;
                 var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
@@ -761,8 +768,8 @@ namespace Paramore.Brighter
                 finally
                 {
                     _tracer?.EndSpan(span);
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
+                    s_clear.Release();
+                    s_backgroundClear.Release();
                 }
 
                 CheckOutstandingMessages(requestContext);
@@ -780,10 +787,10 @@ namespace Paramore.Brighter
             if (!hasOutBox)
                 return;
 
-            s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", _outStandingCount);
+            s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", OutStandingCount);
             // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
             bool exceedsOutstandingMessageLimit =
-                _maxOutStandingMessages != -1 && _outStandingCount > _maxOutStandingMessages;
+                _maxOutStandingMessages != -1 && OutStandingCount > _maxOutStandingMessages;
 
             if (exceedsOutstandingMessageLimit)
                 throw new OutboxLimitReachedException(
@@ -822,6 +829,8 @@ namespace Paramore.Brighter
         /// </summary>
         private void ConfigureCallbacks(RequestContext requestContext)
         {
+            if (_producerRegistry is null) return;
+            
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
             foreach (var producer in _producerRegistry.Producers)
             {
@@ -894,6 +903,7 @@ namespace Paramore.Brighter
             try
             {
                 if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
+                if (_producerRegistry is null) throw new ArgumentException(NoProducerRegistryError);
                 foreach (var message in posts)
                 {
                     s_logger.LogInformation(
@@ -952,6 +962,8 @@ namespace Paramore.Brighter
             try
             {
                 if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                if (_producerRegistry is null) throw new ArgumentException(NoProducerRegistryError);
+                
                 var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
 
                 foreach (var topicBatch in messagesByTopic)
@@ -1017,6 +1029,8 @@ namespace Paramore.Brighter
             try
             {
                 if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                if (_producerRegistry is null) throw new ArgumentException(NoProducerRegistryError);
+                
                 foreach (var message in posts)
                 {
                     s_logger.LogInformation(
@@ -1077,17 +1091,82 @@ namespace Paramore.Brighter
                 requestContext.Span = parentSpan;
             }
         }
+        
+      
+        private void InitializeMappingPipeline(IAmAMessageMapperRegistry mapperRegistry,
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync)
+        {
+            if (mapperRegistry is null)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
+            if (mapperRegistry is not IAmAMessageMapperRegistryAsync mapperRegistryAsync)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
+            if (messageTransformerFactory is null || messageTransformerFactoryAsync is null)
+                throw new ConfigurationException(
+                    "A Command Processor with an external bus must have a message transformer factory");
+            
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+        }
+
+        private void InitializeObservability(IAmABrighterTracer tracer, InstrumentationOptions instrumentationOptions)
+        {
+            _instrumentationOptions = instrumentationOptions;
+            _tracer = tracer;
+        }
+
+        private void InitializeOutbox(IAmABrighterTracer tracer,
+            IAmAnOutbox? outbox,
+            TimeSpan outboxTimeout,
+            int maxOutStandingMessages,
+            TimeSpan? maxOutStandingCheckInterval,
+            Dictionary<string, object>? outBoxBag,
+            IAmAnArchiveProvider? archiveProvider,
+            int archiveBatchSize)
+        {
+            IAmAnOutbox? outbox1 = outbox;
+            //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
+            outbox1 ??= new InMemoryOutbox(TimeProvider.System);
+            outbox1.Tracer = tracer;
+
+            if (outbox1 is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
+            if (outbox1 is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+
+            _outboxTimeout = outboxTimeout;
+            _maxOutStandingMessages = maxOutStandingMessages;
+            _maxOutStandingCheckInterval = maxOutStandingCheckInterval ?? TimeSpan.FromMilliseconds(1000);
+            _outBoxBag = outBoxBag ?? new Dictionary<string, object>();
+            _archiveProvider = archiveProvider;
+            _archiveBatchSize = archiveBatchSize;
+            _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
+        }
+        
+        private void InitializePolicy(IPolicyRegistry<string> policyRegistry)
+        {
+            _policyRegistry = policyRegistry ??
+                              throw new ConfigurationException(NoPolicyRegistry);
+        }
+
+        private void InitializeProducer(IAmAProducerRegistry producerRegistry)
+        {
+            _producerRegistry = producerRegistry ??
+                                throw new ConfigurationException("Missing Producer Registry for External Bus Services");
+        }
 
         private Message MapMessage<TRequest>(TRequest request, RequestContext requestContext)
             where TRequest : class, IRequest
         {
+            if (_producerRegistry is null) throw new ConfigurationException(NoProducerRegistryError);
+            
             var publication = _producerRegistry.LookupPublication<TRequest>();
             if (publication == null)
                 throw new ConfigurationException(
                     $"No publication found for request {request.GetType().Name}");
 
             Message message;
-            if (_transformPipelineBuilder.HasPipeline<TRequest>())
+            if (_transformPipelineBuilder is not null && _transformPipelineBuilder.HasPipeline<TRequest>())
             {
                 message = _transformPipelineBuilder
                     .BuildWrapPipeline<TRequest>()
@@ -1108,13 +1187,15 @@ namespace Paramore.Brighter
         )
             where TRequest : class, IRequest
         {
+            if (_producerRegistry is null) throw new ConfigurationException(NoProducerRegistryError);
+            
             var publication = _producerRegistry.LookupPublication<TRequest>();
             if (publication == null)
                 throw new ConfigurationException(
                     $"No publication found for request {request.GetType().Name}");
 
             Message message;
-            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
+            if (_transformPipelineBuilderAsync is not null && _transformPipelineBuilderAsync.HasPipeline<TRequest>())
             {
                 message = await _transformPipelineBuilderAsync
                     .BuildWrapPipeline<TRequest>()
@@ -1130,7 +1211,7 @@ namespace Paramore.Brighter
 
         private void OutstandingMessagesCheck(RequestContext? requestContext)
         {
-            s_checkOutstandingSemaphoreToken.Wait();
+            LockCheckOutStanding();
 
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
             s_logger.LogDebug("Begin count of outstanding messages");
@@ -1138,7 +1219,7 @@ namespace Paramore.Brighter
             {
                 if (_outBox != null)
                 {
-                    _outStandingCount = _outBox
+                    OutStandingCount = _outBox
                         .OutstandingMessages(
                             _maxOutStandingCheckInterval,
                             requestContext,
@@ -1148,24 +1229,45 @@ namespace Paramore.Brighter
                     return;
                 }
 
-                _outStandingCount = 0;
+                OutStandingCount = 0;
             }
             catch (Exception ex)
             {
                 //if we can't talk to the outbox, we would swallow the exception on this thread
                 //by setting the _outstandingCount to -1, we force an exception
                 s_logger.LogError(ex, "Error getting outstanding message count, reset count");
-                _outStandingCount = 0;
+                OutStandingCount = 0;
             }
             finally
             {
-                s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
-                s_checkOutstandingSemaphoreToken.Release();
+                s_logger.LogDebug("Current outstanding count is {OutStandingCount}", OutStandingCount);
+                ReleaseCheckOutstanding();
             }
+        }
+        
+        /// <summary>
+        /// Unlocks the outstanding checks in an Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, if they lock the Outbox for an outstanding check.
+        /// </summary>
+        public void ReleaseCheckOutstanding()
+        {
+            s_checkOutstanding.Release();
+        }
+
+        
+        /// <summary>
+        /// Unleocks the explicit clear in the Outbox. <see cref="OutboxSync{TMessage,TTransaction}"/> and <see cref="OutboxAsync{TMessage,TTransaction}"/>
+        /// need to do this, if they lock the outbox for an explicit clear
+        /// </summary>
+        public void ReleaseClear()
+        {
+            s_clear.Release();
         }
 
         private bool Retry(Action action, RequestContext? requestContext)
         {
+            if (_policyRegistry is null) throw new ConfigurationException(NoPolicyRegistry);
+            
             var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
             var result = policy.ExecuteAndCapture(action);
             if (result.Outcome != OutcomeType.Successful)
@@ -1188,6 +1290,8 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
+            if (_policyRegistry is null) throw new ConfigurationException(NoPolicyRegistry);
+            
             var result = await _policyRegistry.Get<AsyncPolicy>(CommandProcessor.RETRYPOLICYASYNC)
                 .ExecuteAndCaptureAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
