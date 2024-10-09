@@ -151,7 +151,7 @@ namespace Paramore.Brighter
             if (_disposed)
                 return;
 
-            if (disposing && _producerRegistry != null)
+            if (disposing)
                 _producerRegistry.CloseAll();
             _disposed = true;
         }
@@ -568,7 +568,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span,
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
                 transactionProvider != null, false, _instrumentationOptions);
 
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
@@ -597,7 +597,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span,
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
                 transactionProvider != null, true, _instrumentationOptions);
 
             if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
@@ -654,7 +654,7 @@ namespace Paramore.Brighter
                 s_clearSemaphoreToken.Wait();
                 
                 var parentSpan = requestContext.Span;
-                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
 
                 try
@@ -687,7 +687,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer?.EndSpan(span);
+                    _tracer.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -722,7 +722,7 @@ namespace Paramore.Brighter
                 await s_clearSemaphoreToken.WaitAsync();
                 
                 var parentSpan = requestContext.Span;
-                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
                 try
                 {
@@ -760,7 +760,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer?.EndSpan(span);
+                    _tracer.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
