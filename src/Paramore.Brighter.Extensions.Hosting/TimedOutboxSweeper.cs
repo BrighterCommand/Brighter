@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             }
             else
             {
-                s_logger.LogWarning("Outbox Sweeper is still running - abandoning attempt.");
+                s_logger.LogInformation("Outbox Sweeper is still running - abandoning attempt.");
             }
             
             s_logger.LogInformation("Outbox Sweeper sleeping");
