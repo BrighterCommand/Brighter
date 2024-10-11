@@ -250,6 +250,8 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The request context for the pipeline</param>
         public void Archive(TimeSpan dispatchedSince, RequestContext requestContext)
         {
+            var span = _tracer?.(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
+            
             try
             {
                 if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);

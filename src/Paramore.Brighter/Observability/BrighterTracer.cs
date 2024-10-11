@@ -286,9 +286,15 @@ public class BrighterTracer : IAmABrighterTracer
         return activity;
     }
     
+    /// <summary>
+    /// Creates a span for an archive operation. Because a sweeper may not create an externa bus, but just use the archiver directly, we
+    /// check for this existing and then recreate directly in the archive provider if it does not exist
+    /// </summary>
+    /// <param name="parentActivity">A parent activity that called this one</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns></returns>
     public Activity? CreateArchiveSpan(
         Activity? parentActivity,
-        string? messageId = null,
         InstrumentationOptions options = InstrumentationOptions.All)
     {
         var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {CommandProcessorSpanOperation.Archive.ToSpanName()}";
