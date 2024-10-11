@@ -57,7 +57,7 @@ We will seek to lower the code complexity concerns identified by CodeScene by as
 In practice this did not work. Why?
 
 - The `ExternalServiceBus` is a [Mediator](https://en.wikipedia.org/wiki/Mediator_pattern) that manages the complex interaction between a producer and the outbox
-- Attempting to move functionality from the Mediator back out to the Outbox or MessagePoster classes resulted in a cyclic dependency between the classes as each class needed to call the other. The only way around that would be to lift the functionality to a higher level in a Mmediator between the two -  which would be the reason for the `ExternalServiceBus` class in the first place.
+- Attempting to move functionality from the Mediator back out to the Outbox or MessagePoster classes resulted in a cyclic dependency between the classes as each class needed to call the other. The only way around that would be to lift the functionality to a higher level in a Mediator between the two -  which would be the reason for the `ExternalServiceBus` class in the first place.
 - This situaion is exacerbated by the role of `ExternalServiceBus` in providing a semaphore to control the number of checks of the outbox that can be made at any one time. This is a cross-cutting concern that is difficult to factor out. 
 - Because `ExternalServiceBus` is a singleton the creation of the Outbox and MessagePoster need to happen within `ExternalServiceBus` which itself limits the opportunities for these flowing back to `CommandProcessor`.
 - `ExternalServiceBus` was first extracted from `CommandProcessor` to reduce the complexity of `CommandProcessor`. There is a danger that naive attempts to simplify `ExternalServiceBus` will result in the complexity returning to `CommandProcessor`. 
