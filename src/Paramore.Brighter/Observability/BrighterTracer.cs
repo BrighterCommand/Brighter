@@ -285,6 +285,27 @@ public class BrighterTracer : IAmABrighterTracer
 
         return activity;
     }
+    
+    public Activity? CreateArchiveSpan(
+        Activity? parentActivity,
+        string? messageId = null,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {CommandProcessorSpanOperation.Archive.ToSpanName()}";
+        var kind = ActivityKind.Producer;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();  
+        
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            startTime: now);
+        
+        Activity.Current = activity;
+
+        return activity;
+    }
 
     /// <summary>
     /// Create a span for a batch of messages to be cleared  

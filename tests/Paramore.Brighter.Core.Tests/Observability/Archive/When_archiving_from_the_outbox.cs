@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -23,6 +24,7 @@ public class ExternalServiceBusArchiveObservabilityTests
     private readonly FakeTimeProvider _timeProvider;
     private RoutingKey _routingKey = new("MyEvent");
     private readonly InMemoryOutbox _outbox;
+    private readonly TracerProvider _traceProvider;
 
     public ExternalServiceBusArchiveObservabilityTests()
     {
@@ -32,7 +34,7 @@ public class ExternalServiceBusArchiveObservabilityTests
 
         var builder = Sdk.CreateTracerProviderBuilder();
 
-        var traceProvider = builder
+        _traceProvider = builder
             .AddSource("Paramore.Brighter.Tests", "Paramore.Brighter")
             .ConfigureResource(r => r.AddService("in-memory-tracer"))
             .AddInMemoryExporter(_exportedActivities)
@@ -85,7 +87,10 @@ public class ExternalServiceBusArchiveObservabilityTests
     [Fact]
     public void When_archiving_from_the_outbox()
     {
+        var parentActivity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("BrighterTracerSpanTests");
+        
         var context = new RequestContext();
+        context.Span = parentActivity;
         
         //add and clear message
         var myEvent = new MyEvent();
@@ -104,6 +109,20 @@ public class ExternalServiceBusArchiveObservabilityTests
         
         //should be no messages in the outbox
         _outbox.EntryCount.Should().Be(0);
+        
+        parentActivity?.Stop();
+        
+        _traceProvider.ForceFlush();
+        
+        //We should have exported matching activities
+        _exportedActivities.Count.Should().Be(5);
+        
+        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        
+        //there should be a create span for the batch
+        var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ArchiveMessages} {CommandProcessorSpanOperation.Archive.ToSpanName()}");
+        createActivity.Should().NotBeNull();
+        createActivity.ParentId.Should().Be(parentActivity?.Id);
         
     }
 }

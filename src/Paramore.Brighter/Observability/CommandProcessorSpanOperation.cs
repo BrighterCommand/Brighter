@@ -33,5 +33,6 @@ public enum CommandProcessorSpanOperation
     Create = 1,     // A batch operation, such as publishing an event or clearing a message
     Publish = 2,    // Publish an event
     Deposit = 3,    // Deposit a message in the outbox
-    Clear = 4       // Clear a message from the outbox
+    Clear = 4,      // Clear a message from the outbox
+    Archive = 5     //Archive a message from the outbox
 }
