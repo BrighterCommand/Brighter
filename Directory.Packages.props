@@ -13,7 +13,7 @@
     <PackageVersion Include="Azure.Identity" Version="1.12.1" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.22.2" />
-    <PackageVersion Include="Confluent.Kafka" Version="2.5.3" />
+    <PackageVersion Include="Confluent.Kafka" Version="2.6.0" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.5.3" />
     <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.5.3" />
     <PackageVersion Include="coverlet.collector" Version="6.0.2">
