@@ -283,8 +283,8 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
 
-            var age =
-                _timeProvider.GetUtcNow() - dispatchedSince;
+            var now = _timeProvider.GetUtcNow();
+            var age = now - dispatchedSince;
             return Requests.Values
                 .Where(oe => (oe.TimeFlushed != DateTimeOffset.MinValue) && (oe.TimeFlushed <= age))
                 .Take(pageSize)
@@ -439,7 +439,7 @@ namespace Paramore.Brighter
 
             if (Requests.TryGetValue(id, out OutboxEntry? entry))
             {
-                entry.TimeFlushed = dispatchedAt ?? _timeProvider.GetUtcNow().DateTime;
+                entry.TimeFlushed = dispatchedAt ?? _timeProvider.GetUtcNow();
             }
         }
 

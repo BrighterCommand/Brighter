@@ -29,6 +29,7 @@ namespace Paramore.Brighter.Observability;
 /// </summary>
 public static class BrighterSemanticConventions
 {
+    public const string ArchiveMessages = "paramore.brighter.archive_messages";
     public const string CeSource = "cloudevents.event_source";
     public const string CeMessageId = "cloudevents.event_id";
     public const string CeVersion = "cloudevents.event_spec_version";

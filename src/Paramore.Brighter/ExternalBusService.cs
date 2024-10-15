@@ -151,7 +151,7 @@ namespace Paramore.Brighter
             if (_disposed)
                 return;
 
-            if (disposing && _producerRegistry != null)
+            if (disposing)
                 _producerRegistry.CloseAll();
             _disposed = true;
         }
@@ -250,6 +250,9 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The request context for the pipeline</param>
         public void Archive(TimeSpan dispatchedSince, RequestContext requestContext)
         {
+            //This is a archive span parent; we expect individual archiving operations for messages to have their own spans
+            var span = _tracer?.CreateArchiveSpan(requestContext.Span, options: _instrumentationOptions);
+            
             try
             {
                 if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
@@ -282,6 +285,10 @@ namespace Paramore.Brighter
             {
                 s_logger.LogError(e, "Error while archiving from the outbox");
                 throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);    
             }
         }
 
@@ -568,7 +575,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span,
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
                 transactionProvider != null, false, _instrumentationOptions);
 
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
@@ -597,7 +604,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span,
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
                 transactionProvider != null, true, _instrumentationOptions);
 
             if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
@@ -654,7 +661,7 @@ namespace Paramore.Brighter
                 s_clearSemaphoreToken.Wait();
                 
                 var parentSpan = requestContext.Span;
-                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
 
                 try
@@ -687,7 +694,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer?.EndSpan(span);
+                    _tracer.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -722,7 +729,7 @@ namespace Paramore.Brighter
                 await s_clearSemaphoreToken.WaitAsync();
                 
                 var parentSpan = requestContext.Span;
-                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
                 try
                 {
@@ -760,7 +767,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer?.EndSpan(span);
+                    _tracer.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
