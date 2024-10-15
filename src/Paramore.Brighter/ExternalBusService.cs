@@ -250,7 +250,8 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The request context for the pipeline</param>
         public void Archive(TimeSpan dispatchedSince, RequestContext requestContext)
         {
-            var span = _tracer?.(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
+            //This is a archive span parent; we expect individual archiving operations for messages to have their own spans
+            var span = _tracer?.CreateArchiveSpan(requestContext.Span, options: _instrumentationOptions);
             
             try
             {
@@ -284,6 +285,10 @@ namespace Paramore.Brighter
             {
                 s_logger.LogError(e, "Error while archiving from the outbox");
                 throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);    
             }
         }
 

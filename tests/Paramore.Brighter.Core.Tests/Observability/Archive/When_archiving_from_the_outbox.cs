@@ -115,7 +115,7 @@ public class ExternalServiceBusArchiveObservabilityTests
         _traceProvider.ForceFlush();
         
         //We should have exported matching activities
-        _exportedActivities.Count.Should().Be(5);
+        _exportedActivities.Count.Should().Be(6);
         
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
         
