@@ -23,9 +23,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public static IBrighterBuilder UseDynamoDbOutbox(
             this IBrighterBuilder brighterBuilder, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildDynamoDbOutbox, serviceLifetime));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildDynamoDbOutbox, serviceLifetime));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildDynamoDbOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), GetOrBuildDynamoDbOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), GetOrBuildDynamoDbOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), GetOrBuildDynamoDbOutbox, serviceLifetime));
 
             return brighterBuilder;
         }
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return brighterBuilder;
         }
 
-        private static DynamoDbOutbox BuildDynamoDbOutbox(IServiceProvider provider)
+        private static DynamoDbOutbox GetOrBuildDynamoDbOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<DynamoDbConfiguration>();
             if (config == null)
@@ -58,6 +58,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             if (dynamoDb == null)
                 throw new InvalidOperationException("No service of type IAmazonDynamoDb was found. Please register before calling this method");
 
+            var existingOutbox = provider.GetService<IAmAnOutbox<Message>>();
+            if (existingOutbox != null)
+                return existingOutbox as DynamoDbOutbox;
 
             return new DynamoDbOutbox(dynamoDb, config);
         }
