@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Delivered")]
         [DynamoDBProperty]
-        public long DeliveryTime { get; set; }
+        public long? DeliveryTime { get; set; }
 
         /// <summary>
         /// A JSON object representing a dictionary of additional properties set on the message
@@ -129,7 +129,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CreatedAt = $"{date}";
             CreatedTime = date.Ticks;
             OutstandingCreatedTime = date.Ticks;
-            DeliveryTime = 0;
+            DeliveryTime = null;
             HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             MessageId = message.Id.ToString();
             MessageType = message.Header.MessageType.ToString();
