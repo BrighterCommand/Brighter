@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             }
             else
             {
-                s_logger.LogWarning("Outbox Archiver is still running - abandoning attempt.");
+                s_logger.LogInformation("Outbox Archiver is still running - abandoning attempt.");
             }
             
         }
