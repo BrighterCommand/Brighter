@@ -84,7 +84,7 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.4.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.8.1" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.9.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="8.0.1" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageVersion Include="System.Text.Json" Version="8.0.5" />
