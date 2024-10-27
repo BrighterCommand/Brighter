@@ -141,6 +141,9 @@ Brighter contributors (sorted alphabeticaly)
   
 **[Sagar Sahay](https://github.com/sagarSahay)**  
  * New ASB Transport
+
+**[Tim Salva](https://github.com/jtsalva)
+ * AWS fixes 
   
 **[Tim Seaward](https://github.com/Drawaes)**
  * Fix unecessary allocations
