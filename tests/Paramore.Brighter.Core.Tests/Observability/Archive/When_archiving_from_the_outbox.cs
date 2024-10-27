@@ -130,7 +130,7 @@ public class ExternalServiceBusArchiveObservabilityTests
         var osCheckActivity = _exportedActivities.SingleOrDefault(a =>
             a.DisplayName == $"{OutboxDbOperation.DispatchedMessages.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
         osCheckActivity.Should().NotBeNull();
-        osCheckActivity.ParentId.Should().Be(createActivity.Id);
+        osCheckActivity?.ParentId.Should().Be(createActivity.Id);
 
         //check for delete messages span
         var deleteActivity = _exportedActivities.SingleOrDefault(a =>
@@ -140,5 +140,18 @@ public class ExternalServiceBusArchiveObservabilityTests
         
         //check the tags for the create span
         createActivity.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.ArchiveAge && Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE);
+        
+        //check the tags for the outstanding messages span
+        osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.DispatchedMessages.ToSpanName()).Should().BeTrue();
+        osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable).Should().BeTrue();
+        osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()).Should().BeTrue();
+        osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName).Should().BeTrue();
+        
+        //check the tages for the delete messages span
+        deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.Delete.ToSpanName()).Should().BeTrue();
+        deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable).Should().BeTrue();
+        deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()).Should().BeTrue();
+        deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName).Should().BeTrue();
+        
     }
 }
