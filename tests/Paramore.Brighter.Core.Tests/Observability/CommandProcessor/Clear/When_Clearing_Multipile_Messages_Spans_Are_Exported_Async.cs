@@ -126,7 +126,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert 
-        _exportedActivities.Count.Should().Be(18);
+        _exportedActivities.Count.Should().Be(21);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
         
         //there should be a create span for the batch
