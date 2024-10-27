@@ -251,7 +251,9 @@ namespace Paramore.Brighter
         public void Archive(TimeSpan dispatchedSince, RequestContext requestContext)
         {
             //This is a archive span parent; we expect individual archiving operations for messages to have their own spans
-            var span = _tracer?.CreateArchiveSpan(requestContext.Span, options: _instrumentationOptions);
+            var parentSpan = requestContext.Span;
+            var createSpan = _tracer?.CreateArchiveSpan(requestContext.Span, options: _instrumentationOptions);
+            requestContext.Span = createSpan;
             
             try
             {
@@ -288,7 +290,8 @@ namespace Paramore.Brighter
             }
             finally
             {
-                _tracer?.EndSpan(span);    
+                _tracer?.EndSpan(createSpan);
+                requestContext.Span = parentSpan;
             }
         }
 

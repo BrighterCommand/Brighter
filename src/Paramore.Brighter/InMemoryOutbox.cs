@@ -214,6 +214,8 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
+            //NOTE: As we call Add, don't create telemetry here
+            
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             if (cancellationToken.IsCancellationRequested)
@@ -241,11 +243,11 @@ namespace Paramore.Brighter
         {
             foreach (string messageId in messageIds)
             {
-                Requests.TryRemove(messageId, out _);
+                Delete(messageId);
             }
         }
 
-        /// <summary>
+       /// <summary>
         /// Deletes the messages from the Outbox
         /// </summary>
         /// <param name="messageIds">The ids of the messages to delete</param>
@@ -282,13 +284,26 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
+            
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.DispatchedMessages, InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions
+            );
 
-            var now = _timeProvider.GetUtcNow();
-            var age = now - dispatchedSince;
-            return Requests.Values
-                .Where(oe => (oe.TimeFlushed != DateTimeOffset.MinValue) && (oe.TimeFlushed <= age))
-                .Take(pageSize)
-                .Select(oe => oe.Message).ToArray();
+            try
+            {
+                var now = _timeProvider.GetUtcNow();
+                var age = now - dispatchedSince;
+                return Requests.Values
+                    .Where(oe => (oe.TimeFlushed != DateTimeOffset.MinValue) && (oe.TimeFlushed <= age))
+                    .Take(pageSize)
+                    .Select(oe => oe.Message).ToArray();
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
+            }        
         }
 
         /// <summary>
@@ -309,6 +324,8 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            //NOTE: As we call DispatchedMessages, don't create telemetry here
+            
             return Task.FromResult(DispatchedMessages(dispatchedSince, requestContext, pageSize, pageNumber,
                 outboxTimeout,
                 args));
@@ -391,6 +408,8 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            //NOTE: We don't create a span here as we just call the sync method
+            
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             MarkDispatched(id, requestContext, dispatchedAt);
@@ -415,6 +434,8 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
+            //NOTE: We don't create a span here as we just call the sync method
+            
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             ids.Each((id) => MarkDispatched(id, requestContext, dispatchedAt));
@@ -436,10 +457,23 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
+            
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.MarkDispatched, InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions
+            );
 
-            if (Requests.TryGetValue(id, out OutboxEntry? entry))
+            try
             {
-                entry.TimeFlushed = dispatchedAt ?? _timeProvider.GetUtcNow();
+                if (Requests.TryGetValue(id, out OutboxEntry? entry))
+                {
+                    entry.TimeFlushed = dispatchedAt ?? _timeProvider.GetUtcNow();
+                }
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);
             }
         }
 
@@ -502,12 +536,31 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions
-                .RunContinuationsAsynchronously);
+            //NOTE: We don't create a span here as we just call the sync method
+            
+            var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             tcs.SetResult(OutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber, args));
 
             return tcs.Task;
+        }
+        
+        private void Delete(string messageId, RequestContext? requestContext = null)
+        {
+            var span = Tracer?.CreateDbSpan(
+                new OutboxSpanInfo(DbSystem.Brighter, InMemoryAttributes.DbName, OutboxDbOperation.Delete, InMemoryAttributes.DbTable),
+                requestContext?.Span,
+                options: _instrumentationOptions
+            );
+
+            try
+            {
+                Requests.TryRemove(messageId, out _);
+            }
+            finally
+            {
+                Tracer?.EndSpan(span);    
+            }
         }
     }
 }
