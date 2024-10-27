@@ -30,7 +30,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,22 +42,22 @@ namespace Paramore.Brighter
     /// <summary>
     /// An outbox entry - a message that we want to send
     /// </summary>
-    public class OutboxEntry : IHaveABoxWriteTime
+    public class OutboxEntry(Message message) : IHaveABoxWriteTime
     {
         /// <summary>
         /// When was the message added to the outbox
         /// </summary>
-        public DateTime WriteTime { get; set; }
+        public DateTimeOffset WriteTime { get; set; }
 
         /// <summary>
         /// When was the message sent to the middleware
         /// </summary>
-        public DateTime TimeFlushed { get; set; }
+        public DateTimeOffset TimeFlushed { get; set; }
 
         /// <summary>
         /// The message to be dispatched
         /// </summary>
-        public Message Message { get; set; }
+        public Message Message { get; } = message;
     }
 
 
@@ -104,7 +103,7 @@ namespace Paramore.Brighter
         /// We inject this so that we can use the same tracer as the calling application
         /// You do not need to set this property as we will set it when setting up the External Service Bus
         /// </summary>
-        public IAmABrighterTracer Tracer { private get; set; }
+        public IAmABrighterTracer? Tracer { private get; set; }
 
         /// <summary>
         /// Adds the specified message
@@ -115,9 +114,9 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
         public void Add(
             Message message,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null
+            IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null
         )
         {
             var span = Tracer?.CreateDbSpan(
@@ -134,7 +133,7 @@ namespace Paramore.Brighter
                 if (!Requests.ContainsKey(message.Id))
                 {
                     if (!Requests.TryAdd(message.Id,
-                            new OutboxEntry { Message = message, WriteTime = _timeProvider.GetUtcNow().DateTime }))
+                            new OutboxEntry(message) { WriteTime = _timeProvider.GetUtcNow().DateTime }))
                     {
                         throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                     }
@@ -155,9 +154,9 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
         public void Add(
             IEnumerable<Message> messages,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null
+            IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null
         )
         {
             ClearExpiredMessages();
@@ -180,9 +179,9 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task AddAsync(
             Message message,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
+            IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
             //NOTE: As we call Add, don't create telemetry here
@@ -210,9 +209,9 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task AddAsync(
             IEnumerable<Message> messages,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null,
+            IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -238,7 +237,7 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The messages to delete</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>           
         /// <param name="args"></param>
-        public void Delete(string[] messageIds, RequestContext requestContext, Dictionary<string, object> args = null)
+        public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
         {
             foreach (string messageId in messageIds)
             {
@@ -257,7 +256,7 @@ namespace Paramore.Brighter
         public Task DeleteAsync(
             string[] messageIds,
             RequestContext requestContext,
-            Dictionary<string, object> args,
+            Dictionary<string, object>? args,
             CancellationToken cancellationToken = default)
         {
             Delete(messageIds, requestContext, args);
@@ -267,7 +266,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Get the messages that have been marked as flushed in the store
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="dispatchedSince">How long ago would the message have been dispatched</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
@@ -275,19 +274,19 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             int outboxTimeout = -1,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
 
-            DateTime dispatchedSince =
-                _timeProvider.GetUtcNow().DateTime.AddMilliseconds(-1 * millisecondsDispatchedSince);
+            var age =
+                _timeProvider.GetUtcNow() - dispatchedSince;
             return Requests.Values
-                .Where(oe => (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
+                .Where(oe => (oe.TimeFlushed != DateTimeOffset.MinValue) && (oe.TimeFlushed <= age))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
@@ -295,22 +294,22 @@ namespace Paramore.Brighter
         /// <summary>
         /// Get the messages that have been marked as flushed in the store
         /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="dispatchedSince">How long ago would the message have been dispatched</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
         /// <param name="outboxTimeout"></param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">A cancellation token for the async operation</param>
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince,
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             int outboxTimeout = -1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, requestContext, pageSize, pageNumber,
+            return Task.FromResult(DispatchedMessages(dispatchedSince, requestContext, pageSize, pageNumber,
                 outboxTimeout,
                 args));
         }
@@ -324,7 +323,7 @@ namespace Paramore.Brighter
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <returns>The message</returns>
         public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
             
@@ -336,7 +335,7 @@ namespace Paramore.Brighter
 
             try
             {
-                return Requests.TryGetValue(messageId, out OutboxEntry entry) ? entry.Message : null;
+                return Requests.TryGetValue(messageId, out OutboxEntry? entry) ? entry.Message : new Message();
             }
             finally
             {
@@ -358,7 +357,7 @@ namespace Paramore.Brighter
             string messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
             //NOTE: We don't create a span here as we just call the sync method
@@ -388,8 +387,8 @@ namespace Paramore.Brighter
         public Task MarkDispatchedAsync(
             string id,
             RequestContext requestContext,
-            DateTime? dispatchedAt = null,
-            Dictionary<string, object> args = null,
+            DateTimeOffset? dispatchedAt = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -412,8 +411,8 @@ namespace Paramore.Brighter
         public Task MarkDispatchedAsync(
             IEnumerable<string> ids,
             RequestContext requestContext,
-            DateTime? dispatchedAt = null,
-            Dictionary<string, object> args = null,
+            DateTimeOffset? dispatchedAt = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -433,12 +432,12 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="dispatchedAt">The time that the message was dispatched</param>
         /// <param name="args">Allows passing arbitrary arguments for searching for a message - not used</param>
-        public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null,
-            Dictionary<string, object> args = null)
+        public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null,
+            Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
 
-            if (Requests.TryGetValue(id, out OutboxEntry entry))
+            if (Requests.TryGetValue(id, out OutboxEntry? entry))
             {
                 entry.TimeFlushed = dispatchedAt ?? _timeProvider.GetUtcNow().DateTime;
             }
@@ -447,18 +446,18 @@ namespace Paramore.Brighter
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
-        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="dispatchedSince">How many seconds since the message was sent do we wait to declare it outstanding</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="pageSize">The number of messages to return on a page</param>
         /// <param name="pageNumber">The page number to return</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         public IEnumerable<Message> OutstandingMessages(
-            double millSecondsSinceSent,
-            RequestContext requestContext,
+            TimeSpan dispatchedSince,
+            RequestContext? requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            Dictionary<string, object> args = null
+            Dictionary<string, object>? args = null
         )
         {
             ClearExpiredMessages();
@@ -472,9 +471,9 @@ namespace Paramore.Brighter
             try
             {
                 var now = _timeProvider.GetUtcNow();
-                var sentBefore = now.AddMilliseconds(-1 * millSecondsSinceSent);
+                var sentBefore = now - dispatchedSince;
                 var outstandingMessages = Requests.Values
-                    .Where(oe => oe.TimeFlushed == DateTime.MinValue && oe.WriteTime <= sentBefore.DateTime)
+                    .Where(oe => oe.TimeFlushed == DateTimeOffset.MinValue && oe.WriteTime <= sentBefore.DateTime)
                     .Take(pageSize)
                     .Select(oe => oe.Message).ToArray();
                 return outstandingMessages;
@@ -488,7 +487,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// A list of outstanding messages
         /// </summary>
-        /// <param name="millSecondsSinceSent">The age of the message in milliseconds</param>
+        /// <param name="dispatchedSince">The age of the message in milliseconds</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="pageSize">The number of messages to return on a page</param>
         /// <param name="pageNumber">The page to return</param>
@@ -496,17 +495,17 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">A cancellation token for the ongoing asynchronous operation</param>
         /// <returns></returns>
         public Task<IEnumerable<Message>> OutstandingMessagesAsync(
-            double millSecondsSinceSent,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions
                 .RunContinuationsAsynchronously);
 
-            tcs.SetResult(OutstandingMessages(millSecondsSinceSent, requestContext, pageSize, pageNumber, args));
+            tcs.SetResult(OutstandingMessages(dispatchedSince, requestContext, pageSize, pageNumber, args));
 
             return tcs.Task;
         }

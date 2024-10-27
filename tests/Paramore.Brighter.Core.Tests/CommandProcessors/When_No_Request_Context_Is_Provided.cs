@@ -127,12 +127,14 @@ public class RequestContextFromFactoryTests : IDisposable
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
         var timeProvider = new FakeTimeProvider();
+        var routingKey = new RoutingKey("MyCommand");
+        
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
                 {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
+                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
 
@@ -171,12 +173,14 @@ public class RequestContextFromFactoryTests : IDisposable
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
         var timeProvider = new FakeTimeProvider();
+        var routingKey = new RoutingKey("MyCommand");
+        
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
                 {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
+                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
             
@@ -216,12 +220,14 @@ public class RequestContextFromFactoryTests : IDisposable
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
         var timeProvider = new FakeTimeProvider();
+        var routingKey = new RoutingKey("MyCommand");
+        
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
                 {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
+                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
             
@@ -245,7 +251,7 @@ public class RequestContextFromFactoryTests : IDisposable
         );
         
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
-        var message = new Message(new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var message = new Message(new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         bus.AddToOutbox(message, new RequestContext());
             
         //act
@@ -265,12 +271,14 @@ public class RequestContextFromFactoryTests : IDisposable
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
         var timeProvider = new FakeTimeProvider();
+        var routingKey = new RoutingKey("MyCommand");
+        
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
                 {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
+                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
             
@@ -294,7 +302,7 @@ public class RequestContextFromFactoryTests : IDisposable
         );
         
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
-        var message = new Message(new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var message = new Message(new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         bus.AddToOutbox(message, new RequestContext());
             
         //act

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ;
@@ -33,17 +34,17 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     internal class QueueFactory
     {
         private readonly RmqMessagingGatewayConnection _connection;
-        private readonly string _channelName;
-        private readonly string[] _routingKeys;
+        private readonly ChannelName _channelName;
+        private readonly RoutingKeys _routingKeys;
 
-        public QueueFactory(RmqMessagingGatewayConnection connection, string channelName, params string[] routingKeys)
+        public QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys)
         {
             _connection = connection;
             _channelName = channelName;
             _routingKeys = routingKeys;
         }
 
-        public void Create(int timeToDelayForCreationInMilliseconds)
+        public void Create(TimeSpan timeToDelayForCreation)
         {
             var connectionFactory = new ConnectionFactory {Uri = _connection.AmpqUri.Uri};
             using (var connection = connectionFactory.CreateConnection())
@@ -51,22 +52,22 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 using (var channel = connection.CreateModel())
                 {
                     channel.DeclareExchangeForConnection(_connection, OnMissingChannel.Create);
-                    channel.QueueDeclare(_channelName, false, false, false, null);
+                    channel.QueueDeclare(_channelName.Value, false, false, false, null);
                     if (_routingKeys.Any())
                     {
-                        foreach (var routingKey in _routingKeys)
-                            channel.QueueBind(_channelName, _connection.Exchange.Name, routingKey);
+                        foreach (RoutingKey routingKey in _routingKeys)
+                            channel.QueueBind(_channelName.Value, _connection.Exchange.Name, routingKey);
                     }
                     else
                     {
-                        channel.QueueBind(_channelName, _connection.Exchange.Name, _channelName);
+                        channel.QueueBind(_channelName.Value, _connection.Exchange.Name, _channelName);
                     }
 
                 }
             }
 
             //We need to delay to actually create these queues before we send to them
-            Task.Delay(timeToDelayForCreationInMilliseconds).Wait();
+            Task.Delay(timeToDelayForCreation).Wait();
         }
     }
 }    

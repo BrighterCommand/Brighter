@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
     {
         public string RequestValue { get; set; }
         
-        public MyRequest() : this(new ReplyAddress()) {}
+        public MyRequest() : this(new ReplyAddress("", "")) {}
 
         public MyRequest(ReplyAddress replyAddress) : base(replyAddress)
         {

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
@@ -35,13 +33,17 @@ namespace Tests
         {
             var serviceCollection = new ServiceCollection();
             const string mytopic = "MyTopic";
+            var routingKey = new RoutingKey(mytopic);
+            
             var producerRegistry = new ProducerRegistry(
-                new Dictionary<string, IAmAMessageProducer>
+                new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { mytopic, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
-                    {
-                        Publication = { Topic = new RoutingKey(mytopic)}
-                    } },
+                    { 
+                        routingKey, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+                        {
+                            Publication = { Topic = routingKey}
+                        } 
+                    },
                 });
             
             var messageMapperRegistry = new MessageMapperRegistry(

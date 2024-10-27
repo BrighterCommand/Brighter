@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
 {
     public class ConfigurationCommandStartTests
     {
-        private const string CONNECTION_NAME = "Test";
+        private const string SubscriptionName = "Test";
         private readonly ConfigurationCommandHandler _configurationCommandHandler;
         private readonly ConfigurationCommand _configurationCommand;
         private readonly IDispatcher _dispatcher;
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _dispatcher = A.Fake<IDispatcher>();
             _configurationCommandHandler = new ConfigurationCommandHandler(_dispatcher);
-            _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL) {SubscriptionName = CONNECTION_NAME};
+            _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTCHANNEL, new SubscriptionName(SubscriptionName));
         }
 
         [Fact]
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _configurationCommandHandler.Handle(_configurationCommand);
 
             //_should_call_stop_for_the_given_connection
-            A.CallTo(() => _dispatcher.Shut(CONNECTION_NAME));
+            A.CallTo(() => _dispatcher.Shut(new SubscriptionName(SubscriptionName)));
         }
     }
 }

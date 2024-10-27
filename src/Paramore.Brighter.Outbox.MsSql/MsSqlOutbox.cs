@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Linq;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
@@ -74,38 +73,24 @@ namespace Paramore.Brighter.Outbox.MsSql
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = transactionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
             catch (SqlException sqlException)
             {
-                if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                    sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                {
-                    loggingAction.Invoke();
-                    return;
-                }
+                if (sqlException.Number != MsSqlDuplicateKeyError_UniqueIndexViolation &&
+                    sqlException.Number != MsSqlDuplicateKeyError_UniqueConstraintViolation) throw;
+                loggingAction.Invoke();
 
-                throw;
             }
             finally
             {
-                if (transactionProvider != null)
-                    transactionProvider.Close();
-                else
-                    connection.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -115,20 +100,12 @@ namespace Paramore.Brighter.Outbox.MsSql
             Action loggingAction, 
             CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                    command.Transaction = transactionProvider.GetTransaction();
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
                 await command.ExecuteNonQueryAsync(cancellationToken);
             }
             catch (SqlException sqlException)
@@ -144,10 +121,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
             finally
             {
-                if (transactionProvider != null)
-                    transactionProvider.Close();
-                else
-                    connection.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -252,12 +226,12 @@ namespace Paramore.Brighter.Outbox.MsSql
                 {
                     ParameterName = $"{prefix}Topic", 
                     DbType = DbType.String,
-                    Value = (object)message.Header.Topic ?? DBNull.Value
+                    Value = (object)message.Header.Topic.Value ?? DBNull.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}Timestamp",
-                    DbType = DbType.DateTime,
+                    DbType = DbType.DateTimeOffset,
                     Value = (object)message.Header.TimeStamp.ToUniversalTime() ?? DBNull.Value
                 }, //always store in UTC, as this is how we query messages
                 new SqlParameter
@@ -306,7 +280,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         #region Property Extractors
 
-        private static string GetTopic(DbDataReader dr) => dr.GetString(dr.GetOrdinal("Topic"));
+        private static RoutingKey GetTopic(DbDataReader dr) => new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
 
         private static MessageType GetMessageType(DbDataReader dr) =>
             (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
@@ -349,11 +323,11 @@ namespace Paramore.Brighter.Outbox.MsSql
             return correlationId;
         }
 
-        private static DateTime GetTimeStamp(DbDataReader dr)
+        private static DateTimeOffset GetTimeStamp(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Timestamp");
             var timeStamp = dr.IsDBNull(ordinal)
-                ? DateTime.MinValue
+                ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
@@ -465,7 +439,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             var header = new MessageHeader(id, topic, messageType);
 
-                DateTime timeStamp = GetTimeStamp(dr);
+                DateTimeOffset timeStamp = GetTimeStamp(dr);
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);
@@ -477,9 +451,9 @@ namespace Paramore.Brighter.Outbox.MsSql
                     messageType: messageType,
                     timeStamp: timeStamp,
                     handledCount: 0,
-                   delayedMilliseconds: 0,
+                    delayed: TimeSpan.Zero,
                     correlationId: correlationId,
-                    replyTo: replyTo,
+                    replyTo: new RoutingKey(replyTo),
                 contentType: contentType,
                 partitionKey: partitionKey);
 

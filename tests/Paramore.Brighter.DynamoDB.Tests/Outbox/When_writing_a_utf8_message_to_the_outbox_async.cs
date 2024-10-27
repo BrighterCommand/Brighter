@@ -27,6 +27,7 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -58,13 +59,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             var messageHeader = new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
-                topic: "test_topic",
+                topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
-                delayedMilliseconds: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "ReplyAddress",
+                replyTo: new RoutingKey("ReplyAddress"),
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
@@ -74,8 +75,10 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             _messageEarliest = new Message(messageHeader,
                 new MessageBody(body, "application/json", CharacterEncoding.UTF8));
+            var fakeTimeProvider = new FakeTimeProvider();
             _dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName),
+                fakeTimeProvider);
         }
 
         [Fact]
@@ -97,7 +100,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ").Should()
                 .Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
-            _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
+            _storedMessage.Header.Delayed.Should().Be(TimeSpan.Zero); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);

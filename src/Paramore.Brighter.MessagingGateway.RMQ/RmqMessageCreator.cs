@@ -42,11 +42,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
-            var topic = HeaderResult<string>.Empty();
+            var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var handledCount = HeaderResult<int>.Empty();
-            var delayedMilliseconds = HeaderResult<int>.Empty();
+            var delay = HeaderResult<TimeSpan>.Empty();
             var redelivered = HeaderResult<bool>.Empty();
             var deliveryTag = HeaderResult<ulong>.Empty();
             var messageType = HeaderResult<MessageType>.Empty();
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 messageId = ReadMessageId(fromQueue.BasicProperties.MessageId);
                 timeStamp = ReadTimeStamp(fromQueue.BasicProperties);
                 handledCount = ReadHandledCount(headers);
-                delayedMilliseconds = ReadDelayedMilliseconds(headers);
+                delay = ReadDelay(headers);
                 redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
                 deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
                 messageType = ReadMessageType(headers);
@@ -82,12 +82,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         type: "",
                         timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                         correlationId: "",
-                        replyTo: replyTo.Result,
+                        replyTo: new RoutingKey(replyTo.Result),
                         contentType: "",
                         handledCount: handledCount.Result,
                         dataSchema: null,
                         subject: null,
-                        delayedMilliseconds: delayedMilliseconds.Result
+                        delayed: delay.Result
                         );
                         
 
@@ -144,11 +144,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<string> messageId)
+        private Message FailureMessage(HeaderResult<RoutingKey> topic, HeaderResult<string> messageId)
         {
             var header = new MessageHeader(
                 messageId.Success ? messageId.Result : string.Empty,
-                topic.Success ? topic.Result : string.Empty,
+                topic.Success ? topic.Result : RoutingKey.Empty,
                 MessageType.MT_UNACCEPTABLE);
             var message = new Message(header, new MessageBody(string.Empty));
             return message;
@@ -205,11 +205,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-        private HeaderResult<int> ReadDelayedMilliseconds(IDictionary<string, object> headers)
+        private HeaderResult<TimeSpan> ReadDelay(IDictionary<string, object> headers)
         {
             if (headers.ContainsKey(HeaderNames.DELAYED_MILLISECONDS) == false)
             {
-                return new HeaderResult<int>(0, true);
+                return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
             }
 
             int delayedMilliseconds;
@@ -249,18 +249,18 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     break;
                 }
                 default:
-                    return new HeaderResult<int>(0, false);
+                    return new HeaderResult<TimeSpan>(TimeSpan.Zero, false);
             }
 
-            return new HeaderResult<int>(delayedMilliseconds, true);
+            return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds( delayedMilliseconds), true);
         }
 
-        private HeaderResult<string> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
+        private HeaderResult<RoutingKey> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
         {
             return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
             {
-                var val = string.IsNullOrEmpty(s) ? fromQueue.RoutingKey : s;
-                return new HeaderResult<string>(val, true);
+                var val = string.IsNullOrEmpty(s) ? new RoutingKey(fromQueue.RoutingKey) : new RoutingKey(s);
+                return new HeaderResult<RoutingKey>(val, true);
             });
         }
 

@@ -11,7 +11,7 @@ namespace Paramore.Brighter
             switch (reader.TokenType)
             {
                 case JsonTokenType.String:
-                    return reader.GetString();
+                    return reader.GetString()!;
                 case JsonTokenType.Number:
                     return reader.GetInt32().ToString();
                 default:

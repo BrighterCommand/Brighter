@@ -22,14 +22,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
-using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -55,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly IKafkaMessageHeaderBuilder _headerBuilder;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
-        private bool _hasFatalProducerError = false;
+        private bool _hasFatalProducerError;
         private bool _disposedValue;
 
         public KafkaMessageProducer(
@@ -119,7 +115,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Topic = publication.Topic;
             NumPartitions = publication.NumPartitions;
             ReplicationFactor = publication.ReplicationFactor;
-            TopicFindTimeoutMs = publication.TopicFindTimeoutMs;
+            TopicFindTimeout = TimeSpan.FromMilliseconds(publication.TopicFindTimeoutMs);
             _headerBuilder = publication.MessageHeaderBuilder;
         }
 
@@ -218,9 +214,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
         
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            //No delay support implemented
+            //TODO: No delay support implemented
             Send(message);
         }
         
@@ -313,13 +309,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val))
                     {
-                        Task.Run(() => OnMessagePublished?.Invoke(true, val));
+                        Task.Run(
+                            () => OnMessagePublished?.Invoke(true, val)
+                        );
                         return;
                     }
                 }
             }
             
-            Task.Run((() =>OnMessagePublished?.Invoke(false, string.Empty)));
+            Task.Run(
+                () =>OnMessagePublished?.Invoke(false, string.Empty)
+            );
         }
     }
 }

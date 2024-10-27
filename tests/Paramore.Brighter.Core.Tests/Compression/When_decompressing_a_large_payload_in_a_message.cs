@@ -33,7 +33,7 @@ public class UncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, 
                 timeStamp: DateTime.UtcNow, contentType: mimeType
                 ),
             body
@@ -72,7 +72,7 @@ public class UncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, 
                 timeStamp:DateTime.UtcNow, contentType: mimeType
             ),
             body
@@ -111,7 +111,7 @@ public class UncompressLargePayloadTests
         var body = new MessageBody(output.ToArray(), mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, 
                 timeStamp: DateTime.UtcNow, contentType: mimeType
             ),
             body

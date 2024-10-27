@@ -13,8 +13,9 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutbox _mySqlOutbox;
-        private readonly string _topicFirstMessage = "test_topic";
-        private readonly string _topicLastMessage = "test_topic3";
+        private readonly RoutingKey _routingKeyOne = new("test_topic");
+        private readonly RoutingKey _routingKeyTwo = new("test_topic2"); 
+        private readonly RoutingKey _routingKeyThree = new("test_topic3");
         private readonly RequestContext _context;
 
         public MySqlOutboxFetchOutstandingMessageTests()
@@ -25,15 +26,15 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _context = new RequestContext();
 
             Message messageEarliest = new(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicFirstMessage, MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKeyOne, MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
             Message message1 = new(
-                new MessageHeader(Guid.NewGuid().ToString(), "test_topic2", MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKeyTwo, MessageType.MT_DOCUMENT), 
                 new MessageBody("message body2")
             );
             Message message2 = new(
-                new MessageHeader(Guid.NewGuid().ToString(), _topicLastMessage, MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKeyThree, MessageType.MT_DOCUMENT), 
                 new MessageBody("message body3")
             );
             _mySqlOutbox.Add(messageEarliest, _context);
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public void When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched()
         {
-            var messages = _mySqlOutbox.OutstandingMessages(millSecondsSinceSent: 0, _context);
+            var messages = _mySqlOutbox.OutstandingMessages(dispatchedSince: TimeSpan.Zero, _context);
 
             var msgs = messages as Message[] ?? messages.ToArray();
             msgs.Should().NotBeNullOrEmpty();
@@ -60,7 +61,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched_async()
         {
-            var messages = await _mySqlOutbox.OutstandingMessagesAsync(millSecondsSinceSent: 0, _context);
+            var messages = await _mySqlOutbox.OutstandingMessagesAsync(dispatchedSince: TimeSpan.Zero, _context);
 
             var msgs = messages as Message[] ?? messages.ToArray();
             msgs.Should().NotBeNullOrEmpty();

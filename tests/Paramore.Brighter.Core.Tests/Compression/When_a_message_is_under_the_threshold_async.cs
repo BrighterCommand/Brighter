@@ -10,9 +10,8 @@ namespace Paramore.Brighter.Core.Tests.Compression;
 public class AsyncSmallPayloadNotCompressedTests
 {
     private readonly CompressPayloadTransformerAsync _transformer;
-    private readonly string _body;
     private readonly Message _message;
-    private string _topic;
+    private readonly RoutingKey _topic = new("test_topic");
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
     
     
@@ -21,16 +20,14 @@ public class AsyncSmallPayloadNotCompressedTests
         _transformer = new CompressPayloadTransformerAsync();
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
 
-        _body = "small message";
-        _topic = "test_topic";
+        string body = "small message";
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, 
                 timeStamp:DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON
             ),
-            new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8)
+            new MessageBody(body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8)
         );      
     }
-    
     
     [Fact]
     public async Task When_a_message_is_under_the_threshold()

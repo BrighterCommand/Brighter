@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.Json;
+using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -16,32 +15,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
     [Collection("CommandProcessor")]
     public class CommandProcessorCallTests : IDisposable
     {
-        private const string _topic = "MyRequest";
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new();
-        private readonly Message _message;
+        //private readonly Message _message;
         private readonly InternalBus _bus = new() ;
-
+        private readonly string _replyAddressCorrelationId = Guid.NewGuid().ToString();
+        private readonly MessageMapperRegistry _messageMapperRegistry;
+        private readonly RoutingKey _routingKey;
 
         public CommandProcessorCallTests()
         {
-            _myRequest.RequestValue = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
             InMemoryProducer producer = new(_bus, timeProvider);
-            producer.Publication = new Publication{Topic = new RoutingKey(_topic), RequestType = typeof(MyRequest)};
-
-            var header = new MessageHeader(
-                messageId: _myRequest.Id, 
-                topic: _topic, 
-                messageType:MessageType.MT_COMMAND,
-                correlationId: _myRequest.ReplyAddress.CorrelationId,
-                replyTo: _myRequest.ReplyAddress.Topic);
-
-            var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(_myRequest.Id.ToString(), _myRequest.RequestValue), JsonSerialisationOptions.Options));
-            _message = new Message(header, body);
- 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            _routingKey = new RoutingKey("MyRequest");
+            
+            producer.Publication = new Publication{Topic = _routingKey, RequestType = typeof(MyRequest)};
+            
+            _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
                 if (type == typeof(MyRequestMessageMapper))
                     return new MyRequestMessageMapper();
@@ -50,8 +41,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }), null);
-            messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
-            messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
+            _messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
+            _messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
@@ -65,9 +56,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            InMemoryChannelFactory inMemoryChannelFactory = new InMemoryChannelFactory();
-            //we need to seed the response as the fake producer does not actually send across the wire
-            inMemoryChannelFactory.SeedChannel(new[] {_message});
+            var internalBus = new InternalBus();
+            InMemoryChannelFactory inMemoryChannelFactory = new(internalBus, TimeProvider.System);
             
             var replySubs = new List<Subscription>
             {
@@ -80,16 +70,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { _topic, producer },
+                    { _routingKey, producer },
                 });
 
             var tracer = new BrighterTracer();
             IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry,           
-                messageMapperRegistry,
+                _messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
@@ -107,22 +97,33 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             );
 
             PipelineBuilder<MyRequest>.ClearPipelineCache();
-  
+            
+            _myRequest.RequestValue = "Hello World";
         }
 
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor()
         {
-            _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOutInMilliseconds: 500);
+            //start a message pump on a new thread, to recieve the Call message
+            var provider = new CommandProcessorProvider(_commandProcessor);
             
-            //should send a message via the messaging gateway
-            var message = _bus.Dequeue(new RoutingKey(_topic));
+            Channel channel = new(
+                new("MyChannel"), _routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000))
+            );
+            
+            var messagePump = new MessagePumpBlocking<MyRequest>(provider, _messageMapperRegistry, 
+                    new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
+                { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 
-            //should convert the command into a message
-            message.Should().Be(_message);
+            //Run the pump on a new thread
+            Task pump = Task.Factory.StartNew(() => messagePump.Run());
             
-            //should forward response to a handler
+            _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOut: TimeSpan.FromMilliseconds(500));
+            
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
+            
+            channel.Stop(_routingKey);
 
         }
         

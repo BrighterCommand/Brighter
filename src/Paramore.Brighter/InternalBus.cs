@@ -25,7 +25,9 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Threading;
 
 namespace Paramore.Brighter;
 
@@ -33,38 +35,58 @@ namespace Paramore.Brighter;
 /// Mainly intended for tests provides an in-memory implementation of a message bus
 /// It can be passed to InMemoryProducer and InMemoryConsumer to provide an in-memory message bus
 /// </summary>
-public class InternalBus : IAmABus
+/// <param name="boundedCapacity">The maximum number of messages that can be enqueued; -1 is unbounded; default is -1</param>
+public class InternalBus(int boundedCapacity = -1) : IAmABus
 {
     private ConcurrentDictionary<RoutingKey, BlockingCollection<Message>> _messages = new();
-    
+
     /// <summary>
     /// Enqueue a message to tbe bus
     /// </summary>
     /// <param name="message">The message to enqueue</param>
-    public void Enqueue(Message message)
+    /// <param name="timeout">How long to wait for an item; -1 or null is forever; default is null</param>
+    public void Enqueue(Message message, TimeSpan? timeout = null)
     {
+        timeout ??= TimeSpan.FromMilliseconds(-1);
+        
+        ValidateMillisecondsTimeout(timeout.Value);
+        
         var topic = new RoutingKey(message.Header.Topic);
         
         if (!_messages.ContainsKey(topic))
         {
-            _messages.TryAdd(topic, new BlockingCollection<Message>());
+            var blockingCollection = boundedCapacity > 0 ? 
+                new BlockingCollection<Message>(boundedCapacity) : new BlockingCollection<Message>();
+            
+            if (!_messages.TryAdd(topic, blockingCollection) && !_messages.ContainsKey(topic))
+                throw new InvalidOperationException("Failed to add topic to the bus");
         }
-        _messages[topic].Add(message);
+        
+        if (!_messages[topic].TryAdd(message, Convert.ToInt32(timeout.Value.TotalMilliseconds), CancellationToken.None))
+            throw new InvalidOperationException("Failed to add message to the bus");
     }
 
     /// <summary>
     /// Dequeue a message from the bus
     /// </summary>
     /// <param name="topic">The topic to pull the message from</param>
+    /// <param name="timeout">How long to wait for an item; -1ms or null is forever; default is -1ms</param>
     /// <returns></returns>
-    public Message Dequeue(RoutingKey topic)
+    public Message Dequeue(RoutingKey topic, TimeSpan? timeout = null)
     {
+        timeout ??=TimeSpan.FromMilliseconds(-1);
+        
+        ValidateMillisecondsTimeout(timeout.Value);
+        
         var found = _messages.TryGetValue(topic, out var messages);
         
-        if (!found || !messages.Any())
-            return MessageFactory.CreateEmptyMessage();
-            
-        return messages?.Take();
+        if (!found || messages is null || !messages.Any())
+            return MessageFactory.CreateEmptyMessage(topic);
+
+        if (!messages.TryTake(out Message? message, Convert.ToInt32(timeout.Value.TotalMilliseconds), CancellationToken.None))
+            message = MessageFactory.CreateEmptyMessage(topic);
+        
+        return message;
     }
 
     /// <summary>
@@ -78,4 +100,10 @@ public class InternalBus : IAmABus
         
         return messages != null ? messages.ToArray() : Array.Empty<Message>();
     }   
+    
+    private static void ValidateMillisecondsTimeout(TimeSpan timeout)
+    {
+        if (timeout < TimeSpan.Zero && timeout != TimeSpan.FromMilliseconds(-1))
+            throw new ArgumentOutOfRangeException(nameof(timeout), Convert.ToInt32(timeout.TotalMilliseconds), string.Format(CultureInfo.CurrentCulture, "Timeout must be greater than or equal to -1ms, was {0}", Convert.ToInt32(timeout.TotalMilliseconds)));
+    }
 }

@@ -32,7 +32,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
     /// </summary>
     public class HeartbeatRequestCommandHandler : RequestHandler<HeartbeatRequest>
     {
-        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IAmACommandProcessor? _commandProcessor;
         private readonly IDispatcher _dispatcher;
 
         /// <summary>
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// </summary>
         /// <param name="commandProcessor">The command processor.</param>
         /// <param name="dispatcher">The dispatcher.</param>
-        public HeartbeatRequestCommandHandler(IAmACommandProcessor commandProcessor, IDispatcher dispatcher)
+        public HeartbeatRequestCommandHandler(IAmACommandProcessor? commandProcessor, IDispatcher dispatcher)
         {
             _commandProcessor = commandProcessor;
             _dispatcher = dispatcher;
@@ -54,10 +54,10 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
         /// <returns>TRequest.</returns>
         public override HeartbeatRequest Handle(HeartbeatRequest command)
         {
-            var heartbeat = new HeartbeatReply(_dispatcher.HostName, new ReplyAddress(command.ReplyAddress.Topic, command.ReplyAddress.CorrelationId));
+            var heartbeat = new HeartbeatReply(_dispatcher.HostName, command.ReplyAddress);
             _dispatcher.Consumers.Each((consumer) => heartbeat.Consumers.Add(new RunningConsumer(consumer.Name, consumer.State)));
-
-            _commandProcessor.Post(heartbeat);
+            
+            _commandProcessor?.Post(heartbeat);
 
             return base.Handle(command);
         }

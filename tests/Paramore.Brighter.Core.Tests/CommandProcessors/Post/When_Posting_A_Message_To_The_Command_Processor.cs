@@ -52,10 +52,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
-            InMemoryProducer producer = new(_internalBus, timeProvider) {Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}};
+            var routingKey = new RoutingKey(Topic);
+            
+            InMemoryProducer producer = new(_internalBus, timeProvider) {Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}};
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -72,8 +74,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
             
-            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{Topic, producer},});
+            var policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+            };
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, producer},});
 
             var tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};

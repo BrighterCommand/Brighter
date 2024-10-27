@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
         /// </summary>
         /// <value>The context.</value>
-       public  IRequestContext Context { get; set; }
+       public  IRequestContext? Context { get; set; }
 
         /// <summary>
         /// A claim check moves the payload of a message, which when wrapping checks for a payloads that exceeds a certain threshold size, and inserts those
@@ -50,7 +50,6 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// it retrieves the payload, via the claim check and replaces the payload.
         /// </summary>
         /// <param name="store">The storage to use for the payload</param>
-        /// <param name="threshold">The size at which checking luggage is triggered. If size is 0 or less, the check will always be triggered</param>
         public ClaimCheckTransformerAsync(IAmAStorageProviderAsync store)
         {
             _store = store;
@@ -132,7 +131,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <returns></returns>
         public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
-            if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
+            if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object? objId))
             {
                 var id = (string)objId;
                 var luggage = await new StreamReader(await _store.RetrieveAsync(id, cancellationToken)).ReadToEndAsync();

@@ -22,13 +22,23 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter;
 
+/// <summary>
+/// Defines an interface for a bus that can enqueue, dequeue and stream messages
+/// Mainly used for an internal bus, but could be used for other implementations
+/// </summary>
 public interface IAmABus
 {
-    void Enqueue(Message message);
-    Message Dequeue(RoutingKey topic);
+    /// <summary>
+    /// Enqueues a message onto the bus
+    /// </summary>
+    /// <param name="message">The <see cref="Message"/> to enqueue</param>
+    /// <param name="timeout">The <see cref="TimeSpan"/> to use as a timeout; null or -1ms indicates forever; defaults to -1ms</param>
+    void Enqueue(Message message, TimeSpan? timeout = null);
+    Message Dequeue(RoutingKey topic, TimeSpan? timeout = null);
     IEnumerable<Message> Stream(RoutingKey topic);
 }

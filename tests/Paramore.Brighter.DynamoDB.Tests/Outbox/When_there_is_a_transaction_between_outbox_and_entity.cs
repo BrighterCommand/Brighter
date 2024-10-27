@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
@@ -23,6 +23,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
     {
         _testOutputHelper = testOutputHelper;
         var tableRequestFactory = new DynamoDbTableFactory();
+        var fakeTimeProvider = new FakeTimeProvider();
 
         //act
         CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<MyEntity>(
@@ -44,7 +45,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             DbTableBuilder.EnsureTablesReady(new[] { tableRequest.TableName }, TableStatus.ACTIVE).Wait();
         }
 
-        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+        _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
     }
 
     [Fact]
@@ -55,13 +56,13 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
         var attributes = context.ToDocument(myItem).ToAttributeMap();
         var myMessageHeader = new MessageHeader(
             messageId: Guid.NewGuid().ToString(),
-            topic: "test_topic",
+            topic: new RoutingKey("test_topic"),
             messageType: MessageType.MT_DOCUMENT,
             timeStamp: DateTime.UtcNow.AddDays(-1),
             handledCount: 5,
-            delayedMilliseconds: 5,
+            delayed: TimeSpan.FromMilliseconds(5),
             correlationId: Guid.NewGuid().ToString(),
-            replyTo: "ReplyAddress",
+            replyTo: new RoutingKey("ReplyAddress"),
             contentType: "text/plain");
 
         var body = new MessageBody(myItem.Value);

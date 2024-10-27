@@ -14,7 +14,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         private readonly IAmAProducerRegistry _producerRegistry; 
         private readonly IAmAChannelFactory _channelFactory;
         private readonly MsSqlSubscription<MyCommand> _subscription;
-        private readonly string _topic;
+        private readonly RoutingKey _topic;
 
         public MsSqlMessageConsumerRequeueTests()
         {
@@ -23,11 +23,11 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
             var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";
-            _topic = $"Consumer-Requeue-Tests-{Guid.NewGuid()}";
+            _topic = new RoutingKey($"Consumer-Requeue-Tests-{Guid.NewGuid()}");
 
             _message = new Message(
                 new MessageHeader(myCommand.Id, _topic, MessageType.MT_COMMAND, correlationId:correlationId, 
-                    replyTo:replyTo, contentType:contentType),
+                    replyTo:new RoutingKey(replyTo), contentType:contentType),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -48,10 +48,10 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         {
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(_message);
             var channel = _channelFactory.CreateChannel(_subscription);
-            var message = channel.Receive(2000);
-            channel.Requeue(message, 100);
+            var message = channel.Receive(TimeSpan.FromMilliseconds(2000));
+            channel.Requeue(message, TimeSpan.FromMilliseconds(100));
 
-            var requeuedMessage = channel.Receive(1000);
+            var requeuedMessage = channel.Receive(TimeSpan.FromMilliseconds(1000));
 
             //clear the queue
             channel.Acknowledge(requeuedMessage);

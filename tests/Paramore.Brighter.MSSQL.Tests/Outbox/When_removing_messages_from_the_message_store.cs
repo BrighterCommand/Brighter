@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,19 +50,19 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _outbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             
             _firstMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test"), MessageType.MT_COMMAND, 
                     timeStamp: DateTime.UtcNow.AddHours(-3)
                 ), 
                 new MessageBody("Body")
             );
             _secondMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test2"), MessageType.MT_COMMAND, 
                     timeStamp: DateTime.UtcNow.AddHours(-2)
                 ), 
                 new MessageBody("Body2")
             );
             _thirdMessage = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test3"), MessageType.MT_COMMAND, 
                     timeStamp:DateTime.UtcNow.AddHours(-1)
                 ), 
                 new MessageBody("Body3")
@@ -81,7 +80,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             var context = new RequestContext();
             _outbox.Delete([_firstMessage.Id], context);
 
-            var remainingMessages = _outbox.OutstandingMessages(0, context);
+            var remainingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
 
             remainingMessages.Should().HaveCount(2);
             remainingMessages.Should().Contain(_secondMessage);
@@ -89,7 +88,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             
             _outbox.Delete(remainingMessages.Select(m => m.Id).ToArray(), context);
 
-            var messages = _outbox.OutstandingMessages(0, context);
+            var messages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
 
             messages.Should().HaveCount(0);
 
@@ -100,7 +99,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             var context = new RequestContext();
             await _outbox.DeleteAsync([_firstMessage.Id], context, cancellationToken: CancellationToken.None);
 
-            var remainingMessages = await _outbox.OutstandingMessagesAsync(0, context);
+            var remainingMessages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
             remainingMessages.Should().HaveCount(2);
             remainingMessages.Should().Contain(_secondMessage);
@@ -112,7 +111,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
                 cancellationToken: CancellationToken.None
                 );
 
-            var messages = await _outbox.OutstandingMessagesAsync(0, context);
+            var messages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
             messages.Should().HaveCount(0);
 

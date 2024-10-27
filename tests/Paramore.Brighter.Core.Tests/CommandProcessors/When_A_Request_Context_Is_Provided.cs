@@ -49,7 +49,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue) ;
         commandProcessor.Send(new MyCommand(), context);
 
         //assert
@@ -79,7 +79,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue);
         await commandProcessor.SendAsync(new MyCommand(), context);
 
         //assert
@@ -107,7 +107,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue);
         commandProcessor.Publish(new MyEvent(), context);
 
         //assert
@@ -135,7 +135,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue);
         await commandProcessor.PublishAsync(new MyEvent(), context);
 
         //assert
@@ -155,12 +155,14 @@ public class RequestContextPresentTests : IDisposable
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
         var fakeTimeProvider = new FakeTimeProvider();
+        var routingKey = new RoutingKey("MyCommand");
+        
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer(new InternalBus(), fakeTimeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
                 {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
+                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
 
@@ -187,7 +189,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue) ;
         commandProcessor.DepositPost(new MyCommand(), context);
 
         //assert
@@ -204,12 +206,14 @@ public class RequestContextPresentTests : IDisposable
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
         var timeProvider = new FakeTimeProvider();
+        var routingKey = new RoutingKey("MyCommand");
+        
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
                 {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
+                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
 
@@ -235,7 +239,7 @@ public class RequestContextPresentTests : IDisposable
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue);
         await commandProcessor.DepositPostAsync(new MyCommand(), context);
 
         //assert
@@ -252,12 +256,14 @@ public class RequestContextPresentTests : IDisposable
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
         var timeProvider = new FakeTimeProvider();
+        var routingKey = new RoutingKey("MyCommand");
+        
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
                 {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
+                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
             
@@ -281,13 +287,13 @@ public class RequestContextPresentTests : IDisposable
         );
         
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
-        var message = new Message(new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var message = new Message(new MessageHeader(myCommand.Id, new("MyCommand"), MessageType.MT_COMMAND), new MessageBody("test content"));
         bus.AddToOutbox(message, new RequestContext());
             
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue) ;
         commandProcessor.ClearOutbox(new []{myCommand.Id}, context);
 
         //assert
@@ -304,12 +310,14 @@ public class RequestContextPresentTests : IDisposable
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
         var timeProvider = new FakeTimeProvider();
+        var routingKey = new RoutingKey("MyCommand");
+        
         var producerRegistry =
-            new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { "MyCommand", new InMemoryProducer(new InternalBus(), timeProvider)
+                { routingKey, new InMemoryProducer(new InternalBus(), timeProvider)
                 {
-                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = new RoutingKey("MyCommand")}
+                    Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
             
@@ -333,13 +341,13 @@ public class RequestContextPresentTests : IDisposable
         );
         
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
-        var message = new Message(new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND), new MessageBody("test content"));
+        var message = new Message(new MessageHeader(myCommand.Id, new("MyCommand"), MessageType.MT_COMMAND), new MessageBody("test content"));
         bus.AddToOutbox(message, new RequestContext());
             
         //act
         var context = new RequestContext();
         var testBagValue = Guid.NewGuid().ToString();
-        context.Bag.Add("TestString", testBagValue) ;
+        context.Bag.AddOrUpdate("TestString", testBagValue, (_, _) => testBagValue) ;
         await commandProcessor.ClearOutboxAsync(new []{myCommand.Id}, context);
 
         //assert

@@ -50,10 +50,8 @@ namespace Paramore.Brighter
             IAmAMessageMapperAsync<TRequest> messageMapperAsync, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync, 
             IEnumerable<IAmAMessageTransformAsync> transforms
-            )
+            ) : base(messageMapperAsync, transforms)
         {
-            MessageMapper = messageMapperAsync;
-            Transforms = transforms;
             if (messageTransformerFactoryAsync != null)
             {
                 InstanceScope = new TransformLifetimeScopeAsync(messageTransformerFactoryAsync);

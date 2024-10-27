@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class PostCommandTests : IDisposable
     {
-        private const string Topic = "MyCommand";
+        private readonly RoutingKey _routingKey = new("MyCommand");
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
         private readonly Message _message;
@@ -54,11 +54,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
             InMemoryProducer producer = new(_internalBus, timeProvider)
             {
-                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+                Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
             };
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { Topic, producer }, });
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, producer }, });
 
             var externalBus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
@@ -81,10 +81,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 outbox: _outbox
             );  
             
-            _commandProcessor = CommandProcessorBuilder.With()
+            _commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
+                .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
@@ -94,7 +95,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _commandProcessor.Post(_myCommand);
 
-            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+            _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeTrue();
             
             var message = _outbox.Get(_myCommand.Id, new RequestContext());
             message.Should().NotBeNull();

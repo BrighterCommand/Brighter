@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
-            s_logger.LogInformation("RmqMessageConsumer: Acknowledging message {Id}", message.Id.ToString());
+            s_logger.LogInformation("RmqMessageConsumer: Acknowledging message {Id}", message.Id);
             _inflight.Remove(message.Id);
         }
 
@@ -101,25 +101,26 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Get the next message off the Redis list, within a timeout
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The period to await a message</param>
+        /// <param name="timeOut">The period to await a message. Defaults to 300ms.</param>
         /// <returns>The message read from the list</returns>
-        public Message[] Receive(int timeoutInMilliseconds)
+        public Message[] Receive(TimeSpan? timeOut = null)
         {
             s_logger.LogDebug("RedisMessageConsumer: Preparing to retrieve next message from queue {ChannelName} with routing key {Topic}", _queueName, Topic);
 
             if (_inflight.Any())
             {
                  s_logger.LogError("RedisMessageConsumer: Preparing to retrieve next message from queue {ChannelName}, but have unacked or not rejected message", _queueName);
-                throw new ChannelFailureException($"Unacked message still in flight with id: {_inflight.Keys.First().ToString()}");   
+                throw new ChannelFailureException($"Unacked message still in flight with id: {_inflight.Keys.First()}");   
             }
             
-            var message = new Message();
+            Message message;
             IRedisClient client = null;
+            timeOut ??= TimeSpan.FromMilliseconds(300);
             try
             {
                 client = GetClient();
                 EnsureConnection(client);
-                (string msgId, string rawMsg) redisMessage = ReadMessage(client, timeoutInMilliseconds);
+                (string msgId, string rawMsg) redisMessage = ReadMessage(client, timeOut.Value);
                 message = new RedisMessageCreator().CreateMessage(redisMessage.rawMsg);
                 
                 if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
@@ -129,8 +130,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             catch (TimeoutException te)
             {
-                s_logger.LogError("Could not connect to Redis client within {Timeout} milliseconds", timeoutInMilliseconds.ToString());
-                throw new ChannelFailureException($"Could not connect to Redis client within {timeoutInMilliseconds.ToString()} milliseconds", te);
+                s_logger.LogError("Could not connect to Redis client within {Timeout} milliseconds", timeOut.Value.TotalMilliseconds.ToString());
+                throw new ChannelFailureException($"Could not connect to Redis client within {timeOut.Value.TotalMilliseconds.ToString()} milliseconds", te);
             }
             catch (RedisException re)
             {
@@ -142,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 client?.Dispose();
             }
-            return new Message[] {message};
+            return [message];
         }
 
 
@@ -159,14 +160,20 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="delay"> Time to delay delivery of the message. 0 is no delay. Defaults to 0</param>
         /// <returns>True if the message was requeued</returns>
-         public bool Requeue(Message message, int delayMilliseconds)
+         public bool Requeue(Message message, TimeSpan? delay = null)
         {
-            Task.Delay(delayMilliseconds).Wait();
-            message.Header.DelayedMilliseconds = delayMilliseconds;
-            
-            message.Header.HandledCount++;
+           delay ??= TimeSpan.Zero;
+
+           //TODO: This blocks. We should use a thread to repost to the queue after n milliseconds, using a Timer
+           if (delay > TimeSpan.Zero)
+           {
+               Task.Delay(delay.Value).Wait();
+               message.Header.Delayed = delay.Value;
+           }
+
+           message.Header.HandledCount++;
             using var client = Pool.Value.GetClient();
             if (_inflight.ContainsKey(message.Id))
             {
@@ -179,7 +186,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             else
             {
-                s_logger.LogError(string.Format("Expected to find message id {0} in-flight but was not", message.Id.ToString()));
+                s_logger.LogError(string.Format("Expected to find message id {0} in-flight but was not", message.Id));
                 return false;
             }
         }
@@ -201,10 +208,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         }
 
-        private (string msgId, string rawMsg) ReadMessage(IRedisClient client, int timeoutInMilliseconds)
+        private (string msgId, string rawMsg) ReadMessage(IRedisClient client, TimeSpan timeOut)
         {
             var msg = string.Empty;
-            var latestId = client.BlockingRemoveStartFromList(_queueName, TimeSpan.FromMilliseconds(timeoutInMilliseconds));
+            var latestId = client.BlockingRemoveStartFromList(_queueName, timeOut);
             if (latestId != null)
             {
                 var key = Topic + "." + latestId;

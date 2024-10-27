@@ -17,43 +17,40 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;
-        private readonly ChannelFactory _channelFactory;
         private readonly IAmAChannel _channel;
         private readonly RmqMessageProducer _sender;
-        private readonly string _topicName;
-        private readonly IAmACommandProcessor _commandProcessor;
         private readonly RmqMessageConsumer _deadLetterConsumer;
+        private readonly RmqSubscription<MyCommand> _subscription;
 
 
         public RMQMessageConsumerRetryDLQTests()
         {
             string correlationId = Guid.NewGuid().ToString();
             string contentType = "text\\plain";
-            var channelName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
-            _topicName = $"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}";
-            var routingKey = new RoutingKey(_topicName);
+            var channelName = new ChannelName($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
+            var routingKey = new RoutingKey($"Requeue-Limit-Tests-{Guid.NewGuid().ToString()}");
 
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Requeue" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: correlationId, 
+                new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId, 
                     contentType: contentType
                 ),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 
-            var deadLetterQueueName = $"{_message.Header.Topic}.DLQ";
-            var deadLetterRoutingKey = $"{_message.Header.Topic}.DLQ";
+            var deadLetterQueueName = new ChannelName($"{Guid.NewGuid().ToString()}.DLQ");
+            var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
 
-            var subscription = new RmqSubscription<MyCommand>(
-                name: new SubscriptionName(channelName),
-                channelName: new ChannelName(channelName),
+            _subscription = new RmqSubscription<MyCommand>(
+                name: new SubscriptionName("DLQ Test Subscription"),
+                channelName: channelName,
                 routingKey: routingKey,
                 //after 2 retries, fail and move to the DLQ
                 requeueCount: 2,
                 //delay before re-queuing
-                requeueDelayInMilliseconds: 50,
-                deadLetterChannelName: new ChannelName(deadLetterQueueName),
+                requeueDelay: TimeSpan.FromMilliseconds(50),
+                deadLetterChannelName: deadLetterQueueName,
                 deadLetterRoutingKey: deadLetterRoutingKey,
                 makeChannels: OnMissingChannel.Create
             );
@@ -73,8 +70,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             });
 
             //set up our receiver
-            _channelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnection));
-            _channel = _channelFactory.CreateChannel(subscription);
+            ChannelFactory channelFactory = new(new RmqMessageConsumerFactory(rmqConnection));
+            _channel = channelFactory.CreateChannel(_subscription);
 
             //how do we handle a command
             IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
@@ -84,24 +81,26 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             subscriberRegistry.Register<MyDeferredCommand, MyDeferredCommandHandler>();
 
             //once we read, how do we dispatch to a handler. N.B. we don't use this for reading here
-            _commandProcessor = new CommandProcessor(
+            IAmACommandProcessor commandProcessor = new CommandProcessor(
                 subscriberRegistry: subscriberRegistry,
                 handlerFactory: new QuickHandlerFactory(() => handler),
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
-            var provider = new CommandProcessorProvider(_commandProcessor);
+            var provider = new CommandProcessorProvider(commandProcessor);
 
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
-                null);
+                null
+            );
+            
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
             _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
-                null, new InMemoryRequestContextFactory())
+                new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
             };
 
             _deadLetterConsumer = new RmqMessageConsumer(
@@ -130,7 +129,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             await Task.Delay(20000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message
@@ -139,9 +138,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             await Task.Delay(5000);
 
             //inspect the dlq
-            var dlqMessage = _deadLetterConsumer.Receive(10000).First();
+            var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
 
             //assert this is our message
+            dlqMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             dlqMessage.Body.Value.Should().Be(_message.Body.Value);
 
             _deadLetterConsumer.Acknowledge(dlqMessage);

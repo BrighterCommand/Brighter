@@ -38,8 +38,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The name.</value>
         ChannelName Name { get; }
-        
-         /// <summary>
+
+        /// <summary>
+        /// The topic that this channel is for (how a broker routes to it)
+        /// </summary>
+        /// <value>The topic on the broker</value>
+        RoutingKey RoutingKey { get; }
+
+        /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -51,11 +57,11 @@ namespace Paramore.Brighter
         void Purge();
         
         /// <summary>
-        /// Receives the specified timeout in milliseconds.
+        /// The timeout for the channel to receive a message.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeout">The <see cref="TimeSpan"/> timeout; if null default to 1 second</param>
         /// <returns>Message.</returns>
-        Message Receive(int timeoutInMilliseconds);
+        Message Receive(TimeSpan? timeout);
 
         /// <summary>
         /// Rejects the specified message.
@@ -65,8 +71,9 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// Stops this instance.
+        /// <param name="topic">The topic to post the MT_QUIT message too</param>
         /// </summary>
-        void Stop();
+        void Stop(RoutingKey topic);
         
         /// <summary>
         /// Adds a message to the queue
@@ -78,9 +85,9 @@ namespace Paramore.Brighter
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="timeOut">The delay to the delivery of the message.</param>
         /// <returns>True if the message should be Acked, false otherwise</returns>
-        bool Requeue(Message message, int delayMilliseconds = 0);
+        bool Requeue(Message message, TimeSpan? timeOut = null);
 
    }
 }

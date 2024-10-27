@@ -24,7 +24,7 @@ public class CloudEventsTransformerTests
         _dataSchema = new Uri("http://goparamore.io/CloudEventsTransformerTests/schema");
         _subject = "CloudEventsTransformerTests";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "Test Topic", MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test Topic"), MessageType.MT_COMMAND), 
             new MessageBody("test content")
         );
     }
@@ -123,8 +123,8 @@ public class CloudEventsTransformerTests
         Assert.Equal(new Uri("http://goparamore.io"), cloudEvents.Header.Source);
         Assert.Equal( "goparamore.io.Paramore.Brighter.Message", cloudEvents.Header.Type);
         Assert.Equal("text/plain", cloudEvents.Header.ContentType);
-        Assert.Equal(null, cloudEvents.Header.DataSchema);
-        Assert.Equal(null, cloudEvents.Header.Subject);
+        Assert.Null(cloudEvents.Header.DataSchema);
+        Assert.Null(cloudEvents.Header.Subject);
 
     }
 }

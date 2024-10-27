@@ -62,6 +62,7 @@ namespace Paramore.Brighter
         /// As you cannot see the HandlerFactory and SubscriberRegistry post-creation, don't use
         /// this constructor in uses cases where you want anything other than an empty configuration.
         /// </summary>
-        public HandlerConfiguration() {}
+        public HandlerConfiguration() : this(new SubscriberRegistry(), new SimpleHandlerFactorySync(_ => throw new ConfigurationException("No Handlers have been configured.")))
+        { }
     }
 }

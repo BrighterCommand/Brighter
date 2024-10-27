@@ -37,12 +37,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
-                routingKey: routingKey
+                routingKey: routingKey,
+                rawMessageDelivery: false
             );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, correlationId: _correlationId,
-                    replyTo: _replyTo, contentType: _contentType),
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
+                    replyTo: new RoutingKey(_replyTo), contentType: _contentType),
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -58,15 +59,27 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
 
-        [Fact]
-        public async Task When_posting_a_message_via_the_producer()
+        [Theory]
+        [InlineData("test subject", true)]
+        [InlineData(null, true)]
+        [InlineData("test subject", false)]
+        [InlineData(null, false)]
+        public async Task When_posting_a_message_via_the_producer(string subject, bool sendAsync)
         {
             //arrange
-            _messageProducer.Send(_message);
-            
+            _message.Header.Subject = subject;
+            if (sendAsync)
+            {
+                await _messageProducer.SendAsync(_message);
+            }
+            else
+            {
+                _messageProducer.Send(_message);
+            }
+
             await Task.Delay(1000);
             
-            var message =_channel.Receive(5000);
+            var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             
             //clear the queue
             _channel.Acknowledge(message);
@@ -76,15 +89,16 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             message.Id.Should().Be(_myCommand.Id);
             message.Redelivered.Should().BeFalse();
-            message.Header.Id.Should().Be(_myCommand.Id);
-            message.Header.Topic.Should().Contain(_topicName);
+            message.Header.MessageId.Should().Be(_myCommand.Id);
+            message.Header.Topic.Value.Should().Contain(_topicName);
             message.Header.CorrelationId.Should().Be(_correlationId);
             message.Header.ReplyTo.Should().Be(_replyTo);
             message.Header.ContentType.Should().Be(_contentType);
             message.Header.HandledCount.Should().Be(0);
+            message.Header.Subject.Should().Be(subject);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
             message.Header.TimeStamp.Should().BeAfter(RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-            message.Header.DelayedMilliseconds.Should().Be(0);
+            message.Header.Delayed.Should().Be(TimeSpan.Zero);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             message.Body.Value.Should().Be(_message.Body.Value);
         }
@@ -96,7 +110,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _messageProducer?.Dispose();
         }
         
-        private DateTime RoundToSeconds(DateTime dateTime)
+        private static DateTime RoundToSeconds(DateTime dateTime)
         {
             return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);
         }

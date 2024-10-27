@@ -46,13 +46,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _postgresSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
-            _firstMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test", MessageType.MT_COMMAND, 
+            _firstMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test"), MessageType.MT_COMMAND, 
                 timeStamp:DateTime.UtcNow.AddHours(-3)), new MessageBody("Body")
             );
-            _secondMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test2", MessageType.MT_COMMAND, 
+            _secondMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test2"), MessageType.MT_COMMAND, 
                 timeStamp:DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2")
             );
-            _thirdMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), "Test3", MessageType.MT_COMMAND, 
+            _thirdMessage = new Message(new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("Test3"), MessageType.MT_COMMAND, 
                 timeStamp:DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3")
             );
             
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _sqlOutbox.Delete([_firstMessage.Id], context);
 
             //assert
-            var remainingMessages = _sqlOutbox.OutstandingMessages(0, context);
+            var remainingMessages = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
 
             var msgs = remainingMessages as Message[] ?? remainingMessages.ToArray();
             msgs.Should().HaveCount(2);
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             
             _sqlOutbox.Delete(new []{_secondMessage.Id, _thirdMessage.Id}, context);
 
-            var messages = _sqlOutbox.OutstandingMessages(0, context);
+            var messages = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
 
             messages.Should().HaveCount(0);
         }

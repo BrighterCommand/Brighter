@@ -77,35 +77,24 @@ namespace Paramore.Brighter.Outbox.MySql
             Action loggingAction
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = transactionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
             catch (MySqlException sqlException)
             {
-                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                {
-                    s_logger.LogWarning(
-                        "MsSqlOutbox: A duplicate was detected in the batch");
-                    return;
-                }
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                s_logger.LogWarning(
+                    "MsSqlOutbox: A duplicate was detected in the batch");
 
-                throw;
             }
             finally
             {
-                transactionProvider?.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -116,19 +105,11 @@ namespace Paramore.Brighter.Outbox.MySql
             CancellationToken cancellationToken
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
                 await command.ExecuteNonQueryAsync(cancellationToken);
             }
@@ -145,7 +126,7 @@ namespace Paramore.Brighter.Outbox.MySql
             }
             finally
             {
-                transactionProvider?.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -228,12 +209,12 @@ namespace Paramore.Brighter.Outbox.MySql
                 },
                 new MySqlParameter
                 {
-                    ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic,
+                    ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic.Value,
                 },
                 new MySqlParameter
                 {
                     ParameterName = $"@{prefix}Timestamp",
-                    DbType = DbType.DateTime2,
+                    DbType = DbType.DateTimeOffset,
                     Value = message.Header.TimeStamp.ToUniversalTime()
                 }, //always store in UTC, as this is how we query messages
                 new MySqlParameter
@@ -361,7 +342,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
             if (dr.FieldCount > 4)
             {
-                DateTime timeStamp = GetTimeStamp(dr);
+                DateTimeOffset timeStamp = GetTimeStamp(dr);
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);
@@ -373,9 +354,9 @@ namespace Paramore.Brighter.Outbox.MySql
                     messageType: messageType,
                     timeStamp: timeStamp,
                     handledCount: 0,
-                    delayedMilliseconds: 0,
+                    delayed: TimeSpan.Zero,
                     correlationId: correlationId,
-                    replyTo: replyTo,
+                    replyTo: new RoutingKey(replyTo),
                     contentType: contentType,
                     partitionKey: partitionKey);
 
@@ -475,16 +456,16 @@ namespace Paramore.Brighter.Outbox.MySql
             return replyTo;
         }
 
-        private static string GetTopic(IDataReader dr)
+        private static RoutingKey GetTopic(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
         }
 
-        private static DateTime GetTimeStamp(IDataReader dr)
+        private static DateTimeOffset GetTimeStamp(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Timestamp");
             var timeStamp = dr.IsDBNull(ordinal)
-                ? DateTime.MinValue
+                ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }

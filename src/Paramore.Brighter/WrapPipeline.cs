@@ -48,18 +48,15 @@ namespace Paramore.Brighter
         /// <param name="transforms">The transforms applied after the message mapper</param>
         public WrapPipeline(
             IAmAMessageMapper<TRequest> messageMapper, 
-            IAmAMessageTransformerFactory messageTransformerFactory, 
+            IAmAMessageTransformerFactory? messageTransformerFactory, 
             IEnumerable<IAmAMessageTransform> transforms
-            )
+            ) : base(messageMapper, transforms)
         {
-            MessageMapper = messageMapper;
-            Transforms = transforms;
             if (messageTransformerFactory != null)
             {
                 InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
                 Transforms.Each(transform => InstanceScope.Add(transform));
             }
-
         }
 
         /// <summary>        

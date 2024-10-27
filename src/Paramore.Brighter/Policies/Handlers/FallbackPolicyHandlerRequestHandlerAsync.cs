@@ -36,13 +36,13 @@ namespace Paramore.Brighter.Policies.Handlers
         /// </summary>
         public const string CAUSE_OF_FALLBACK_EXCEPTION = "Fallback_Exception_Cause";
 
-        private Func<TRequest, CancellationToken, Task<TRequest>> _exceptionHandlerFunc;
+        private Func<TRequest, CancellationToken, Task<TRequest>>? _exceptionHandlerFunc;
 
         /// <summary>
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
             var catchAll = Convert.ToBoolean(initializerList[0]);
             var catchBrokenCircuit = Convert.ToBoolean(initializerList[1]);
@@ -71,6 +71,8 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <returns>TRequest.</returns>
         public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
+            if (_exceptionHandlerFunc is null)
+                throw new ArgumentException("ExceptionHandler must be set before handling.");
             return await _exceptionHandlerFunc(command, cancellationToken);
         }
 
@@ -82,7 +84,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (Exception exception)
             {
-                Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, exception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, exception, (s, o) => exception);
             }
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
@@ -95,7 +97,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (BrokenCircuitException brokenCircuitExceptionexception)
             {
-                Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception, (s, o) => brokenCircuitExceptionexception);
             }
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }

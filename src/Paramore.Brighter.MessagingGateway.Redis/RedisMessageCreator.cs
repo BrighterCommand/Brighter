@@ -122,7 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
            //Read HandledCount
             var handledCount = ReadHandledCount(headers);
             //Read DelayedMilliseconds
-            var delayedMilliseconds = ReadDelayedMilliseconds(headers);
+            var delayed = ReadDelay(headers);
             //Read MessageBag
             var bag = ReadMessageBag(headers);
             //reply to
@@ -148,12 +148,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     type: "",
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                     correlationId: "",
-                    replyTo: replyTo.Result,
+                    replyTo: new RoutingKey(replyTo.Result),
                     contentType: "",
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: null,
-                    delayedMilliseconds: delayedMilliseconds.Result);
+                    delayed: delayed.Result);
 
                 if (replyTo.Success)
                 {
@@ -189,11 +189,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="topic"></param>
         /// <param name="messageId"></param>
         /// <returns></returns>
-        private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<string> messageId)
+        private MessageHeader FailureMessageHeader(HeaderResult<RoutingKey> topic, HeaderResult<string> messageId)
         {
             return new MessageHeader(
                 messageId.Success ? messageId.Result : string.Empty,
-                topic.Success ? topic.Result : string.Empty,
+                topic.Success ? topic.Result : RoutingKey.Empty,
                 MessageType.MT_UNACCEPTABLE);
         }
         
@@ -218,16 +218,16 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<string>(newCorrelationId, false);
         }
 
-         private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
+        private HeaderResult<TimeSpan> ReadDelay(Dictionary<string, string> headers)
         {
             if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out string header))
             {
                 if (int.TryParse(header, out int delayedMilliseconds))
                 {
-                    return new HeaderResult<int>(delayedMilliseconds, true); 
+                    return new HeaderResult<TimeSpan>(TimeSpan.FromMilliseconds(delayedMilliseconds), true); 
                 }
             }
-            return new HeaderResult<int>(0, true);
+            return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
          }
         
         private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
@@ -312,14 +312,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
         }
 
-        private HeaderResult<string> ReadTopic(Dictionary<string, string> headers)
+        private HeaderResult<RoutingKey> ReadTopic(Dictionary<string, string> headers)
         {
             var topic = string.Empty;
             if (headers.TryGetValue(HeaderNames.TOPIC, out string header))
             {
-                return new HeaderResult<string>(header, false);
+                return new HeaderResult<RoutingKey>(new RoutingKey(header), false);
             }
-            return new HeaderResult<string>(String.Empty, false);
+            return new HeaderResult<RoutingKey>(RoutingKey.Empty, false);
         }
 
      }

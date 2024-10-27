@@ -50,9 +50,9 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         public const string HEARTBEAT = "heartbeat";
 
-        private IAmAChannelFactory _channelFactory;
-        private IDispatcher _dispatcher;
-        private IAmAProducerRegistryFactory _producerRegistryFactory;
+        private IAmAChannelFactory? _channelFactory;
+        private IDispatcher? _dispatcher;
+        private IAmAProducerRegistryFactory? _producerRegistryFactory;
 
         /// <summary>
         /// We need a dispatcher to pull messages off the control bus and dispatch them out to control bus handlers.
@@ -151,11 +151,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 );
             outgoingMessageMapperRegistry.Register<HeartbeatReply, HeartbeatReplyCommandMessageMapper>();
 
+            if (_producerRegistryFactory is null)
+                throw new ArgumentException("Producer Registry Factory must not be null.");
+            
             var producerRegistry = _producerRegistryFactory.Create();
 
             var outbox = new SinkOutboxSync();
-            
-            CommandProcessor commandProcessor = null;
             
             var externalBus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
@@ -165,12 +166,17 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(), 
                 tracer: new BrighterTracer(),   //TODO: Do we need to pass in a tracer?
                 outbox: outbox
-            );  
+            );
+
+            if (_dispatcher is null) throw new ArgumentException("Dispatcher must not be null");
+
+            CommandProcessor? commandProcessor = null;
             
-            commandProcessor = CommandProcessorBuilder.With()
+            commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
+                .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
             
@@ -188,13 +194,16 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                     new RoutingKey($"{hostName}.{HEARTBEAT}"))
             };
 
-            return DispatchBuilder.With()
+            if (_channelFactory is null) throw new ArgumentException("Channel Factory must not be null");
+            
+            return DispatchBuilder.StartNew()
                 .CommandProcessorFactory(() => 
                     new CommandProcessorProvider(commandProcessor), new InMemoryRequestContextFactory()
                 )
                 .MessageMappers(incomingMessageMapperRegistry, null, null, null)
                 .ChannelFactory(_channelFactory)                                        
                 .Subscriptions(subscriptions)
+                .NoInstrumentation()
                 .Build();
         }
 
@@ -204,57 +213,57 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
-            public IAmABrighterTracer Tracer { private get; set; } 
+            public IAmABrighterTracer? Tracer { private get; set; } 
             
-            public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
+            public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null)
             {
                 //discard message
             }
 
-            public void Add(IEnumerable<Message> messages, RequestContext requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
+            public void Add(IEnumerable<Message> messages, RequestContext? requestContext, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction>? transactionProvider = null)
             {
                //discard message 
             }
             
-            public void Delete(string[] messageIds, RequestContext requestContext, Dictionary<string, object> args = null)
+            public void Delete(string[] messageIds, RequestContext? requestContext, Dictionary<string, object>? args = null)
             {
                 //ignore
             }
 
-            public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object> args = null)
+            public Message Get(string messageId, RequestContext requestContext, int outBoxTimeout = -1, Dictionary<string, object>? args = null)
             {
-                 return null;
+                 return new Message(){Header = new MessageHeader("",new RoutingKey(""), MessageType.MT_NONE)};
             }
 
-            public void MarkDispatched(string id, RequestContext requestContext, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+            public void MarkDispatched(string id, RequestContext requestContext, DateTimeOffset? dispatchedAt = null, Dictionary<string, object>? args = null)
             {
                 //ignore
             }
 
             public IEnumerable<Message> DispatchedMessages(
-                double millisecondsDispatchedSince, 
+                TimeSpan millisecondsDispatchedSince, 
                 RequestContext requestContext,
                 int pageSize = 100, 
                 int pageNumber = 1,
                 int outboxTimeout = -1, 
-                Dictionary<string, object> args = null
+                Dictionary<string, object>? args = null
             )
             {
                 return Array.Empty<Message>();
             }
 
             public IEnumerable<Message> OutstandingMessages(
-                double millSecondsSinceSent, 
-                RequestContext requestContext,
+                TimeSpan dispatchedSince, 
+                RequestContext? requestContext,
                 int pageSize = 100, 
                 int pageNumber = 1,
-                Dictionary<string, object> args = null)
+                Dictionary<string, object>? args = null)
             {
                 return Array.Empty<Message>(); 
             }
 
 
-            public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
+            public IEnumerable<Message> OutstandingMessages(TimeSpan dispatchedSince)
             {
                return Array.Empty<Message>(); 
             }

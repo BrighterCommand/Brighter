@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Net;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SecurityToken;
@@ -35,17 +36,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly RegionEndpoint _region;
         private AmazonSecurityTokenServiceClient _stsClient;
 
-        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region) : base(credentials, region)
+        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null) 
+            : base(credentials, region, clientConfigAction)
         {
             _region = region;
 
-            _stsClient = new AmazonSecurityTokenServiceClient(credentials, region);
+            var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
+            _stsClient = clientFactory.CreateStsClient();
         }
 
-        public override (bool, string TopicArn) Validate(string topic)
+        public override async Task<(bool, string TopicArn)> ValidateAsync(string topic)
         {
             var topicArn = GetArnFromTopic(topic);
-            return base.Validate(topicArn);
+            return await base.ValidateAsync(topicArn);
         }
 
         private string GetArnFromTopic(string topicName)

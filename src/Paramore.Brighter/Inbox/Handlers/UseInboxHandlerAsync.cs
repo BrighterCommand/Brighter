@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Inbox.Handlers
 
         private readonly IAmAnInboxAsync _inbox;
         private bool _onceOnly;
-        private string _contextKey;
+        private string? _contextKey;
         private OnceOnlyAction _onceOnlyAction;
 
         /// <summary>
@@ -59,11 +59,13 @@ namespace Paramore.Brighter.Inbox.Handlers
         }
         
         
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _onceOnly = (bool) initializerList[0];
-            _contextKey = (string)initializerList[1];
-            _onceOnlyAction = (OnceOnlyAction)initializerList[2];
+            _onceOnly = (bool?) initializerList[0] ?? false;
+            _contextKey = (string?)initializerList[1];
+            _onceOnlyAction = (OnceOnlyAction?)initializerList[2] ?? OnceOnlyAction.Throw;
+            
+            base.InitializeFromAttributeParams(initializerList);
             
             base.InitializeFromAttributeParams(initializerList);
         }
@@ -76,6 +78,8 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default)
         {
+            if (_contextKey is null)
+                throw new ArgumentException("ContextKey must be set before Handling");
             
             if (_onceOnly)
             {

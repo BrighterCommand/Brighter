@@ -45,7 +45,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
-        void Send<TRequest>(TRequest command, RequestContext requestContext = null) where TRequest : class, IRequest;
+        void Send<TRequest>(TRequest command, RequestContext? requestContext = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Awaitably sends the specified command.
@@ -55,14 +55,14 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task SendAsync<TRequest>(TRequest command, RequestContext requestContext = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
+        Task SendAsync<TRequest>(TRequest command, RequestContext? requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
 
         /// <summary>
         /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>       /// <param name="event">The event.</param>
-        void Publish<TRequest>(TRequest @event, RequestContext requestContext = null) where TRequest : class, IRequest;
+        void Publish<TRequest>(TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Publishes the specified event with async/await support. Throws an aggregate exception on failure of a pipeline but executes remaining
@@ -75,8 +75,8 @@ namespace Paramore.Brighter
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task PublishAsync<TRequest>(
             TRequest @event, 
-            RequestContext requestContext = null,
-            bool continueOnCapturedContext = false, 
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default
             ) where TRequest : class, IRequest;
 
@@ -87,7 +87,7 @@ namespace Paramore.Brighter
         /// <param name="request">The request.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        void Post<TRequest>(TRequest request, RequestContext requestContext= null, Dictionary<string, object> args = null) where TRequest : class, IRequest;
+        void Post<TRequest>(TRequest request, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Posts the specified request with async/await support.
@@ -101,9 +101,9 @@ namespace Paramore.Brighter
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task PostAsync<TRequest>(
             TRequest request, 
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false, 
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default
         ) where TRequest : class, IRequest;
 
@@ -119,7 +119,7 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
-        string DepositPost<TRequest>(TRequest request, RequestContext requestContext = null, Dictionary<string, object> args = null) where TRequest : class, IRequest;
+        string DepositPost<TRequest>(TRequest request, RequestContext? requestContext = null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
@@ -132,14 +132,16 @@ namespace Paramore.Brighter
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="batchId">The id of the deposit batch, if this isn't set items will be added to the outbox as they come in and not as a batch</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
         string DepositPost<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            string? batchId = null
             ) where TRequest : class, IRequest;
 
         /// <summary>
@@ -154,7 +156,7 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext requestContext, Dictionary<string, object> args = null) where TRequest : class, IRequest;
+        string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext requestContext, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Adds a messages into the outbox, and returns the id of the saved message.
@@ -173,8 +175,8 @@ namespace Paramore.Brighter
         string[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null
             ) where TRequest : class, IRequest;
 
         /// <summary>
@@ -193,9 +195,9 @@ namespace Paramore.Brighter
         /// <returns></returns>
         Task<string> DepositPostAsync<TRequest>(
             TRequest request,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             ) where TRequest : class, IRequest;
 
@@ -213,16 +215,18 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <param name="batchId">The id of the deposit batch, if this isn't set items will be added to the outbox as they come in and not as a batch</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
         Task<string> DepositPostAsync<T, TTransaction>(
             T request,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default,
+            string? batchId = null
             ) where T : class, IRequest;
 
         /// <summary>
@@ -242,9 +246,9 @@ namespace Paramore.Brighter
         /// <returns></returns>
         Task<string[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             ) where TRequest : class, IRequest;
 
@@ -267,9 +271,9 @@ namespace Paramore.Brighter
         Task<string[]> DepositPostAsync<T, TTransaction>(
             IEnumerable<T> requests,
             IAmABoxTransactionProvider<TTransaction> transactionProvider,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             ) where T : class, IRequest;
 
@@ -280,7 +284,7 @@ namespace Paramore.Brighter
         /// <param name="ids">The ids to flush</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        void ClearOutbox(string[] ids, RequestContext requestContext = null, Dictionary<string, object> args = null);
+        void ClearOutbox(string[] ids, RequestContext? requestContext = null, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"/> to the broker.
@@ -293,9 +297,9 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken"></param>
         Task ClearOutboxAsync(
             IEnumerable<string> posts,
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default);
         
         /// <summary>
@@ -303,16 +307,16 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        /// <param name="minimumAge">The minimum age to clear (Default 5 second).</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
-            int minimumAge = 5000, 
+            TimeSpan? minimumAge = null, 
             bool useBulk = false, 
-            RequestContext requestContext = null,
-            Dictionary<string, object> args = null
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null
             );
 
         /// <summary>
@@ -325,9 +329,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">What message do we want a reply to</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/></param>
-        /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
+        /// <param name="timeOut">The call blocks, so we must time out; defaults to 500 ms if null</param>
         /// <exception cref="NotImplementedException"></exception>
-        TResponse Call<T, TResponse>(T request, RequestContext requestContext = null, int timeOutInMilliseconds = 500)
+        TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
             where T : class, ICall where TResponse : class, IResponse;
     }
 }

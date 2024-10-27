@@ -30,11 +30,16 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
+        private const string ChannelName = "myChannel";
+        private readonly RoutingKey _routingKey = new("MyTopic");
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
         private readonly SpyCommandProcessor _commandProcessor;
 
@@ -42,32 +47,38 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            var channel = new FailingChannel { NumberOfRetries = 1 };
+            var channel = new FailingChannel(
+                new ChannelName(ChannelName), _routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 
+                2)
+            {
+                NumberOfRetries = 1
+            };
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory())
+            _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
             {
-                Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1
+                Channel = channel, TimeOut = TimeSpan.FromMilliseconds(500), RequeueCount = -1
             };
 
             var command = new MyCommand();
 
             //two command, will be received when subscription restored
             var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
             var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
             channel.Enqueue(message1);
             channel.Enqueue(message2);
             
             //end the pump
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);
             channel.Enqueue(quitMessage);
         }
 

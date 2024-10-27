@@ -57,71 +57,57 @@ namespace Paramore.Brighter.Monitoring.Events
     /// events before executing the remainder of the chain, after exiting the remainder of the chain, or because an exception was thrown in the chain.
     /// We capture the information on timing and the request.
     /// </summary>
-    public class MonitorEvent : Event
+    public class MonitorEvent(
+        string? instanceName,
+        MonitorEventType eventType,
+        string? handlerName,
+        string? handlerFullAssemblyName,
+        string requestBody,
+        DateTime eventTime,
+        int timeElapsedMs,
+        Exception? exception = null)
+        : Event(Guid.NewGuid())
     {
         /// <summary>
         /// Any exception that was thrown when processing the handler pipeline
         /// </summary>
-        public Exception Exception { get; set; }
+        public Exception? Exception { get; set; } = exception;
 
         /// <summary>
         /// Why was this event raised?
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public MonitorEventType EventType { get; private set; }
+        public MonitorEventType EventType { get; private set; } = eventType;
 
         /// <summary>
         /// When was this event raised?
         /// </summary>
-        public DateTime EventTime { get; private set; }
+        public DateTime EventTime { get; private set; } = eventTime;
 
 
         /// <summary>
         /// When was the duration in milliseconds?
         /// </summary>
-        public int TimeElapsedMs { get; set; }
+        public int TimeElapsedMs { get; set; } = timeElapsedMs;
 
         /// <summary>
         //What was the handler that we raised this event for? 
         /// </summary>
-        public string HandlerName { get; private set; }
+        public string? HandlerName { get; private set; } = handlerName;
 
         /// <summary>
         //What was the handler that we raised this event for, include full assembly path
         /// </summary>
-        public string HandlerFullAssemblyName { get; set; }
+        public string? HandlerFullAssemblyName { get; set; } = handlerFullAssemblyName;
 
         /// <summary>
         /// Which instance was this handler running on?
         /// </summary>
-        public string InstanceName { get; set; }
+        public string? InstanceName { get; set; } = instanceName;
 
         /// <summary>
         /// The serialised request - what were the parameters to this command?
         /// </summary>
-        public string RequestBody { get; private set; }
-
-        public MonitorEvent(
-            string instanceName,
-            MonitorEventType eventType, 
-            string handlerName,
-            string handlerFullAssemblyName,
-            string requestBody,
-            DateTime eventTime,
-            int timeElapsedMs,
-            Exception exception = null
-            )
-            :base(Guid.NewGuid())
-        {
-            InstanceName = instanceName;
-            EventType = eventType;
-            HandlerName = handlerName;
-            HandlerFullAssemblyName = handlerFullAssemblyName;
-            RequestBody = requestBody;
-            EventTime = eventTime;
-            TimeElapsedMs = timeElapsedMs;
-            Exception = exception;
-        }
-
+        public string RequestBody { get; private set; } = requestBody;
     }
 }

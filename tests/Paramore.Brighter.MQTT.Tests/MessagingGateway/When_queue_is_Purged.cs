@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
             for (int i = 0; i < 5; i++)
             {
                 Message _message = new(
-                    new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
+                    new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND),
                     new MessageBody($"test message")
                 );
 
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
 
             _messageConsumer.Purge();
 
-            Message[] recievedMessages = _messageConsumer.Receive(100);
+            Message[] recievedMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(100));
 
             recievedMessages.Should().NotBeEmpty()
             .And.HaveCount(1)

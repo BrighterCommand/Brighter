@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Paramore.Brighter.FeatureSwitch;
@@ -39,23 +40,23 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets the Span [Activity] associated with the request
         /// </summary>
-        Activity Span { get; set; }
+        Activity? Span { get; set; }
         
         /// <summary>
         /// Gets the bag.
         /// </summary>
         /// <value>The bag.</value>
-        Dictionary<string, object> Bag { get; }
+        ConcurrentDictionary<string, object> Bag { get; }
         
         /// <summary>
         /// Gets the policies.
         /// </summary>
         /// <value>The policies.</value>
-        IPolicyRegistry<string>  Policies { get; }
+        IPolicyRegistry<string>?  Policies { get; }
 
         /// <summary>
         /// Gets the Feature Switches
         /// </summary>
-        IAmAFeatureSwitchRegistry FeatureSwitches { get; }
+        IAmAFeatureSwitchRegistry? FeatureSwitches { get; }
     }
 }

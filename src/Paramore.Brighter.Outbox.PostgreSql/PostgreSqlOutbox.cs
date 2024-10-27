@@ -81,18 +81,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = transactionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
@@ -108,7 +101,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                transactionProvider?.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -118,20 +111,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             Action loggingAction,
             CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
+            await connection.OpenAsync(cancellationToken);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
-                    command.Transaction = transactionProvider.GetTransaction();
+                if (transactionProvider is { HasOpenTransaction: true })
+                    command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
                 await command.ExecuteNonQueryAsync(cancellationToken);
             }
             catch (PostgresException sqlException)
@@ -147,10 +133,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                if (transactionProvider != null)
-                    transactionProvider.Close();
-                else
-                    connection.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -248,13 +231,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     ParameterName = $"{prefix}Topic",
                     NpgsqlDbType = NpgsqlDbType.Text,
-                    Value = message.Header.Topic
+                    Value = message.Header.Topic.Value
                 },
                 new NpgsqlParameter
                 {
                     ParameterName = $"{prefix}Timestamp",
                     NpgsqlDbType = NpgsqlDbType.TimestampTz,
-                    Value = message.Header.TimeStamp
+                    Value = message.Header.TimeStamp.ToUniversalTime()
                 },
                 new NpgsqlParameter
                 {
@@ -366,7 +349,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var messageType = GetMessageType(dr);
             var topic = GetTopic(dr);
 
-            DateTime timeStamp = GetTimeStamp(dr);
+            DateTimeOffset timeStamp = GetTimeStamp(dr);
             var correlationId = GetCorrelationId(dr);
             var replyTo = GetReplyTo(dr);
             var contentType = GetContentType(dr);
@@ -378,9 +361,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 messageType: messageType,
                 timeStamp: timeStamp,
                 handledCount: 0,
-                delayedMilliseconds: 0,
+                delayed: TimeSpan.Zero,
                 correlationId: correlationId,
-                replyTo: replyTo,
+                replyTo: new RoutingKey(replyTo),
                 contentType: contentType,
                 partitionKey: partitionKey);
 
@@ -429,9 +412,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return correlationId;
         }
 
-        private static string GetTopic(DbDataReader dr)
+        private static RoutingKey GetTopic(DbDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
         }
 
         private static MessageType GetMessageType(DbDataReader dr)
@@ -463,11 +446,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return replyTo;
         }
 
-        private static DateTime GetTimeStamp(DbDataReader dr)
+        private static DateTimeOffset GetTimeStamp(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Timestamp");
             var timeStamp = dr.IsDBNull(ordinal)
-                ? DateTime.MinValue
+                ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }

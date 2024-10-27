@@ -27,20 +27,13 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.FeatureSwitch.Providers
 {
-    public class FluentConfigRegistry : IAmAFeatureSwitchRegistry
+    public class FluentConfigRegistry(IDictionary<Type, FeatureSwitchStatus> switches) : IAmAFeatureSwitchRegistry
     {
         public MissingConfigStrategy MissingConfigStrategy { get; set; } = MissingConfigStrategy.Exception;
 
-        private readonly IDictionary<Type, FeatureSwitchStatus> _switches;        
-
-        public FluentConfigRegistry(IDictionary<Type, FeatureSwitchStatus> switches)
-        {
-            _switches = switches;
-        }        
-
         public FeatureSwitchStatus StatusOf(Type handler)
         {
-            var configExists = _switches.ContainsKey(handler);
+            var configExists = switches.ContainsKey(handler);
 
             if (!configExists)
             {
@@ -60,7 +53,7 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
                 }
             }
 
-            return _switches[handler];
+            return switches[handler];
         }        
     }
 
@@ -68,7 +61,7 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
     {
         private readonly IDictionary<Type, FeatureSwitchStatus> _switches;
 
-        private Type _nextType;
+        private Type? _nextType;
 
         private FluentConfigRegistryBuilder()
         {

@@ -41,11 +41,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<string>(string.Empty, true);
         }
 
-        protected Message FailureMessage(HeaderResult<string> topic, HeaderResult<string> messageId)
+        protected Message FailureMessage(HeaderResult<RoutingKey> topic, HeaderResult<string> messageId)
         {
             var header = new MessageHeader(
                 messageId.Success ? messageId.Result : string.Empty,
-                topic.Success ? topic.Result : string.Empty,
+                topic.Success ? topic.Result : RoutingKey.Empty,
                 MessageType.MT_UNACCEPTABLE);
             var message = new Message(header, new MessageBody(string.Empty));
             return message;

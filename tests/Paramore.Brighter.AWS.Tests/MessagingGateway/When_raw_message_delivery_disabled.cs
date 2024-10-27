@@ -15,9 +15,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
     public class SqsRawMessageDeliveryTests : IDisposable
     {
         private readonly SqsMessageProducer _messageProducer;
-        private readonly string _topicName; 
         private readonly ChannelFactory _channelFactory;
         private readonly IAmAChannel _channel;
+        private readonly RoutingKey _routingKey;
 
         public SqsRawMessageDeliveryTests()
         {
@@ -26,9 +26,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             _channelFactory = new ChannelFactory(awsConnection);
             var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            _topicName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-
-            var routingKey = new RoutingKey(_topicName);
+            _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
             var bufferSize = 10;
 
@@ -36,7 +34,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _channel = _channelFactory.CreateChannel(new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName:new ChannelName(channelName),
-                routingKey:routingKey,
+                routingKey:_routingKey,
                 bufferSize: bufferSize,
                 makeChannels: OnMissingChannel.Create,
                 rawMessageDelivery: false));
@@ -54,10 +52,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //arrange
             var messageHeader = new MessageHeader(
                 Guid.NewGuid().ToString(), 
-                _topicName, 
+                _routingKey, 
                 MessageType.MT_COMMAND, 
                 correlationId: Guid.NewGuid().ToString(), 
-                replyTo: string.Empty, 
+                replyTo: RoutingKey.Empty, 
                 contentType: "text\\plain");
 
             var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
@@ -68,7 +66,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //act
             _messageProducer.Send(messageToSent);
 
-            var messageReceived = _channel.Receive(10000);
+            var messageReceived = _channel.Receive(TimeSpan.FromMilliseconds(10000));
 
             _channel.Acknowledge(messageReceived);
 

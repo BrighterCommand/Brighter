@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         /// <param name="requestBody">The request body.</param>
         /// <param name="writeTime">The request arrived at when.</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        public InboxItem(Type requestType, string requestBody, DateTime writeTime, string contextKey)
+        public InboxItem(Type requestType, string requestBody, DateTimeOffset writeTime, string contextKey)
         {
             RequestType = requestType;
             RequestBody = requestBody;
@@ -68,7 +68,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The command when.</value>
 
-        public DateTime WriteTime { get; }
+        public DateTimeOffset WriteTime { get; }
 
         /// <summary>
         /// The Id and the key for the context i.e. message type, that we are looking for
@@ -102,6 +102,8 @@ namespace Paramore.Brighter
     /// </summary>
     public class InMemoryInbox(TimeProvider timeProvider) : InMemoryBox<InboxItem>(timeProvider), IAmAnInboxSync, IAmAnInboxAsync
     {
+        private readonly TimeProvider _timeProvider = timeProvider;
+
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
@@ -125,7 +127,7 @@ namespace Paramore.Brighter
             string key = InboxItem.CreateKey(command.Id, contextKey);
             if (!Exists<T>(command.Id, contextKey))
             {
-                if (!Requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, timeProvider.GetUtcNow().DateTime, contextKey)))
+                if (!Requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, _timeProvider.GetUtcNow().DateTime, contextKey)))
                 {
                     throw new Exception($"Could not add command: {command.Id} to the Inbox");
                 }
@@ -173,9 +175,12 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            if (Requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
+            if (Requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem? inboxItem))
             {
-                return JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);
+                var result = JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);
+
+                if (result is null) throw new ArgumentException("Body must not be null");
+                return result;
             }
 
             throw new RequestNotFoundException<T>(id);

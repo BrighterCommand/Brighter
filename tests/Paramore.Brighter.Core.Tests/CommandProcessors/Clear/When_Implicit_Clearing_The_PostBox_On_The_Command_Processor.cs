@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
     [Collection("CommandProcessor")]
     public class CommandProcessorPostBoxImplicitClearTests : IDisposable
     {
-        private const string Topic = "MyCommand";
+        private readonly RoutingKey Topic = new("MyCommand");
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly Message _message2;
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
                 { Topic, producer },
             }); 
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             _outbox.Add(_message, context);
             _outbox.Add(_message2, context);
 
-            _commandProcessor.ClearOutstandingFromOutbox(1,0);
+            _commandProcessor.ClearOutstandingFromOutbox(1,TimeSpan.Zero);
             
             var topic = new RoutingKey(Topic);
             for (var i = 1; i <= 10; i++)
@@ -136,7 +136,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 if (_bus.Stream(topic).Count() == 2)
                     break;
                 Thread.Sleep(i * 100);
-                _commandProcessor.ClearOutstandingFromOutbox(1, 0);
+                _commandProcessor.ClearOutstandingFromOutbox(1, TimeSpan.Zero);
             }
 
             //_should_send_a_message_via_the_messaging_gateway

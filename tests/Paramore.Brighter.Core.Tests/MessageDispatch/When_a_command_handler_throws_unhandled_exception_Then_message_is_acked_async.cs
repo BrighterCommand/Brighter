@@ -25,11 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
 
@@ -38,17 +38,19 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpCommandProcessingExceptionTestsAsync
     {
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
-        private readonly SpyExceptionCommandProcessor _commandProcessor;
+        private readonly Channel _channel;
         private readonly int _requeueCount = 5;
+        private readonly RoutingKey _routingKey = new("MyCommand");
+        private readonly FakeTimeProvider _timeProvider = new();
 
         public MessagePumpCommandProcessingExceptionTestsAsync()
         {
+            SpyExceptionCommandProcessor commandProcessor = new();
+            var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 
-            _commandProcessor = new SpyExceptionCommandProcessor();
-            var commandProcessorProvider = new CommandProcessorProvider(_commandProcessor);
+            InternalBus bus = new();
             
-            _channel = new FakeChannel();
+            _channel = new Channel(new("myChannel"),_routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
@@ -56,17 +58,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
              
             _messagePump = new MessagePumpAsync<MyCommand>(commandProcessorProvider, messageMapperRegistry, 
-                null, new InMemoryRequestContextFactory()
+                null, new InMemoryRequestContextFactory(), _channel
                 )
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };
 
             var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyCommand>()
-                .WrapAsync(new MyCommand(),  new RequestContext(), new Publication{Topic = new RoutingKey("MyCommand")})
+                .WrapAsync(new MyCommand(),  new RequestContext(), new Publication{Topic = _routingKey})
                 .Result;
-            _channel.Enqueue(msg);
+            bus.Enqueue(msg);
         }
 
         [Fact]
@@ -77,18 +79,19 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
                 await Task.Delay(1000);
 
-                var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT),
+                _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
+                
+                var quitMessage = new Message(new MessageHeader(string.Empty, RoutingKey.Empty, MessageType.MT_QUIT),
                     new MessageBody(""));
                 _channel.Enqueue(quitMessage);
 
                 await Task.WhenAll(task);
 
-                _channel.AcknowledgeCount.Should().Be(1);
-
+                
                 TestCorrelator.GetLogEventsFromCurrentContext()
                     .Should().Contain(x => x.Level == LogEventLevel.Error)
                     .Which.MessageTemplate.Text
-                    .Should().Be("MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}");
+                    .Should().Be("MessagePump: Failed to dispatch message '{Id}' from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}");
             }
         }
     }

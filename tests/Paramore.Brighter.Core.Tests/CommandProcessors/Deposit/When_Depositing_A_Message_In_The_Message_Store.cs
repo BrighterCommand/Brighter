@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
     [Collection("CommandProcessor")]
     public class CommandProcessorDepositPostTests : IDisposable
     {
-        private const string Topic = "MyCommand";
+        private readonly RoutingKey _routingKey = new("MyCommand");
 
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -31,11 +31,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var timeProvider = new FakeTimeProvider();
             InMemoryProducer producer = new(_internalBus, timeProvider)
             {
-                Publication = {Topic = new RoutingKey(Topic), RequestType = typeof(MyCommand)}
+                Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
             };
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, Topic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -53,9 +53,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { Topic, producer },
+                    { _routingKey, producer },
                 });
 
             var policyRegistry = new PolicyRegistry
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             //assert
             
             //message should not be posted
-            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
+            _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
             
             //message should correspond to the command
             var depositedPost = _fakeOutbox.Get(postedMessageId, context);
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = _fakeOutbox.OutstandingMessages(0, context);
+            var outstandingMessages = _fakeOutbox.OutstandingMessages(TimeSpan.Zero, context);
             var outstandingMessage = outstandingMessages.Single();
             outstandingMessage.Id.Should().Be(_message.Id);
         }

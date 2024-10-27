@@ -32,7 +32,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Sqlite;
 
@@ -43,8 +42,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// </summary>
     public class SqliteOutbox : RelationDatabaseOutbox
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteOutbox>();
-
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
         private readonly IAmARelationalDatabaseConfiguration _configuration;
@@ -78,37 +75,23 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Action loggingAction
             )
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
             try
             {
-                if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                if (transactionProvider is { HasOpenTransaction: true })
                     command.Transaction = transactionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
             catch (SqliteException sqlException)
             {
-                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                {
-                    loggingAction.Invoke();
-                    return;
-                }
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                loggingAction.Invoke();
 
-                throw;
             }
             finally
             {
-                if (transactionProvider != null)
-                    transactionProvider.Close();
-                else
-                    connection.Close();
+                FinishWrite(connection, transactionProvider);
             }
         }
 
@@ -118,14 +101,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Action loggingAction, 
             CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
-                connectionProvider = transConnectionProvider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
+            var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
             using var command = commandFunc.Invoke(connection);
             try
             {
@@ -135,13 +111,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
             catch (SqliteException sqlException)
             {
-                if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                {
-                    loggingAction.Invoke();
-                    return;
-                }
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
+                loggingAction.Invoke();
 
-                throw;
             }
             finally
             {
@@ -237,13 +209,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-            return new[]
+            return new IDbDataParameter[]
             {
                 new SqliteParameter
                 {
                     ParameterName = $"@{prefix}MessageId",
                     SqliteType = SqliteType.Text,
-                    Value = message.Id.ToString()
+                    Value = message.Id
                 },
                 new SqliteParameter
                 {
@@ -253,7 +225,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 },
                 new SqliteParameter
                 {
-                    ParameterName = $"@{prefix}Topic", SqliteType = SqliteType.Text, Value = message.Header.Topic
+                    ParameterName = $"@{prefix}Topic", SqliteType = SqliteType.Text, Value = message.Header.Topic.Value
                 },
                 new SqliteParameter
                 {
@@ -380,7 +352,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             if (dr.FieldCount > 4)
             {
-                DateTime timeStamp = GetTimeStamp(dr);
+                DateTimeOffset timeStamp = GetTimeStamp(dr);
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);
@@ -392,9 +364,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     messageType: messageType,
                     timeStamp: timeStamp,
                     handledCount: 0,
-                    delayedMilliseconds: 0,
+                    delayed: TimeSpan.Zero,
                     correlationId: correlationId,
-                    replyTo: replyTo,
+                    replyTo: new RoutingKey(replyTo),
                     contentType: contentType,
                     partitionKey: partitionKey);
 
@@ -411,7 +383,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var body = _configuration.BinaryMessagePayload
                 ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), "application/octet-stream",
                     CharacterEncoding.Raw)
-                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
+                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
 
             return new Message(header, body);
@@ -483,17 +455,17 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return replyTo;
         }
 
-        private static string GetTopic(IDataReader dr)
+        private static RoutingKey GetTopic(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            return new RoutingKey(dr.GetString(dr.GetOrdinal("Topic")));
         }
 
 
-        private static DateTime GetTimeStamp(IDataReader dr)
+        private static DateTimeOffset GetTimeStamp(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Timestamp");
             var timeStamp = dr.IsDBNull(ordinal)
-                ? DateTime.MinValue
+                ? DateTimeOffset.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }

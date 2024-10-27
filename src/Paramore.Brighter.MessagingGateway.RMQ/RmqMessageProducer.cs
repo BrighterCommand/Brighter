@@ -31,7 +31,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.Observability;
 using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
@@ -48,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         static readonly object _lock = new object();
         private readonly RmqPublication _publication;
         private readonly ConcurrentDictionary<ulong, string> _pendingConfirmations = new ConcurrentDictionary<ulong, string>();
-        private bool _confirmsSelected = false;
+        private bool _confirmsSelected;
         private readonly int _waitForConfirmsTimeOutInMilliseconds;
 
         /// <summary>
@@ -103,10 +102,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="delay">Delay to delivery of the message.</param>
         /// <returns>Task.</returns>
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
+            delay ??= TimeSpan.Zero;
+            
             try
             {
                 lock (_lock)
@@ -125,24 +126,25 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
                     s_logger.LogDebug(
                         "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}",
-                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delayMilliseconds,
+                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                         message.Header.Topic, message.Persist, message.Id, message.Body.Value);
 
                     _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id);
 
                     if (DelaySupported)
                     {
-                        rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
+                        rmqMessagePublisher.PublishMessage(message, delay.Value);
                     }
                     else
                     {
-                        Task.Delay(delayMilliseconds).Wait();
-                        rmqMessagePublisher.PublishMessage(message, 0);
+                        //TODO: Replace with a Timer, don't block
+                        Task.Delay(delay.Value).Wait();
+                        rmqMessagePublisher.PublishMessage(message, TimeSpan.Zero);
                     }
 
                     s_logger.LogInformation(
-                        "RmqMessageProducer: Published message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}",
-                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delayMilliseconds,
+                        "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}",
+                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay,
                         message.Header.Topic, message.Persist, message.Id,
                         JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);
                 }
@@ -201,7 +203,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string messageId))
             {
                 OnMessagePublished?.Invoke(false, messageId);
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out string msgId);
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out string _);
                 s_logger.LogDebug("Failed to publish message: {MessageId}", messageId);
             }
         }
@@ -211,7 +213,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out string messageId))
             {
                 OnMessagePublished?.Invoke(true, messageId);
-                _pendingConfirmations.TryRemove(e.DeliveryTag, out string msgId);
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out string _);
                 s_logger.LogInformation("Published message: {MessageId}", messageId);
             }
         }

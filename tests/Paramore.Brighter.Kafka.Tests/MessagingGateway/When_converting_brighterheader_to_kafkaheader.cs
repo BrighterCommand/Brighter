@@ -19,18 +19,18 @@ public class KafkaDefaultMessageHeaderBuilderTests
         var message = new Message(
             new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
-                topic: "test",
+                topic: new RoutingKey("test"),
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "test",
+                replyTo: new RoutingKey("test"),
                 contentType: "application/octet",
                 partitionKey: "mykey"
             ),
             new MessageBody("test content")
         );
 
-        message.Header.DelayedMilliseconds = 500;
+        message.Header.Delayed = TimeSpan.FromMilliseconds(500);
         message.Header.HandledCount = 2;
 
         Dictionary<string,object> bag = message.Header.Bag;
@@ -48,17 +48,17 @@ public class KafkaDefaultMessageHeaderBuilderTests
         
         //known properties
         headers.GetLastBytes(HeaderNames.MESSAGE_TYPE).Should().Equal(message.Header.MessageType.ToString().ToByteArray());
-        headers.GetLastBytes(HeaderNames.MESSAGE_ID).Should().Equal(message.Header.Id.ToString().ToByteArray());
-        headers.GetLastBytes(HeaderNames.TOPIC).Should().Equal(message.Header.Topic.ToByteArray());
+        headers.GetLastBytes(HeaderNames.MESSAGE_ID).Should().Equal(message.Header.MessageId.ToString().ToByteArray());
+        headers.GetLastBytes(HeaderNames.TOPIC).Should().Equal(message.Header.Topic.Value.ToByteArray());
         headers.GetLastBytes(HeaderNames.TIMESTAMP).Should()
-            .Equal(new DateTimeOffset(message.Header.TimeStamp).ToUnixTimeMilliseconds().ToString().ToByteArray());
+            .Equal(message.Header.TimeStamp.ToUnixTimeMilliseconds().ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.CORRELATION_ID).Should()
             .Equal(message.Header.CorrelationId.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.PARTITIONKEY).Should().Equal(message.Header.PartitionKey.ToByteArray());
         headers.GetLastBytes(HeaderNames.CONTENT_TYPE).Should().Equal(message.Header.ContentType.ToByteArray());
         headers.GetLastBytes(HeaderNames.REPLY_TO).Should().Equal(message.Header.ReplyTo.ToByteArray());
         headers.GetLastBytes(HeaderNames.DELAYED_MILLISECONDS).Should()
-            .Equal(message.Header.DelayedMilliseconds.ToString().ToByteArray());
+            .Equal(message.Header.Delayed.TotalMilliseconds.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.HANDLED_COUNT).Should()
             .Equal(message.Header.HandledCount.ToString().ToByteArray());    
 

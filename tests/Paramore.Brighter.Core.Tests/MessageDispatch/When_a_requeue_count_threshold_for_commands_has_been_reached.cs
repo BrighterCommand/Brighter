@@ -29,40 +29,41 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpCommandRequeueCountThresholdTests
     {
+        private const string Channel = "MyChannel";
+        private readonly RoutingKey _routingKey = new("MyTopic");
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
+        private readonly Channel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
-        private readonly MyCommand _command;
 
         public MessagePumpCommandRequeueCountThresholdTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            _channel = new FakeChannel();
+            _channel = new Channel(new(Channel) ,_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-             _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+             _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel) 
+                { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3 };
 
-            _command = new MyCommand();
-
-            var message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
-                new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
+             var message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
+                new MessageBody(JsonSerializer.Serialize((MyCommand)new(), JsonSerialisationOptions.Options))
             );
-            var message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_COMMAND), 
-                new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
+            var message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_COMMAND), 
+                new MessageBody(JsonSerializer.Serialize((MyCommand)new(), JsonSerialisationOptions.Options))
             );
-            _channel.Enqueue(message1);
-            _channel.Enqueue(message2);
+            _bus.Enqueue(message1);
+            _bus.Enqueue(message2);
         }
 
         [Fact]
@@ -70,20 +71,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             await Task.Delay(1000);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
             _channel.Enqueue(quitMessage);
 
             await Task.WhenAll(task);
 
-            //_should_send_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);
-            //_should_have_been_handled_6_times_via_send
             _commandProcessor.SendCount.Should().Be(6);
-            //_should_requeue_the_messages
-            _channel.Length.Should().Be(0);
-            //_should_dispose_the_input_channel
-            _channel.DisposeHappened.Should().BeTrue();
+            
+            Assert.Empty(_bus.Stream(_routingKey));  
+            
+            //TODO: How can we observe that the channel has been closed? Observability?
         }
     }
 }

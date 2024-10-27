@@ -81,11 +81,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 SqsSubscription sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels);
+                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels).Wait();
                 EnsureQueue();
 
                 return new Channel(
-                    subscription.ChannelName.ToValidSQSQueueName(),
+                    subscription.ChannelName.ToValidSQSQueueName(), 
+                    subscription.RoutingKey.ToValidSNSTopicName(),
                     _messageConsumerFactory.Create(subscription),
                     subscription.BufferSize
                 );
@@ -150,7 +151,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 attributes.Add("DelaySeconds", _subscription.DelaySeconds.ToString());
                 attributes.Add("MessageRetentionPeriod", _subscription.MessageRetentionPeriod.ToString());
                 if (_subscription.IAMPolicy != null )attributes.Add("Policy", _subscription.IAMPolicy);
-                attributes.Add("ReceiveMessageWaitTimeSeconds", ToSecondsAsString(_subscription.TimeoutInMilliseconds));
+                attributes.Add("ReceiveMessageWaitTimeSeconds", _subscription.TimeOut.Seconds.ToString());
                 attributes.Add("VisibilityTimeout", _subscription.LockTimeout.ToString());
 
                 var tags = new Dictionary<string, string>();
@@ -308,17 +309,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private string ToSecondsAsString(int timeoutInMilliseconds)
-        {
-            int timeOutInSeconds = 0;
-            if (timeoutInMilliseconds >= 1000)
-                timeOutInSeconds = timeoutInMilliseconds / 1000;
-            else if (timeoutInMilliseconds > 0)
-                timeOutInSeconds = 1;
-
-            return Convert.ToString(timeOutInSeconds);
-        }
-
         private (bool, string) QueueExists(AmazonSQSClient client, string channelName)
         {
             bool exists = false;
@@ -399,7 +389,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 return;
 
             using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
-            (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(ChannelTopicArn);
+            (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).ValidateAsync(ChannelTopicArn).GetAwaiter().GetResult();
             if (exists)
             {
                 try

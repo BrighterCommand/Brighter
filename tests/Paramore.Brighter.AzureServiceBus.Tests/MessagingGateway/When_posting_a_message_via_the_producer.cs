@@ -64,7 +64,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             _administrationClient.CreateSubscription(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration());
 
             var channelFactory =
-                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, false));
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
             _topicChannel = channelFactory.CreateChannel(subscription);
             _queueChannel = channelFactory.CreateChannel(queueSubscription);
 
@@ -90,13 +90,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             var commandMessage = GenerateMessage(testQueues ? _queueName : _topicName);
             commandMessage.Header.Bag.Add(testHeader, testHeaderValue);
             
-            var producer = _producerRegistry.LookupBy(testQueues ? _queueName : _topicName) as IAmAMessageProducerAsync;
+            var producer = _producerRegistry.LookupBy(testQueues 
+                ? new RoutingKey(_queueName) : new RoutingKey(_topicName)) as IAmAMessageProducerAsync;
            
             await producer.SendAsync(commandMessage);
 
             var channel = testQueues ? _queueChannel : _topicChannel;
             
-            var message = channel.Receive(5000);
+            var message = channel.Receive(TimeSpan.FromMilliseconds(5000));
 
             //clear the queue
             channel.Acknowledge(message);
@@ -105,21 +106,21 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             message.Id.Should().Be(_command.Id);
             message.Redelivered.Should().BeFalse();
-            message.Header.Id.Should().Be(_command.Id);
-            message.Header.Topic.Should().Contain(testQueues ? _queueName : _topicName);
+            message.Header.MessageId.Should().Be(_command.Id);
+            message.Header.Topic.Value.Should().Contain(testQueues ? _queueName : _topicName);
             message.Header.CorrelationId.Should().Be(_correlationId);
             message.Header.ContentType.Should().Be(_contentType);
             message.Header.HandledCount.Should().Be(0);
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
             message.Header.TimeStamp.Should().BeAfter(RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
-            message.Header.DelayedMilliseconds.Should().Be(0);
+            message.Header.Delayed.Should().Be(TimeSpan.Zero);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             message.Body.Value.Should().Be(commandMessage.Body.Value);
             message.Header.Bag.Should().Contain(testHeader, testHeaderValue);
         }
         
         private Message GenerateMessage(string topicName) => new Message(
-            new MessageHeader(_command.Id, topicName, MessageType.MT_COMMAND, correlationId:_correlationId, 
+            new MessageHeader(_command.Id, new RoutingKey( topicName), MessageType.MT_COMMAND, correlationId:_correlationId, 
                 contentType: _contentType
             ),
             new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
@@ -127,8 +128,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _administrationClient.DeleteChannelAsync(_topicName, false).GetAwaiter().GetResult();
-            _administrationClient.DeleteChannelAsync(_queueName, true).GetAwaiter().GetResult();
+            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
+            _administrationClient.DeleteQueueAsync(_queueName).GetAwaiter().GetResult();
         }
 
         private DateTime RoundToSeconds(DateTime dateTime)

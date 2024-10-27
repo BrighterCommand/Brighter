@@ -6,7 +6,6 @@ using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -17,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
     public class CommandProcessorCallTestsNoTimeout : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly MyRequest _myRequest = new MyRequest();
+        private readonly MyRequest _myRequest = new();
 
         public CommandProcessorCallTestsNoTimeout()
         {
@@ -60,14 +59,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             };
 
             const string topic = "MyRequest";
+            var routingKey = new RoutingKey(topic);
             var fakeTimeProvider = new FakeTimeProvider();
-            
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { topic, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
-                {
-                    Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyRequest)}
-                } }
+                { 
+                    routingKey, new InMemoryProducer(new InternalBus(), fakeTimeProvider)
+                    {
+                        Publication = {Topic = routingKey, RequestType = typeof(MyRequest)}
+                    } 
+                }
             });
 
             var timeProvider = fakeTimeProvider;
@@ -90,7 +92,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 policyRegistry,
                 bus,
                 replySubscriptions:replySubs,
-                responseChannelFactory: new InMemoryChannelFactory()
+                responseChannelFactory: new InMemoryChannelFactory(new InternalBus(), TimeProvider.System)
             );
            
             PipelineBuilder<MyRequest>.ClearPipelineCache();
@@ -101,7 +103,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Timeout()
         {
-            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, timeOutInMilliseconds: 0));
+            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(
+                _myRequest, timeOut: TimeSpan.FromMilliseconds(0))
+            );
             
             //should throw an exception as we require a timeout to be set
             exception.Should().BeOfType<InvalidOperationException>();

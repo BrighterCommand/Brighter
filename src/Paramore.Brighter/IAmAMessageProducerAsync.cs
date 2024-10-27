@@ -63,7 +63,7 @@ namespace Paramore.Brighter
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        Task SendWithDelay(Message message, int delayMilliseconds = 0);
+        /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0</param>
+        Task SendWithDelay(Message message, TimeSpan? delay);
     }
 }

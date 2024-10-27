@@ -85,7 +85,7 @@ namespace Paramore.Brighter
         /// <param name="characterEncoding">The encoding of the content. Defaults to MessageEncoding.UTF8.
         /// If you pass us "application/octet" but the type is ascii or utf8, we will convert to base64 for you.
         /// </param>
-        public MessageBody(string body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(string? body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             ContentType = contentType;
             CharacterEncoding = characterEncoding;
@@ -98,13 +98,13 @@ namespace Paramore.Brighter
                 return;
             }
             
-            Bytes = CharacterEncoding switch
+            Bytes = (CharacterEncoding switch
             {
                 CharacterEncoding.Base64 => Convert.FromBase64String(body),
                 CharacterEncoding.UTF8 => Encoding.UTF8.GetBytes(body),
                 CharacterEncoding.ASCII => Encoding.ASCII.GetBytes(body),
                 _ => Bytes
-            };
+            })!;
         }
 
         /// <summary>
@@ -112,14 +112,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="bytes">The Body of the Message</param>
         /// <param name="contentType">The content type of message encoded in body</param>
-        /// <param name="encoding"></param>
+        /// <param name="characterEncoding"></param>
         [JsonConstructor]
-        public MessageBody(byte[] bytes, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(byte[]? bytes, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             ContentType = contentType;
             CharacterEncoding = characterEncoding;
             
-            if (bytes == null)
+            if (bytes is null)
             {
                 Bytes = Array.Empty<byte>();
                 return;
@@ -137,6 +137,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="body"></param>
         /// <param name="contentType"></param>
+        /// <param name="characterEncoding"></param>
         public MessageBody(in ReadOnlyMemory<byte> body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             Bytes = body.ToArray();
@@ -165,9 +166,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
-        public bool Equals(MessageBody other)
+        public bool Equals(MessageBody? other)
         {
-            return Bytes.SequenceEqual(other.Bytes) && ContentType.Equals(other.ContentType);
+            if (other is null) return false;
+            return Bytes.SequenceEqual(other.Bytes) && ContentType.Equals(other?.ContentType);
         }
 
         /// <summary>
@@ -175,7 +177,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -198,7 +200,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator ==(MessageBody left, MessageBody right)
+        public static bool operator ==(MessageBody? left, MessageBody? right)
         {
             return Equals(left, right);
         }
@@ -209,7 +211,7 @@ namespace Paramore.Brighter
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator !=(MessageBody left, MessageBody right)
+        public static bool operator !=(MessageBody? left, MessageBody? right)
         {
             return !Equals(left, right);
         }

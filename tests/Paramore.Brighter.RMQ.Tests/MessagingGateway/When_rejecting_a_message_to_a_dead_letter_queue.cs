@@ -40,12 +40,16 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public RmqMessageProducerDLQTests()
         {
-           _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            
+            _message = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
+                    MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
 
-            var deadLetterQueueName = $"{_message.Header.Topic}.DLQ";
-            var deadLetterRoutingKey = $"{_message.Header.Topic}.DLQ";
+            var queueName = new ChannelName(Guid.NewGuid().ToString());
+            var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
+            var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
             
              var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -58,8 +62,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             _messageConsumer = new RmqMessageConsumer(
                 connection: rmqConnection, 
-                queueName: _message.Header.Topic, 
-                routingKey: _message.Header.Topic, 
+                queueName: queueName, 
+                routingKey: routingKey, 
                 isDurable: false, 
                 highAvailability: false,
                 deadLetterQueueName: deadLetterQueueName,
@@ -76,7 +80,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 );
 
             //create the infrastructure
-            _messageConsumer.Receive(0); 
+            _messageConsumer.Receive(TimeSpan.FromMilliseconds(0)); 
              
         }
 
@@ -85,12 +89,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             _messageProducer.Send(_message);
 
-            var message = _messageConsumer.Receive(10000).First(); 
+            var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
             
             //This will push onto the DLQ
             _messageConsumer.Reject(message);
 
-            var dlqMessage = _deadLetterConsumer.Receive(10000).First();
+            var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             
             //assert this is our message
             dlqMessage.Id.Should().Be(_message.Id);

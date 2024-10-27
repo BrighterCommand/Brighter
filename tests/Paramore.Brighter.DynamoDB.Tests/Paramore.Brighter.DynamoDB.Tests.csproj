@@ -12,6 +12,7 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="FluentAssertions" />
+      <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" />
       <PackageReference Include="xunit" />
       <PackageReference Include="xunit.runner.visualstudio">
@@ -22,6 +23,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.DynamoDB\Paramore.Brighter.Inbox.DynamoDB.csproj" />
+      <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.DynamoDB\Paramore.Brighter.Locking.DynamoDB.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.DynamoDB\Paramore.Brighter.Outbox.DynamoDB.csproj" />
     </ItemGroup>
 

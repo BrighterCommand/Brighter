@@ -40,9 +40,9 @@ namespace Paramore.Brighter.Monitoring.Handlers
     {
         readonly IAmAControlBusSender _controlBusSender;
         private readonly bool _isMonitoringEnabled;
-        private string _handlerName;
-        private readonly string _instanceName;
-        private string _handlerFullAssemblyName;
+        private string? _handlerName;
+        private readonly string? _instanceName;
+        private string? _handlerFullAssemblyName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}"/> class.
@@ -60,10 +60,10 @@ namespace Paramore.Brighter.Monitoring.Handlers
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
-            _handlerName = (string) initializerList[0];
-            _handlerFullAssemblyName = (string)initializerList[1];
+            _handlerName = (string?) initializerList[0];
+            _handlerFullAssemblyName = (string?)initializerList[1];
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
                             timeAfterHandle,
-                            (timeAfterHandle-timeBeforeHandle).Milliseconds));
+                            Convert.ToInt32((timeAfterHandle-timeBeforeHandle).TotalMilliseconds)));
                         
                     return command;
                 }
@@ -115,7 +115,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
                             timeOnException,
-                            (timeOnException - timeBeforeHandle).Milliseconds,
+                            Convert.ToInt32((timeOnException - timeBeforeHandle).TotalMilliseconds),
                             e));
                     throw;
                 }

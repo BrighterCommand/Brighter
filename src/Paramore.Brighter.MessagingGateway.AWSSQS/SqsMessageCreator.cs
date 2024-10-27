@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
@@ -51,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
-            var topic = HeaderResult<string>.Empty();
+            var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
             var contentType = HeaderResult<string>.Empty();
             var correlationId = HeaderResult<string>.Empty();
@@ -84,12 +83,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     type: "",
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                     correlationId:correlationId.Success ? correlationId.Result : "",
-                    replyTo: replyTo.Success ? replyTo.Result : "",
+                    replyTo: replyTo.Success ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
                     contentType: contentType.Success ? contentType.Result : "",
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: null,
-                    delayedMilliseconds: 0
+                    delayed: TimeSpan.Zero
                 );
 
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage, messageHeader.ContentType));
@@ -119,7 +118,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if(contentType == CompressPayloadTransformerAsync.GZIP || contentType == CompressPayloadTransformerAsync.DEFLATE || contentType == CompressPayloadTransformerAsync.BROTLI)
                 return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
             
-            return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.UTF8);
+            return new MessageBody(sqsMessage.Body, contentType);
         }
 
         private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
@@ -164,7 +163,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue value))
             {
-                if (Enum.TryParse<MessageType>(value.StringValue, out MessageType messageType))
+                if (Enum.TryParse(value.StringValue, out MessageType messageType))
                 {
                     return new HeaderResult<MessageType>(messageType, true);
                 }
@@ -211,16 +210,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<string>(string.Empty, true);
         }
 
-        private HeaderResult<string> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
+        private HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue value))
             {
                 //we have an arn, and we want the topic
                 var arnElements = value.StringValue.Split(':');
                 var topic = arnElements[(int)ARNAmazonSNS.TopicName];
-                return new HeaderResult<string>(topic, true);
+                return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
             }
-            return new HeaderResult<string>(String.Empty, true);
+            return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
         }
     }
 }

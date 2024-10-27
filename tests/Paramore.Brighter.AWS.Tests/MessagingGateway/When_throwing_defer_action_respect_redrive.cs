@@ -27,6 +27,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _sender;
         private readonly AWSMessagingGatewayConnection _awsConnection;
+        private readonly SqsSubscription<MyCommand> _subscription;
 
         public SnsReDrivePolicySDlqTests()
         {
@@ -39,14 +40,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var routingKey = new RoutingKey(topicName);
 
             //how are we consuming
-            var subscription = new SqsSubscription<MyCommand>(
+            _subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
                 //don't block the redrive policy from owning retry management
                 requeueCount: -1,
                 //delay before requeuing
-                requeueDelayInMs: 50,
+                requeueDelay: TimeSpan.FromMilliseconds(50),
                 //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
                 redrivePolicy: new RedrivePolicy
                 (
@@ -57,8 +58,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //what do we send
             var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
             _message = new Message(
-                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId,
-                    replyTo: replyTo, contentType: contentType),
+                new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: new RoutingKey(replyTo), contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
             );
 
@@ -71,7 +72,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 _awsConnection, 
                 new SnsPublication 
                     { 
-                        Topic = new RoutingKey(topicName), 
+                        Topic = routingKey, 
                         RequestType = typeof(MyDeferredCommand), 
                         MakeChannels = OnMissingChannel.Create 
                     }
@@ -79,7 +80,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             //We need to do this manually in a test - will create the channel from subscriber parameters
             ChannelFactory channelFactory = new(_awsConnection);
-            _channel = channelFactory.CreateChannel(subscription);
+            _channel = channelFactory.CreateChannel(_subscription);
 
             //how do we handle a command
             IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
@@ -105,9 +106,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
-                null, new InMemoryRequestContextFactory())
+                null,  new InMemoryRequestContextFactory(), _channel)
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
             };
         }
 
@@ -143,7 +144,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             await Task.Delay(5000);
 
             //send a quit message to the pump to terminate it 
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message

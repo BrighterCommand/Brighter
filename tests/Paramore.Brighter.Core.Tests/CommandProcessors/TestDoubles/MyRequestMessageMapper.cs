@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 correlationId: request.ReplyAddress.CorrelationId,
                 replyTo: request.ReplyAddress.Topic);
 
-            var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(request.Id.ToString(), request.RequestValue), JsonSerialisationOptions.Options));
+            var body = new MessageBody(JsonSerializer.Serialize(request.RequestValue, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
   
@@ -27,9 +27,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             var replyAddress = new ReplyAddress(topic: message.Header.ReplyTo, correlationId: message.Header.CorrelationId);
             var command = new MyRequest(replyAddress);
-            var messageBody = JsonSerializer.Deserialize<MyRequestDTO>(message.Body.Value, JsonSerialisationOptions.Options);
-            command.Id = messageBody.Id;
-            command.RequestValue = messageBody.RequestValue;
+            var myRequest = JsonSerializer.Deserialize<MyRequest>(message.Body.Value, JsonSerialisationOptions.Options);
+            command.Id = myRequest.Id;
+            command.RequestValue = myRequest.RequestValue;
             return command;
         }
     }

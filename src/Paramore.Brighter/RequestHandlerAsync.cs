@@ -54,13 +54,13 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandlerAsync<TRequest>>();
 
-        private IHandleRequestsAsync<TRequest> _successor;
+        private IHandleRequestsAsync<TRequest>? _successor;
 
         /// <summary>
         /// Gets or sets the context.
         /// </summary>
         /// <value>The context.</value>
-        public IRequestContext Context { get; set; }
+        public IRequestContext? Context { get; set; }
 
         /// <summary>
         /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
@@ -169,14 +169,14 @@ namespace Paramore.Brighter
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public virtual void InitializeFromAttributeParams(params object[] initializerList) { }
+        public virtual void InitializeFromAttributeParams(params object?[] initializerList) { }
 
         internal MethodInfo FindHandlerMethod()
         {
             var methods = GetType().GetMethods();
             return methods
                 .Where(method => method.Name == nameof(HandleAsync))
-                .SingleOrDefault(method => method.GetParameters().Length == 2 
+                .Single(method => method.GetParameters().Length == 2 
                     && method.GetParameters()[0].ParameterType == typeof(TRequest)
                     && method.GetParameters()[1].ParameterType == typeof(CancellationToken));
         }

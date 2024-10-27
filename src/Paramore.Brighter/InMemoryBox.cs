@@ -15,7 +15,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// When was this item written to the box
         /// </summary>
-        DateTime WriteTime { get; }
+        DateTimeOffset WriteTime { get; }
     }
      
     /// <summary>
@@ -25,7 +25,7 @@ namespace Paramore.Brighter
     public class InMemoryBox<T>(TimeProvider timeProvider) where T: IHaveABoxWriteTime
     {
         protected readonly ConcurrentDictionary<string, T> Requests = new ConcurrentDictionary<string, T>();
-        private DateTime _lastScanAt = timeProvider.GetUtcNow().DateTime;
+        private DateTimeOffset _lastScanAt = timeProvider.GetUtcNow();
         private readonly object _cleanupRunningLockObject = new object();
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace Paramore.Brighter
 
         protected void ClearExpiredMessages()
         {
-            var now = timeProvider.GetUtcNow().DateTime;
+            var now = timeProvider.GetUtcNow();
 
             TimeSpan elapsedSinceLastScan = now - _lastScanAt;
             if (elapsedSinceLastScan < ExpirationScanInterval)
@@ -69,7 +69,7 @@ namespace Paramore.Brighter
 
             //This is expensive, so use a background thread
             Task.Factory.StartNew(
-                action: state => RemoveExpiredMessages((DateTime)state),
+                action: state => RemoveExpiredMessages((DateTimeOffset)state!),
                 state: now,
                 cancellationToken: CancellationToken.None,
                 creationOptions: TaskCreationOptions.DenyChildAttach,
@@ -78,7 +78,7 @@ namespace Paramore.Brighter
             _lastScanAt = now;
         }
 
-        private void RemoveExpiredMessages(DateTime now)
+        private void RemoveExpiredMessages(DateTimeOffset now)
         {
             if (Monitor.TryEnter(_cleanupRunningLockObject))
             {
@@ -115,7 +115,7 @@ namespace Paramore.Brighter
                     int entriesToRemove = upperSize - newSize;
 
                     Task.Factory.StartNew(
-                        action: state => Compact((int)state),
+                        action: state => Compact((int)state!),
                         state: entriesToRemove,
                         CancellationToken.None,
                         TaskCreationOptions.DenyChildAttach,

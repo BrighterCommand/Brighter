@@ -27,6 +27,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
@@ -71,14 +72,18 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection);
 
             var container = new ServiceCollection();
-            var commandProcessor = CommandProcessorBuilder.With()
+            var tracer = new BrighterTracer(TimeProvider.System);
+            var instrumentationOptions = InstrumentationOptions.All;
+            
+            var commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
                 .Policies(policyRegistry)
                 .NoExternalBus()
+                .ConfigureInstrumentation(tracer, instrumentationOptions)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
-            _builder = DispatchBuilder.With()
+            _builder = DispatchBuilder.StartNew()
                 .CommandProcessorFactory(() => 
                     new CommandProcessorProvider(commandProcessor),
                     new InMemoryRequestContextFactory()
@@ -91,13 +96,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                         new SubscriptionName("foo"),
                         new ChannelName("mary"),
                         new RoutingKey("bob"),
-                        timeoutInMilliseconds: 200),
+                        timeOut: TimeSpan.FromMilliseconds(200)),
                     new RmqSubscription<MyEvent>(
                         new SubscriptionName("bar"),
                         new ChannelName("alice"),
                         new RoutingKey("simon"),
-                        timeoutInMilliseconds: 200)
-                });
+                        timeOut: TimeSpan.FromMilliseconds(200))
+                })
+                .ConfigureInstrumentation(tracer, instrumentationOptions);
         }
 
         [Fact]

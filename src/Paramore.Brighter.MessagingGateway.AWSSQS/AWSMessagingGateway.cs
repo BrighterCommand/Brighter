@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Net;
+using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Microsoft.Extensions.Logging;
@@ -38,23 +38,26 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         protected AWSMessagingGatewayConnection _awsConnection;
         protected string ChannelTopicArn;
 
+        private AWSClientFactory _awsClientFactory;
+
         public AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         {
             _awsConnection = awsConnection;
+            _awsClientFactory = new AWSClientFactory(awsConnection);
         }
 
-        protected string EnsureTopic(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
+        protected async Task<string> EnsureTopicAsync(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
         {
             //on validate or assume, turn a routing key into a topicARN
             if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
-                ValidateTopic(topic, topicFindBy, makeTopic);
+                await ValidateTopicAsync(topic, topicFindBy, makeTopic);
             else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes);
             return ChannelTopicArn;
         }
 
         private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
         {
-            using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
+            using var snsClient = _awsClientFactory.CreateSnsClient();
             var attributes = new Dictionary<string, string>();
             if (snsAttributes != null)
             {
@@ -77,10 +80,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
         }
 
-        private void ValidateTopic(RoutingKey topic, TopicFindBy findTopicBy, OnMissingChannel onMissingChannel)
+        private async Task ValidateTopicAsync(RoutingKey topic, TopicFindBy findTopicBy, OnMissingChannel onMissingChannel)
         {
             IValidateTopic topicValidationStrategy = GetTopicValidationStrategy(findTopicBy);
-            (bool exists, string topicArn) = topicValidationStrategy.Validate(topic);
+            (bool exists, string topicArn) = await topicValidationStrategy.ValidateAsync(topic);
             if (exists)
                 ChannelTopicArn = topicArn;
             else
@@ -93,11 +96,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             switch (findTopicBy)
             {
                 case TopicFindBy.Arn:
-                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 case TopicFindBy.Convention:
-                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 case TopicFindBy.Name:
-                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region);
+                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
                 default:
                     throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey");
             }

@@ -59,7 +59,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <value>The name.</value>
         public ConsumerName Name { get; }
 
-        public SubscriptionName SubscriptionName { get; set; }
+        public Subscription Subscription { get; set; }
         /// <summary>
         /// Gets the performer.
         /// </summary>
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets or sets the job.
         /// </summary>
         /// <value>The job.</value>
-        public Task Job { get; set; }
+        public Task? Job { get; set; }
 
         public int JobId { get; set; }
 
@@ -83,13 +83,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// Initializes a new instance of the <see cref="Consumer"/> class.
         /// </summary>
         /// <param name="name">The name.</param>
-        /// <param name="subscriptionName">The name of the associated subscription.</param>
+        /// <param name="subscription"></param>
         /// <param name="channel">The channel.</param>
         /// <param name="messagePump">The message pump.</param>
-        public Consumer(ConsumerName name, SubscriptionName subscriptionName, IAmAChannel channel, IAmAMessagePump messagePump)
+        public Consumer(ConsumerName name, Subscription subscription, IAmAChannel channel, IAmAMessagePump messagePump)
         {
             Name = name;
-            SubscriptionName = subscriptionName;
+            Subscription = subscription;
             Performer = new Performer(channel, messagePump);
             State = ConsumerState.Shut;
         }
@@ -107,11 +107,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Shuts the task, which will not receive messages.
         /// </summary>
-        public void Shut()
+        /// <param name="topic">The topic we post the quit message to, in order to shut the perfomer</param>
+        public void Shut(RoutingKey topic)
         {
             if (State == ConsumerState.Open)
             {
-                Performer.Stop();
+                Performer.Stop(topic);
                 State = ConsumerState.Shut;
             }
         }
@@ -138,7 +139,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
-        public bool Equals(Consumer other)
+        public bool Equals(Consumer? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -150,7 +151,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -166,7 +167,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             unchecked
             {
-                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ (Job != null ? Job.GetHashCode() : 0);
+                return ((Name is not null ? Name.GetHashCode() : 0) * 397) ^ (Job != null ? Job.GetHashCode() : 0);
             }
         }
 

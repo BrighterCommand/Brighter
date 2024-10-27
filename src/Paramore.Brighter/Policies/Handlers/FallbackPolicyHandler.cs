@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Policies.Handlers
         /// </summary>
         public const string CAUSE_OF_FALLBACK_EXCEPTION = "Fallback_Exception_Cause";
 
-        private Func<TRequest, TRequest> _exceptionHandlerFunc;
+        private Func<TRequest, TRequest>? _exceptionHandlerFunc;
 
         #region Overrides of RequestHandler<TRequest>
 
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Policies.Handlers
         /// Initializes from attribute parameters.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+        public override void InitializeFromAttributeParams(params object?[] initializerList)
         {
             bool catchAll = Convert.ToBoolean(initializerList[0]);
             bool catchBrokenCircuit = Convert.ToBoolean(initializerList[1]);
@@ -73,6 +73,8 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest command)
         {
+            if (_exceptionHandlerFunc is null)
+                throw new ArgumentException("ExceptionHandler must be set before handling.");
             return _exceptionHandlerFunc(command);
         }
 
@@ -84,7 +86,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (Exception exception)
             {
-                Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, exception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, exception, (s, o) => exception);
                 return base.Fallback(command);
             }
         }
@@ -97,7 +99,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
             catch (BrokenCircuitException brokenCircuitExceptionexception)
             {
-                Context.Bag.Add(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception);
+                Context?.Bag.AddOrUpdate(CAUSE_OF_FALLBACK_EXCEPTION, brokenCircuitExceptionexception, (s, o) => brokenCircuitExceptionexception);
                 return base.Fallback(command);
             }
         }

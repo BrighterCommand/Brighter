@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication[] {new KafkaPublication
+                new[] {new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -86,8 +86,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         [Fact]
         public async Task When_a_consumer_declares_topics()
         {
+            var routingKey = new RoutingKey(_topic);
+            
             var message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_COMMAND)
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
@@ -95,7 +97,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             );
             
             //This should fail, if consumer can't create the topic as set to Assume
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
 
             Message[] messages = new Message[0];
             int maxTries = 0;
@@ -105,7 +107,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     maxTries++;
                     await Task.Delay(500); //Let topic propagate in the broker
-                    messages = _consumer.Receive(10000);
+                    messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                     _consumer.Acknowledge(messages[0]);
                     
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)

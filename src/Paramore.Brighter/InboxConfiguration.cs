@@ -42,14 +42,14 @@ namespace Paramore.Brighter
         /// override with a function that takes a type name - the target handler, and returns a string, the context key
         /// to use in the inbox to disambiguate requests (such as when an event is raised). 
         /// </summary>
-        public Func<Type, string> Context { get; set; }
+        public Func<Type, string>? Context { get; set; }
 
         public InboxConfiguration(
-            IAmAnInbox inbox = null,
+            IAmAnInbox? inbox = null,
             InboxScope scope = InboxScope.All, 
             bool onceOnly = true,
             OnceOnlyAction actionOnExists = OnceOnlyAction.Throw, 
-            Func<Type, string> context = null)
+            Func<Type, string>? context = null)
         {
             Inbox = inbox ?? new InMemoryInbox(TimeProvider.System); 
             
@@ -60,7 +60,7 @@ namespace Paramore.Brighter
 
             if (context == null)
             {
-                Context = (handlerType) => handlerType.FullName;
+                Context = (handlerType) => handlerType?.FullName ?? string.Empty;
             }
         }
     }

@@ -37,21 +37,41 @@ namespace Paramore.Brighter
     /// </summary>
     public class Channel : IAmAChannel
     {
-        private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
+        private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
-        private static readonly Message s_NoneMessage = new Message();
+        private static readonly Message s_noneMessage = new();
+        
+        /// <summary>
+        /// The name of a channel is its identifier
+        /// See Topic for the broker routing key
+        /// May be used for the queue name, if known, on middleware that supports named queues
+        /// </summary>
+        /// <value>The channel identifier</value>
+        public ChannelName Name { get; }
+        
+        /// <summary>
+        /// The topic that this channel is for (how a broker routes to it)
+        /// </summary>
+        /// <value>The topic on the broker</value>
+        public RoutingKey RoutingKey { get; }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
         /// </summary>
         /// <param name="channelName">Name of the queue.</param>
+        /// <param name="routingKey"></param>
         /// <param name="messageConsumer">The messageConsumer.</param>
         /// <param name="maxQueueLength">What is the maximum buffer size we will accept</param>
-        public Channel(string channelName, IAmAMessageConsumer messageConsumer, int maxQueueLength = 1)
+        public Channel(
+            ChannelName channelName, 
+            RoutingKey routingKey, 
+            IAmAMessageConsumer messageConsumer,
+            int maxQueueLength = 1
+            )
         {
-            _channelName = channelName;
+            Name = channelName;
+            RoutingKey = routingKey;
             _messageConsumer = messageConsumer;
 
             if (maxQueueLength < 1 || maxQueueLength > 10)
@@ -67,7 +87,7 @@ namespace Paramore.Brighter
         ///  Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
+        public virtual void Acknowledge(Message message)
         {
             _messageConsumer.Acknowledge(message);
         }
@@ -79,7 +99,7 @@ namespace Paramore.Brighter
         /// after the queue
         /// </summary>
         /// <param name="messages">The messages to insert into the channel</param>
-        public void Enqueue(params Message[] messages)
+        public virtual void Enqueue(params Message[] messages)
         {
             var currentLength = _queue.Count;
             var messagesToAdd = messages.Length;
@@ -92,35 +112,31 @@ namespace Paramore.Brighter
             
             messages.Each((message) => _queue.Enqueue(message));
         }
-
-       /// <summary>
-        ///   Gets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public ChannelName Name => new ChannelName(_channelName);
-
-       /// <summary>
+ 
+        /// <summary>
         /// Purges the queue
         /// </summary>
-        public void Purge()
+        public virtual void Purge()
         {
             _messageConsumer.Purge();
             _queue = new ConcurrentQueue<Message>();
         }
 
         /// <summary>
-        ///  Receives the specified timeout in milliseconds.
+        ///  The timeout to recieve wihtin.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeout">The <see cref="TimeSpan"/>"> timeout. If null default to 1s</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutInMilliseconds)
+        public virtual Message Receive(TimeSpan? timeout = null)
         {
-            if (!_queue.TryDequeue(out Message message))
+            timeout ??= TimeSpan.FromSeconds(1);
+            
+            if (!_queue.TryDequeue(out Message? message))
             {
-                Enqueue(_messageConsumer.Receive(timeoutInMilliseconds));
+                Enqueue(_messageConsumer.Receive(timeout));
                 if (!_queue.TryDequeue(out message))
                 {
-                    message = s_NoneMessage; //Will be MT_NONE
+                    message = s_noneMessage; //Will be MT_NONE
                 }
             }
 
@@ -131,7 +147,7 @@ namespace Paramore.Brighter
         ///  Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        public virtual void Reject(Message message)
         {
             _messageConsumer.Reject(message);
         }
@@ -140,25 +156,25 @@ namespace Paramore.Brighter
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">How long should we delay before requeueing</param>
+        /// <param name="timeOut">How long should we delay before requeueing</param>
         /// <returns>True if the message was re-queued false otherwise </returns>
-        public bool Requeue(Message message, int delayMilliseconds = 0)
+        public virtual bool Requeue(Message message, TimeSpan? timeOut = null)
         {
-            return _messageConsumer.Requeue(message, delayMilliseconds);
+            return _messageConsumer.Requeue(message, timeOut);
         }
 
         /// <summary>
         ///  Stops this instance.
         /// </summary>
-        public void Stop()
+        public virtual void Stop(RoutingKey topic)
         {
-            _queue.Enqueue(MessageFactory.CreateQuitMessage());
+            _queue.Enqueue(MessageFactory.CreateQuitMessage(topic));
         }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-        public void Dispose()
+        public virtual void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);

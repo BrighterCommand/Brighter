@@ -43,12 +43,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var headers = new Headers
             {
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
-                new Header(HeaderNames.TOPIC, message.Header.Topic.ToByteArray()),
-                new Header(HeaderNames.MESSAGE_ID, message.Header.Id.ToByteArray()),
+                new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()),
+                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
             };
 
             if (message.Header.TimeStamp != default)
-                headers.Add(HeaderNames.TIMESTAMP, new DateTimeOffset(message.Header.TimeStamp).ToString().ToByteArray());
+                headers.Add(HeaderNames.TIMESTAMP, message.Header.TimeStamp.ToString().ToByteArray());
             else
                 headers.Add(HeaderNames.TIMESTAMP, DateTimeOffset.UtcNow.ToString().ToByteArray());
             
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!string.IsNullOrEmpty(message.Header.ReplyTo))
                 headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
             
-            headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.DelayedMilliseconds.ToString().ToByteArray());
+            headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.Delayed.ToString().ToByteArray());
             
             headers.Add(HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString().ToByteArray());
             

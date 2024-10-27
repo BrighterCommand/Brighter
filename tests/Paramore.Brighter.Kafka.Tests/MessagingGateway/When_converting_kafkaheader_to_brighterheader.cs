@@ -18,18 +18,18 @@ public class KafkaHeaderToBrighterTests
         var message = new Message(
             new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
-                topic: "test",
+                topic: new RoutingKey("test"),
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "test",
+                replyTo: new RoutingKey("test"),
                 contentType: "application/octet",
                 partitionKey: "mykey"
             ),
             new MessageBody("test content")
         );
         
-        message.Header.DelayedMilliseconds = 500;
+        message.Header.Delayed = TimeSpan.FromMilliseconds(500);
         message.Header.HandledCount = 2;
 
         Dictionary<string,object> bag = message.Header.Bag;
@@ -57,11 +57,11 @@ public class KafkaHeaderToBrighterTests
         //assert
         readMessage.Id.Should().Be(message.Id);
         readMessage.Header.MessageType.Should().Be(message.Header.MessageType);
-        readMessage.Header.Id.Should().Be(message.Header.Id);
+        readMessage.Header.MessageId.Should().Be(message.Header.MessageId);
         readMessage.Header.CorrelationId.Should().Be(message.Header.CorrelationId);
         readMessage.Header.ContentType.Should().Be(message.Header.ContentType);
         readMessage.Header.Topic.Should().Be(message.Header.Topic);
-        readMessage.Header.DelayedMilliseconds.Should().Be(message.Header.DelayedMilliseconds);
+        readMessage.Header.Delayed.Should().Be(message.Header.Delayed);
         readMessage.Header.HandledCount.Should().Be(message.Header.HandledCount);
         readMessage.Header.TimeStamp.ToString("u").Should().Be(message.Header.TimeStamp.ToString("u"));            
         

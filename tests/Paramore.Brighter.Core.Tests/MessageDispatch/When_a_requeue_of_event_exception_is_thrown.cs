@@ -23,62 +23,72 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using System.Text.Json;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpEventRequeueTests
     {
+        private const string Channel = "MyChannel";
+        private readonly RoutingKey _routingKey = new("MyTopic");
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly FakeChannel _channel;
         private readonly SpyCommandProcessor _commandProcessor;
 
         public MessagePumpEventRequeueTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            _channel = new FakeChannel();
+            Channel channel = new(
+                new(Channel), _routingKey, 
+                new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)),
+                2
+            );
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory()) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
-
-            MyEvent @event = new();
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
+                { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = -1 };
 
             var message1 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
-                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize((MyEvent)new(), JsonSerialisationOptions.Options))
             );
             var message2 = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "MyTopic", MessageType.MT_EVENT), 
-                new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options))
+                new MessageHeader(Guid.NewGuid().ToString(), _routingKey, MessageType.MT_EVENT), 
+                new MessageBody(JsonSerializer.Serialize((MyEvent)new(), JsonSerialisationOptions.Options))
             );
-            _channel.Enqueue(message1);
-            _channel.Enqueue(message2);
-            var quitMessage = new Message(new MessageHeader(string.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            _channel.Enqueue(quitMessage);
+            
+            channel.Enqueue(message1);
+            channel.Enqueue(message2);
+            var quitMessage = MessageFactory.CreateQuitMessage(new RoutingKey("MyTopic"));
+            channel.Enqueue(quitMessage);
         }
 
         [Fact]
         public void When_A_Requeue_Of_Event_Exception_Is_Thrown()
         {
             _messagePump.Run();
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
 
             //_should_publish_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Publish);
+            
             //_should_requeue_the_messages
-            _channel.Length.Should().Be(2);
-            //_should_dispose_the_input_channel
-            _channel.DisposeHappened.Should().BeTrue();
+            Assert.Equal(2, _bus.Stream(_routingKey).Count());
+            
+            //TODO: How do we know that the channel has been disposed? Observability
         }
     }
 }

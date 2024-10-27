@@ -10,7 +10,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <value>The name.</value>
         ConsumerName Name { get; }
-        SubscriptionName SubscriptionName { get; set; }
+        
+        /// <summary>
+        /// What is the subscription that this Consumer is for
+        /// </summary>
+        Subscription Subscription { get; set; }
 
         /// <summary>
         /// Gets the performer.
@@ -28,7 +32,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets or sets the job.
         /// </summary>
         /// <value>The job.</value>
-        Task Job { get; set; }
+        Task? Job { get; set; }
 
         int JobId { get; set; }
 
@@ -40,6 +44,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Shuts the task, which will not receive messages.
         /// </summary>
-        void Shut();
+        /// <param name="subscriptionRoutingKey"></param>
+        void Shut(RoutingKey subscriptionRoutingKey);
     }
 }

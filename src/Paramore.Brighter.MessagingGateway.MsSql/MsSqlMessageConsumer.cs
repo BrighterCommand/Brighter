@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private readonly string _topic;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumer>();
-        private readonly MsSqlMessageQueue<Message> _sqlQ;
+        private readonly MsSqlMessageQueue<Message> _sqlMessageQueue;
 
         public MsSqlMessageConsumer(
             RelationalDatabaseConfiguration msSqlConfiguration, 
@@ -20,7 +20,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             )
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
-            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
+            _sqlMessageQueue = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
         }
 
         public MsSqlMessageConsumer(
@@ -34,11 +34,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
         /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">How long to wait on a recieve. Default is 300ms</param>
         /// <returns>Message.</returns>
-        public Message[] Receive(int timeoutInMilliseconds)
+        public Message[] Receive(TimeSpan? timeOut = null)
         {
-            var rc = _sqlQ.TryReceive(_topic, timeoutInMilliseconds);
+            timeOut ??= TimeSpan.FromMilliseconds(300);
+            
+            var rc = _sqlMessageQueue.TryReceive(_topic, timeOut.Value);
             var message = !rc.IsDataValid ? new Message() : rc.Message;
             return new Message[]{message};
         }
@@ -69,24 +71,31 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public void Purge()
         {
             s_logger.LogDebug("MsSqlMessagingConsumer: purging queue");
-            _sqlQ.Purge();
+            _sqlMessageQueue.Purge();
         }
 
         /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="delayMilliseconds">Delay to delivery of the message. 0 for immediate requeue. Default to 0</param>
         /// <returns>True when message is requeued</returns>
-        public bool Requeue(Message message, int delayMilliseconds)
+        public bool Requeue(Message message, TimeSpan? delay = null)
         {
-            Task.Delay(delayMilliseconds).Wait();
+            delay ??= TimeSpan.Zero;
+
+            //TODO: This blocks, use a time evern instead to requeue after an interval
+            if (delay.Value > TimeSpan.Zero)
+            {
+                Task.Delay(delay.Value).Wait();
+            }
+
             var topic = message.Header.Topic;
 
             s_logger.LogDebug("MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}", topic,
                 message.Id.ToString());
 
-            _sqlQ.Send(message, topic); 
+            _sqlMessageQueue.Send(message, topic); 
             return true;
         }
         

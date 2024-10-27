@@ -11,8 +11,8 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxBulkAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly string _Topic1 = "test_topic";
-        private readonly string _Topic2 = "test_topic3";
+        private readonly RoutingKey _routingKeyOne = new RoutingKey("test_topic");
+        private readonly RoutingKey _routingKeyTwo = new RoutingKey("test_topic3");
         private readonly Message _message1;
         private readonly Message _message2;
         private readonly Message _message3;
@@ -27,13 +27,13 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _context = new RequestContext();
 
             _sqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
-            _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic1, MessageType.MT_COMMAND),
+            _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKeyOne, MessageType.MT_COMMAND),
                 new MessageBody("message body"));
-            _message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic2, MessageType.MT_EVENT),
+            _message1 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKeyTwo, MessageType.MT_EVENT),
                 new MessageBody("message body2"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic1, MessageType.MT_COMMAND),
+            _message2 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKeyOne, MessageType.MT_COMMAND),
                 new MessageBody("message body3"));
-            _message3 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _Topic2, MessageType.MT_EVENT),
+            _message3 = new Message(new MessageHeader(Guid.NewGuid().ToString(), _routingKeyTwo, MessageType.MT_EVENT),
                 new MessageBody("message body4"));
         }
 
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
 
             await Task.Delay(TimeSpan.FromSeconds(5));
 
-            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0, _context);
+            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, _context);
 
             undispatchedMessages.Count().Should().Be(2);
         }

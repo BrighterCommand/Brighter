@@ -26,23 +26,28 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     [Collection("CommandProcessor")]
     public class MessageDispatcherShutConnectionTests : IDisposable
     {
+        private const string Topic = "fakekey";
+        private const string ChannelName = "fakeChannel";
         private readonly Dispatcher _dispatcher;
         private readonly Subscription _subscription;
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly FakeTimeProvider _timeProvider = new();
 
         public MessageDispatcherShutConnectionTests()
         {
-            var channel = new FakeChannel();
+            InternalBus bus = new();
+            
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -53,38 +58,33 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _subscription = new Subscription<MyEvent>(
                 new SubscriptionName("test"), 
                 noOfPerformers: 3, 
-                timeoutInMilliseconds: 1000, 
-                channelFactory: new InMemoryChannelFactory(channel), 
-                channelName: new ChannelName("fakeChannel"), 
-                routingKey: new RoutingKey("fakekey")
+                timeOut: TimeSpan.FromMilliseconds(1000), 
+                channelFactory: new InMemoryChannelFactory(bus, _timeProvider), 
+                channelName: new ChannelName(ChannelName), 
+                routingKey: _routingKey
             );
             _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { _subscription }, messageMapperRegistry);
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{ Topic = _subscription.RoutingKey});
             for (var i = 0; i < 6; i++)
-                channel.Enqueue(message);
+                bus.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
 
-#pragma warning disable xUnit1031
         [Fact]
-        public void When_A_Message_Dispatcher_Shuts_A_Connection()
+        public async Task When_A_Message_Dispatcher_Shuts_A_Connection()
         {
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
             _dispatcher.Shut(_subscription);
-            _dispatcher.End().Wait();
+            await _dispatcher.End();
 
-            //_should_have_consumed_the_messages_in_the_channel
             _dispatcher.Consumers.Should().NotContain(consumer => consumer.Name == _subscription.Name && consumer.State == ConsumerState.Open);
-            //_should_have_a_stopped_state
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
-            //_should_have_no_consumers
             _dispatcher.Consumers.Should().BeEmpty();
         }
-#pragma warning restore xUnit1031
         
         public void Dispose()
         {

@@ -24,13 +24,13 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -38,12 +38,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class DispatcherAddNewConnectionTests : IDisposable
     {
         private readonly Dispatcher _dispatcher;
-        private readonly FakeChannel _channel;
         private readonly Subscription _newSubscription;
+        private readonly InternalBus _bus;
+        private readonly RoutingKey _routingKey = new("MyEvent");
+        private readonly RoutingKey _routingKeyTwo = new("OtherEvent");
 
         public DispatcherAddNewConnectionTests()
         {
-            _channel = new FakeChannel();
+            _bus = new InternalBus();
+            
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -51,13 +54,21 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            Subscription subscription = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _newSubscription = new Subscription<MyEvent>(new SubscriptionName("newTest"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            Subscription subscription = new Subscription<MyEvent>(
+                new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), channelName: new ChannelName("fakeChannel"), 
+                routingKey: _routingKey
+            );
+            
+            _newSubscription = new Subscription<MyEvent>(
+                new SubscriptionName("newTest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
+                channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), 
+                channelName: new ChannelName("fakeChannelTwo"), routingKey: _routingKeyTwo);
             _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = new RoutingKey("MyEvent")});
-            _channel.Enqueue(message);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKey});
+            _bus.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
@@ -69,19 +80,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Open(_newSubscription);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = new RoutingKey("MyEvent")});
-            _channel.Enqueue(message);
+            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKeyTwo});
+            _bus.Enqueue(message);
 
             await Task.Delay(1000);
 
-            //_should_have_consumed_the_messages_in_the_event_channel
-            _channel.Length.Should().Be(0);
-            //_should_have_a_running_state
+            _bus.Stream(_routingKey).Count().Should().Be(0);
             _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
-            //_should_have_only_one_consumer
             _dispatcher.Consumers.Should().HaveCount(2);
-            //_should_have_two_connections
-            _dispatcher.Connections.Should().HaveCount(2);
+            _dispatcher.Subscriptions.Should().HaveCount(2);
         }
 
         public void Dispose()

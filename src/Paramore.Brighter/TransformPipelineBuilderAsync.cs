@@ -222,7 +222,7 @@ namespace Paramore.Brighter
                 null,
                 CallingConventions.Any,
                 new Type[] { typeof(TRequest), typeof(Publication), typeof(CancellationToken) },
-                null);
+                null)!;
         }
 
 
@@ -233,7 +233,7 @@ namespace Paramore.Brighter
                 null,
                 CallingConventions.Any,
                 new Type[] { typeof(Message), typeof(CancellationToken) },
-                null);
+                null)!;
         }
 
         private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipelineAsync<TRequest> pipeline) where TRequest : class, IRequest

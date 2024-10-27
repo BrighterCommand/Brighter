@@ -32,13 +32,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
             var messageHeader = new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
-                topic: "test_topic",
+                topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
-                delayedMilliseconds: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "ReplyTo",
+                replyTo: new RoutingKey("ReplyTo"),
                 contentType: "text/plain",
                 partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
                 .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
-            _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
+            _storedMessage.Header.Delayed.Should().Be(TimeSpan.Zero); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);

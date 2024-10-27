@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
     [Collection("CommandProcessor")]
     public class CommandProcessorPostMissingMessageTransformerTestsAsync : IDisposable
     {
-        private readonly MyCommand _myCommand = new MyCommand();
+        private readonly MyCommand _myCommand = new();
         private readonly InMemoryOutbox _outbox;
         private Exception _exception;
         private readonly MessageMapperRegistry _messageMapperRegistry;
@@ -69,13 +69,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             CircuitBreakerPolicy circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+
+            var routingKey = new RoutingKey("MyTopic");
             
-            _producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                {"MyTopic", new InMemoryProducer(new InternalBus(), new FakeTimeProvider()){ 
+                {
+                    routingKey, new InMemoryProducer(new InternalBus(), new FakeTimeProvider()){ 
                     Publication =
                     {
-                        Topic = new RoutingKey("MyTopic"), RequestType = typeof(MyCommand)
+                        Topic = routingKey, RequestType = typeof(MyCommand)
                     }
                 }},
             });

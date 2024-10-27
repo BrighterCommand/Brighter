@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
@@ -48,7 +47,7 @@ namespace Paramore.Brighter
         /// Gets the header.
         /// </summary>
         /// <value>The header.</value>
-        public MessageHeader Header { get; set; }
+        public MessageHeader Header { get; init; }
         /// <summary>
         /// Gets the body.
         /// </summary>
@@ -56,12 +55,17 @@ namespace Paramore.Brighter
         public MessageBody Body { get; set; }
 
         /// <summary>
+        /// Returns true if this is an empty Message.
+        /// </summary>
+        public bool Empty => Header.MessageType == MessageType.MT_NONE;
+
+        /// <summary>
         /// Gets the identifier of the message.
         /// </summary>
         /// <value>The identifier.</value>
         public string Id
         {
-            get { return Header.Id; }
+            get { return Header.MessageId; }
         }
         
         /// <summary>
@@ -72,7 +76,7 @@ namespace Paramore.Brighter
         {
             get
             {
-                if (Header.Bag.TryGetValue(DeliveryTagHeaderName, out object value))
+                if (Header.Bag.TryGetValue(DeliveryTagHeaderName, out object? value))
                     return (ulong) value;
                 else
                     return 0;
@@ -94,7 +98,7 @@ namespace Paramore.Brighter
         {
             get
             {
-                if (Header.Bag.TryGetValue(RedeliveredHeaderName, out object value))
+                if (Header.Bag.TryGetValue(RedeliveredHeaderName, out object? value))
                     return (bool) value;
                 else
                 {
@@ -109,7 +113,7 @@ namespace Paramore.Brighter
         /// </summary>
         public Message()
         {
-            Header = new MessageHeader(messageId: string.Empty, topic: string.Empty, messageType: MessageType.MT_NONE);
+            Header = new MessageHeader(messageId: string.Empty, topic: RoutingKey.Empty, messageType: MessageType.MT_NONE);
             Body = new MessageBody(string.Empty);
         }
 
@@ -136,7 +140,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
-        public bool Equals(Message other)
+        public bool Equals(Message? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -148,7 +152,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -164,7 +168,7 @@ namespace Paramore.Brighter
         {
             unchecked
             {
-                return ((Header != null ? Header.GetHashCode() : 0) * 397) ^ (Body != null ? Body.GetHashCode() : 0);
+                return (Header.GetHashCode() * 397) ^ (Body is not null ? Body.GetHashCode() : 0);
             }
         }
 

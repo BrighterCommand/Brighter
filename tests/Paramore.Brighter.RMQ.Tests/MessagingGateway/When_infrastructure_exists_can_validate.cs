@@ -13,27 +13,31 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         
         public RmqValidateExistingInfrastructureTests() 
         {
-            _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
-                new MessageBody("test content"));
+            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            var queueName = new ChannelName(Guid.NewGuid().ToString());
+            
+            _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
+                new MessageBody("test content")
+            );
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange(Guid.NewGuid().ToString())
+                Exchange = new Exchange("paramore.brighter.exchange")
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
             _messageConsumer = new RmqMessageConsumer(
-                connection:rmqConnection, 
-                queueName:_message.Header.Topic, 
-                routingKey:_message.Header.Topic, 
+                connection: rmqConnection, 
+                queueName: queueName, 
+                routingKey: routingKey, 
                 isDurable: false, 
-                highAvailability:false, 
+                highAvailability: false, 
                 makeChannels: OnMissingChannel.Validate);
 
             //This creates the infrastructure we want
-            new QueueFactory(rmqConnection, _message.Header.Topic).Create(3000);
+            new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey))
+                .Create(TimeSpan.FromMilliseconds(3000));
         }
         
         [Fact]
@@ -44,9 +48,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             {
                 //As we validate and don't create, this would throw due to lack of infrastructure if not already created
                 _messageProducer.Send(_message);
-                _messageConsumer.Receive(10000);
+                _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000));
             }
-            catch (ChannelFailureException)
+            catch (ChannelFailureException cfe)
             {
                 exceptionThrown = true;
             }

@@ -59,8 +59,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _tracer = new BrighterTracer(timeProvider);
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = _tracer};
 
+            var routingKey = new RoutingKey("MyTopic");
+            
             _message = new Message(
-                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -77,15 +79,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
             
-            _producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            _producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                {"MyTopic", new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
-                {
-                    Publication = {Topic = new RoutingKey("MyTopic"), RequestType = typeof(MyCommand) }
-                }},
+                { 
+                    routingKey, new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
+                    {
+                        Publication = {Topic = routingKey, RequestType = typeof(MyCommand) }
+                    }
+                },
             });
 
-            _policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
+            _policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+            };
          }
 
         [Fact]

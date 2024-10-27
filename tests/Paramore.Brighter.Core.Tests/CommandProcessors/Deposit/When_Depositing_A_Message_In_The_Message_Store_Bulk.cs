@@ -16,8 +16,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
     [Collection("CommandProcessor")]
     public class CommandProcessorBulkDepositPostTests : IDisposable
     {
-        private const string CommandTopic = "MyCommand";
-        private const string EventTopic = "MyEvent";
+        private readonly RoutingKey _commandTopic = new("MyCommand");
+        private readonly RoutingKey _eventTopic = new("MyEvent");
 
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
@@ -37,29 +37,29 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             InMemoryProducer commandProducer = new(_bus, timeProvider);
             commandProducer.Publication = new Publication 
             { 
-                Topic = new RoutingKey(CommandTopic), 
+                Topic = new RoutingKey(_commandTopic), 
                 RequestType = typeof(MyCommand) 
             };
 
             InMemoryProducer eventProducer = new(_bus, timeProvider);
             eventProducer.Publication = new Publication 
             { 
-                Topic = new RoutingKey(EventTopic), 
+                Topic = new RoutingKey(_eventTopic), 
                 RequestType = typeof(MyEvent) 
             };
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, CommandTopic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, _commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
             
             _messageTwo = new Message(
-                new MessageHeader(_myCommandTwo.Id, CommandTopic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommandTwo.Id, _commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommandTwo, JsonSerialisationOptions.Options))
             );
             
             _messageThree = new Message(
-                new MessageHeader(_myEvent.Id, EventTopic, MessageType.MT_EVENT),
+                new MessageHeader(_myEvent.Id, _eventTopic, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
 
@@ -84,10 +84,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
             
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { CommandTopic, commandProducer },
-                { EventTopic, eventProducer}
+                { _commandTopic, commandProducer },
+                { _eventTopic, eventProducer}
             });
 
             var policyRegistry = new PolicyRegistry
@@ -123,15 +123,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         {
             //act
             var requests = new List<IRequest> {_myCommand, _myCommandTwo, _myEvent } ;
-            var postedMessageId = _commandProcessor.DepositPost(requests);
+            _commandProcessor.DepositPost(requests);
             var context = new RequestContext();
             
             //assert
             
             //message should not be posted
             
-            _bus.Stream(new RoutingKey(CommandTopic)).Any().Should().BeFalse();
-            _bus.Stream(new RoutingKey(EventTopic)).Any().Should().BeFalse();
+            _bus.Stream(new RoutingKey(_commandTopic)).Any().Should().BeFalse();
+            _bus.Stream(new RoutingKey(_eventTopic)).Any().Should().BeFalse();
             
             //message should correspond to the command
             var depositedPost = _outbox.Get(_message.Id, context);
@@ -147,7 +147,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost2.Header.MessageType.Should().Be(_messageTwo.Header.MessageType);
             
             var depositedPost3 = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _messageThree.Id);
             //message should correspond to the command
             depositedPost3.Id.Should().Be(_messageThree.Id);
@@ -156,7 +156,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             depositedPost3.Header.MessageType.Should().Be(_messageThree.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = _outbox.OutstandingMessages(0, context);
+            var outstandingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
             outstandingMessages.Count().Should().Be(3);
         }
         

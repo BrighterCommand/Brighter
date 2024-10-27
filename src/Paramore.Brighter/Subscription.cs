@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Paramore.Brighter
 {
@@ -46,7 +45,7 @@ namespace Paramore.Brighter
         /// Gets the channel.
         /// </summary>
         /// <value>The channel.</value>
-        public IAmAChannelFactory ChannelFactory { get; set; }
+        public IAmAChannelFactory? ChannelFactory { get; set; }
 
         /// <summary>
         /// Gets the name we use for this channel. In platforms where queues have names, will be used as the name of the queue
@@ -95,9 +94,9 @@ namespace Paramore.Brighter
         public int RequeueCount { get; }
 
         /// <summary>
-        /// Gets or sets number of milliseconds to delay delivery of re-queued messages.
+        /// Gets or sets the delay delivery of re-queued messages.
         /// </summary>
-        public int RequeueDelayInMilliseconds { get; }
+        public TimeSpan RequeueDelay { get; }
 
         /// <summary>
         /// Gets or sets the routing key or topic that this channel subscribes to on the broker.
@@ -114,11 +113,11 @@ namespace Paramore.Brighter
         public bool RunAsync { get; }
 
         /// <summary>
-        /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
+        /// Gets the timeout that we use to infer that nothing could be read from the channel i.e. is empty
         /// or busy
         /// </summary>
-        /// <value>The timeout in milliseconds.</value>
-        public int TimeoutInMilliseconds { get; }
+        /// <value>The timeout</value>
+        public TimeSpan TimeOut { get; }
 
         /// <summary>
         /// Gets the number of messages before we will terminate the channel due to high error rates
@@ -134,9 +133,9 @@ namespace Paramore.Brighter
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The timeout for the subscription to consider the queue empty and pause</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelay">The delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -145,30 +144,32 @@ namespace Paramore.Brighter
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
             Type dataType,
-            SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int timeoutInMilliseconds = 300,
+            TimeSpan? timeOut = null,
             int requeueCount = -1,
-            int requeueDelayInMilliseconds = 0,
+            TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)
         {
             DataType = dataType;
-            Name = name ?? new SubscriptionName(dataType.FullName);
-            ChannelName = channelName ?? new ChannelName(dataType.FullName);
-            RoutingKey = routingKey ?? new RoutingKey(dataType.FullName);
+            Name = name ?? new SubscriptionName(dataType.FullName!);
+            ChannelName = channelName ?? new ChannelName(dataType.FullName!);
+            RoutingKey = routingKey ?? new RoutingKey(dataType.FullName!);
             BufferSize = bufferSize;
             NoOfPerformers = noOfPerformers;
-            TimeoutInMilliseconds = timeoutInMilliseconds;
+            timeOut ??= TimeSpan.FromMilliseconds(300);
+            TimeOut = timeOut.Value;
             RequeueCount = requeueCount;
-            RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
+            requeueDelay ??= TimeSpan.Zero;
+            RequeueDelay = requeueDelay.Value;
             UnacceptableMessageLimit = unacceptableMessageLimit;
             RunAsync = runAsync;
             ChannelFactory = channelFactory;
@@ -194,9 +195,9 @@ namespace Paramore.Brighter
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="bufferSize">The number of messages to buffer on the channel</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeOut">The timeout before we consider the subscription empty and pause</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelay">The delay the delivery of a requeue message; defaults to 0ms</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="runAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -204,17 +205,17 @@ namespace Paramore.Brighter
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
-            SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int noOfPerformers = 1,
             int bufferSize = 1,
-            int timeoutInMilliseconds = 300,
+            TimeSpan? timeOut = null,
             int requeueCount = -1,
-            int requeueDelayInMilliseconds = 0,
+            TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
             int channelFailureDelay = 1000)
@@ -225,9 +226,9 @@ namespace Paramore.Brighter
                 routingKey,
                 bufferSize,
                 noOfPerformers,
-                timeoutInMilliseconds,
+                timeOut,
                 requeueCount,
-                requeueDelayInMilliseconds,
+                requeueDelay,
                 unacceptableMessageLimit,
                 runAsync,
                 channelFactory,

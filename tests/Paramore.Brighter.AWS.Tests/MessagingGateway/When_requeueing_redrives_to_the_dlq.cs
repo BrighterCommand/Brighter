@@ -45,8 +45,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _message = new Message(
-                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId: correlationId,
-                    replyTo: replyTo, contentType: contentType),
+                new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: new RoutingKey(replyTo), contentType: contentType),
                 new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
             );
  
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             _sender = new SqsMessageProducer(_awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
             
-            _sender.ConfirmTopicExists(topicName);
+            _sender.ConfirmTopicExistsAsync(topicName).Wait();
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);
@@ -67,14 +67,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public void When_requeueing_redrives_to_the_queue()
         { 
             _sender.Send(_message);
-             var receivedMessage = _channel.Receive(5000); 
+             var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000)); 
             _channel.Requeue(receivedMessage );
 
-            receivedMessage = _channel.Receive(5000);
+            receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             _channel.Requeue(receivedMessage );
             
             //should force us into the dlq
-            receivedMessage = _channel.Receive(5000);
+            receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             _channel.Requeue(receivedMessage) ;
 
             Task.Delay(5000);

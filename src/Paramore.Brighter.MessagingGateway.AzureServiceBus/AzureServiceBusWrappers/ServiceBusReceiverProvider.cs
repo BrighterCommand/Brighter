@@ -1,5 +1,4 @@
-﻿using System;
-using Azure.Messaging.ServiceBus;
+﻿using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
@@ -17,17 +16,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// Gets a <see cref="IServiceBusReceiverWrapper"/> for a Service Bus Queue
         /// </summary>
         /// <param name="queueName">The name of the Topic.</param>
-        /// <param name="receiveMode">The Receive Mode.</param>
         /// <param name="sessionEnabled">Use Sessions for Processing</param>
         /// <returns>A ServiceBusReceiverWrapper.</returns>
-        public IServiceBusReceiverWrapper Get(string queueName, ServiceBusReceiveMode receiveMode, bool sessionEnabled)
+        public IServiceBusReceiverWrapper? Get(string queueName, bool sessionEnabled)
         {
             if (sessionEnabled)
             {
                 try
                 {
                     return new ServiceBusReceiverWrapper(_client.AcceptNextSessionAsync(queueName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = receiveMode}).GetAwaiter().GetResult());
+                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}).GetAwaiter().GetResult());
                 }
                 catch (ServiceBusException e)
                 {
@@ -43,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             else
             {
                 return new ServiceBusReceiverWrapper(_client.CreateReceiver(queueName,
-                    new ServiceBusReceiverOptions { ReceiveMode = receiveMode, }));
+                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }));
             }
         }
 
@@ -52,17 +50,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription on the Topic.</param>
-        /// <param name="receiveMode">The Receive Mode.</param>
         /// <param name="sessionEnabled">Use Sessions for Processing</param>
         /// <returns>A ServiceBusReceiverWrapper.</returns>
-        public IServiceBusReceiverWrapper Get(string topicName, string subscriptionName, ServiceBusReceiveMode receiveMode, bool sessionEnabled)
+        public IServiceBusReceiverWrapper? Get(string topicName, string subscriptionName, bool sessionEnabled)
         {
             if (sessionEnabled)
             {
                 try
                 {
                     return new ServiceBusReceiverWrapper(_client.AcceptNextSessionAsync(topicName, subscriptionName,
-                        new ServiceBusSessionReceiverOptions() {ReceiveMode = receiveMode}).GetAwaiter().GetResult());
+                        new ServiceBusSessionReceiverOptions() {ReceiveMode = ServiceBusReceiveMode.PeekLock}).GetAwaiter().GetResult());
                 }
                 catch (ServiceBusException e)
                 {
@@ -78,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             else
             {
                 return new ServiceBusReceiverWrapper(_client.CreateReceiver(topicName, subscriptionName,
-                    new ServiceBusReceiverOptions { ReceiveMode = receiveMode, }));
+                    new ServiceBusReceiverOptions { ReceiveMode = ServiceBusReceiveMode.PeekLock }));
             }
         }
     }

@@ -37,7 +37,7 @@ public class AsyncRetrieveClaimLargePayloadTests
         var id = await _store.StoreAsync(stream);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
         message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
         
@@ -46,7 +46,7 @@ public class AsyncRetrieveClaimLargePayloadTests
         
         //assert
         unwrappedMessage.Body.Value.Should().Be(_contents);
-        //clean up
+        //clean up                                                      
         message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _).Should().BeFalse();
         (await _store.HasClaimAsync(id)).Should().BeFalse();
     }

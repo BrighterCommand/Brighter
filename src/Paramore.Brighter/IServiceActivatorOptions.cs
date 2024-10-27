@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -7,7 +8,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Used to create a channel, an abstraction over a message processing pipeline
         /// </summary>
-        IAmAChannelFactory ChannelFactory { get; set; }
+        IAmAChannelFactory DefaultChannelFactory { get; set; }
         
         /// <summary>
         /// The configuration of our inbox
@@ -25,6 +26,10 @@ namespace Paramore.Brighter
         ///  Otherwise the CommandProcessor is a singleton.
         /// </summary>
         bool UseScoped { get; set; }
- 
+
+        /// <summary>
+        /// How detailed should the instrumentation of the Dispatcher operations be
+        /// </summary>
+        InstrumentationOptions InstrumentationOptions { get; set; }
     }
 }

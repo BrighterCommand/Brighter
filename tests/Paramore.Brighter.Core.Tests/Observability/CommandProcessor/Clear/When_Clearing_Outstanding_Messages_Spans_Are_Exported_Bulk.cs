@@ -62,20 +62,21 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
         messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
+        var routingKey = new RoutingKey(_topic);
         InMemoryProducer producer = new(_internalBus, timeProvider)
         {
             Publication =
             {
                 Source = new Uri("http://localhost"),
                 RequestType = typeof(MyEvent),
-                Topic = new RoutingKey(_topic),
+                Topic = routingKey,
                 Type = nameof(MyEvent),
             }
         };
 
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
-            {_topic, producer}
+            {routingKey, producer}
         });
         
         IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
@@ -114,12 +115,12 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        var messageIds = _commandProcessor.DepositPostAsync(new[]{eventOne, eventTwo, eventThree}, context);
+        await _commandProcessor.DepositPostAsync(new[]{eventOne, eventTwo, eventThree}, context);
         
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutstandingFromOutbox(3, 0, useBulk: true, requestContext: context);
+        _commandProcessor.ClearOutstandingFromOutbox(3, TimeSpan.Zero, useBulk: true, requestContext: context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         
@@ -153,7 +154,7 @@ public class AsyncCommandProcessorBulkClearOutstandingObservabilityTests
             depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageId && (string)a.Value == message.Id ).Should().BeTrue();
             depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestination && (string)a.Value == message.Header.Topic).Should().BeTrue();
             depositEvent.Tags.Any(a => a is { Value: not null, Key: BrighterSemanticConventions.MessageBodySize } && (int)a.Value == message.Body.Bytes.Length).Should().BeTrue();
-            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value.ToString()).Should().BeTrue();
+            depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageBody && (string)a.Value == message.Body.Value).Should().BeTrue();
             depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageType && (string)a.Value == message.Header.MessageType.ToString()).Should().BeTrue();
             depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)a.Value == message.Header.PartitionKey).Should().BeTrue();
             depositEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MessageHeaders && (string)a.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();

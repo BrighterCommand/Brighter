@@ -55,8 +55,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
  
             var messageHeader = new MessageHeader(
-                Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), handledCount:5, delayedMilliseconds: 5
+                Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1), handledCount:5, delayed: TimeSpan.FromMilliseconds(5)
             );
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);

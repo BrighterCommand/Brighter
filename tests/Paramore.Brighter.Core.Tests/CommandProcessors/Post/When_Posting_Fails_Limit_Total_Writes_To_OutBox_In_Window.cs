@@ -44,9 +44,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
         public PostFailureLimitCommandTests()
         {
-            const string topic = "MyCommand";
+            var routingKey = new RoutingKey("MyCommand");
             
-            IAmAMessageProducer producer = new FakeErroringMessageProducerSync{Publication = { Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}};
+            IAmAMessageProducer producer = new FakeErroringMessageProducerSync{Publication = { Topic = routingKey, RequestType = typeof(MyCommand)}};
 
             var messageMapperRegistry =
                 new MessageMapperRegistry(
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _outbox = new InMemoryOutbox(_timeProvider) {Tracer = tracer};
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { topic, producer }, }); 
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, }); 
             
             var externalBus = new ExternalBusService<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
@@ -70,13 +70,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 tracer,
                 outbox: _outbox,
                 maxOutStandingMessages:3,
-                maxOutStandingCheckIntervalMilliSeconds:250
+                maxOutStandingCheckInterval: TimeSpan.FromMilliseconds(250)
             );  
             
-            _commandProcessor = CommandProcessorBuilder.With()
+            _commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
+                .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

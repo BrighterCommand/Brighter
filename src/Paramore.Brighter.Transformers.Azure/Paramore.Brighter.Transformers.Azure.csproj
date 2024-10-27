@@ -8,8 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" />
-    
+    <PackageReference Include="Azure.Storage.Blobs"/>
   </ItemGroup>
 
   <ItemGroup>

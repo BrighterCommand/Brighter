@@ -21,10 +21,10 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 
             message.Id.Should().Be("18669550-2069-48c5-923d-74a2e79c0748");
             message.Header.TimeStamp.Should().Be(DateTime.Parse("2018-02-07T09:38:36Z"));
-            message.Header.Topic.Should().Be("test");
+            message.Header.Topic.Value.Should().Be("test");
             message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             message.Header.HandledCount.Should().Be(3);
-            message.Header.DelayedMilliseconds.Should().Be(200);
+            message.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(200));
             message.Header.CorrelationId.Should().Be("0AF88BBC-07FD-4FC3-9CA7-BF68415A2535");
             message.Header.ContentType.Should().Be("text/plain");
             message.Header.ReplyTo.Should().Be("reply.queue");

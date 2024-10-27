@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
-            var topic = HeaderResult<string>.Empty();
+            var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
             var contentType = HeaderResult<string>.Empty();
             var correlationId = HeaderResult<string>.Empty();
@@ -46,11 +46,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var timeStamp = HeaderResult<DateTime>.Empty();
             var receiptHandle = HeaderResult<string>.Empty();
             var replyTo = HeaderResult<string>.Empty();
+            var subject = HeaderResult<string>.Empty();
 
             Message message;
             try
             {
-                _messageAttributes = ReadMessageAttributes(sqsMessage);
+                var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
+                _messageAttributes = ReadMessageAttributes(jsonDocument);
 
                 topic = ReadTopic();
                 messageId = ReadMessageId();
@@ -60,6 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 messageType = ReadMessageType();
                 timeStamp = ReadTimestamp();
                 replyTo = ReadReplyTo();
+                subject = ReadMessageSubject(jsonDocument);
                 receiptHandle = ReadReceiptHandle(sqsMessage);
                 
                 //TODO:CLOUD_EVENTS parse from headers
@@ -72,14 +75,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     type: "",
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
                     correlationId: correlationId.Success ? correlationId.Result : "",
-                    replyTo: replyTo.Result,
+                    replyTo: new RoutingKey(replyTo.Result),
                     contentType: contentType.Result,
                     handledCount: handledCount.Result,
                     dataSchema: null,
-                    subject: null,
-                    delayedMilliseconds: 0);
+                    subject: subject.Result,
+                    delayed: TimeSpan.Zero);
 
-                message = new Message(messageHeader, ReadMessageBody(sqsMessage));
+                message = new Message(messageHeader, ReadMessageBody(jsonDocument));
 
                 //deserialize the bag 
                 var bag = ReadMessageBag();
@@ -101,14 +104,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return message;
         }
 
-        private Dictionary<string, JsonElement> ReadMessageAttributes(Amazon.SQS.Model.Message sqsMessage)
+        private static Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
         {
             var messageAttributes = new Dictionary<string, JsonElement>();
 
             try
             {
-                var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
-
                 if (jsonDocument.RootElement.TryGetProperty("MessageAttributes", out var attributes))
                 {
                     messageAttributes = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
@@ -224,7 +225,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<string>(string.Empty, true);
         }
 
-        private HeaderResult<string> ReadTopic()
+        private HeaderResult<RoutingKey> ReadTopic()
         {
             if (_messageAttributes.TryGetValue(HeaderNames.Topic, out var topicArn))
             {
@@ -232,18 +233,33 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var arnElements = topicArn.GetValueInString().Split(':');
                 var topic = arnElements[(int)ARNAmazonSNS.TopicName];
 
-                return new HeaderResult<string>(topic, true);
+                return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
             }
 
-            return new HeaderResult<string>(string.Empty, true);
+            return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
         }
 
-        private MessageBody ReadMessageBody(Amazon.SQS.Model.Message sqsMessage)
+        private static HeaderResult<string> ReadMessageSubject(JsonDocument jsonDocument)
         {
             try
             {
-                var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
+                if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
+                {
+                    return new HeaderResult<string>(value.GetString(), true);
+                }
+            }
+            catch (Exception ex)
+            {
+                s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
+            }
 
+            return new HeaderResult<string>(null, true);
+        }
+
+        private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
+        {
+            try
+            {
                 if (jsonDocument.RootElement.TryGetProperty("Message", out var value))
                 {
                     return new MessageBody(value.GetString());

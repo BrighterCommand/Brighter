@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
     public class ClearParams
     {
         public int AmountToClear;
-        public int MinimumAge;
+        public TimeSpan MinimumAge;
         public Dictionary<string, object> Args;
     }
 
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         private readonly Dictionary<string, IRequest> _postBox = new();
 
         public IList<CommandType> Commands { get; } = new List<CommandType>();
-        public List<ClearParams> ClearParamsList { get; } = new List<ClearParams>();
+        public List<ClearParams> ClearParamsList { get; } = new();
 
         public virtual void Send<T>(T command, RequestContext requestContext = null) where T : class, IRequest
         {
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public virtual async Task SendAsync<TRequest>(
             TRequest command, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public virtual async Task PublishAsync<TRequest>(
             TRequest @event, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             TRequest request, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -140,7 +140,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             TRequest request,
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
-            Dictionary<string, object> args = null) 
+            Dictionary<string, object> args = null,
+            string batchId = null) 
             where TRequest : class, IRequest
         {
             return DepositPost(request);
@@ -176,7 +177,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             TRequest request,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -192,8 +193,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false, 
-            CancellationToken cancellationToken = default)
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default,
+            string batchId = null)
             where TRequest : class, IRequest
         {
             _postBox.Add(request.Id, request);
@@ -207,7 +209,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             IEnumerable<TRequest> requests,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
         {
@@ -225,7 +227,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             IAmABoxTransactionProvider<TTransaction> provider,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
             return await DepositPostAsync(requests, cancellationToken: cancellationToken);
@@ -246,7 +248,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             IEnumerable<string> posts, 
             RequestContext requestContext = null,
             Dictionary<string, object> args = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
             var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -259,7 +261,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
         public void ClearOutstandingFromOutbox(
             int amountToClear = 100, 
-            int minimumAge = 5000, 
+            TimeSpan? minimumAge = null, 
             bool useBulk = false,
             RequestContext requestContext = null,
             Dictionary<string, object> args = null)
@@ -267,14 +269,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             Commands.Add(CommandType.Clear);
             ClearParamsList.Add(new ClearParams
             {
-                AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args
+                AmountToClear = amountToClear, MinimumAge = minimumAge ?? TimeSpan.FromMilliseconds(5000), Args = args
             });
         }
 
         public TResponse Call<T, TResponse>(
             T request, 
             RequestContext requestContext = null,
-            int timeOutInMilliseconds = 500)
+            TimeSpan? timeOut = null)
             where T : class, ICall where TResponse : class, IResponse
         {
             _requests.Enqueue(request);
@@ -325,7 +327,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public override async Task SendAsync<T>(
             T command, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             )
         {
@@ -337,7 +339,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public override async Task PublishAsync<T>(
             T @event, 
             RequestContext requestContext = null,
-            bool continueOnCapturedContext = false,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
             )
         {
@@ -378,14 +380,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
-        public override async Task SendAsync<T>(T command, RequestContext requestContext = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public override async Task SendAsync<T>(T command, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
         {
             await base.SendAsync(command, requestContext, continueOnCapturedContext, cancellationToken);
             SendCount++;
             throw new Exception();
         }
 
-        public override async Task PublishAsync<T>(T @event, RequestContext requestContext = null, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        public override async Task PublishAsync<T>(T @event, RequestContext requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default)
         {
             await base.PublishAsync(@event, requestContext, continueOnCapturedContext, cancellationToken);
             PublishCount++;

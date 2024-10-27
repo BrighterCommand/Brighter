@@ -39,24 +39,27 @@ namespace Paramore.Brighter
     /// </summary>
     /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
     /// <param name="timeProvider"></param>
-    public class InMemoryProducer(IAmABus bus, TimeProvider timeProvider) : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
+    public class InMemoryProducer(IAmABus bus, TimeProvider timeProvider)
+        : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
+        private ITimer? _requeueTimer;
+
         /// <summary>
         /// The publication that describes what the Producer is for
         /// </summary>
         public Publication Publication { get; set; } = new();
-        
+
         /// <summary>
         /// Used for OTel tracing. We use property injection to set this, so that we can use the same tracer across all
         /// The producer is being used within the context of a CommandProcessor pipeline which will have initiated the trace
         /// or be using one from a containing framework like ASP.NET Core
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
-        public event Action<bool, string> OnMessagePublished;
+        public event Action<bool, string>? OnMessagePublished;
 
         /// <summary>
         /// Dispsose of the producer; a no-op for the in-memory producer
@@ -70,15 +73,15 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task SendAsync(Message message)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, true);
-            
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
+
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
             tcs.SetResult(message);
             return tcs.Task;
         }
-        
+
         /// <summary>
         /// Send messages to a broker; in this case an <see cref="InternalBus"/> 
         /// </summary>
@@ -86,15 +89,16 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">A cancellation token to end the operation</param>
         /// <returns></returns>
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
-        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<string[]> SendAsync(IEnumerable<Message> messages,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             var msgs = messages as Message[] ?? messages.ToArray();
             foreach (var msg in msgs)
             {
-                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg, true);
+                BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg);
                 bus.Enqueue(msg);
-                OnMessagePublished?.Invoke(true, msg.Id); 
+                OnMessagePublished?.Invoke(true, msg.Id);
                 yield return new[] { msg.Id };
             }
         }
@@ -105,21 +109,40 @@ namespace Paramore.Brighter
         /// <param name="message">The message to send</param>
         public void Send(Message message)
         {
-            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message, true);
+            BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
             bus.Enqueue(message);
             OnMessagePublished?.Invoke(true, message.Id);
         }
-        
+
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay
         /// The delay is simulated by the <see cref="TimeProvider"/>
         /// </summary>
         /// <param name="message">The message to send</param>
-        /// <param name="delayMilliseconds">The delay in milliseconds</param>
-        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        /// <param name="delay">The delay of the send</param>
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            timeProvider.Delay(TimeSpan.FromMilliseconds(delayMilliseconds));
-            Send(message);
+            delay ??= TimeSpan.FromMilliseconds(0);
+
+            //we don't want to block, so we use a timer to invoke the requeue after a delay
+            _requeueTimer = timeProvider.CreateTimer(
+                msg => Send((Message)msg!),
+                message,
+                delay.Value,
+                TimeSpan.Zero
+            );
+        }
+
+        private void SendNoDelay(Message message)
+        {
+            try
+            {
+                Send(message);
+            }
+            finally
+            {
+                _requeueTimer?.Dispose();
+            }
         }
     }
 }

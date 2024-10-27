@@ -23,13 +23,15 @@ THE SOFTWARE. */
 #endregion
 
 
+using System;
 using System.Diagnostics;
 using System.Reflection;
 
 namespace Paramore.Brighter
 {
+    [Obsolete("Use BrighterTracer instead")]
     internal static class ApplicationTelemetry
     {
-        internal static ActivitySource ActivitySource { get; }= new ActivitySource("Paramore.Brighter", Assembly.GetAssembly(typeof(ApplicationTelemetry)).GetName().Version.ToString());
+        internal static ActivitySource ActivitySource { get; }= new ActivitySource("Paramore.Brighter", Assembly.GetAssembly(typeof(ApplicationTelemetry))!.GetName()!.Version!.ToString());
     }
 }

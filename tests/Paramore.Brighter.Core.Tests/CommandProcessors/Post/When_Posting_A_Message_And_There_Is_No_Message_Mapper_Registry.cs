@@ -45,13 +45,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
         public CommandProcessorNoMessageMapperTests()
         {
-            const string topic = "MyCommand";
+            var routingKey = new RoutingKey("MyCommand");
             _myCommand.Value = "Hello World";
 
             var timeProvider = new FakeTimeProvider();
             InMemoryProducer producer = new(new InternalBus(), timeProvider)
             {
-                Publication = {Topic = new RoutingKey(topic), RequestType = typeof(MyCommand)}
+                Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
             };
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -66,9 +66,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
-                { topic, producer },
+                { routingKey, producer },
             });
 
             var policyRegistry = new PolicyRegistry

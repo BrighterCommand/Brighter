@@ -30,6 +30,7 @@ using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -54,17 +55,18 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             var messageHeader = new MessageHeader(
                 messageId: Guid.NewGuid().ToString(),
-                topic: "test_topic",
+                topic: new RoutingKey("test_topic"),
                 messageType: MessageType.MT_DOCUMENT,
                 timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount: 5,
-                delayedMilliseconds: 5,
+                delayed: TimeSpan.FromMilliseconds(5),
                 correlationId: Guid.NewGuid().ToString(),
-                replyTo: "ReplyAddress",
+                replyTo: new RoutingKey("ReplyAddress"),
                 contentType: "text/plain");
 
+            var fakeTimeProvider = new FakeTimeProvider();
             var dynamoDbOutbox = new DynamoDbOutbox(Client,
-                new DynamoDbConfiguration(OutboxTableName));
+                new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
 
             var messageEarliest = new Message(
                 messageHeader,

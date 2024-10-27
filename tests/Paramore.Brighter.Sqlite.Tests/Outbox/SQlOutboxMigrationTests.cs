@@ -46,7 +46,12 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox  = new SqliteOutbox(new RelationalDatabaseConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.OutboxTableName));
 
-            _message = new Message(new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _message = new Message(new MessageHeader(
+                Guid.NewGuid().ToString(), 
+                new RoutingKey("test_topic"), 
+                MessageType.MT_DOCUMENT), 
+                new MessageBody("message body")
+                );
             AddHistoricMessage(_message);
         }
 
@@ -57,7 +62,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             {
                 new SqliteParameter("MessageId", message.Id.ToString()),
                 new SqliteParameter("MessageType", message.Header.MessageType.ToString()),
-                new SqliteParameter("Topic", message.Header.Topic),
+                new SqliteParameter("Topic", message.Header.Topic.Value),
                 new SqliteParameter("Timestamp", SqliteType.Text) { Value =message.Header.TimeStamp.ToString("s")},
                 new SqliteParameter("HeaderBag",SqliteType.Text) { Value = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options)},
                 new SqliteParameter("Body", message.Body.Value),

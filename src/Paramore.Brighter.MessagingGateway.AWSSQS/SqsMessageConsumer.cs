@@ -24,7 +24,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using Amazon.SimpleNotificationService;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
-        private readonly AWSMessagingGatewayConnection _awsConnection;
+        private readonly AWSClientFactory _clientFactory;
         private readonly string _queueName;
         private readonly int _batchSize;
         private readonly bool _hasDlq;
@@ -63,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             bool hasDLQ = false,
             bool rawMessageDelivery = true)
         {
-            _awsConnection = awsConnection;
+            _clientFactory = new AWSClientFactory(awsConnection);
             _queueName = queueName;
             _batchSize = batchSize;
             _hasDlq = hasDLQ;
@@ -73,15 +72,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds. Anything greater than 0 uses long-polling  </param>
-        public Message[] Receive(int timeoutInMilliseconds)
+        /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
+        public Message[] Receive(TimeSpan? timeOut = null)
         {
             AmazonSQSClient client = null;
             Amazon.SQS.Model.Message[] sqsMessages;
             try
             {
-                client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+                client = _clientFactory.CreateSqsClient();
                 var urlResponse = client.GetQueueUrlAsync(_queueName).GetAwaiter().GetResult();
+                timeOut ??= TimeSpan.Zero;
 
                 s_logger.LogDebug("SqsMessageConsumer: Preparing to retrieve next message from queue {URL}",
                     urlResponse.QueueUrl);
@@ -89,9 +89,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var request = new ReceiveMessageRequest(urlResponse.QueueUrl)
                 {
                     MaxNumberOfMessages = _batchSize,
-                    WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutInMilliseconds).TotalSeconds,
+                    WaitTimeSeconds = timeOut.Value.Seconds,
                     MessageAttributeNames = new List<string> {"All"},
-                    AttributeNames = new List<string> {"All"}
                 };
 
                 var receiveResponse = client.ReceiveMessageAsync(request).GetAwaiter().GetResult();
@@ -148,7 +147,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                using var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+                using var client = _clientFactory.CreateSqsClient();
                 var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
                 client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle)).Wait();
 
@@ -180,7 +179,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     message.Id, receiptHandle, _queueName
                     );
 
-                using var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+                using var client = _clientFactory.CreateSqsClient();
                 var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
                 if (_hasDlq)
                 {
@@ -205,7 +204,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             try
             {
-                using var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+                using var client = _clientFactory.CreateSqsClient();
                 s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
 
                 var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
@@ -224,12 +223,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <param name="delay">Time to delay delivery of the message. AWS uses seconds. 0s is immediate requeue. Default is 0ms</param>
         /// <returns>True if the message was requeued successfully</returns>
-        public bool Requeue(Message message, int delayMilliseconds)
+        public bool Requeue(Message message, TimeSpan? delay = null)
         {
             if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
                 return false;
+            
+            delay ??= TimeSpan.Zero;
 
             var receiptHandle = value.ToString();
 
@@ -237,10 +238,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 s_logger.LogInformation("SqsMessageConsumer: re-queueing the message {Id}", message.Id);
 
-                using (var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
+                using (var client = _clientFactory.CreateSqsClient())
                 {
                     var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
+                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, delay.Value.Seconds)).Wait();
                 }
 
                 s_logger.LogInformation("SqsMessageConsumer: re-queued the message {Id}", message.Id);
@@ -256,7 +257,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private string FindTopicArnByName(RoutingKey topicName)
         {
-            using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
+            using var snsClient = _clientFactory.CreateSnsClient();
             var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
             if (topic == null)
                 throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");

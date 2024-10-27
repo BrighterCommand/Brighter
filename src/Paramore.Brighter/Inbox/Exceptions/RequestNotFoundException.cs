@@ -2,16 +2,9 @@
 
 namespace Paramore.Brighter.Inbox.Exceptions
 {
-    public class RequestNotFoundException<T> : Exception where T : IRequest
+    public class RequestNotFoundException<T>(string id, Exception? innerException = null)
+        : Exception($"Command '{id}' of type {typeof(T).FullName} does not exist", innerException)
+        where T : IRequest
     {
-        public RequestNotFoundException(string id)
-            :this(id, null)
-        {
-        }
-
-        public RequestNotFoundException(string id, Exception innerException)
-            : base($"Command '{id}' of type {typeof(T).FullName} does not exist", innerException)
-        {
-        }
     }
 }

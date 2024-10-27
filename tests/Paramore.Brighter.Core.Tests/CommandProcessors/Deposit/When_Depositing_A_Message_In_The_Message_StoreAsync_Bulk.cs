@@ -18,8 +18,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
     [Collection("CommandProcessor")]
     public class CommandProcessorBulkDepositPostTestsAsync: IDisposable
     {
-        private const string CommandTopic = "MyCommand";
-        private const string EventTopic = "MyEvent";
+        private readonly RoutingKey _commandTopic = new("MyCommand");
+        private readonly RoutingKey _eventTopic = new("MyEvent");
 
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
@@ -41,29 +41,29 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             InMemoryProducer commandProducer = new(_internalBus, timeProvider);
             commandProducer.Publication = new Publication
             {
-                Topic =  new RoutingKey(CommandTopic),
+                Topic =  new RoutingKey(_commandTopic),
                 RequestType = typeof(MyCommand)
             };
 
             InMemoryProducer eventProducer = new(_internalBus, timeProvider);
             eventProducer.Publication = new Publication
             {
-                Topic =  new RoutingKey(EventTopic),
+                Topic =  new RoutingKey(_eventTopic),
                 RequestType = typeof(MyEvent)
             };
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, CommandTopic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, _commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
             
             _message2 = new Message(
-                new MessageHeader(_myCommand2.Id, CommandTopic, MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand2.Id, _commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand2, JsonSerialisationOptions.Options))
             );
             
             _message3 = new Message(
-                new MessageHeader(_myEvent.Id, EventTopic, MessageType.MT_EVENT),
+                new MessageHeader(_myEvent.Id, _eventTopic, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
 
@@ -94,10 +94,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             };
 
             var producerRegistry =
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
-                    { CommandTopic, commandProducer },
-                    { EventTopic, eventProducer }
+                    { _commandTopic, commandProducer },
+                    { _eventTopic, eventProducer }
                 }); 
             
             var tracer = new BrighterTracer(new FakeTimeProvider());
@@ -133,22 +133,22 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             //assert
             //message should not be posted
-            _internalBus.Stream(new RoutingKey(CommandTopic)).Any().Should().BeFalse();
-            _internalBus.Stream(new RoutingKey(EventTopic)).Any().Should().BeFalse();
+            _internalBus.Stream(new RoutingKey(_commandTopic)).Any().Should().BeFalse();
+            _internalBus.Stream(new RoutingKey(_eventTopic)).Any().Should().BeFalse();
             
             //message should be in the store
             var depositedPost = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
             
             //message should be in the store
             var depositedPost2 = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message2.Id);
             
             //message should be in the store
             var depositedPost3 = _outbox
-                .OutstandingMessages(0, context)
+                .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message3.Id);
 
             depositedPost.Should().NotBeNull();

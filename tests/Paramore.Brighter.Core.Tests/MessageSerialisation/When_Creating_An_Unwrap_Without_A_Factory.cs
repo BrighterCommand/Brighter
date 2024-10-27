@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _myCommand = new MyTransformableCommand();
         
         _message = new Message(
-            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
+            new MessageHeader(_myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 

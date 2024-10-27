@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
-using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
@@ -14,13 +14,16 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     [Collection("CommandProcessor")]
     public class MessageDispatcherRoutingAsyncTests  : IDisposable
     {
+        private const string ChannelName = "myChannel";
+        private const string Topic = "myTopic";
         private readonly Dispatcher _dispatcher;
-        private readonly FakeChannel _channel;
         private readonly SpyCommandProcessor _commandProcessor;
+        private readonly RoutingKey _routingKey = new(Topic);
+        private readonly InternalBus _bus = new();
+        private readonly FakeTimeProvider _timeProvider = new();
 
         public MessageDispatcherRoutingAsyncTests()
         {
-            _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -29,28 +32,28 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 );
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-            var connection = new Subscription<MyEvent>(
+            var subscription = new Subscription<MyEvent>(
                 new SubscriptionName("test"),
                 noOfPerformers: 1, 
-                timeoutInMilliseconds: 1000, 
-                channelFactory: new InMemoryChannelFactory(_channel),
-                channelName: new ChannelName("fakeChannel"), 
-                routingKey: new RoutingKey("fakekey"),
+                timeOut: TimeSpan.FromMilliseconds(1000), 
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+                channelName: new ChannelName(ChannelName), 
+                routingKey: _routingKey,
                 runAsync: true
             );
 
             _dispatcher = new Dispatcher(
                 _commandProcessor, 
-                new List<Subscription> { connection }, 
+                new List<Subscription> { subscription }, 
                 null, 
                 messageMapperRegistry,
                requestContextFactory: new InMemoryRequestContextFactory() 
             );
 
-            var @event = new MyEvent();
-            var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new() { Topic = connection.RoutingKey }).Result;
+            var @event = new MyEvent {Data = 4};
+            var message = new MyEventMessageMapperAsync().MapToMessageAsync(@event, new() { Topic = _routingKey }).Result;
             
-            _channel.Enqueue(message);
+            _bus.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
@@ -58,19 +61,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 #pragma warning disable xUnit1031
         
         [Fact]
-        public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
+        public async Task When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
         {
-            Task.Delay(5000).Wait();
-            _dispatcher.End().Wait();
-
-            //should have consumed the messages in the channel
-            _channel.Length.Should().Be(0);
-            //should have a stopped state
+            await Task.Delay(5000);
+            
+            _timeProvider.Advance(TimeSpan.FromSeconds(2)); //This will trigger requeue of not acked/rejected messages
+            
+            await _dispatcher.End();
+            
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
-            //should have dispatched a request
             _commandProcessor.Observe<MyEvent>().Should().NotBeNull();
-            //should have published async
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.PublishAsync);
+            Assert.Empty(_bus.Stream(_routingKey));
         }
         
         public void Dispose()

@@ -63,7 +63,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = new BrighterOptions();
             configure?.Invoke(options);
             services.TryAddSingleton<IBrighterOptions>(options);
-            services.TryAddSingleton<IAmABrighterTracer>(new BrighterTracer());
 
             return BrighterHandlerBuilder(services, options);
         }
@@ -233,7 +232,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
         
         
-        private static INeedARequestContext AddEventBus(
+        private static INeedInstrumentation AddEventBus(
             IServiceProvider provider,
             INeedMessaging messagingBuilder,
             IUseRpc useRequestResponse)
@@ -242,15 +241,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
 
-            INeedARequestContext ret = null;
+            INeedInstrumentation instrumentationBuilder = null;
             var hasEventBus = eventBus != null;
             bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
 
-            if (!hasEventBus) ret = messagingBuilder.NoExternalBus();
+            if (!hasEventBus) instrumentationBuilder = messagingBuilder.NoExternalBus();
 
             if (hasEventBus && !useRpc)
             {
-                ret = messagingBuilder.ExternalBus(
+                instrumentationBuilder = messagingBuilder.ExternalBus(
                     ExternalBusType.FireAndForget,
                     eventBus,
                     eventBusConfiguration.ResponseChannelFactory,
@@ -261,7 +260,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (hasEventBus && useRpc)
             {
-                ret = messagingBuilder.ExternalBus(
+                instrumentationBuilder = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus,
                     eventBusConfiguration.ResponseChannelFactory,
@@ -270,7 +269,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 );
             }
 
-            return ret;
+            return instrumentationBuilder;
         }
 
         private static IPolicyRegistry<string> AddDefaults(IPolicyRegistry<string> policyRegistry)
@@ -298,26 +297,30 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var handlerFactory = new ServiceProviderHandlerFactory(provider);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory);
 
-            var needHandlers = CommandProcessorBuilder.With();
+            var handlerBuilder = CommandProcessorBuilder.StartNew();
 
             var featureSwitchRegistry = provider.GetService<IAmAFeatureSwitchRegistry>();
 
             if (featureSwitchRegistry != null)
-                needHandlers = needHandlers.ConfigureFeatureSwitches(featureSwitchRegistry);
+                handlerBuilder = handlerBuilder.ConfigureFeatureSwitches(featureSwitchRegistry);
             
-            var policyBuilder = needHandlers.Handlers(handlerConfiguration);
+            var policyBuilder = handlerBuilder.Handlers(handlerConfiguration);
 
             var messagingBuilder = options.PolicyRegistry == null
                 ? policyBuilder.DefaultPolicy()
                 : policyBuilder.Policies(options.PolicyRegistry);
 
-            INeedARequestContext ret = AddEventBus(provider, messagingBuilder, useRequestResponse);
+            INeedInstrumentation instrumentationBuilder = AddEventBus(provider, messagingBuilder, useRequestResponse);
 
+            var tracer = provider.GetService<IAmABrighterTracer>();
+
+            var contextBuilder = instrumentationBuilder.ConfigureInstrumentation(tracer, options.InstrumentationOptions);
+            
             var requestContextFactory = provider.GetService<IAmARequestContextFactory>();
-
-            var commandProcessor = ret
-                .RequestContextFactory(requestContextFactory)
-                .Build();
+            
+            var builder = contextBuilder.RequestContextFactory(requestContextFactory);
+                
+            var commandProcessor = builder.Build();
 
             return commandProcessor;
         }
@@ -345,9 +348,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
-                busConfiguration.MaxOutStandingCheckIntervalMilliSeconds,
+                busConfiguration.MaxOutStandingCheckInterval,
                 busConfiguration.OutBoxBag,
                 busConfiguration.ArchiveBatchSize,
+                TimeProvider.System,
                 busConfiguration.InstrumentationOptions);
         }
 

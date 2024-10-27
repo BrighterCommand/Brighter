@@ -61,7 +61,7 @@ namespace Paramore.Brighter
             T message,
             RequestContext requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default
         );
 
@@ -76,9 +76,9 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task"/>.</returns>
         Task AddAsync(
             IEnumerable<T> messages,
-            RequestContext requestContext,
+            RequestContext? requestContext,
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider = null,
             CancellationToken cancellationToken = default
         );
 
@@ -92,14 +92,14 @@ namespace Paramore.Brighter
         Task DeleteAsync(
             string[] messageIds,
             RequestContext requestContext,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         );
 
         /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
-        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="dispatchedSince"></param>
         /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
@@ -108,12 +108,12 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <returns>List of messages that need to be dispatched.</returns>
         Task<IEnumerable<Message>> DispatchedMessagesAsync(
-            double millisecondsDispatchedSince,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
             int outboxTimeout = -1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         );
 
@@ -130,7 +130,7 @@ namespace Paramore.Brighter
             string messageId,
             RequestContext requestContext,
             int outBoxTimeout = -1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default
         );
 
@@ -145,8 +145,8 @@ namespace Paramore.Brighter
         Task MarkDispatchedAsync(
             string id,
             RequestContext requestContext,
-            DateTime? dispatchedAt = null,
-            Dictionary<string, object> args = null,
+            DateTimeOffset? dispatchedAt = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
@@ -160,14 +160,14 @@ namespace Paramore.Brighter
         Task MarkDispatchedAsync(
             IEnumerable<string> ids,
             RequestContext requestContext,
-            DateTime? dispatchedAt = null,
-            Dictionary<string, object> args = null,
+            DateTimeOffset? dispatchedAt = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
-        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="dispatchedSince">How long since the message was sent do we wait to declare it outstanding</param>
         /// <param name="requestContext"></param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
@@ -175,11 +175,11 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
         Task<IEnumerable<Message>> OutstandingMessagesAsync(
-            double millSecondsSinceSent,
+            TimeSpan dispatchedSince,
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            Dictionary<string, object> args = null,
+            Dictionary<string, object>? args = null,
             CancellationToken cancellationToken = default);
     }
 }

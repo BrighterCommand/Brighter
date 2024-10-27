@@ -23,11 +23,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Net.Mime;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
-using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -42,13 +41,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _client = client;
         }
 
-        public string Publish(Message message)
+        public async Task<string> PublishAsync(Message message)
         {
             var messageString = message.Body.Value;
-            var publishRequest = new PublishRequest(_topicArn, messageString);
+            var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);
 
             var messageAttributes = new Dictionary<string, MessageAttributeValue>();
-            messageAttributes.Add(HeaderNames.Id, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.Id), DataType = "String"});
+            messageAttributes.Add(HeaderNames.Id, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.MessageId), DataType = "String"});
             messageAttributes.Add(HeaderNames.Topic, new MessageAttributeValue{StringValue = _topicArn, DataType = "String"});
             messageAttributes.Add(HeaderNames.ContentType, new MessageAttributeValue {StringValue = message.Header.ContentType, DataType = "String"});
             messageAttributes.Add(HeaderNames.CorrelationId, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String"});
@@ -65,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             publishRequest.MessageAttributes = messageAttributes;
             
             
-             var response = _client.PublishAsync(publishRequest).GetAwaiter().GetResult();
+             var response = await _client.PublishAsync(publishRequest);
              if (response.HttpStatusCode == System.Net.HttpStatusCode.OK || response.HttpStatusCode == System.Net.HttpStatusCode.Created || response.HttpStatusCode == System.Net.HttpStatusCode.Accepted)
              {
                  return response.MessageId;

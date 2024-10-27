@@ -24,10 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Polly.Caching;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
@@ -39,15 +37,20 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _messageOne;
         private readonly Message _messageTwo;
+        private readonly ChannelName _queueName = new(Guid.NewGuid().ToString());
 
         public RmqMessageProducerQueueLengthTests()
         {
-           _messageOne = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            
+            _messageOne = new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
+                    MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
            
            _messageTwo = new Message(
-               new MessageHeader(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+               new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
+                   MessageType.MT_COMMAND), 
                new MessageBody("test content"));
 
              var rmqConnection = new RmqMessagingGatewayConnection
@@ -60,8 +63,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             _messageConsumer = new RmqMessageConsumer(
                 connection: rmqConnection, 
-                queueName: _messageOne.Header.Topic, 
-                routingKey: _messageOne.Header.Topic, 
+                queueName: _queueName, 
+                routingKey: routingKey, 
                 isDurable: false, 
                 highAvailability: false,
                 batchSize: 5,
@@ -70,7 +73,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 );
 
             //create the infrastructure
-            _messageConsumer.Receive(0); 
+            _messageConsumer.Receive(TimeSpan.Zero); 
              
         }
 
@@ -81,14 +84,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageProducer.Send(_messageTwo);
 
             //check messages are flowing - absence needs to be expiry
-            var messages = _messageConsumer.Receive(5000);
+            var messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
             var message = messages.First();
             _messageConsumer.Acknowledge(message);
             
             //should be the first message
             
             //try to grab the next message
-            var nextMessages = _messageConsumer.Receive(5000);
+            var nextMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
             message = nextMessages.First();
             message.Header.MessageType.Should().Be(MessageType.MT_NONE);
 

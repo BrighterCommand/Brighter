@@ -114,10 +114,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">The sending delay</param>
+        /// <param name="delay">The sending delay</param>
         /// <returns>Task.</returns>
-         public void SendWithDelay(Message message, int delayMilliseconds = 0)
-        {
+         public void SendWithDelay(Message message, TimeSpan? delay = null)
+        {                                                        
             //No delay support implemented
             Send(message);
         }

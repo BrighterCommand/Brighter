@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -40,10 +41,11 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         public DynamoDbOutboxEmptyStoreAsyncTests()
         {
             _messageEarliest = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
                 new MessageBody("message body")
             );
-            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName));
+            var fakeTimeProvider = new FakeTimeProvider();
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(OutboxTableName), fakeTimeProvider);
         }
 
         [Fact]
