@@ -61,7 +61,15 @@ It isn't wise to build something that can be a part of someone's ecosystem witho
 0. Submit a pull request
 0. Sit back, and wait. 
 
-	1. Try pinging @BrighterCommmand on Twitter if you hear nothing 
+	1. Try pinging @BrighterCommmand on Twitter if you hear nothing
+
+### Architecture Decision Record ###
+If your pull request makes a change to the design of Brighter, please include an [Architectural Decision Record](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions)(ADR) for the change. This should describe the agreed design for the change. The ADR helps us review the change, so that we can understand that we have built what was agreed. (In addition, an ADR captures design decisions so that we can understand why implementation choices were made later).
+
+You can create the ADR as the first step on a new branch/fork. Then your first commit includes the ADR describing the change. This then allows you to create a draft PR which includes the ADR. This allows others to review their understanding of the change, and give feedback early on if those expectations are mismatched. If you update the design as you learn, add another ADR that supercedes the old one.
+
+### Conventional Commits ###
+In order to keep a clean commit history, please use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#specification) when contributing to Brighter.
 
 ### Contributor Licence Agreement ###
 To safeguard the project we ask you to sign a Contributor Licence Agreement. The goal is to let you keep your copyright, but to assign it to the project so that it can use it in perpetuity. It is still yours, but the project is not at risk from having multiple contributors holding the copyright, with anyone able to hold it to ransom by removing their grant of licence.
