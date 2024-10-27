@@ -55,27 +55,11 @@ namespace Paramore.Brighter
         /// that these are transient errors which can be retried
         /// </summary>
         /// <param name="dispatchedSince">How stale is the message that we want archive</param>
-        public void Archive(TimeSpan dispatchedSince)
+        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
+         public void Archive(TimeSpan dispatchedSince, RequestContext? requestContext = null)
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
-#pragma warning restore CS0618 // Type or member is obsolete
-            var requestContext = _requestContextFactory.Create();
-            requestContext.Span = activity;
-            
-            try
-            {
-                bus.Archive(dispatchedSince, requestContext);  
-            }
-            catch (Exception e)
-            {
-                activity?.SetStatus(ActivityStatusCode.Error, e.Message);
-            }
-            finally
-            {
-                if(activity?.DisplayName == ARCHIVE_OUTBOX)
-                    activity.Dispose();
-            }
+            requestContext = requestContext ?? _requestContextFactory.Create();
+             bus.Archive(dispatchedSince, requestContext);  
         }
 
         /// <summary>
@@ -86,26 +70,10 @@ namespace Paramore.Brighter
         /// <param name="dispatchedSince">How stale is the message that</param>
         /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext, CancellationToken cancellationToken)
+        public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext? requestContext = null, CancellationToken cancellationToken = default)
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
-#pragma warning restore CS0618 // Type or member is obsolete
-            requestContext.Span = activity;
-            
-            try
-            {
-                await bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
-            }
-            catch (Exception e)
-            {
-                activity?.SetStatus(ActivityStatusCode.Error, e.Message);
-            }
-            finally
-            {
-                if(activity?.DisplayName == ARCHIVE_OUTBOX)
-                    activity.Dispose();
-            }
+            requestContext = requestContext ?? _requestContextFactory.Create();
+            await bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
         }
     }
 }

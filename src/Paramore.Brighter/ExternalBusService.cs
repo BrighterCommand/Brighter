@@ -11,6 +11,8 @@ using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 
+// ReSharper disable StaticMemberInGenericType
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -119,7 +121,7 @@ namespace Paramore.Brighter
             _transformPipelineBuilderAsync =
                 new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
-            //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
+            //default to in-memory; expectation for an in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox(TimeProvider.System);
             outbox.Tracer = tracer;
 
@@ -250,9 +252,9 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The request context for the pipeline</param>
         public void Archive(TimeSpan dispatchedSince, RequestContext requestContext)
         {
-            //This is a archive span parent; we expect individual archiving operations for messages to have their own spans
+            //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
             var parentSpan = requestContext.Span;
-            var createSpan = _tracer?.CreateArchiveSpan(requestContext.Span, options: _instrumentationOptions);
+            var createSpan = _tracer.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
             requestContext.Span = createSpan;
             
             try
@@ -290,7 +292,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                _tracer?.EndSpan(createSpan);
+                _tracer.EndSpan(createSpan);
                 requestContext.Span = parentSpan;
             }
         }
@@ -565,7 +567,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Commence a batch of outbox messages to add
         /// </summary>
-        /// <returns>The Id of the new batch</returns>
+        /// <returns>The ID of the new batch</returns>
         public string StartBatchAddToOutbox()
         {
             var batchId = Guid.NewGuid().ToString();
@@ -597,7 +599,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Flush the batch of Messages to the outbox.
         /// </summary>
-        /// <param name="batchId">The Id of the batch to be flushed</param>
+        /// <param name="batchId">The ID of the batch to be flushed</param>
         /// <param name="transactionProvider"></param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="cancellationToken"></param>

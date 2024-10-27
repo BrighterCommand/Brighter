@@ -25,6 +25,7 @@ public class ExternalServiceBusArchiveObservabilityTests
     private RoutingKey _routingKey = new("MyEvent");
     private readonly InMemoryOutbox _outbox;
     private readonly TracerProvider _traceProvider;
+    private const double TOLERANCE = 0.000000001;
 
     public ExternalServiceBusArchiveObservabilityTests()
     {
@@ -105,7 +106,8 @@ public class ExternalServiceBusArchiveObservabilityTests
         _timeProvider.Advance(TimeSpan.FromSeconds(300)); 
         
         //archive
-        _bus.Archive(TimeSpan.FromSeconds(100), context);
+        var dispatchedSince = TimeSpan.FromSeconds(100);
+        _bus.Archive(dispatchedSince, context);
         
         //should be no messages in the outbox
         _outbox.EntryCount.Should().Be(0);
@@ -115,14 +117,28 @@ public class ExternalServiceBusArchiveObservabilityTests
         _traceProvider.ForceFlush();
         
         //We should have exported matching activities
-        _exportedActivities.Count.Should().Be(6);
+        _exportedActivities.Count.Should().Be(9);
         
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
         
-        //there should be a create span for the batch
+        //there should be a n archive create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ArchiveMessages} {CommandProcessorSpanOperation.Archive.ToSpanName()}");
         createActivity.Should().NotBeNull();
         createActivity.ParentId.Should().Be(parentActivity?.Id);
         
+        //check for outstanding messages span
+        var osCheckActivity = _exportedActivities.SingleOrDefault(a =>
+            a.DisplayName == $"{OutboxDbOperation.DispatchedMessages.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
+        osCheckActivity.Should().NotBeNull();
+        osCheckActivity.ParentId.Should().Be(createActivity.Id);
+
+        //check for delete messages span
+        var deleteActivity = _exportedActivities.SingleOrDefault(a =>
+            a.DisplayName == $"{OutboxDbOperation.Delete.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
+        deleteActivity.Should().NotBeNull();
+        deleteActivity.ParentId.Should().Be(createActivity.Id);
+        
+        //check the tags for the create span
+        createActivity.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.ArchiveAge && Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE);
     }
 }
