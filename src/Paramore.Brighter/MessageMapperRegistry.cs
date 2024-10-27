@@ -23,9 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Paramore.Brighter
 {
@@ -38,7 +36,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageMapperRegistry : IAmAMessageMapperRegistry, IAmAMessageMapperRegistryAsync 
     {
-        private readonly IAmAMessageMapperFactory _messageMapperFactory;
+        private readonly IAmAMessageMapperFactory? _messageMapperFactory;
         private readonly IAmAMessageMapperFactoryAsync? _messageMapperFactoryAsync;
         private readonly Dictionary<Type, Type> _messageMappers = new Dictionary<Type, Type>();
         private readonly Dictionary<Type, Type> _asyncMessageMappers = new Dictionary<Type, Type>();
@@ -48,7 +46,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageMapperFactory">The message mapper factory.</param>
         /// <param name="messageMapperFactoryAsync">The async message mapper factory</param>
-        public MessageMapperRegistry(IAmAMessageMapperFactory messageMapperFactory, IAmAMessageMapperFactoryAsync? messageMapperFactoryAsync)
+        public MessageMapperRegistry(IAmAMessageMapperFactory? messageMapperFactory, IAmAMessageMapperFactoryAsync? messageMapperFactoryAsync)
         {
             _messageMapperFactory = messageMapperFactory;
             _messageMapperFactoryAsync = messageMapperFactoryAsync;
@@ -64,7 +62,7 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapper&lt;TRequest&gt;.</returns>
         public IAmAMessageMapper<TRequest>? Get<TRequest>() where TRequest : class, IRequest
         {
-            if (_messageMappers.ContainsKey(typeof(TRequest)))
+            if ( _messageMapperFactory is not null && _messageMappers.ContainsKey(typeof(TRequest)))
             {
                 var messageMapperType = _messageMappers[typeof(TRequest)];
                 return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);

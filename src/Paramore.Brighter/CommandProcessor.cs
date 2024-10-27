@@ -247,9 +247,9 @@ namespace Paramore.Brighter
 
                 handlerChain.First().Handle(command);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                span?.SetStatus(ActivityStatusCode.Error);
+                _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
             }
             finally
@@ -296,9 +296,9 @@ namespace Paramore.Brighter
                 await handlerChain.First().HandleAsync(command, cancellationToken)
                     .ConfigureAwait(continueOnCapturedContext);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                span?.SetStatus(ActivityStatusCode.Error);
+                _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
             }
             finally
@@ -362,7 +362,7 @@ namespace Paramore.Brighter
 
                 if (exceptions.Any())
                 {
-                    span?.SetStatus(ActivityStatusCode.Error);
+                    _tracer?.AddExceptionToSpan(span, exceptions);
                     throw new AggregateException(
                         "Failed to publish to one more handlers successfully, see inner exceptions for details",
                         exceptions);
@@ -441,7 +441,7 @@ namespace Paramore.Brighter
                 _tracer?.LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
-                    span?.SetStatus(ActivityStatusCode.Error);
+                    _tracer?.AddExceptionToSpan(span, exceptions);
 
                 if (exceptions.Count > 0)
                 {
@@ -573,6 +573,11 @@ namespace Paramore.Brighter
 
                 return message.Id!;
             }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
             finally
             {
                 _tracer?.EndSpan(span);
@@ -642,6 +647,11 @@ namespace Paramore.Brighter
                 bus.EndBatchAddToOutbox(batchId, transactionProvider, context);
                 
                 return successfullySentMessage.ToArray();
+            }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
             }
             finally
             {
@@ -760,6 +770,11 @@ namespace Paramore.Brighter
 
                 return message.Id!;
             }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
             finally
             {
                 _tracer?.EndSpan(span);
@@ -845,6 +860,11 @@ namespace Paramore.Brighter
 
                 return successfullySentMessage.ToArray();
             }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
             finally
             {
                 _tracer?.EndSpan(span);
@@ -901,6 +921,11 @@ namespace Paramore.Brighter
             {
                 s_bus!.ClearOutbox(ids, context, args);
             }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
             finally
             {
                 _tracer?.EndSpan(span);
@@ -929,6 +954,11 @@ namespace Paramore.Brighter
             try
             {
                 await s_bus!.ClearOutboxAsync(posts, context, continueOnCapturedContext, args, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
             }
             finally
             {
@@ -961,6 +991,11 @@ namespace Paramore.Brighter
             {
                 var minAge = minimumAge ?? TimeSpan.FromMilliseconds(5000);
                 s_bus!.ClearOutstandingFromOutbox(amountToClear, minAge, useBulk, context, args);
+            }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
             }
             finally
             {
@@ -1042,11 +1077,15 @@ namespace Paramore.Brighter
                     return response;
                 }
 
-
                 s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
 
                 return null;
             } 
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
             finally
             {
                 _tracer?.EndSpan(span);

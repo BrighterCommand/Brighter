@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Paramore.Brighter.Observability;
@@ -184,4 +185,11 @@ public interface IAmABrighterTracer : IDisposable
     /// </summary>
     /// <param name="handlerSpans"></param>
     void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans);
+
+    /// <summary>
+    /// If an activity has an exception, then we should record it on the span
+    /// </summary>
+    /// <param name="span"></param>
+    /// <param name="exceptions"></param>
+    void AddExceptionToSpan(Activity? span, IEnumerable<Exception> exceptions);
 }

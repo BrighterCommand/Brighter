@@ -67,6 +67,31 @@ public class BrighterTracer : IAmABrighterTracer
     }
 
     /// <summary>
+    /// If an activity has an exception, then we should record it on the span
+    /// </summary>
+    /// <param name="span"></param>
+    /// <param name="exceptions"></param>
+    public void AddExceptionToSpan(Activity? span, IEnumerable<Exception> exceptions)
+    {
+        if (span == null ) return;
+
+        var exceptionList = exceptions.ToArray();
+        
+        if (exceptionList.Length == 0) return;
+        
+        if (exceptionList .Length == 1)
+        {
+            span.RecordException(exceptionList[0]);
+            span.SetStatus(ActivityStatusCode.Error, exceptionList[0].Message);
+            return;
+        }
+
+        var exception = new  AggregateException("Operation failed, see inner exceptions for details",  exceptionList); 
+        span.RecordException(exception);
+        span.SetStatus(ActivityStatusCode.Error, exception.Message);
+    }
+
+    /// <summary>
     /// Create a span for a request in CommandProcessor
     /// </summary>
     /// <param name="operation">The <see cref="CommandProcessorSpanOperation"/> that tells us what type of span are we creating</param>

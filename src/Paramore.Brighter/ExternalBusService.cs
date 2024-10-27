@@ -254,8 +254,8 @@ namespace Paramore.Brighter
         {
             //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
             var parentSpan = requestContext.Span;
-            var createSpan = _tracer.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
-            requestContext.Span = createSpan;
+            var span = _tracer.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
+            requestContext.Span = span;
             
             try
             {
@@ -288,11 +288,12 @@ namespace Paramore.Brighter
             catch (Exception e)
             {
                 s_logger.LogError(e, "Error while archiving from the outbox");
+                _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
             }
             finally
             {
-                _tracer.EndSpan(createSpan);
+                _tracer?.EndSpan(span);
                 requestContext.Span = parentSpan;
             }
         }
@@ -304,9 +305,17 @@ namespace Paramore.Brighter
         /// <param name="dispatchedSince"></param>
         /// <param name="requestContext"></param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext,
-            CancellationToken cancellationToken)
+        public async Task ArchiveAsync(
+            TimeSpan dispatchedSince, 
+            RequestContext requestContext,
+            CancellationToken cancellationToken = default
+            )
         {
+            //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
+            var parentSpan = requestContext.Span;
+            var span = _tracer.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
+            requestContext.Span = span;
+            
             try
             {
                 if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
@@ -330,7 +339,13 @@ namespace Paramore.Brighter
             catch (Exception e)
             {
                 s_logger.LogError(e, "Error while archiving from the outbox");
+                _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+                requestContext.Span = parentSpan;
             }
         }
 
