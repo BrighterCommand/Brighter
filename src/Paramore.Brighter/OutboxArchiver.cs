@@ -23,12 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
@@ -42,12 +38,7 @@ namespace Paramore.Brighter
         IAmARequestContextFactory? requestContextFactory = null)
         where TMessage : Message
     {
-        private const string ARCHIVE_OUTBOX = "Archive Outbox";
-        
-        private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
         private readonly IAmARequestContextFactory _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
-
-        private const string SUCCESS_MESSAGE = "Successfully archiver {NumberOfMessageArchived} out of {MessagesToArchive}, batch size : {BatchSize}";
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
@@ -58,7 +49,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
          public void Archive(TimeSpan dispatchedSince, RequestContext? requestContext = null)
         {
-            requestContext = requestContext ?? _requestContextFactory.Create();
+            requestContext ??= _requestContextFactory.Create();
              bus.Archive(dispatchedSince, requestContext);  
         }
 
@@ -72,7 +63,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token</param>
         public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext? requestContext = null, CancellationToken cancellationToken = default)
         {
-            requestContext = requestContext ?? _requestContextFactory.Create();
+            requestContext ??= _requestContextFactory.Create();
             await bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
         }
     }
