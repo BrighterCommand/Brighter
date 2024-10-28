@@ -54,7 +54,7 @@
     <PackageVersion Include="MySqlConnector" Version="2.3.7" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NJsonSchema" Version="11.0.2" />
-    <PackageReference Include="NJsonSchema.NewtonsoftJson" Version="11.0.2" />
+    <PackageVersion Include="NJsonSchema.NewtonsoftJson" Version="11.0.2" />
     <PackageVersion Include="Npgsql" Version="8.0.5" />
     <PackageVersion Include="NUnit" Version="4.2.2" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.3.0">
