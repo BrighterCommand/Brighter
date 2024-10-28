@@ -49,7 +49,7 @@ namespace Paramore.Brighter
                 null);
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
-            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: mapper,
@@ -62,7 +62,7 @@ namespace Paramore.Brighter
                 CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .ExternalBus(ExternalBusType.FireAndForget, bus)   
+                .ExternalBus(ExternalBusType.FireAndForget, mediator)   
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build()

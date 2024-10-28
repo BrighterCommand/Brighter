@@ -158,7 +158,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             var outbox = new SinkOutboxSync();
             
-            var externalBus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: outgoingMessageMapperRegistry,
@@ -175,7 +175,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
-                .ExternalBus(ExternalBusType.FireAndForget, externalBus)
+                .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();

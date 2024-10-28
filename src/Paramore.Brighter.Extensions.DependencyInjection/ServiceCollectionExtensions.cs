@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
-using System.Transactions;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -94,7 +93,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
             
-            services.TryAddSingleton<IAmARequestContextFactory>(options.RequestContextFactory);
+            services.TryAddSingleton(options.RequestContextFactory);
 
             if (options.FeatureSwitchRegistry != null)
                 services.TryAddSingleton(options.FeatureSwitchRegistry);
@@ -136,9 +135,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="configure">A callback that allows you to configure <see cref="ExternalBusConfiguration"/> options</param>
-        /// <param name="transactionProvider">The transaction provider for the outbox, can be null for in-memory default
-        /// of <see cref="CommittableTransactionProvider"/> which you must set the generic type to <see cref="CommittableTransaction"/> for
-        /// </param>
         /// <param name="serviceLifetime">The lifetime of the transaction provider</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder UseExternalBus(
