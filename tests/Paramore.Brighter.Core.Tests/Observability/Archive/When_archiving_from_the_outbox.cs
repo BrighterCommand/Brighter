@@ -25,6 +25,7 @@ public class ExternalServiceBusArchiveObservabilityTests
     private RoutingKey _routingKey = new("MyEvent");
     private readonly InMemoryOutbox _outbox;
     private readonly TracerProvider _traceProvider;
+    private readonly OutboxArchiver<Message,CommittableTransaction> _archiver;
     private const double TOLERANCE = 0.000000001;
 
     public ExternalServiceBusArchiveObservabilityTests()
@@ -73,6 +74,8 @@ public class ExternalServiceBusArchiveObservabilityTests
         _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
         var archiveProvider = new InMemoryArchiveProvider();
 
+        _archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: tracer);
+
         _bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry,
             policyRegistry,
@@ -81,7 +84,6 @@ public class ExternalServiceBusArchiveObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             _outbox,
-            archiveProvider,
             timeProvider:_timeProvider);
     }
 
@@ -107,7 +109,7 @@ public class ExternalServiceBusArchiveObservabilityTests
         
         //archive
         var dispatchedSince = TimeSpan.FromSeconds(100);
-        _bus.Archive(dispatchedSince, context);
+        _archiver.Archive(dispatchedSince, context);
         
         //should be no messages in the outbox
         _outbox.EntryCount.Should().Be(0);
@@ -135,8 +137,8 @@ public class ExternalServiceBusArchiveObservabilityTests
         //check for delete messages span
         var deleteActivity = _exportedActivities.SingleOrDefault(a =>
             a.DisplayName == $"{OutboxDbOperation.Delete.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
-        deleteActivity.Should().NotBeNull();
-        deleteActivity.ParentId.Should().Be(createActivity.Id);
+        deleteActivity?.Should().NotBeNull();
+        deleteActivity?.ParentId.Should().Be(createActivity.Id);
         
         //check the tags for the create span
         createActivity.TagObjects.Should().Contain(t => t.Key == BrighterSemanticConventions.ArchiveAge && Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE);

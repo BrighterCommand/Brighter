@@ -23,8 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
@@ -33,12 +37,43 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="TMessage">The type of message to archive</typeparam>
     /// <typeparam name="TTransaction">The transaction type of the Db</typeparam>
-    public class OutboxArchiver<TMessage, TTransaction>(
-        IAmAnExternalBusService bus,
-        IAmARequestContextFactory? requestContextFactory = null)
-        where TMessage : Message
+    public class OutboxArchiver<TMessage, TTransaction> where TMessage : Message
     {
-        private readonly IAmARequestContextFactory _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
+        private readonly IAmARequestContextFactory _requestContextFactory;
+        private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
+        private readonly IAmAnOutboxAsync<TMessage, TTransaction>? _asyncOutbox;
+        private readonly IAmAnArchiveProvider _archiveProvider;
+        private readonly int _archiveBatchSize;
+        private readonly IAmABrighterTracer? _tracer;
+        private readonly InstrumentationOptions _instrumentationOptions;
+
+        /// <summary>
+        /// Used to archive messages from an Outbox
+        /// </summary>
+        /// <typeparam name="TMessage">The type of message to archive</typeparam>
+        /// <typeparam name="TTransaction">The transaction type of the Db</typeparam>
+        public OutboxArchiver(
+            IAmAnOutbox outbox,
+            IAmAnArchiveProvider archiveProvider,
+            IAmARequestContextFactory? requestContextFactory = null,
+            int archiveBatchSize = 100,
+            IAmABrighterTracer? tracer = null,
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+        {
+            _archiveProvider = archiveProvider;
+            _archiveBatchSize = archiveBatchSize;
+            _tracer = tracer;
+            _instrumentationOptions = instrumentationOptions;
+            _requestContextFactory = requestContextFactory ?? new InMemoryRequestContextFactory();
+            
+            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) _outBox = syncOutbox;
+            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) _asyncOutbox = asyncOutbox;
+        }
+
+        private const string NoSyncOutboxError = "A sync Outbox must be defined.";
+        private const string NoArchiveProviderError = "An Archive Provider must be defined.";
+        private const string NoAsyncOutboxError = "An async Outbox must be defined.";
 
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
@@ -50,7 +85,49 @@ namespace Paramore.Brighter
          public void Archive(TimeSpan dispatchedSince, RequestContext? requestContext = null)
         {
             requestContext ??= _requestContextFactory.Create();
-             bus.Archive(dispatchedSince, requestContext);  
+            //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
+            var parentSpan = requestContext.Span;
+            var span = _tracer?.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
+            requestContext.Span = span;
+            
+            try
+            {
+                if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
+                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
+                var messages = _outBox
+                    .DispatchedMessages(dispatchedSince, requestContext, _archiveBatchSize)
+                    .ToArray();
+
+                s_logger.LogInformation(
+                    "Found {NumberOfMessageArchived} message to archive, batch size : {BatchSize}",
+                    messages.Count(), _archiveBatchSize
+                );
+
+                if (messages.Length <= 0) return;
+
+                foreach (var message in messages)
+                {
+                    _archiveProvider.ArchiveMessage(message);
+                }
+
+                _outBox.Delete(messages.Select(e => e.Id).ToArray(), requestContext);
+
+                s_logger.LogInformation(
+                    "Successfully archived {NumberOfMessageArchived}, batch size : {BatchSize}",
+                    messages.Count(), _archiveBatchSize
+                );
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Error while archiving from the outbox");
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+                requestContext.Span = parentSpan;
+            }
         }
 
         /// <summary>
@@ -64,7 +141,46 @@ namespace Paramore.Brighter
         public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext? requestContext = null, CancellationToken cancellationToken = default)
         {
             requestContext ??= _requestContextFactory.Create();
-            await bus.ArchiveAsync(dispatchedSince, requestContext, cancellationToken);
+            //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
+            var parentSpan = requestContext.Span;
+            var span = _tracer?.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
+            requestContext.Span = span;
+            
+            try
+            {
+                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
+                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
+                var messages = (await _asyncOutbox.DispatchedMessagesAsync(
+                    dispatchedSince, requestContext, pageSize: _archiveBatchSize,
+                    cancellationToken: cancellationToken
+                )).ToArray();
+
+                if (messages.Length <= 0)
+                {
+                }
+                else
+                {
+                    foreach (var message in messages)
+                    {
+                        await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
+                    }
+
+                    await _asyncOutbox.DeleteAsync(messages.Select(e => e.Id).ToArray(), requestContext,
+                        cancellationToken: cancellationToken
+                    );
+                }
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Error while archiving from the outbox");
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+                requestContext.Span = parentSpan;
+            }
         }
     }
 }

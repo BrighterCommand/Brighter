@@ -26,14 +26,12 @@ namespace Paramore.Brighter
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         private readonly IPolicyRegistry<string> _policyRegistry;
-        private readonly IAmAnArchiveProvider? _archiveProvider;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
         private readonly IAmAnOutboxAsync<TMessage, TTransaction>? _asyncOutbox;
         private readonly int _outboxTimeout;
         private readonly IAmAProducerRegistry _producerRegistry;
-        private readonly int _archiveBatchSize;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
@@ -49,7 +47,6 @@ namespace Paramore.Brighter
 
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
-        private const string NoArchiveProviderError = "An Archive Provider must be defined.";
             
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
@@ -70,13 +67,11 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="tracer"></param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
-        /// <param name="archiveProvider">When archiving rows from the Outbox, abstracts to where we should send them</param>
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
         /// <param name="maxOutStandingCheckInterval">How long before we check for maxOutStandingMessages</param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
-        /// <param name="archiveBatchSize">What batch size to use when archiving from the Outbox</param>
         /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
         public ExternalBusService(IAmAProducerRegistry producerRegistry,
@@ -86,13 +81,11 @@ namespace Paramore.Brighter
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             IAmABrighterTracer tracer,
             IAmAnOutbox? outbox = null,
-            IAmAnArchiveProvider? archiveProvider = null,
             IAmARequestContextFactory? requestContextFactory = null,
             int outboxTimeout = 300,
             int maxOutStandingMessages = -1,
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
-            int archiveBatchSize = 100,
             TimeProvider? timeProvider = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
@@ -100,7 +93,6 @@ namespace Paramore.Brighter
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _policyRegistry = policyRegistry ??
                               throw new ConfigurationException("Missing Policy Registry for External Bus Services");
-            _archiveProvider = archiveProvider;
 
             requestContextFactory ??= new InMemoryRequestContextFactory();
 
@@ -132,7 +124,6 @@ namespace Paramore.Brighter
             _maxOutStandingMessages = maxOutStandingMessages;
             _maxOutStandingCheckInterval = maxOutStandingCheckInterval ?? TimeSpan.FromMilliseconds(1000);
             _outBoxBag = outBoxBag ?? new Dictionary<string, object>();
-            _archiveBatchSize = archiveBatchSize;
             _instrumentationOptions = instrumentationOptions;
             _tracer = tracer;
 
@@ -242,111 +233,6 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write message {message.Id} to the outbox");
-        }
-
-        /// <summary>
-        /// Archive Message from the outbox to the outbox archive provider
-        /// Throws any archiving exception
-        /// </summary>
-        /// <param name="dispatchedSince">Minimum age</param>
-        /// <param name="requestContext">The request context for the pipeline</param>
-        public void Archive(TimeSpan dispatchedSince, RequestContext requestContext)
-        {
-            //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
-            var parentSpan = requestContext.Span;
-            var span = _tracer.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
-            requestContext.Span = span;
-            
-            try
-            {
-                if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
-                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
-                var messages = _outBox
-                    .DispatchedMessages(dispatchedSince, requestContext, _archiveBatchSize)
-                    .ToArray();
-
-                s_logger.LogInformation(
-                    "Found {NumberOfMessageArchived} message to archive, batch size : {BatchSize}",
-                    messages.Count(), _archiveBatchSize
-                );
-
-                if (messages.Length <= 0) return;
-
-                foreach (var message in messages)
-                {
-                    _archiveProvider.ArchiveMessage(message);
-                }
-
-                _outBox.Delete(messages.Select(e => e.Id).ToArray(), requestContext);
-
-                s_logger.LogInformation(
-                    "Successfully archived {NumberOfMessageArchived}, batch size : {BatchSize}",
-                    messages.Count(),
-                    _archiveBatchSize
-                );
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e, "Error while archiving from the outbox");
-                _tracer?.AddExceptionToSpan(span, [e]);
-                throw;
-            }
-            finally
-            {
-                _tracer?.EndSpan(span);
-                requestContext.Span = parentSpan;
-            }
-        }
-
-        /// <summary>
-        /// Archive Message from the outbox to the outbox archive provider
-        /// Throws any archiving exception
-        /// </summary>
-        /// <param name="dispatchedSince"></param>
-        /// <param name="requestContext"></param>
-        /// <param name="cancellationToken">The Cancellation Token</param>
-        public async Task ArchiveAsync(
-            TimeSpan dispatchedSince, 
-            RequestContext requestContext,
-            CancellationToken cancellationToken = default
-            )
-        {
-            //This is an archive span parent; we expect individual archiving operations for messages to have their own spans
-            var parentSpan = requestContext.Span;
-            var span = _tracer.CreateArchiveSpan(requestContext.Span, dispatchedSince, options: _instrumentationOptions);
-            requestContext.Span = span;
-            
-            try
-            {
-                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
-                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
-                var messages = (await _asyncOutbox.DispatchedMessagesAsync(
-                    dispatchedSince, requestContext, pageSize: _archiveBatchSize,
-                    cancellationToken: cancellationToken
-                )).ToArray();
-
-                if (messages.Length <= 0) return;
-
-                foreach (var message in messages)
-                {
-                    await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
-                }
-
-                await _asyncOutbox.DeleteAsync(messages.Select(e => e.Id).ToArray(), requestContext,
-                    cancellationToken: cancellationToken
-                );
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e, "Error while archiving from the outbox");
-                _tracer?.AddExceptionToSpan(span, [e]);
-                throw;
-            }
-            finally
-            {
-                _tracer?.EndSpan(span);
-                requestContext.Span = parentSpan;
-            }
         }
 
         /// <summary>

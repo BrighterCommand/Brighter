@@ -11,22 +11,6 @@ namespace Paramore.Brighter
     /// </summary>
     public interface IAmAnExternalBusService : IDisposable
     {
-
-        /// <summary>
-        /// Archive Message from the outbox to the outbox archive provider
-        /// </summary>
-        /// <param name="dispatchedSince">Minimum age</param>
-        /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-        void Archive(TimeSpan dispatchedSince, RequestContext requestContext);
-
-        /// <summary>
-        /// Archive Message from the outbox to the outbox archive provider
-        /// </summary>
-        /// <param name="dispatchedSince">How stale is the message that we want to archive</param>
-        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
-        /// <param name="cancellationToken">The Cancellation Token</param>
-        Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext, CancellationToken cancellationToken);
-        
         /// <summary>
         /// Used with RPC to call a remote service via the external bus
         /// </summary>

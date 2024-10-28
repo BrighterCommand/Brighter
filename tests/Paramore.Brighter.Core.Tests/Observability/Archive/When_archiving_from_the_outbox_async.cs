@@ -24,9 +24,10 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
     private readonly ExternalBusService<Message,CommittableTransaction> _bus;
     private readonly Publication _publication;
     private readonly FakeTimeProvider _timeProvider;
-    private RoutingKey _routingKey = new("MyEvent");
+    private readonly RoutingKey _routingKey = new("MyEvent");
     private readonly InMemoryOutbox _outbox;
     private readonly TracerProvider _traceProvider;
+    private readonly OutboxArchiver<Message,CommittableTransaction> _archiver;
     private const double TOLERANCE = 0.000000001;
 
     public AsyncExternalServiceBusArchiveObservabilityTests()
@@ -75,6 +76,8 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
         _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
         var archiveProvider = new InMemoryArchiveProvider();
 
+        _archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: tracer);
+
         _bus = new ExternalBusService<Message, CommittableTransaction>(
             producerRegistry,
             policyRegistry,
@@ -83,7 +86,6 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             new EmptyMessageTransformerFactoryAsync(),
             tracer,
             _outbox,
-            archiveProvider,
             timeProvider:_timeProvider);
     }
 
@@ -109,7 +111,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
         
         //archive
         var dispatchedSince = TimeSpan.FromSeconds(100);
-        await _bus.ArchiveAsync(dispatchedSince, context);
+        await _archiver.ArchiveAsync(dispatchedSince, context);
         
         //should be no messages in the outbox
         _outbox.EntryCount.Should().Be(0);
