@@ -49,7 +49,7 @@ namespace Paramore.Brighter
                 null);
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
-            var bus = new ExternalBusService<Message, CommittableTransaction>(
+            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: mapper,

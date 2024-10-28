@@ -222,7 +222,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             brighterBuilder.Services.TryAddSingleton<IAmExternalBusConfiguration>(busConfiguration);
            
-            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnExternalBusService),
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
                (serviceProvider) => BuildExternalBus(
                    serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
                    ),
@@ -237,7 +237,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             INeedMessaging messagingBuilder,
             IUseRpc useRequestResponse)
         {
-            var eventBus = provider.GetService<IAmAnExternalBusService>();
+            var eventBus = provider.GetService<IAmAnOutboxProducerMediator>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
 
@@ -325,7 +325,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return commandProcessor;
         }
         
-        private static IAmAnExternalBusService BuildExternalBus(IServiceProvider serviceProvider,
+        private static IAmAnOutboxProducerMediator BuildExternalBus(IServiceProvider serviceProvider,
             Type transactionType,
             ExternalBusConfiguration busConfiguration,
             IPolicyRegistry<string> policyRegistry,
@@ -333,9 +333,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
-            var busType = typeof(ExternalBusService<,>).MakeGenericType(typeof(Message), transactionType);
+            var busType = typeof(OutboxProducerMediator<,>).MakeGenericType(typeof(Message), transactionType);
 
-            return (IAmAnExternalBusService)Activator.CreateInstance(
+            return (IAmAnOutboxProducerMediator)Activator.CreateInstance(
                 busType,
                 busConfiguration.ProducerRegistry,
                 policyRegistry,

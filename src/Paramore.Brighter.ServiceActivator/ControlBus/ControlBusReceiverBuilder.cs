@@ -158,7 +158,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             var outbox = new SinkOutboxSync();
             
-            var externalBus = new ExternalBusService<Message, CommittableTransaction>(
+            var externalBus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry: producerRegistry,
                 policyRegistry: new DefaultPolicy(),
                 mapperRegistry: outgoingMessageMapperRegistry,

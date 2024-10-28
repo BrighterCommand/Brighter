@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {                                             
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, _retryPolicy }, { CommandProcessor.CIRCUITBREAKER, _circuitBreakerPolicy } };
 
-            _exception = Catch.Exception(() => new ExternalBusService<Message, CommittableTransaction>(
+            _exception = Catch.Exception(() => new OutboxProducerMediator<Message, CommittableTransaction>(
                 null, 
                 policyRegistry,
                 _messageMapperRegistry,

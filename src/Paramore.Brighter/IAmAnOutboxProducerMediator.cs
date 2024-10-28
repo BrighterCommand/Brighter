@@ -9,7 +9,7 @@ namespace Paramore.Brighter
     /// An external bus service allows us to send messages to external systems
     /// The interaction with the CommandProcessor is mostly via the Outbox and the Message Mapper
     /// </summary>
-    public interface IAmAnExternalBusService : IDisposable
+    public interface IAmAnOutboxProducerMediator : IDisposable
     {
         /// <summary>
         /// Used with RPC to call a remote service via the external bus
@@ -103,7 +103,7 @@ namespace Paramore.Brighter
     /// An external bus service allows us to send messages to external systems
     /// The interaction with the CommandProcessor is mostly via the Outbox and the Message Mapper
     /// </summary>
-    public interface IAmAnExternalBusService<TMessage, TTransaction> : IDisposable
+    public interface IAmAnOutboxProducerMediator<TMessage, TTransaction> : IDisposable
     {
         /// <summary>
         /// Adds a message to the outbox

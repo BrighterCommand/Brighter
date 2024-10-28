@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.Archive;
 public class AsyncExternalServiceBusArchiveObservabilityTests
 {
     private readonly List<Activity> _exportedActivities = new();
-    private readonly ExternalBusService<Message,CommittableTransaction> _bus;
+    private readonly OutboxProducerMediator<Message,CommittableTransaction> _bus;
     private readonly Publication _publication;
     private readonly FakeTimeProvider _timeProvider;
     private readonly RoutingKey _routingKey = new("MyEvent");
@@ -78,7 +78,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
 
         _archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, archiveProvider, tracer: tracer);
 
-        _bus = new ExternalBusService<Message, CommittableTransaction>(
+        _bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry,
             policyRegistry,
             messageMapperRegistry,

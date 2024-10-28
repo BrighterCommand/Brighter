@@ -16,11 +16,12 @@ using Polly.Registry;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Provide services to CommandProcessor that persist across the lifetime of the application. Allows separation from
-    /// elements that have a lifetime linked to the scope of a request, or are transient for DI purposes
+    /// Mediates the interaction between a producer and an outbox. As we want to write to the outbox, and then send from there
+    /// to the producer, we need to take control of produce operations to mediate between the two in a transaction.
+    /// NOTE: This class is singleton. The CommandProcessor by contrast, is transient or more typically scoped. 
     /// </summary>
-    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService,
-        IAmAnExternalBusService<TMessage, TTransaction>
+    public class OutboxProducerMediator<TMessage, TTransaction> : IAmAnOutboxProducerMediator,
+        IAmAnOutboxProducerMediator<TMessage, TTransaction>
         where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
@@ -58,7 +59,7 @@ namespace Paramore.Brighter
         private readonly TimeProvider _timeProvider;
 
         /// <summary>
-        /// Creates an instance of External Bus Services
+        /// Creates an instance of the Outbox Producer Mediator
         /// </summary>
         /// <param name="producerRegistry">A registry of producers</param>
         /// <param name="policyRegistry">A registry for reliability policies</param>
@@ -74,7 +75,8 @@ namespace Paramore.Brighter
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
         /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
-        public ExternalBusService(IAmAProducerRegistry producerRegistry,
+        public OutboxProducerMediator(
+            IAmAProducerRegistry producerRegistry,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
