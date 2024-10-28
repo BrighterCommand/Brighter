@@ -219,7 +219,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             brighterBuilder.Services.TryAddSingleton<IAmExternalBusConfiguration>(busConfiguration);
            
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
-               (serviceProvider) => BuildExternalBus(
+               (serviceProvider) => BuildOutBoxProducerMediator(
                    serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
                    ),
                ServiceLifetime.Singleton));
@@ -321,7 +321,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return commandProcessor;
         }
         
-        private static IAmAnOutboxProducerMediator BuildExternalBus(IServiceProvider serviceProvider,
+        private static IAmAnOutboxProducerMediator BuildOutBoxProducerMediator(IServiceProvider serviceProvider,
             Type transactionType,
             ExternalBusConfiguration busConfiguration,
             IPolicyRegistry<string> policyRegistry,
@@ -340,13 +340,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactoryAsync(serviceProvider),
                 Tracer(serviceProvider),
                 outbox,
-                busConfiguration.ArchiveProvider,
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
                 busConfiguration.MaxOutStandingCheckInterval,
                 busConfiguration.OutBoxBag,
-                busConfiguration.ArchiveBatchSize,
                 TimeProvider.System,
                 busConfiguration.InstrumentationOptions);
         }

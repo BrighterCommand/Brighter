@@ -93,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
             var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, new RequestContext(), TimeSpan.FromMilliseconds(500)));
             
             //should throw an exception as we require a mapper for the outgoing request 
-            exception.Should().BeOfType<ArgumentOutOfRangeException>();
+            exception.Should().BeOfType<InvalidOperationException>();
         }
 
         public void Dispose()
