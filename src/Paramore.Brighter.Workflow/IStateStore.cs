@@ -26,8 +26,21 @@ using System;
 
 namespace Paramore.Brighter.Workflow;
 
+/// <summary>
+/// Used to store the state of a workflow
+/// </summary>
 public interface IStateStore
 {
+    /// <summary>
+    /// Saves the workflow state
+    /// </summary>
+    /// <param name="state">The workflow state</param>
     void SaveState(WorkflowState state);
-    WorkflowState GetState(Guid id);
+    
+    /// <summary>
+    /// Retrieves a workflow via its Id
+    /// </summary>
+    /// <param name="id">The id of the workflow</param>
+    /// <returns>if found, the workflow, otherwise null</returns>
+    WorkflowState? GetState(Guid id);
 }

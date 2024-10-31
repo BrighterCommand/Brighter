@@ -8,6 +8,7 @@ namespace Paramore.Brighter.Core.Tests.Workflows;
 public class MediatorOneStepFlowTests 
 {
     private readonly MyCommandHandler _myCommandHandler;
+    private readonly Workflow.Mediator _mediator;
 
     public MediatorOneStepFlowTests()
     {
@@ -20,7 +21,7 @@ public class MediatorOneStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var stateStore = new InMemoryStateStore();
-        var mediator = new Workflow.Mediator(commandProcessor, stateStore);
+        _mediator = new Workflow.Mediator([new Step("Test of Workflow", true, "Test", StepType.FireAndForget], commandProcessor, stateStore);
     }
     
     [Fact]

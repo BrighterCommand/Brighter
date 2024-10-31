@@ -22,22 +22,16 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-
 namespace Paramore.Brighter.Workflow;
 
-public class InMemoryStateStore : IStateStore
+public enum StepType
 {
-    private readonly Dictionary<Guid, WorkflowState> _states = new();
-
-    public void SaveState(WorkflowState state)
-    {
-        _states[state.Id] = state;
-    }
-
-    public WorkflowState? GetState(Guid id)
-    {
-        return _states.TryGetValue(id, out var state) ? state : null;
-    }
+    Choice,
+    Failure,
+    FireAndForget,
+    Publish,
+    RequestReaction,
+    Wait 
 }
+
+public record struct Step(string Description, bool End, string Name, StepType Type);

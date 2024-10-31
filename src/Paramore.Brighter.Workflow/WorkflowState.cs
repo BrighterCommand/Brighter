@@ -26,18 +26,6 @@ using System;
 
 namespace Paramore.Brighter.Workflow;
 
-public enum WorkflowStep
-{
-    Start,
-    FireAndForget,
-    RequestReaction,
-    Publish,
-    Choice,
-    Wait, 
-    Failure,
-    Finish
-}
-
 /// <summary>
 /// WorkflowState represents the current state of the workflow and tracks if it’s awaiting a response.
 /// </summary>
@@ -51,7 +39,7 @@ public class WorkflowState
     /// <summary>
     /// What is the current state of the workflow
     /// </summary>
-    public WorkflowStep CurrentStep { get; set; }
+    public Step CurrentStep { get; set; }
     
     /// <summary>
     /// Is the workflow currently awaiting an event response
@@ -59,21 +47,8 @@ public class WorkflowState
     public bool AwaitingResponse { get; set; } = false;
 
     /// <summary>
-    /// Constructs a new Workflows instance in a give state
-    /// </summary>
-    /// <param name="initialStep"></param>
-    public WorkflowState(WorkflowStep initialStep)
-    {
-        CurrentStep = initialStep;
-    }
-
-    /// <summary>
-    ///  Default constructor, used for serdes
+    ///  Constructs a new WorkflowState 
     /// </summary>
     public WorkflowState() { }
 }
 
-public class NullWorkflowState : WorkflowState
-{
-    public NullWorkflowState() : base(WorkflowStep.Finish) { }  
-}

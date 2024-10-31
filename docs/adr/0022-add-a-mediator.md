@@ -24,6 +24,8 @@ A particular reference for the requirements for this work is [AWS step functions
 
 This approach is intended to enable flexible, event-driven workflows that can handle various business processes and requirements, including asynchronous event handling and conditional branching.
 
+We are also influenced by the [Arazzo Specification](https://github.com/OAI/Arazzo-Specification/blob/main/versions/1.0.0.md) for defining workflows from AsyncAPI.
+
 
 ## Decision
 

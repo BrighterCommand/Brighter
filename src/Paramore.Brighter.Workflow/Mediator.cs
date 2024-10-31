@@ -22,10 +22,15 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter.Workflow;
 
-public class Mediator(IAmACommandProcessor commandProcessor, IStateStore stateStore)
+public class Mediator(IList<Step> steps, IAmACommandProcessor commandProcessor, IStateStore stateStore)
 {
     private readonly IAmACommandProcessor _commandProcessor = commandProcessor;
     private readonly IStateStore _stateStore = stateStore;
+    
+    
+
 }
