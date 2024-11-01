@@ -38,19 +38,21 @@ public class WorkflowState
     public bool AwaitingResponse { get; set; } = false;
     
     /// <summary>
-    /// What is the current state of the workflow
-    /// </summary>
-    public Step CurrentStep { get; set; }
-    
-    /// <summary>
     /// Used to store data that is passed between steps in the workflow
     /// </summary>
     public Dictionary<string, object> Bag { get; set; } = new();
     
     /// <summary>
+    /// What is the current state of the workflow
+    /// </summary>
+    public Step CurrentStep { get; set; }
+    
+    /// <summary>
     /// The id of the workflow, used to save-retrieve it from storage
     /// </summary>
     public  Guid Id { get; private set; } = Guid.NewGuid();
+
+    public Dictionary<Type, Action<Event, WorkflowState>> PendingResponses { get; private set; } = new();
 
     /// <summary>
     ///  Constructs a new WorkflowState 
