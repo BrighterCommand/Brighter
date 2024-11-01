@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Mediator.TestDoubles;
 using Paramore.Brighter.Workflow;
 using Polly.Registry;
@@ -23,7 +24,10 @@ public class MediatorOneStepFlowTests
         
         var stateStore = new InMemoryStateStore();
         _mediator = new Workflow.Mediator(
-            [new Step("Test of Workflow", new FireAndForgetAction<MyCommand>((state) => new MyCommand{Value = (state.Bag["MyState"] as string)!}), "Test", false)], 
+            [new Step("Test of Workflow", 
+                new FireAndForgetAction<MyCommand>((state) => new MyCommand{Value = (state.Bag["MyValue"] as string)!}), 
+                "Test", 
+                false)], 
             commandProcessor, 
             stateStore
             );
@@ -32,10 +36,9 @@ public class MediatorOneStepFlowTests
     [Fact]
     public void When_running_a_single_step_workflow()
     {
-        _mediator.InitializeWorkflow(new WorkflowState() {Bag = new Dictionary<string, object> {{"MyState", "Test"}}});
+        _mediator.InitializeWorkflow(new WorkflowState() {Bag = new Dictionary<string, object> {{"MyValue", "Test"}}});
         _mediator.RunWorkFlow();
         
-        //_should_send_a_command_to_the_command_processor
-        Assert.True(_myCommandHandler.Handled);    
+        _myCommandHandler.ReceivedCommand?.Value.Should().Be( "Test");    
     }
 }

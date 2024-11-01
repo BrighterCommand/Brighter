@@ -26,27 +26,17 @@ namespace Paramore.Brighter.Core.Tests.Mediator.TestDoubles
 {
     internal class MyCommandHandler : RequestHandler<MyCommand>
     {
-        private MyCommand _command;
-
-        public MyCommandHandler()
-        {
-            _command = null;
-        }
-
+        public MyCommand? ReceivedCommand { get; private set; }
+        
         public override MyCommand Handle(MyCommand command)
         {
             LogCommand(command);
             return base.Handle(command);
         }
 
-        public  bool ShouldReceive(MyCommand expectedCommand)
-        {
-            return (_command != null) && (expectedCommand.Id == _command.Id);
-        }
-
         private void LogCommand(MyCommand request)
         {
-            _command = request;
+            ReceivedCommand = request;
         }
     }
 }
