@@ -24,14 +24,4 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Workflow;
 
-public enum StepType
-{
-    Choice,
-    Failure,
-    FireAndForget,
-    Publish,
-    RequestReaction,
-    Wait 
-}
-
-public record struct Step(string Description, bool End, string Name, StepType Type);
+public record struct Step(string Name, IWorkflowAction Action, string Description, bool End);

@@ -22,15 +22,31 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.Workflow;
 
 public class Mediator(IList<Step> steps, IAmACommandProcessor commandProcessor, IStateStore stateStore)
 {
-    private readonly IAmACommandProcessor _commandProcessor = commandProcessor;
     private readonly IStateStore _stateStore = stateStore;
-    
-    
+    private WorkflowState? _state;
 
+
+    public void RunWorkFlow()
+    {
+        if (_state == null) 
+            throw new InvalidOperationException("Workflow has not been initialized");
+        
+        foreach (var step in steps)
+        {
+            step.Action.Handle(_state, commandProcessor);
+            if (step.End) break;
+        }
+    }
+
+    public void InitializeWorkflow(WorkflowState workflowState)
+    {
+        _state = workflowState;
+    }
 }

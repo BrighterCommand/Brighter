@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Workflow;
 
-public interface IMediatorState
+public interface IWorkflowAction
 {
-    IMediatorState Handle(WorkflowState state, IAmACommandProcessor commandProcessor);
+    void Handle(WorkflowState state, IAmACommandProcessor commandProcessor);
 }

@@ -1,4 +1,5 @@
-﻿using Paramore.Brighter.Core.Tests.Mediator.TestDoubles;
+﻿using System.Collections.Generic;
+using Paramore.Brighter.Core.Tests.Mediator.TestDoubles;
 using Paramore.Brighter.Workflow;
 using Polly.Registry;
 using Xunit;
@@ -21,12 +22,20 @@ public class MediatorOneStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var stateStore = new InMemoryStateStore();
-        _mediator = new Workflow.Mediator([new Step("Test of Workflow", true, "Test", StepType.FireAndForget], commandProcessor, stateStore);
+        _mediator = new Workflow.Mediator(
+            [new Step("Test of Workflow", new FireAndForgetAction<MyCommand>((state) => new MyCommand{Value = (state.Bag["MyState"] as string)!}), "Test", false)], 
+            commandProcessor, 
+            stateStore
+            );
     }
     
     [Fact]
     public void When_running_a_single_step_workflow()
     {
+        _mediator.InitializeWorkflow(new WorkflowState() {Bag = new Dictionary<string, object> {{"MyState", "Test"}}});
+        _mediator.RunWorkFlow();
         
+        //_should_send_a_command_to_the_command_processor
+        Assert.True(_myCommandHandler.Handled);    
     }
 }

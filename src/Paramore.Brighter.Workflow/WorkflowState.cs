@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.Workflow;
 
@@ -32,9 +33,9 @@ namespace Paramore.Brighter.Workflow;
 public class WorkflowState
 {
     /// <summary>
-    /// The id of the workflow, used to save-retrieve it from storage
+    /// Is the workflow currently awaiting an event response
     /// </summary>
-    public  Guid Id { get; private set; } = Guid.NewGuid();
+    public bool AwaitingResponse { get; set; } = false;
     
     /// <summary>
     /// What is the current state of the workflow
@@ -42,9 +43,14 @@ public class WorkflowState
     public Step CurrentStep { get; set; }
     
     /// <summary>
-    /// Is the workflow currently awaiting an event response
+    /// Used to store data that is passed between steps in the workflow
     /// </summary>
-    public bool AwaitingResponse { get; set; } = false;
+    public Dictionary<string, object> Bag { get; set; } = new();
+    
+    /// <summary>
+    /// The id of the workflow, used to save-retrieve it from storage
+    /// </summary>
+    public  Guid Id { get; private set; } = Guid.NewGuid();
 
     /// <summary>
     ///  Constructs a new WorkflowState 
