@@ -315,7 +315,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutation_Sweeper", "sampl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.MsSql", "src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj", "{758EE237-C722-4A0A-908C-2D08C1E59025}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Workflow", "src\Paramore.Brighter.Workflow\Paramore.Brighter.Workflow.csproj", "{F00B137A-C187-4C33-A37B-22AD40B71600}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MediatorWorkflow", "src\Paramore.Brighter.MediatorWorkflow\Paramore.Brighter.MediatorWorkflow.csproj", "{F00B137A-C187-4C33-A37B-22AD40B71600}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

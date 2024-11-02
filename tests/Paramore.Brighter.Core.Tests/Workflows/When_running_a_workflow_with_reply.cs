@@ -1,6 +1,6 @@
 ﻿using Paramore.Brighter.Core.Tests.Mediator.TestDoubles;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
-using Paramore.Brighter.Workflow;
+using Paramore.Brighter.MediatorWorkflow;
 using Polly.Registry;
 using Xunit;
 
@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Core.Tests.Workflows;
 public class MediatorTwoStepFlowTests  
 {
     private readonly MyCommandHandler _myCommandHandler;
-    private readonly Workflow.Mediator _mediator;
+    private readonly MediatorWorkflow.Mediator _mediator;
 
     public MediatorTwoStepFlowTests()
     {
@@ -22,7 +22,7 @@ public class MediatorTwoStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var stateStore = new InMemoryStateStore();
-        _mediator = new Workflow.Mediator(
+        _mediator = new MediatorWorkflow.Mediator(
             [new Step("Test of Workflow", 
                 new RequestAndReplyAction<MyCommand, MyEvent>(
                     (state) => new MyCommand{Value = (state.Bag["MyValue"] as string)!},

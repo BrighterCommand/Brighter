@@ -25,19 +25,38 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-namespace Paramore.Brighter.Workflow;
+namespace Paramore.Brighter.MediatorWorkflow;
 
-public class InMemoryStateStore : IStateStore
+/// <summary>
+/// WorkflowState represents the current state of the workflow and tracks if it’s awaiting a response.
+/// </summary>
+public class WorkflowState
 {
-    private readonly Dictionary<Guid, WorkflowState> _states = new();
+    /// <summary>
+    /// Is the workflow currently awaiting an event response
+    /// </summary>
+    public bool AwaitingResponse { get; set; } = false;
+    
+    /// <summary>
+    /// Used to store data that is passed between steps in the workflow
+    /// </summary>
+    public Dictionary<string, object> Bag { get; set; } = new();
+    
+    /// <summary>
+    /// What is the current state of the workflow
+    /// </summary>
+    public Step CurrentStep { get; set; }
+    
+    /// <summary>
+    /// The id of the workflow, used to save-retrieve it from storage
+    /// </summary>
+    public  Guid Id { get; private set; } = Guid.NewGuid();
 
-    public void SaveState(WorkflowState state)
-    {
-        _states[state.Id] = state;
-    }
+    public Dictionary<Type, Action<Event, WorkflowState>> PendingResponses { get; private set; } = new();
 
-    public WorkflowState? GetState(Guid id)
-    {
-        return _states.TryGetValue(id, out var state) ? state : null;
-    }
+    /// <summary>
+    ///  Constructs a new WorkflowState 
+    /// </summary>
+    public WorkflowState() { }
 }
+

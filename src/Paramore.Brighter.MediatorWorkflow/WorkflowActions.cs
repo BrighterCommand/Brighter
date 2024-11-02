@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Paramore.Brighter.Workflow;
+namespace Paramore.Brighter.MediatorWorkflow;
 
 public interface IWorkflowAction
 {

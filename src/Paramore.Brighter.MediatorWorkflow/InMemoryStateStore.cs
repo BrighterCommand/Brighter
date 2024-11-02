@@ -25,28 +25,19 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-namespace Paramore.Brighter.Workflow;
+namespace Paramore.Brighter.MediatorWorkflow;
 
-public class Mediator(IList<Step> steps, IAmACommandProcessor commandProcessor, IStateStore stateStore)
+public class InMemoryStateStore : IStateStore
 {
-    private readonly IStateStore _stateStore = stateStore;
-    private WorkflowState? _state;
+    private readonly Dictionary<Guid, WorkflowState> _states = new();
 
-
-    public void RunWorkFlow()
+    public void SaveState(WorkflowState state)
     {
-        if (_state == null) 
-            throw new InvalidOperationException("Workflow has not been initialized");
-        
-        foreach (var step in steps)
-        {
-            step.Action.Handle(_state, commandProcessor);
-            if (step.End) break;
-        }
+        _states[state.Id] = state;
     }
 
-    public void InitializeWorkflow(WorkflowState workflowState)
+    public WorkflowState? GetState(Guid id)
     {
-        _state = workflowState;
+        return _states.TryGetValue(id, out var state) ? state : null;
     }
 }

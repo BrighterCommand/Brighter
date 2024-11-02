@@ -25,38 +25,28 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-namespace Paramore.Brighter.Workflow;
+namespace Paramore.Brighter.MediatorWorkflow;
 
-/// <summary>
-/// WorkflowState represents the current state of the workflow and tracks if it’s awaiting a response.
-/// </summary>
-public class WorkflowState
+public class Mediator(IList<Step> steps, IAmACommandProcessor commandProcessor, IStateStore stateStore)
 {
-    /// <summary>
-    /// Is the workflow currently awaiting an event response
-    /// </summary>
-    public bool AwaitingResponse { get; set; } = false;
-    
-    /// <summary>
-    /// Used to store data that is passed between steps in the workflow
-    /// </summary>
-    public Dictionary<string, object> Bag { get; set; } = new();
-    
-    /// <summary>
-    /// What is the current state of the workflow
-    /// </summary>
-    public Step CurrentStep { get; set; }
-    
-    /// <summary>
-    /// The id of the workflow, used to save-retrieve it from storage
-    /// </summary>
-    public  Guid Id { get; private set; } = Guid.NewGuid();
+    private readonly IStateStore _stateStore = stateStore;
+    private WorkflowState? _state;
 
-    public Dictionary<Type, Action<Event, WorkflowState>> PendingResponses { get; private set; } = new();
 
-    /// <summary>
-    ///  Constructs a new WorkflowState 
-    /// </summary>
-    public WorkflowState() { }
+    public void RunWorkFlow()
+    {
+        if (_state == null) 
+            throw new InvalidOperationException("Workflow has not been initialized");
+        
+        foreach (var step in steps)
+        {
+            step.Action.Handle(_state, commandProcessor);
+            if (step.End) break;
+        }
+    }
+
+    public void InitializeWorkflow(WorkflowState workflowState)
+    {
+        _state = workflowState;
+    }
 }
-

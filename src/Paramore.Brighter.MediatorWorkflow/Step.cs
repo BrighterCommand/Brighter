@@ -22,6 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Workflow;
+namespace Paramore.Brighter.MediatorWorkflow;
 
 public record struct Step(string Name, IWorkflowAction Action, string Description, bool End);
