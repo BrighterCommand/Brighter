@@ -34,6 +34,12 @@ namespace Paramore.Brighter
     public class Event : IEvent
     {
         /// <summary>
+        /// An event may be the response to a command, in order to find the command that caused the event, we need to know the correlation id
+        /// In many cases correlation id is the command id
+        /// </summary>
+        public Guid CorrelationId { get; set; }
+        
+        /// <summary>
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>

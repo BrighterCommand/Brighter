@@ -22,11 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Core.Tests.Mediator.TestDoubles
+using System.Collections.Generic;
+
+namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
     internal class MyCommandHandler : RequestHandler<MyCommand>
     {
-        public MyCommand? ReceivedCommand { get; private set; }
+        public static List<MyCommand> ReceivedCommands { get;  } = [];
         
         public override MyCommand Handle(MyCommand command)
         {
@@ -36,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.Mediator.TestDoubles
 
         private void LogCommand(MyCommand request)
         {
-            ReceivedCommand = request;
+            ReceivedCommands.Add(request);
         }
     }
 }

@@ -27,36 +27,41 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.MediatorWorkflow;
 
-/// <summary>
-/// WorkflowState represents the current state of the workflow and tracks if it’s awaiting a response.
-/// </summary>
-public class WorkflowState
+public enum WorkflowState
 {
-    /// <summary>
-    /// Is the workflow currently awaiting an event response
-    /// </summary>
-    public bool AwaitingResponse { get; set; } = false;
-    
+    Ready,
+    Waiting,
+    Done
+}
+
+/// <summary>
+/// Workflow represents the current state of the workflow and tracks if it’s awaiting a response.
+/// </summary>
+public class Workflow
+{
     /// <summary>
     /// Used to store data that is passed between steps in the workflow
     /// </summary>
     public Dictionary<string, object> Bag { get; set; } = new();
     
     /// <summary>
-    /// What is the current state of the workflow
-    /// </summary>
-    public Step CurrentStep { get; set; }
-    
-    /// <summary>
     /// The id of the workflow, used to save-retrieve it from storage
     /// </summary>
     public  Guid Id { get; private set; } = Guid.NewGuid();
 
-    public Dictionary<Type, Action<Event, WorkflowState>> PendingResponses { get; private set; } = new();
+    /// <summary>
+    /// If we are awaiting a response, we store the type of the response and the action to take when it arrives
+    /// </summary>
+    public Dictionary<Type, Action<Event, Workflow>> PendingResponses { get; private set; } = new();
+    
+    /// <summary>
+    /// Is the workflow currently awaiting an event response
+    /// </summary>
+    public WorkflowState State { get; set; } = WorkflowState.Ready;
 
     /// <summary>
-    ///  Constructs a new WorkflowState 
+    ///  Constructs a new Workflow 
     /// </summary>
-    public WorkflowState() { }
+    public Workflow() { }
 }
 

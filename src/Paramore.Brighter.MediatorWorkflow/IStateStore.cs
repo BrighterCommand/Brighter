@@ -35,12 +35,12 @@ public interface IStateStore
     /// Saves the workflow state
     /// </summary>
     /// <param name="state">The workflow state</param>
-    void SaveState(WorkflowState state);
+    void SaveState(Workflow state);
     
     /// <summary>
     /// Retrieves a workflow via its Id
     /// </summary>
     /// <param name="id">The id of the workflow</param>
     /// <returns>if found, the workflow, otherwise null</returns>
-    WorkflowState? GetState(Guid id);
+    Workflow? GetState(Guid id);
 }

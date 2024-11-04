@@ -27,26 +27,45 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.MediatorWorkflow;
 
-public class Mediator(IList<Step> steps, IAmACommandProcessor commandProcessor, IStateStore stateStore)
+/// <summary>
+/// The mediator orchestrates a workflow, executing each step in the sequence. 
+/// </summary>
+/// <param name="steps"></param>
+/// <param name="commandProcessor"></param>
+/// <param name="stateStore"></param>
+public class Mediator(IAmACommandProcessor commandProcessor)
 {
-    private readonly IStateStore _stateStore = stateStore;
-    private WorkflowState? _state;
-
-
-    public void RunWorkFlow()
+    /// <summary>
+    /// 
+    /// Runs the workflow by executing each step in the sequence.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
+    public void RunWorkFlow(Step? firstStep)
     {
-        if (_state == null) 
-            throw new InvalidOperationException("Workflow has not been initialized");
-        
-        foreach (var step in steps)
+        var step = firstStep;
+        while (step is not null)
         {
-            step.Action.Handle(_state, commandProcessor);
-            if (step.End) break;
+            step.Action.Handle(step.Flow, commandProcessor);
+            step.OnCompletion();
+            step = step.Next;
         }
     }
 
-    public void InitializeWorkflow(WorkflowState workflowState)
-    {
-        _state = workflowState;
+    /// <summary>
+    /// Receives an event and processes it if there is a pending response for the event type.
+    /// </summary>
+    /// <param name="event">The event to process.</param>
+    /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
+     public void ReceiveWorklowEvent(Event @event)
+     {
+        //     var state = stateStore.GetState(@event.CorrelationId);
+        //     
+        //     var eventType = @event.GetType();
+        //     
+        //     if (!state.PendingResponses.TryGetValue(eventType, out Action<Event, Workflow> replyFactory)) 
+        //         return;
+        //     
+        //     replyFactory(@event, state);
+        //     state.PendingResponses.Remove(eventType);
     }
 }

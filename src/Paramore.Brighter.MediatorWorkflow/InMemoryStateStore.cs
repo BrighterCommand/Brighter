@@ -29,14 +29,14 @@ namespace Paramore.Brighter.MediatorWorkflow;
 
 public class InMemoryStateStore : IStateStore
 {
-    private readonly Dictionary<Guid, WorkflowState> _states = new();
+    private readonly Dictionary<Guid, Workflow> _states = new();
 
-    public void SaveState(WorkflowState state)
+    public void SaveState(Workflow state)
     {
         _states[state.Id] = state;
     }
 
-    public WorkflowState? GetState(Guid id)
+    public Workflow? GetState(Guid id)
     {
         return _states.TryGetValue(id, out var state) ? state : null;
     }

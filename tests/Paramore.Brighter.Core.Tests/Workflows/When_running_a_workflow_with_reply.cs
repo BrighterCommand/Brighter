@@ -1,36 +1,38 @@
-﻿using Paramore.Brighter.Core.Tests.Mediator.TestDoubles;
-using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
+﻿using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.MediatorWorkflow;
 using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorTwoStepFlowTests  
+public class MediatorReplyStepFlowTests  
 {
-    private readonly MyCommandHandler _myCommandHandler;
-    private readonly MediatorWorkflow.Mediator _mediator;
+    private readonly Mediator _mediator;
 
-    public MediatorTwoStepFlowTests()
+    public MediatorReplyStepFlowTests()
     {
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
-        _myCommandHandler = new MyCommandHandler();
-        var handlerFactory = new SimpleHandlerFactorySync(_ => _myCommandHandler);
+        registry.Register<MyEvent, MyEventHandler>();
+        MyCommandHandler myCommandHandler = new();
+        var handlerFactory = new SimpleHandlerFactorySync(_ => myCommandHandler);
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-        PipelineBuilder<MyCommand>.ClearPipelineCache();    
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+            new PolicyRegistry());
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+
+        var flow = new Workflow();
+
+        var step = new Step("Test of Workflow",
+            new RequestAndReplyAction<MyCommand, MyEvent>(
+                () => new MyCommand { Value = (flow.Bag["MyValue"] as string)! },
+                (reply) => flow.Bag.Add("MyReply", ((MyEvent)reply).Data)),
+            () => { },
+            flow,
+            null);
         
-        var stateStore = new InMemoryStateStore();
-        _mediator = new MediatorWorkflow.Mediator(
-            [new Step("Test of Workflow", 
-                new RequestAndReplyAction<MyCommand, MyEvent>(
-                    (state) => new MyCommand{Value = (state.Bag["MyValue"] as string)!},
-                    (reply, state) => state.Bag.Add("MyReply", ((MyEvent) reply).Data)),
-                "Test", 
-                false)], 
-            commandProcessor, 
-            stateStore
+        _mediator = new Mediator(
+            commandProcessor 
         );
     }
     

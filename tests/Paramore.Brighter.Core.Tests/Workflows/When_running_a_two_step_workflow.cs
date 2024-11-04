@@ -8,12 +8,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorOneStepFlowTests 
+public class MediatorTwoStepFlowTests 
 {
     private readonly Mediator _mediator;
-    private readonly Step _step;
+    private readonly Step _stepOne;
 
-    public MediatorOneStepFlowTests()
+    public MediatorTwoStepFlowTests()
     {
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
@@ -29,21 +29,28 @@ public class MediatorOneStepFlowTests
             commandProcessor 
             );
 
-        _step = new Step("Test of Workflow",
+        
+        var stepTwo = new Step("Test of Workflow Two",
             new FireAndForgetAction<MyCommand>(() => new MyCommand { Value = (flow.Bag["MyValue"] as string)! }),
             () => { },
-            flow, 
+        flow,
             null
+            );
+        
+        _stepOne = new Step("Test of Workflow One",
+            new FireAndForgetAction<MyCommand>(() => new MyCommand { Value = (flow.Bag["MyValue"] as string)! }),
+            () => { flow.Bag["MyValue"] = "TestTwo"; }, 
+            flow,
+            stepTwo
             );
     }
     
     [Fact]
     public void When_running_a_single_step_workflow()
     {
-        MyCommandHandler.ReceivedCommands.Clear();
-        
-        _mediator.RunWorkFlow(_step);
+        _mediator.RunWorkFlow(_stepOne);
         
         MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
+        MyCommandHandler.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();
     }
 }

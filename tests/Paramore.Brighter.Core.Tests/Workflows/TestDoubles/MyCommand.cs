@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.Core.Tests.Mediator.TestDoubles
+namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
     public class MyCommand : Command
     {

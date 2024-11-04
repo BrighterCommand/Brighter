@@ -26,11 +26,11 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal class MyEventHandler(IDictionary<string, string> receivedMessages) : RequestHandler<CommandProcessors.TestDoubles.MyEvent>
+    internal class MyEventHandler(MediatorWorkflow.Mediator mediator) : RequestHandler<MyEvent>
     {
-        public override CommandProcessors.TestDoubles.MyEvent Handle(CommandProcessors.TestDoubles.MyEvent @event)
+        public override MyEvent Handle(MyEvent @event)
         {
-            receivedMessages.Add(nameof(MyEventHandler), @event.Id);
+            mediator.ReceiveWorklowEvent(@event);
             return base.Handle(@event);
         }
     }
