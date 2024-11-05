@@ -23,24 +23,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.MediatorWorkflow;
 
-/// <summary>
-/// Used to store the state of a workflow
-/// </summary>
-public interface IStateStore
+public class InMemoryWorkflowStore : IAmAWorkflowStore
 {
-    /// <summary>
-    /// Saves the workflow state
-    /// </summary>
-    /// <param name="state">The workflow state</param>
-    void SaveState(Workflow state);
-    
-    /// <summary>
-    /// Retrieves a workflow via its Id
-    /// </summary>
-    /// <param name="id">The id of the workflow</param>
-    /// <returns>if found, the workflow, otherwise null</returns>
-    Workflow? GetState(Guid id);
+    private readonly Dictionary<Guid, Workflow> _flows = new();
+
+    public void SaveWorkflow<TData>(Workflow<TData> workflow) where TData : IAmTheWorkflowData
+    {
+        _flows[workflow.Id] = workflow;
+    }
+
+    public Workflow? GetWorkflow(Guid id)
+    {
+        return _flows.TryGetValue(id, out var state) ? state : null;
+    }
 }

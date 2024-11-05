@@ -23,29 +23,45 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 
 namespace Paramore.Brighter.MediatorWorkflow;
 
 /// <summary>
 /// The mediator orchestrates a workflow, executing each step in the sequence. 
 /// </summary>
-/// <param name="steps"></param>
-/// <param name="commandProcessor"></param>
-/// <param name="stateStore"></param>
-public class Mediator(IAmACommandProcessor commandProcessor)
+public class Mediator<TData> where TData : IAmTheWorkflowData
 {
+    private readonly IAmACommandProcessor _commandProcessor;
+    private readonly IAmAWorkflowStore _workflowStore;
+
+    /// <summary>
+    /// The mediator orchestrates a workflow, executing each step in the sequence. 
+    /// </summary>
+    /// <param name="commandProcessor"></param>
+    /// <param name="workflowStore"></param>
+    public Mediator(IAmACommandProcessor commandProcessor, IAmAWorkflowStore workflowStore)
+    {
+        _commandProcessor = commandProcessor;
+        _workflowStore = workflowStore;
+    }
+
     /// <summary>
     /// 
     /// Runs the workflow by executing each step in the sequence.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
-    public void RunWorkFlow(Step? firstStep)
-    {
+    public void RunWorkFlow(Step<TData>? firstStep)
+    {                       
         var step = firstStep;
         while (step is not null)
         {
-            step.Action.Handle(step.Flow, commandProcessor);
+            step.Flow.State = WorkflowState.Running;
+            step.Action.Handle(step.Flow, _commandProcessor);
+            if (step.Flow.State == WorkflowState.Waiting)
+            {
+                
+                return;
+            }
             step.OnCompletion();
             step = step.Next;
         }
@@ -58,14 +74,19 @@ public class Mediator(IAmACommandProcessor commandProcessor)
     /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
      public void ReceiveWorklowEvent(Event @event)
      {
-        //     var state = stateStore.GetState(@event.CorrelationId);
-        //     
-        //     var eventType = @event.GetType();
-        //     
-        //     if (!state.PendingResponses.TryGetValue(eventType, out Action<Event, Workflow> replyFactory)) 
-        //         return;
-        //     
-        //     replyFactory(@event, state);
-        //     state.PendingResponses.Remove(eventType);
+        var w = _workflowStore.GetWorkflow(@event.CorrelationId);
+        
+        if (w is not Workflow<TData> workflow)
+            throw new InvalidOperationException("Workflow has not been stored");
+             
+        var eventType = @event.GetType();
+             
+        if (!workflow.PendingResponses.TryGetValue(eventType, out Action<Event, Workflow<TData>>? replyFactory)) 
+            return;
+             
+        replyFactory(@event, workflow);
+        workflow.State = WorkflowState.Running;
+        workflow.PendingResponses.Remove(eventType);
+        RunWorkFlow(workflow.CurrentStep);
     }
 }

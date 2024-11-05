@@ -23,15 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using Paramore.Brighter.MediatorWorkflow;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal class MyEventHandler(MediatorWorkflow.Mediator mediator) : RequestHandler<MyEvent>
+    internal class MyEventHandler(Mediator<WorkflowTestData>? mediator) : RequestHandler<MyEvent>
     {
+        public static List<MyEvent> ReceivedEvents { get;  } = [];
         public override MyEvent Handle(MyEvent @event)
         {
-            mediator.ReceiveWorklowEvent(@event);
+            LogEvent(@event);
+            mediator?.ReceiveWorklowEvent(@event);
             return base.Handle(@event);
+        }
+        
+        private void LogEvent(MyEvent request)
+        {
+            ReceivedEvents.Add(request);
         }
     }
 }

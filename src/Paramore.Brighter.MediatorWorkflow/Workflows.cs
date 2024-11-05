@@ -9,28 +9,28 @@ namespace Paramore.Brighter.MediatorWorkflow;
 /// <param name="Action">The type of action we take with the step</param>
 /// <param name="Flow">The workflow that we belong to</param>
 /// <param name="Next">What is the next step in sequence</param>
-public record Step(string Name, IWorkflowAction Action, Action OnCompletion, Workflow Flow, Step? Next);
+public record Step<TData>(string Name, IWorkflowAction<TData> Action, Action OnCompletion, Workflow<TData> Flow, Step<TData>? Next) where TData : IAmTheWorkflowData;
 
-public interface IWorkflowAction
+public interface IWorkflowAction<TData> where TData : IAmTheWorkflowData
 {
-    void Handle(Workflow state, IAmACommandProcessor commandProcessor);
+    void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor);
 }
 
-public class FireAndForgetAction<TRequest>(Func<TRequest> requestFactory) : IWorkflowAction where TRequest : class, IRequest
+public class FireAndForgetAction<TRequest, TData>(Func<TRequest> requestFactory) : IWorkflowAction<TData> where TRequest : class, IRequest where TData : IAmTheWorkflowData
 {
-    public void Handle(Workflow state, IAmACommandProcessor commandProcessor)
+    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor) 
     {
         commandProcessor.Send(requestFactory());
     }
 }
 
-public class RequestAndReplyAction<TRequest, TReply>(Func<TRequest> requestFactory, Action<Event> replyFactory) 
-    : IWorkflowAction where TRequest : class, IRequest where TReply : class, IRequest
+public class RequestAndReplyAction<TRequest, TReply, TData>(Func<TRequest> requestFactory, Action<Event> replyFactory) 
+    : IWorkflowAction<TData> where TRequest : class, IRequest where TReply : class, IRequest where TData : IAmTheWorkflowData
 {
-    public void Handle(Workflow state, IAmACommandProcessor commandProcessor)
+    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
         commandProcessor.Send(requestFactory());
        
-        state.PendingResponses.Add(typeof(TReply), (reply, state) => replyFactory(reply));
+        state.PendingResponses.Add(typeof(TReply), (reply, _) => replyFactory(reply));
     }
 }

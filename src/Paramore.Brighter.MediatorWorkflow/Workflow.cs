@@ -27,22 +27,44 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.MediatorWorkflow;
 
+/// <summary>
+///  What state is the workflow in
+/// </summary>
 public enum WorkflowState
 {
     Ready,
+    Running,
     Waiting,
-    Done
+    Done,
+}
+
+/// <summary>
+/// empty class, used as maker for the workflow data
+/// </summary>
+public abstract class Workflow { }
+
+/// <summary>
+/// Interface for the data that is passed between steps in the workflow
+/// </summary>
+public interface  IAmTheWorkflowData
+{
+    /// <summary>
+    /// Bucket for  data that is passed between steps in the workflow
+    /// </summary>
+    public Dictionary<string, object> Bag { get; set; }    
 }
 
 /// <summary>
 /// Workflow represents the current state of the workflow and tracks if it’s awaiting a response.
 /// </summary>
-public class Workflow
+public class Workflow<TData> : Workflow where TData :  IAmTheWorkflowData
 {
     /// <summary>
-    /// Used to store data that is passed between steps in the workflow
+    /// What step are we currently at in the workflow
     /// </summary>
-    public Dictionary<string, object> Bag { get; set; } = new();
+    public Step<TData>? CurrentStep { get; set; }
+    
+    public TData Data { get; set; } 
     
     /// <summary>
     /// The id of the workflow, used to save-retrieve it from storage
@@ -52,7 +74,7 @@ public class Workflow
     /// <summary>
     /// If we are awaiting a response, we store the type of the response and the action to take when it arrives
     /// </summary>
-    public Dictionary<Type, Action<Event, Workflow>> PendingResponses { get; private set; } = new();
+    public Dictionary<Type, Action<Event, Workflow<TData>>> PendingResponses { get; private set; } = new();
     
     /// <summary>
     /// Is the workflow currently awaiting an event response
@@ -62,6 +84,6 @@ public class Workflow
     /// <summary>
     ///  Constructs a new Workflow 
     /// </summary>
-    public Workflow() { }
+    public Workflow(TData data) { Data = data; }
 }
 

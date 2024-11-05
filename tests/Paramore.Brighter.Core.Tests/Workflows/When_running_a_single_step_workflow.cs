@@ -10,8 +10,8 @@ namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorOneStepFlowTests 
 {
-    private readonly Mediator _mediator;
-    private readonly Step _step;
+    private readonly Mediator<WorkflowTestData> _mediator;
+    private readonly Step<WorkflowTestData> _step;
 
     public MediatorOneStepFlowTests()
     {
@@ -23,14 +23,18 @@ public class MediatorOneStepFlowTests
         var commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
-        var flow = new Workflow() {Bag = new Dictionary<string, object> {{"MyValue", "Test"}}};
+        var workflowData= new WorkflowTestData();
+        workflowData.Bag.Add("MyValue", "Test");
         
-        _mediator = new Mediator(
-            commandProcessor 
+        var flow = new Workflow<WorkflowTestData>(workflowData) ;
+        
+        _mediator = new Mediator<WorkflowTestData>(
+            commandProcessor, 
+            new InMemoryWorkflowStore() 
             );
 
-        _step = new Step("Test of Workflow",
-            new FireAndForgetAction<MyCommand>(() => new MyCommand { Value = (flow.Bag["MyValue"] as string)! }),
+        _step = new Step<WorkflowTestData>("Test of Workflow",
+            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! }),
             () => { },
             flow, 
             null

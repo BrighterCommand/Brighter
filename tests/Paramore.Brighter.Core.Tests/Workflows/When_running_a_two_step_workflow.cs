@@ -10,8 +10,8 @@ namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorTwoStepFlowTests 
 {
-    private readonly Mediator _mediator;
-    private readonly Step _stepOne;
+    private readonly Mediator<WorkflowTestData> _mediator;
+    private readonly Step<WorkflowTestData> _stepOne;
 
     public MediatorTwoStepFlowTests()
     {
@@ -23,23 +23,27 @@ public class MediatorTwoStepFlowTests
         var commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
-        var flow = new Workflow() {Bag = new Dictionary<string, object> {{"MyValue", "Test"}}};
+        var workflowData= new WorkflowTestData();
+        workflowData.Bag.Add("MyValue", "Test");
         
-        _mediator = new Mediator(
-            commandProcessor 
+        var flow = new Workflow<WorkflowTestData>(workflowData);
+        
+        _mediator = new Mediator<WorkflowTestData>(
+            commandProcessor,
+            new InMemoryWorkflowStore()
             );
 
         
-        var stepTwo = new Step("Test of Workflow Two",
-            new FireAndForgetAction<MyCommand>(() => new MyCommand { Value = (flow.Bag["MyValue"] as string)! }),
+        var stepTwo = new Step<WorkflowTestData>("Test of Workflow Two",
+            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! }),
             () => { },
         flow,
             null
             );
         
-        _stepOne = new Step("Test of Workflow One",
-            new FireAndForgetAction<MyCommand>(() => new MyCommand { Value = (flow.Bag["MyValue"] as string)! }),
-            () => { flow.Bag["MyValue"] = "TestTwo"; }, 
+        _stepOne = new Step<WorkflowTestData>("Test of Workflow One",
+            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! }),
+            () => { flow.Data.Bag["MyValue"] = "TestTwo"; }, 
             flow,
             stepTwo
             );
