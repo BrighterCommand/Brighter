@@ -80,7 +80,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
             {routingKey, producer}
         });
         
-        IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
             policyRegistry, 
             messageMapperRegistry, 
@@ -126,7 +126,7 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert 
-        _exportedActivities.Count.Should().Be(18);
+        _exportedActivities.Count.Should().Be(21);
         _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
         
         //there should be a create span for the batch

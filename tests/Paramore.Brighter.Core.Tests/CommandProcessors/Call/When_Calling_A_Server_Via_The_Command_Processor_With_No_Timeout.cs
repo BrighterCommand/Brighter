@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var timeProvider = fakeTimeProvider;
             var tracer = new BrighterTracer(timeProvider);
-            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 
                 messageMapperRegistry,

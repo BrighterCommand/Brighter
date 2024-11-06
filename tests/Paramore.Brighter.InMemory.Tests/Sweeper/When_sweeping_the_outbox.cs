@@ -52,7 +52,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            var bus = new ExternalBusService<Message, CommittableTransaction>(
+            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,
@@ -128,7 +128,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();            
             
-            var bus = new ExternalBusService<Message, CommittableTransaction>(
+            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,
@@ -203,7 +203,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var bus = new ExternalBusService<Message, CommittableTransaction>(
+            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,
@@ -287,7 +287,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var bus = new ExternalBusService<Message, CommittableTransaction>(
+            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,

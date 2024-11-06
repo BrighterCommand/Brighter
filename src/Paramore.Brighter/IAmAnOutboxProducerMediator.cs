@@ -9,24 +9,8 @@ namespace Paramore.Brighter
     /// An external bus service allows us to send messages to external systems
     /// The interaction with the CommandProcessor is mostly via the Outbox and the Message Mapper
     /// </summary>
-    public interface IAmAnExternalBusService : IDisposable
+    public interface IAmAnOutboxProducerMediator : IDisposable
     {
-
-        /// <summary>
-        /// Archive Message from the outbox to the outbox archive provider
-        /// </summary>
-        /// <param name="dispatchedSince">Minimum age</param>
-        /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
-        void Archive(TimeSpan dispatchedSince, RequestContext requestContext);
-
-        /// <summary>
-        /// Archive Message from the outbox to the outbox archive provider
-        /// </summary>
-        /// <param name="dispatchedSince">How stale is the message that we want to archive</param>
-        /// <param name="requestContext">The context for the request pipeline; gives us the OTel span for example</param>
-        /// <param name="cancellationToken">The Cancellation Token</param>
-        Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext, CancellationToken cancellationToken);
-        
         /// <summary>
         /// Used with RPC to call a remote service via the external bus
         /// </summary>
@@ -119,7 +103,7 @@ namespace Paramore.Brighter
     /// An external bus service allows us to send messages to external systems
     /// The interaction with the CommandProcessor is mostly via the Outbox and the Message Mapper
     /// </summary>
-    public interface IAmAnExternalBusService<TMessage, TTransaction> : IDisposable
+    public interface IAmAnOutboxProducerMediator<TMessage, TTransaction> : IDisposable
     {
         /// <summary>
         /// Adds a message to the outbox

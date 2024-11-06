@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         [Fact]
         public void When_Creating_A_Command_Processor_Without_Message_Transformer_Async()
         {                                             
-            _exception = Catch.Exception(() => new ExternalBusService<Message, CommittableTransaction>(
+            _exception = Catch.Exception(() => new OutboxProducerMediator<Message, CommittableTransaction>(
                 _producerRegistry, 
                 _policyRegistry,
                 _messageMapperRegistry,

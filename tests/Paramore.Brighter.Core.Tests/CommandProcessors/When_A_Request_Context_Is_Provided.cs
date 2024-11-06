@@ -170,7 +170,7 @@ public class RequestContextPresentTests : IDisposable
         var tracer = new BrighterTracer(timeProvider);
         var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
-        var bus = new ExternalBusService<Message, CommittableTransaction>(
+        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
             _policyRegistry,
             messageMapperRegistry,
@@ -220,7 +220,7 @@ public class RequestContextPresentTests : IDisposable
         var tracer = new BrighterTracer(timeProvider);
         var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
-        var bus = new ExternalBusService<Message, CommittableTransaction>(
+        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
             _policyRegistry,
             messageMapperRegistry,
@@ -270,7 +270,7 @@ public class RequestContextPresentTests : IDisposable
         var tracer = new BrighterTracer(timeProvider);
         var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
         
-        var bus = new ExternalBusService<Message, CommittableTransaction>(
+        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
             _policyRegistry,
             messageMapperRegistry,
@@ -324,7 +324,7 @@ public class RequestContextPresentTests : IDisposable
         var tracer = new BrighterTracer(timeProvider);
         var fakeOutbox = new InMemoryOutbox(timeProvider);
         
-        var bus = new ExternalBusService<Message, CommittableTransaction>(
+        var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
             _policyRegistry,
             messageMapperRegistry,

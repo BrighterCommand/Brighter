@@ -30,7 +30,6 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
-using System.Transactions;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
@@ -94,7 +93,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
             
-            services.TryAddSingleton<IAmARequestContextFactory>(options.RequestContextFactory);
+            services.TryAddSingleton(options.RequestContextFactory);
 
             if (options.FeatureSwitchRegistry != null)
                 services.TryAddSingleton(options.FeatureSwitchRegistry);
@@ -136,9 +135,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="configure">A callback that allows you to configure <see cref="ExternalBusConfiguration"/> options</param>
-        /// <param name="transactionProvider">The transaction provider for the outbox, can be null for in-memory default
-        /// of <see cref="CommittableTransactionProvider"/> which you must set the generic type to <see cref="CommittableTransaction"/> for
-        /// </param>
         /// <param name="serviceLifetime">The lifetime of the transaction provider</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder UseExternalBus(
@@ -222,8 +218,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             brighterBuilder.Services.TryAddSingleton<IAmExternalBusConfiguration>(busConfiguration);
            
-            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnExternalBusService),
-               (serviceProvider) => BuildExternalBus(
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxProducerMediator),
+               (serviceProvider) => BuildOutBoxProducerMediator(
                    serviceProvider, transactionType, busConfiguration, brighterBuilder.PolicyRegistry, outbox
                    ),
                ServiceLifetime.Singleton));
@@ -237,7 +233,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             INeedMessaging messagingBuilder,
             IUseRpc useRequestResponse)
         {
-            var eventBus = provider.GetService<IAmAnExternalBusService>();
+            var eventBus = provider.GetService<IAmAnOutboxProducerMediator>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
 
@@ -325,7 +321,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return commandProcessor;
         }
         
-        private static IAmAnExternalBusService BuildExternalBus(IServiceProvider serviceProvider,
+        private static IAmAnOutboxProducerMediator BuildOutBoxProducerMediator(IServiceProvider serviceProvider,
             Type transactionType,
             ExternalBusConfiguration busConfiguration,
             IPolicyRegistry<string> policyRegistry,
@@ -333,9 +329,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             //Because the bus has specialized types as members, we need to create the bus type dynamically
             //again to prevent someone configuring Brighter from having to pass generic types
-            var busType = typeof(ExternalBusService<,>).MakeGenericType(typeof(Message), transactionType);
+            var busType = typeof(OutboxProducerMediator<,>).MakeGenericType(typeof(Message), transactionType);
 
-            return (IAmAnExternalBusService)Activator.CreateInstance(
+            return (IAmAnOutboxProducerMediator)Activator.CreateInstance(
                 busType,
                 busConfiguration.ProducerRegistry,
                 policyRegistry,
@@ -344,13 +340,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 TransformFactoryAsync(serviceProvider),
                 Tracer(serviceProvider),
                 outbox,
-                busConfiguration.ArchiveProvider,
                 RequestContextFactory(serviceProvider),
                 busConfiguration.OutboxTimeout,
                 busConfiguration.MaxOutStandingMessages,
                 busConfiguration.MaxOutStandingCheckInterval,
                 busConfiguration.OutBoxBag,
-                busConfiguration.ArchiveBatchSize,
                 TimeProvider.System,
                 busConfiguration.InstrumentationOptions);
         }
