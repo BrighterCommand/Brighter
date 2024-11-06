@@ -11,27 +11,28 @@ using Paramore.Brighter.Observability;
 using Polly;
 using Polly.Registry;
 
+// ReSharper disable StaticMemberInGenericType
+
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Provide services to CommandProcessor that persist across the lifetime of the application. Allows separation from
-    /// elements that have a lifetime linked to the scope of a request, or are transient for DI purposes
+    /// Mediates the interaction between a producer and an outbox. As we want to write to the outbox, and then send from there
+    /// to the producer, we need to take control of produce operations to mediate between the two in a transaction.
+    /// NOTE: This class is singleton. The CommandProcessor by contrast, is transient or more typically scoped. 
     /// </summary>
-    public class ExternalBusService<TMessage, TTransaction> : IAmAnExternalBusService,
-        IAmAnExternalBusService<TMessage, TTransaction>
+    public class OutboxProducerMediator<TMessage, TTransaction> : IAmAnOutboxProducerMediator,
+        IAmAnOutboxProducerMediator<TMessage, TTransaction>
         where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         private readonly IPolicyRegistry<string> _policyRegistry;
-        private readonly IAmAnArchiveProvider? _archiveProvider;
         private readonly TransformPipelineBuilder _transformPipelineBuilder;
         private readonly TransformPipelineBuilderAsync _transformPipelineBuilderAsync;
         private readonly IAmAnOutboxSync<TMessage, TTransaction>? _outBox;
         private readonly IAmAnOutboxAsync<TMessage, TTransaction>? _asyncOutbox;
         private readonly int _outboxTimeout;
         private readonly IAmAProducerRegistry _producerRegistry;
-        private readonly int _archiveBatchSize;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
 
@@ -47,7 +48,6 @@ namespace Paramore.Brighter
 
         private const string NoSyncOutboxError = "A sync Outbox must be defined.";
         private const string NoAsyncOutboxError = "An async Outbox must be defined.";
-        private const string NoArchiveProviderError = "An Archive Provider must be defined.";
             
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
@@ -59,7 +59,7 @@ namespace Paramore.Brighter
         private readonly TimeProvider _timeProvider;
 
         /// <summary>
-        /// Creates an instance of External Bus Services
+        /// Creates an instance of the Outbox Producer Mediator
         /// </summary>
         /// <param name="producerRegistry">A registry of producers</param>
         /// <param name="policyRegistry">A registry for reliability policies</param>
@@ -68,29 +68,26 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactoryAsync">The factory used to create a transformer pipeline for an async message mapper</param>
         /// <param name="tracer"></param>
         /// <param name="outbox">An outbox for transactional messaging, if none is provided, use an InMemoryOutbox</param>
-        /// <param name="archiveProvider">When archiving rows from the Outbox, abstracts to where we should send them</param>
         /// <param name="requestContextFactory"></param>
         /// <param name="outboxTimeout">How long to timeout for with an outbox</param>
         /// <param name="maxOutStandingMessages">How many messages can become outstanding in the Outbox before we throw an OutboxLimitReached exception</param>
         /// <param name="maxOutStandingCheckInterval">How long before we check for maxOutStandingMessages</param>
         /// <param name="outBoxBag">An outbox may require additional arguments, such as a topic list to search</param>
-        /// <param name="archiveBatchSize">What batch size to use when archiving from the Outbox</param>
         /// <param name="timeProvider"></param>
         /// <param name="instrumentationOptions">How verbose do we want our instrumentation to be</param>
-        public ExternalBusService(IAmAProducerRegistry producerRegistry,
+        public OutboxProducerMediator(
+            IAmAProducerRegistry producerRegistry,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
             IAmABrighterTracer tracer,
             IAmAnOutbox? outbox = null,
-            IAmAnArchiveProvider? archiveProvider = null,
             IAmARequestContextFactory? requestContextFactory = null,
             int outboxTimeout = 300,
             int maxOutStandingMessages = -1,
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
-            int archiveBatchSize = 100,
             TimeProvider? timeProvider = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
@@ -98,7 +95,6 @@ namespace Paramore.Brighter
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
             _policyRegistry = policyRegistry ??
                               throw new ConfigurationException("Missing Policy Registry for External Bus Services");
-            _archiveProvider = archiveProvider;
 
             requestContextFactory ??= new InMemoryRequestContextFactory();
 
@@ -119,7 +115,7 @@ namespace Paramore.Brighter
             _transformPipelineBuilderAsync =
                 new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
-            //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
+            //default to in-memory; expectation for an in memory box is Message and CommittableTransaction
             outbox ??= new InMemoryOutbox(TimeProvider.System);
             outbox.Tracer = tracer;
 
@@ -130,7 +126,6 @@ namespace Paramore.Brighter
             _maxOutStandingMessages = maxOutStandingMessages;
             _maxOutStandingCheckInterval = maxOutStandingCheckInterval ?? TimeSpan.FromMilliseconds(1000);
             _outBoxBag = outBoxBag ?? new Dictionary<string, object>();
-            _archiveBatchSize = archiveBatchSize;
             _instrumentationOptions = instrumentationOptions;
             _tracer = tracer;
 
@@ -151,7 +146,7 @@ namespace Paramore.Brighter
             if (_disposed)
                 return;
 
-            if (disposing && _producerRegistry != null)
+            if (disposing)
                 _producerRegistry.CloseAll();
             _disposed = true;
         }
@@ -240,86 +235,6 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write message {message.Id} to the outbox");
-        }
-
-        /// <summary>
-        /// Archive Message from the outbox to the outbox archive provider
-        /// Throws any archiving exception
-        /// </summary>
-        /// <param name="dispatchedSince">Minimum age</param>
-        /// <param name="requestContext">The request context for the pipeline</param>
-        public void Archive(TimeSpan dispatchedSince, RequestContext requestContext)
-        {
-            try
-            {
-                if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
-                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
-                var messages = _outBox
-                    .DispatchedMessages(dispatchedSince, requestContext, _archiveBatchSize)
-                    .ToArray();
-
-                s_logger.LogInformation(
-                    "Found {NumberOfMessageArchived} message to archive, batch size : {BatchSize}",
-                    messages.Count(), _archiveBatchSize
-                );
-
-                if (messages.Length <= 0) return;
-
-                foreach (var message in messages)
-                {
-                    _archiveProvider.ArchiveMessage(message);
-                }
-
-                _outBox.Delete(messages.Select(e => e.Id).ToArray(), requestContext);
-
-                s_logger.LogInformation(
-                    "Successfully archived {NumberOfMessageArchived}, batch size : {BatchSize}",
-                    messages.Count(),
-                    _archiveBatchSize
-                );
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e, "Error while archiving from the outbox");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Archive Message from the outbox to the outbox archive provider
-        /// Throws any archiving exception
-        /// </summary>
-        /// <param name="dispatchedSince"></param>
-        /// <param name="requestContext"></param>
-        /// <param name="cancellationToken">The Cancellation Token</param>
-        public async Task ArchiveAsync(TimeSpan dispatchedSince, RequestContext requestContext,
-            CancellationToken cancellationToken)
-        {
-            try
-            {
-                if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
-                if (_archiveProvider is null) throw new ArgumentException(NoArchiveProviderError);
-                var messages = (await _asyncOutbox.DispatchedMessagesAsync(
-                    dispatchedSince, requestContext, pageSize: _archiveBatchSize,
-                    cancellationToken: cancellationToken
-                )).ToArray();
-
-                if (messages.Length <= 0) return;
-
-                foreach (var message in messages)
-                {
-                    await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
-                }
-
-                await _asyncOutbox.DeleteAsync(messages.Select(e => e.Id).ToArray(), requestContext,
-                    cancellationToken: cancellationToken
-                );
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e, "Error while archiving from the outbox");
-                throw;
-            }
         }
 
         /// <summary>
@@ -555,7 +470,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Commence a batch of outbox messages to add
         /// </summary>
-        /// <returns>The Id of the new batch</returns>
+        /// <returns>The ID of the new batch</returns>
         public string StartBatchAddToOutbox()
         {
             var batchId = Guid.NewGuid().ToString();
@@ -568,7 +483,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span,
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
                 transactionProvider != null, false, _instrumentationOptions);
 
             if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
@@ -587,7 +502,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Flush the batch of Messages to the outbox.
         /// </summary>
-        /// <param name="batchId">The Id of the batch to be flushed</param>
+        /// <param name="batchId">The ID of the batch to be flushed</param>
         /// <param name="transactionProvider"></param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="cancellationToken"></param>
@@ -597,7 +512,7 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
-            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext?.Span,
+            BrighterTracer.WriteOutboxEvent(OutboxDbOperation.Add, _outboxBatches[batchId], requestContext.Span,
                 transactionProvider != null, true, _instrumentationOptions);
 
             if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
@@ -654,7 +569,7 @@ namespace Paramore.Brighter
                 s_clearSemaphoreToken.Wait();
                 
                 var parentSpan = requestContext.Span;
-                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
 
                 try
@@ -687,7 +602,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer?.EndSpan(span);
+                    _tracer.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }
@@ -722,7 +637,7 @@ namespace Paramore.Brighter
                 await s_clearSemaphoreToken.WaitAsync();
                 
                 var parentSpan = requestContext.Span;
-                var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
+                var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
                     _instrumentationOptions);
                 try
                 {
@@ -760,7 +675,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
-                    _tracer?.EndSpan(span);
+                    _tracer.EndSpan(span);
                     s_clearSemaphoreToken.Release();
                     s_backgroundClearSemaphoreToken.Release();
                 }

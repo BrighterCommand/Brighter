@@ -86,7 +86,7 @@ namespace Paramore.Brighter
         private IPolicyRegistry<string>? _policyRegistry;
 
         private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
-        private IAmAnExternalBusService? _bus;
+        private IAmAnOutboxProducerMediator? _bus;
         private bool _useRequestReplyQueues;
         private IAmAChannelFactory? _responseChannelFactory;
         private IEnumerable<Subscription>? _replySubscriptions;
@@ -174,7 +174,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public INeedInstrumentation ExternalBus(
             ExternalBusType busType, 
-            IAmAnExternalBusService bus, 
+            IAmAnOutboxProducerMediator bus, 
             IAmAChannelFactory? responseChannelFactory = null, 
             IEnumerable<Subscription>? subscriptions = null,
             InboxConfiguration? inboxConfiguration = null
@@ -372,7 +372,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         INeedInstrumentation ExternalBus(
             ExternalBusType busType, 
-            IAmAnExternalBusService bus, 
+            IAmAnOutboxProducerMediator bus, 
             IAmAChannelFactory? responseChannelFactory = null, 
             IEnumerable<Subscription>? subscriptions = null,
             InboxConfiguration? inboxConfiguration = null

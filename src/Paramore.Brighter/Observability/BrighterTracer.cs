@@ -63,7 +63,32 @@ public class BrighterTracer : IAmABrighterTracer
     /// </summary>
     public void Dispose()
     {
-        ActivitySource?.Dispose();
+        ActivitySource.Dispose();
+    }
+
+    /// <summary>
+    /// If an activity has an exception, then we should record it on the span
+    /// </summary>
+    /// <param name="span"></param>
+    /// <param name="exceptions"></param>
+    public void AddExceptionToSpan(Activity? span, IEnumerable<Exception> exceptions)
+    {
+        if (span == null ) return;
+
+        var exceptionList = exceptions.ToArray();
+        
+        if (exceptionList.Length == 0) return;
+        
+        if (exceptionList .Length == 1)
+        {
+            span.RecordException(exceptionList[0]);
+            span.SetStatus(ActivityStatusCode.Error, exceptionList[0].Message);
+            return;
+        }
+
+        var exception = new  AggregateException("Operation failed, see inner exceptions for details",  exceptionList); 
+        span.RecordException(exception);
+        span.SetStatus(ActivityStatusCode.Error, exception.Message);
     }
 
     /// <summary>
@@ -282,6 +307,43 @@ public class BrighterTracer : IAmABrighterTracer
         
         if(activity is not null)
             Activity.Current = activity;
+
+        return activity;
+    }
+
+    /// <summary>
+    /// Creates a span for an archive operation. Because a sweeper may not create an externa bus, but just use the archiver directly, we
+    /// check for this existing and then recreate directly in the archive provider if it does not exist
+    /// </summary>
+    /// <param name="parentActivity">A parent activity that called this one</param>
+    /// <param name="dispatchedSince">The minimum age of a row to be archived</param>
+    /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
+    /// <returns></returns>
+    public Activity? CreateArchiveSpan(
+        Activity? parentActivity,
+        TimeSpan dispatchedSince,
+        InstrumentationOptions options = InstrumentationOptions.All)
+    {
+        var operation = CommandProcessorSpanOperation.Archive;
+        var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {operation.ToSpanName()}";
+        var kind = ActivityKind.Producer;
+        var parentId = parentActivity?.Id;
+        var now = _timeProvider.GetUtcNow();  
+        var tags = new ActivityTagsCollection()
+        
+        {
+            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
+            { BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds }
+        };
+        
+        var activity = ActivitySource.StartActivity(
+            name: spanName,
+            kind: kind,
+            parentId: parentId,
+            tags: tags,
+            startTime: now);
+        
+         Activity.Current = activity;
 
         return activity;
     }
@@ -539,7 +601,6 @@ public class BrighterTracer : IAmABrighterTracer
     /// <summary>
     /// Create an event representing the external service bus calling the outbox
     /// This is generic and not specific details from a particular outbox and is thus mostly message properties
-    /// This is a batch version of <see cref="WriteOutbox"/>
     /// NOTE: Events are static, as we only need the instance state to create an activity
     /// </summary>
     /// <param name="operation">What <see cref="OutboxDbOperation"/> are we performing on the group of messages</param>

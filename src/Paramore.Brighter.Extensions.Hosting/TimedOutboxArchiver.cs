@@ -25,29 +25,43 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+// ReSharper disable StaticMemberInGenericType
 
 namespace Paramore.Brighter.Extensions.Hosting
 {
-
     /// <summary>
     /// The archiver will find messages in the outbox that are older than a certain age and archive them
     /// </summary>
-    /// <param name="serviceScopeFactory">Needed to create a scope within which to create a <see cref="CommandProcessor"/></param>
-    /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
-    /// <param name="options">The <see cref="TimedOutboxArchiverOptions"/> that control how the archiver runs, such as interval</param>
-    public class TimedOutboxArchiver(
-        IServiceScopeFactory serviceScopeFactory,
-        IDistributedLock distributedLock,
-        TimedOutboxArchiverOptions options
-        )
-        : IHostedService, IDisposable
+    public class TimedOutboxArchiver<TMessage, TTransaction> : IHostedService, IDisposable where TMessage : Message
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer _timer;
+        private readonly OutboxArchiver<TMessage, TTransaction> _archiver;
+        private readonly TimeSpan _dispatchedSince;
+        private readonly IDistributedLock _distributedLock;
+        private readonly TimedOutboxArchiverOptions _options;
+
+        /// <summary>
+        /// The archiver will find messages in the outbox that are older than a certain age and archive them
+        /// </summary>
+        /// <param name="archiver">The archiver to use</param>
+        /// <param name="dispatchedSince">How old should a message be, in order to archive it?</param>
+        /// <param name="distributedLock">Used to ensure that only one instance of the <see cref="TimedOutboxSweeper"/> is running</param>
+        /// <param name="options">The <see cref="TimedOutboxArchiverOptions"/> that control how the archiver runs, such as interval</param>
+        public TimedOutboxArchiver(
+            OutboxArchiver<TMessage, TTransaction> archiver,
+            TimeSpan dispatchedSince,
+            IDistributedLock distributedLock,
+            TimedOutboxArchiverOptions options)
+        {
+            _archiver = archiver;
+            _dispatchedSince = dispatchedSince;
+            _distributedLock = distributedLock;
+            _options = options;
+        }
 
         private const string LockingResourceName = "Archiver";
 
@@ -60,8 +74,8 @@ namespace Paramore.Brighter.Extensions.Hosting
         {
             s_logger.LogInformation("Outbox Archiver Service is starting");
 
-            _timer = new Timer(async (e) => await Archive(e, cancellationToken), null, TimeSpan.Zero,
-                TimeSpan.FromSeconds(options.TimerInterval));
+            _timer = new Timer(async e => await Archive(e, cancellationToken), null, TimeSpan.Zero,
+                TimeSpan.FromSeconds(_options.TimerInterval));
 
             return Task.CompletedTask;
         }
@@ -90,16 +104,13 @@ namespace Paramore.Brighter.Extensions.Hosting
 
         private async Task Archive(object state, CancellationToken cancellationToken)
         {
-            var lockId = await distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
+            var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, cancellationToken); 
             if (lockId != null)
             {
-                var scope = serviceScopeFactory.CreateScope();
                 s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
                 try
                 {
-                    IAmAnExternalBusService externalBusService = scope.ServiceProvider.GetService<IAmAnExternalBusService>();
-                    
-                    await externalBusService.ArchiveAsync(options.MinimumAge,  new RequestContext(), cancellationToken);
+                    await _archiver.ArchiveAsync(_dispatchedSince, new RequestContext(), cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -107,7 +118,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 }
                 finally
                 {
-                    await distributedLock.ReleaseLockAsync(LockingResourceName, lockId, cancellationToken);
+                    await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, cancellationToken);
                 }
 
                 s_logger.LogInformation("Outbox Sweeper sleeping");

@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
-using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
-using Polly;
-using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Archiving;
@@ -17,57 +13,19 @@ public class ServiceBusMessageStoreArchiverTestsAsync
 {
     private readonly InMemoryOutbox _outbox;
     private readonly InMemoryArchiveProvider _archiveProvider;
-    private readonly ExternalBusService<Message,CommittableTransaction> _bus;
     private readonly FakeTimeProvider _timeProvider;
     private readonly RoutingKey _routingKey = new("MyTopic");
+    private readonly OutboxArchiver<Message,CommittableTransaction> _archiver;
 
     public ServiceBusMessageStoreArchiverTestsAsync()
     {
-        var producer = new InMemoryProducer(new InternalBus(), new FakeTimeProvider())
-        {
-            Publication = {Topic = _routingKey, RequestType = typeof(MyCommand)}
-        };
-
-        var messageMapperRegistry = new MessageMapperRegistry(
-            null,
-            new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync())
-        );
-
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .RetryAsync();
-
-        var circuitBreakerPolicy = Policy
-            .Handle<Exception>()
-            .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-
-        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
-        {
-            { _routingKey, producer },
-        });
-
-        var policyRegistry = new PolicyRegistry
-        {
-            { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
-            { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
-        }; 
-        
         _timeProvider = new FakeTimeProvider();
         var tracer = new BrighterTracer();
         _outbox = new InMemoryOutbox(_timeProvider){Tracer = tracer};
         _archiveProvider = new InMemoryArchiveProvider();
         
-        _bus = new ExternalBusService<Message, CommittableTransaction>(
-            producerRegistry, 
-            policyRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer, 
-            _outbox,
-            _archiveProvider 
-        );
- 
+        _archiver = new OutboxArchiver<Message, CommittableTransaction>(_outbox, _archiveProvider);
+
     }
     
     [Fact]
@@ -92,7 +50,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         
         _timeProvider.Advance(TimeSpan.FromSeconds(30));
         
-        await _bus.ArchiveAsync(TimeSpan.FromSeconds(15), context, new CancellationToken());
+        await _archiver.ArchiveAsync(TimeSpan.FromSeconds(15), context);
         
         //assert
         _outbox.EntryCount.Should().Be(0);
@@ -122,7 +80,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         
         _timeProvider.Advance(TimeSpan.FromSeconds(30));
         
-        await _bus.ArchiveAsync(TimeSpan.FromSeconds(15), context, new CancellationToken());
+        await _archiver.ArchiveAsync(TimeSpan.FromSeconds(15), context);
         
         //assert
         _outbox.EntryCount.Should().Be(1);
@@ -148,7 +106,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         //act
         _outbox.EntryCount.Should().Be(3);
         
-        await _bus.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context, new CancellationToken());
+        await _archiver.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context);
         
         //assert
         _outbox.EntryCount.Should().Be(3);
@@ -164,7 +122,7 @@ public class ServiceBusMessageStoreArchiverTestsAsync
         var context = new RequestContext();
         
         //act
-        await _bus.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context, new CancellationToken());
+        await _archiver.ArchiveAsync(TimeSpan.FromMilliseconds(20000), context);
         
         //assert
         _outbox.EntryCount.Should().Be(0);

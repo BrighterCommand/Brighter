@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             var tracer = new BrighterTracer(_timeProvider);
             _outbox = new InMemoryOutbox(_timeProvider) {Tracer = tracer};
             
-            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 
                 messageMapperRegistry,

@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{_routingKey, producer},});
-            IAmAnExternalBusService bus = new ExternalBusService<Message, CommittableTransaction>(
+            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 
                 messageMapperRegistry,
