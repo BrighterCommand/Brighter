@@ -69,7 +69,7 @@ public class Workflow<TData> : Workflow where TData :  IAmTheWorkflowData
     /// <summary>
     /// The id of the workflow, used to save-retrieve it from storage
     /// </summary>
-    public  Guid Id { get; private set; } = Guid.NewGuid();
+    public  string Id { get; private set; } = Guid.NewGuid().ToString();
 
     /// <summary>
     /// If we are awaiting a response, we store the type of the response and the action to take when it arrives

@@ -29,15 +29,16 @@ namespace Paramore.Brighter.MediatorWorkflow;
 
 public class InMemoryWorkflowStore : IAmAWorkflowStore
 {
-    private readonly Dictionary<Guid, Workflow> _flows = new();
+    private readonly Dictionary<string, Workflow> _flows = new();
 
     public void SaveWorkflow<TData>(Workflow<TData> workflow) where TData : IAmTheWorkflowData
     {
         _flows[workflow.Id] = workflow;
     }
 
-    public Workflow? GetWorkflow(Guid id)
+    public Workflow? GetWorkflow(string? id)
     {
+        if (id is null) return null;
         return _flows.TryGetValue(id, out var state) ? state : null;
     }
 }

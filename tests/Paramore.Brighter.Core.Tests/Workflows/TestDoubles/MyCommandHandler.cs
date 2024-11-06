@@ -26,13 +26,14 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal class MyCommandHandler : RequestHandler<MyCommand>
+    internal class MyCommandHandler(IAmACommandProcessor? commandProcessor) : RequestHandler<MyCommand>
     {
         public static List<MyCommand> ReceivedCommands { get;  } = [];
         
         public override MyCommand Handle(MyCommand command)
         {
             LogCommand(command);
+            commandProcessor?.Publish(new MyEvent(command.Value) {CorrelationId = command.CorrelationId});
             return base.Handle(command);
         }
 

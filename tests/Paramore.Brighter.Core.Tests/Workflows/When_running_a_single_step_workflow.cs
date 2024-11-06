@@ -17,10 +17,11 @@ public class MediatorOneStepFlowTests
     {
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
-        MyCommandHandler myCommandHandler = new();
-        var handlerFactory = new SimpleHandlerFactorySync(_ => myCommandHandler);
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+        CommandProcessor commandProcessor = null;
+        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler(commandProcessor));
+
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();

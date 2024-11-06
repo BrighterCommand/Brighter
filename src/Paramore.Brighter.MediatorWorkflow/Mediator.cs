@@ -56,10 +56,11 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
         while (step is not null)
         {
             step.Flow.State = WorkflowState.Running;
+            step.Flow.CurrentStep = step;
             step.Action.Handle(step.Flow, _commandProcessor);
             if (step.Flow.State == WorkflowState.Waiting)
             {
-                
+                _workflowStore.SaveWorkflow(step.Flow);
                 return;
             }
             step.OnCompletion();
@@ -72,8 +73,11 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
     /// </summary>
     /// <param name="event">The event to process.</param>
     /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
-     public void ReceiveWorklowEvent(Event @event)
+     public void ReceiveWorkflowEvent(Event @event)
      {
+         if (@event.CorrelationId is null)
+             throw new InvalidOperationException("CorrelationId should not be null; needed to retrieve state of workflow");
+         
         var w = _workflowStore.GetWorkflow(@event.CorrelationId);
         
         if (w is not Workflow<TData> workflow)
@@ -83,10 +87,14 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
              
         if (!workflow.PendingResponses.TryGetValue(eventType, out Action<Event, Workflow<TData>>? replyFactory)) 
             return;
+
+        if (workflow.CurrentStep is null)
+            throw new InvalidOperationException($"Current step of workflow #{workflow.Id} should not be null");
              
         replyFactory(@event, workflow);
+        workflow.CurrentStep.OnCompletion();
         workflow.State = WorkflowState.Running;
         workflow.PendingResponses.Remove(eventType);
-        RunWorkFlow(workflow.CurrentStep);
+        RunWorkFlow(workflow.CurrentStep.Next);
     }
 }

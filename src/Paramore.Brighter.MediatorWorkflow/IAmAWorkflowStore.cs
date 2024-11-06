@@ -36,11 +36,11 @@ public interface IAmAWorkflowStore
     /// </summary>
     /// <param name="workflow">The workflow</param>
     void SaveWorkflow<TData>(Workflow<TData> workflow) where TData : IAmTheWorkflowData;
-    
+
     /// <summary>
     /// Retrieves a workflow via its Id
     /// </summary>
     /// <param name="id">The id of the workflow</param>
     /// <returns>if found, the workflow, otherwise null</returns>
-    Workflow? GetWorkflow(Guid id) ;
+    Workflow? GetWorkflow(string? id) ;
 }

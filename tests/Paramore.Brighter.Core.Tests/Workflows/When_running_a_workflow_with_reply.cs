@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.MediatorWorkflow;
 using Polly.Registry;
@@ -10,22 +12,24 @@ public class MediatorReplyStepFlowTests
 {
     private readonly Mediator<WorkflowTestData> _mediator;
     private bool _stepCompleted;
+    private readonly Step<WorkflowTestData> _step;
 
     public MediatorReplyStepFlowTests()
     {
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
         registry.Register<MyEvent, MyEventHandler>();
+
+        IAmACommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactorySync((handlerType) =>
              handlerType switch
             { 
-                _ when handlerType == typeof(MyCommandHandler) => new MyCommandHandler(),
+                _ when handlerType == typeof(MyCommandHandler) => new MyCommandHandler(commandProcessor),
                 _ when handlerType == typeof(MyEventHandler) => new MyEventHandler(_mediator),
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
-            new PolicyRegistry());
+        commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
@@ -33,10 +37,10 @@ public class MediatorReplyStepFlowTests
         
         var flow = new Workflow<WorkflowTestData>(workflowData) ;
 
-        var step = new Step<WorkflowTestData>("Test of Workflow",
+        _step = new Step<WorkflowTestData>("Test of Workflow",
             new RequestAndReplyAction<MyCommand, MyEvent, WorkflowTestData>(
                 () => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! },
-                (reply) => flow.Data.Bag.Add("MyReply", ((MyEvent)reply).Data)),
+                (reply) => flow.Data.Bag.Add("MyReply", ((MyEvent)reply).Value)),
             () => { _stepCompleted = true; },
             flow,
             null);
@@ -50,6 +54,14 @@ public class MediatorReplyStepFlowTests
     [Fact]
     public void When_running_a_workflow_with_reply()
     {
+        MyCommandHandler.ReceivedCommands.Clear();
+        MyEventHandler.ReceivedEvents.Clear();
         
+        _mediator.RunWorkFlow(_step);
+
+        _stepCompleted.Should().BeTrue();
+        
+        MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
+        MyEventHandler.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
     }
 }

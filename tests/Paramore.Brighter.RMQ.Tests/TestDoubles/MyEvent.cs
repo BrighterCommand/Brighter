@@ -26,23 +26,18 @@ using System;
 
 namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
-    internal class MyEvent : Event, IEquatable<MyEvent>
+    internal class MyEvent() : Event(Guid.NewGuid().ToString()), IEquatable<MyEvent>
     {
-        public int Data { get; private set; }
+        public int Data { get; private set; } = 7;
 
-        public MyEvent() : base(Guid.NewGuid())
-        {
-            Data = 7;
-        }
-
-        public bool Equals(MyEvent other)
+        public bool Equals(MyEvent? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Data == other.Data;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;

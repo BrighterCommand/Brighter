@@ -26,42 +26,8 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal class MyEvent : Event, IEquatable<MyEvent>
+    internal class MyEvent(string? value) : Event(Guid.NewGuid().ToString())
     {
-        public int Data { get; set; }
-
-        public MyEvent() : base(Guid.NewGuid())
-        {
-        }
-
-        public bool Equals(MyEvent other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Data == other.Data;
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((MyEvent)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            return Data;
-        }
-
-        public static bool operator ==(MyEvent left, MyEvent right)
-        {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(MyEvent left, MyEvent right)
-        {
-            return !Equals(left, right);
-        }
+        public string Value { get; set; } = value ?? string.Empty;
     }
 }

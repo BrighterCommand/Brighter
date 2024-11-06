@@ -35,9 +35,8 @@ namespace Paramore.Brighter
     {
         /// <summary>
         /// An event may be the response to a command, in order to find the command that caused the event, we need to know the correlation id
-        /// In many cases correlation id is the command id
         /// </summary>
-        public Guid CorrelationId { get; set; }
+        public string? CorrelationId { get; set; }
         
         /// <summary>
         /// Gets or sets the identifier.
@@ -53,15 +52,6 @@ namespace Paramore.Brighter
         public Event(string id)
         {
             Id = id;
-        }
-        
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Event"/> class.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        public Event(Guid id)
-        {
-            Id = id.ToString();
         }
     }
 }

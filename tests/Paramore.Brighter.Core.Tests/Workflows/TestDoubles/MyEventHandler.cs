@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
         public override MyEvent Handle(MyEvent @event)
         {
             LogEvent(@event);
-            mediator?.ReceiveWorklowEvent(@event);
+            mediator?.ReceiveWorkflowEvent(@event);
             return base.Handle(@event);
         }
         

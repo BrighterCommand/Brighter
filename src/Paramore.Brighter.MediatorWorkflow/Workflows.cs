@@ -18,9 +18,11 @@ public interface IWorkflowAction<TData> where TData : IAmTheWorkflowData
 
 public class FireAndForgetAction<TRequest, TData>(Func<TRequest> requestFactory) : IWorkflowAction<TData> where TRequest : class, IRequest where TData : IAmTheWorkflowData
 {
-    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor) 
+    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
-        commandProcessor.Send(requestFactory());
+        var command = requestFactory();
+        command.CorrelationId = state.Id;
+        commandProcessor.Send(command);
     }
 }
 
@@ -29,7 +31,9 @@ public class RequestAndReplyAction<TRequest, TReply, TData>(Func<TRequest> reque
 {
     public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
-        commandProcessor.Send(requestFactory());
+        var command = requestFactory();
+        command.CorrelationId = state.Id;
+        commandProcessor.Send(command);
        
         state.PendingResponses.Add(typeof(TReply), (reply, _) => replyFactory(reply));
     }
