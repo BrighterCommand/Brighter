@@ -45,7 +45,10 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class CommandProcessor.
-    /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
+    /// The `CommandProcessor` class implements both the Command Dispatcher and Command Processor design patterns.
+    /// It is responsible for handling commands and events, managing their execution, and ensuring reliable delivery.
+    /// The `CommandProcessor` class is the main entry point for the Brighter library.
+    /// It implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
     /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns 
     /// </summary>
     public class CommandProcessor : IAmACommandProcessor
@@ -117,6 +120,7 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <exception cref="ArgumentException">Thrown when no handler factory is set.</exception>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -223,8 +227,8 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <exception cref="System.ArgumentException">
-        /// </exception>
+        /// <exception cref="InvalidOperationException">Thrown when no handler factory is defined.</exception>
+        /// <exception cref="ArgumentException">Thrown when no subscriber registry is configured or when the command has more than one handler.</exception>
         public void Send<T>(T command, RequestContext? requestContext = null) where T : class, IRequest
         {
             if (_handlerFactorySync == null)
@@ -265,9 +269,11 @@ namespace Paramore.Brighter
         /// <param name="command">The command.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task SendAsync<T>(
+        /// <param name="cancellationToken">Token to cancel the request pipeline.</param>
+        /// <returns>An awaitable task.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when no async handler factory is defined.</exception>
+        /// <exception cref="ArgumentException">Thrown when no subscriber registry is configured.</exception>
+         public async Task SendAsync<T>(
             T command, 
             RequestContext? requestContext = null, 
             bool continueOnCapturedContext = true, 
@@ -317,6 +323,8 @@ namespace Paramore.Brighter
         /// <typeparam name="T"></typeparam>
         /// <param name="event">The event.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <exception cref="InvalidOperationException">Thrown when no handler factory is defined.</exception>
+        /// <exception cref="ArgumentException">Thrown when no subscriber registry is configured.</exception>
         public void Publish<T>(T @event, RequestContext? requestContext = null) where T : class, IRequest
         {
             if (_handlerFactorySync == null)
@@ -387,7 +395,9 @@ namespace Paramore.Brighter
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
+        /// <returns>An awaitable task.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when no async handler factory is defined.</exception>
+        /// <exception cref="ArgumentException">Thrown when no subscriber registry is configured.</exception>
         public async Task PublishAsync<T>(
             T @event,
             RequestContext? requestContext = null,

@@ -71,10 +71,12 @@ namespace Paramore.Brighter
         public DateTimeOffset WriteTime { get; }
 
         /// <summary>
-        /// The Id and the key for the context i.e. message type, that we are looking for
-        /// Occurs because we may service the same message in different contexts and need to
-        /// know they are all handled or not
+        /// Gets the context key for the request. This is a combination of the request ID and the context identifier.
         /// </summary>
+        /// <remarks>
+        /// The context key is used to uniquely identify a request within a specific processing context,
+        /// allowing the message to be handled differently in various contexts.
+        /// </remarks>
         string Key { get;}
 
         /// <summary>
@@ -82,8 +84,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The Guid for the request</param>
         /// <param name="contextKey">The handler this is for</param>
-        /// <returns></returns>
-        public static string CreateKey(string id, string contextKey)
+        /// <returns>A composite key combining the request ID and context key.</returns>
+         public static string CreateKey(string id, string contextKey)
         {
             return $"{id}:{contextKey}";
         }
@@ -92,14 +94,17 @@ namespace Paramore.Brighter
     
     /// <summary>
     /// Class InMemoryInbox.
-    /// A Inbox stores <see cref="Command"/>s for diagnostics or replay.
+    /// Provides an in-memory implementation of an inbox for storing and retrieving requests. An Inbox stores <see cref="Command"/>s for diagnostics or replay.
+    /// </summary>
+    /// <remarks> 
     /// This class is intended to be thread-safe, so you can use one InMemoryInbox across multiple performers. However, the state is not global i.e. static
     /// so you can use multiple instances safely as well.
     /// N.B. that the primary limitation of this in-memory inbox is that it will not work across processes. So if you use the competing consumers pattern
     /// the consumers will not be able to determine if another consumer has already processed this command.
     /// It is possible to use multiple performers within one process as competing consumers, and if you want to use an InMemoryInbox this is the most
     /// viable strategy - otherwise use an out-of-process inbox that provides shared state to all consumers
-    /// </summary>
+    /// </remarks>
+    /// <param name="timeProvider">The time provider used for timestamp operations.</param>
     public class InMemoryInbox(TimeProvider timeProvider) : InMemoryBox<InboxItem>(timeProvider), IAmAnInboxSync, IAmAnInboxAsync
     {
         private readonly TimeProvider _timeProvider = timeProvider;
@@ -118,9 +123,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="contextKey"></param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <param name="contextKey">The context-specific key for this request.</param>
+        /// <param name="timeoutInMilliseconds">The timeout for the operation in milliseconds. Use -1 for no timeout.</param>
+        /// <exception cref="Exception">Thrown when the request cannot be added to the inbox.</exception>
+         public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
             
@@ -141,11 +147,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="contextKey"></param>
+        /// <param name="contextKey">The context-specific key for this request.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
+        /// <returns> <see cref="Task"/> Allows the sender to cancel the call, optional</returns>
         public Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -165,13 +170,14 @@ namespace Paramore.Brighter
         /// <summary>
         /// Finds the command with the specified identifier.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="contextKey"></param>
+        /// <typeparam name="T">The type of the request to retrieve, which must implement IRequest.</typeparam>
+        /// <param name="id">The unique identifier of the request.</param>
+        /// <param name="contextKey">The context-specific key for this request.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <returns>ICommand.</returns>
-        /// <exception cref="System.TypeLoadException"></exception>
-        public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
+        /// <returns>The requested item of type T.</returns>
+        /// <exception cref="RequestNotFoundException{T}">Thrown when the requested item is not found in the inbox.</exception>
+        /// <exception cref="ArgumentException">Thrown when the deserialized request body is null.</exception>
+         public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
             
@@ -186,6 +192,14 @@ namespace Paramore.Brighter
             throw new RequestNotFoundException<T>(id);
         }
 
+        /// <summary>
+        /// Checks if a request exists in the inbox.
+        /// </summary>
+        /// <typeparam name="T">The type of the request, which must implement IRequest.</typeparam>
+        /// <param name="id">The unique identifier of the request.</param>
+        /// <param name="contextKey">The context-specific key for this request.</param>
+        /// <param name="timeoutInMilliseconds">The timeout for the operation in milliseconds. Use -1 for no timeout.</param>
+        /// <returns>True if the request exists in the inbox; otherwise, false.</returns>
         public bool Exists<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();

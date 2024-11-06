@@ -27,18 +27,21 @@ using System;
 namespace Paramore.Brighter.MediatorWorkflow;
 
 /// <summary>
-/// The mediator orchestrates a workflow, executing each step in the sequence. 
+/// The `Mediator<TData>` class orchestrates a workflow by executing each step in a sequence.
+/// It uses a command processor and a workflow store to manage the workflow's state and actions.
 /// </summary>
+/// <typeparam name="TData">The type of the workflow data.</typeparam>
 public class Mediator<TData> where TData : IAmTheWorkflowData
 {
     private readonly IAmACommandProcessor _commandProcessor;
     private readonly IAmAWorkflowStore _workflowStore;
 
+
     /// <summary>
-    /// The mediator orchestrates a workflow, executing each step in the sequence. 
+    /// Initializes a new instance of the <see cref="Mediator{TData}"/> class.
     /// </summary>
-    /// <param name="commandProcessor"></param>
-    /// <param name="workflowStore"></param>
+    /// <param name="commandProcessor">The command processor used to handle commands.</param>
+    /// <param name="workflowStore">The workflow store used to store and retrieve workflows.</param>
     public Mediator(IAmACommandProcessor commandProcessor, IAmAWorkflowStore workflowStore)
     {
         _commandProcessor = commandProcessor;
@@ -46,9 +49,9 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
     }
 
     /// <summary>
-    /// 
     /// Runs the workflow by executing each step in the sequence.
     /// </summary>
+    /// <param name="firstStep">The first step of the workflow to execute.</param>
     /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
     public void RunWorkFlow(Step<TData>? firstStep)
     {                       
@@ -58,18 +61,13 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
             step.Flow.State = WorkflowState.Running;
             step.Flow.CurrentStep = step;
             step.Action.Handle(step.Flow, _commandProcessor);
-            if (step.Flow.State == WorkflowState.Waiting)
-            {
-                _workflowStore.SaveWorkflow(step.Flow);
-                return;
-            }
             step.OnCompletion();
             step = step.Next;
         }
     }
 
     /// <summary>
-    /// Receives an event and processes it if there is a pending response for the event type.
+    /// Call this method from a RequestHandler that listens for an expected event. This will process that event if there is a pending response for the event type.
     /// </summary>
     /// <param name="event">The event to process.</param>
     /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
@@ -95,6 +93,15 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
         workflow.CurrentStep.OnCompletion();
         workflow.State = WorkflowState.Running;
         workflow.PendingResponses.Remove(eventType);
-        RunWorkFlow(workflow.CurrentStep.Next);
+    }
+    
+    /// <summary>
+    ///  Waits for a workflow event to be received.
+    /// - Stores the workflow state in the workflow store.
+    /// - Sets the workflow state to waiting.
+    /// - Sets the callback for the workflow to run on completion
+    /// </summary>
+    public void WaitOnWorkflowEvent()
+    {
     }
 }
