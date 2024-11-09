@@ -33,9 +33,8 @@ namespace Paramore.Brighter.MediatorWorkflow;
 /// <param name="Name">The name of the step.</param>
 /// <param name="Action">The action to be taken with the step.</param>
 /// <param name="OnCompletion">The action to be taken upon completion of the step.</param>
-/// <param name="Flow">The workflow that the step belongs to.</param>
 /// <param name="Next">The next step in the sequence.</param>
-public record Step<TData>(string Name, IWorkflowAction<TData> Action, Action OnCompletion, Workflow<TData> Flow, Step<TData>? Next) where TData : IAmTheWorkflowData;
+public record Step<TData>(string Name, IWorkflowAction<TData> Action, Action OnCompletion, Step<TData>? Next) where TData : IAmTheWorkflowData;
 
 /// <summary>
 /// Defines an interface for workflow actions.

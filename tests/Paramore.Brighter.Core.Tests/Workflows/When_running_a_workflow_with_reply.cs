@@ -12,7 +12,7 @@ public class MediatorReplyStepFlowTests
 {
     private readonly Mediator<WorkflowTestData> _mediator;
     private bool _stepCompleted;
-    private readonly Step<WorkflowTestData> _step;
+    private readonly Workflow<WorkflowTestData> _flow;
 
     public MediatorReplyStepFlowTests()
     {
@@ -35,15 +35,14 @@ public class MediatorReplyStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
         
-        var flow = new Workflow<WorkflowTestData>(workflowData) ;
-
-        _step = new Step<WorkflowTestData>("Test of Workflow",
+        Step<WorkflowTestData> firstStep = new("Test of Workflow",
             new RequestAndReplyAction<MyCommand, MyEvent, WorkflowTestData>(
-                () => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! },
-                (reply) => flow.Data.Bag.Add("MyReply", ((MyEvent)reply).Value)),
+                () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
+                (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value)),
             () => { _stepCompleted = true; },
-            flow,
             null);
+        
+        _flow = new Workflow<WorkflowTestData>(firstStep, workflowData) ;
         
         _mediator = new Mediator<WorkflowTestData>(
             commandProcessor,
@@ -57,11 +56,12 @@ public class MediatorReplyStepFlowTests
         MyCommandHandler.ReceivedCommands.Clear();
         MyEventHandler.ReceivedEvents.Clear();
         
-        _mediator.RunWorkFlow(_step);
+        _mediator.RunWorkFlow(_flow);
 
         _stepCompleted.Should().BeTrue();
         
         MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
         MyEventHandler.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
+        _flow.State.Should().Be(WorkflowState.Done);
     }
 }

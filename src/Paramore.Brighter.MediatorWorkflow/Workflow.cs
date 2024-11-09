@@ -83,7 +83,14 @@ public class Workflow<TData> : Workflow where TData :  IAmTheWorkflowData
 
     /// <summary>
     ///  Constructs a new Workflow 
+    /// <param name="firstStep">The first step of the workflow to execute.</param>
+    /// <param name="data">State which is passed between steps of the workflow</param>
     /// </summary>
-    public Workflow(TData data) { Data = data; }
+    public Workflow(Step<TData> firstStep, TData data) 
+    {
+        CurrentStep = firstStep;
+        Data = data;
+        State = WorkflowState.Ready;    
+    }
 }
 

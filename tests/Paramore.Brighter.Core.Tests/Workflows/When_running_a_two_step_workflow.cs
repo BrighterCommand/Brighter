@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Core.Tests.Workflows;
 public class MediatorTwoStepFlowTests 
 {
     private readonly Mediator<WorkflowTestData> _mediator;
-    private readonly Step<WorkflowTestData> _stepOne;
+    private readonly Workflow<WorkflowTestData> _flow;
 
     public MediatorTwoStepFlowTests()
     {
@@ -27,27 +27,25 @@ public class MediatorTwoStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
         
-        var flow = new Workflow<WorkflowTestData>(workflowData);
+        
+        var secondStep = new Step<WorkflowTestData>("Test of Workflow Two",
+            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            () => { },
+            null
+            );
+        
+        var firstStep = new Step<WorkflowTestData>("Test of Workflow One",
+            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            () => { workflowData.Bag["MyValue"] = "TestTwo"; }, 
+            secondStep
+            );
         
         _mediator = new Mediator<WorkflowTestData>(
             commandProcessor,
             new InMemoryWorkflowStore()
             );
 
-        
-        var stepTwo = new Step<WorkflowTestData>("Test of Workflow Two",
-            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! }),
-            () => { },
-            flow,
-            null
-            );
-        
-        _stepOne = new Step<WorkflowTestData>("Test of Workflow One",
-            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! }),
-            () => { flow.Data.Bag["MyValue"] = "TestTwo"; }, 
-            flow,
-            stepTwo
-            );
+        _flow = new Workflow<WorkflowTestData>(firstStep, workflowData);
     }
     
     [Fact]
@@ -55,9 +53,10 @@ public class MediatorTwoStepFlowTests
     {
         MyCommandHandler.ReceivedCommands.Clear();
         
-        _mediator.RunWorkFlow(_stepOne);
+        _mediator.RunWorkFlow(_flow);
         
         MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
         MyCommandHandler.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();
+        _flow.State.Should().Be(WorkflowState.Done);
     }
 }

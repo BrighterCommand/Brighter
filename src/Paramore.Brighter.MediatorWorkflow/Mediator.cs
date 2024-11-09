@@ -51,19 +51,28 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
     /// <summary>
     /// Runs the workflow by executing each step in the sequence.
     /// </summary>
-    /// <param name="firstStep">The first step of the workflow to execute.</param>
+    /// <param name="workflow"></param>
     /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
-    public void RunWorkFlow(Step<TData>? firstStep)
-    {                       
-        var step = firstStep;
-        while (step is not null)
+    public void RunWorkFlow(Workflow<TData> workflow)
+    {
+        if (workflow.CurrentStep is null)
         {
-            step.Flow.State = WorkflowState.Running;
-            step.Flow.CurrentStep = step;
-            step.Action.Handle(step.Flow, _commandProcessor);
-            step.OnCompletion();
-            step = step.Next;
+            workflow.State = WorkflowState.Done;
+            return;
         }
+        
+        workflow.State = WorkflowState.Running;
+        _workflowStore.SaveWorkflow(workflow);
+        
+        while (workflow.CurrentStep is not null)
+        {
+           workflow.CurrentStep.Action.Handle(workflow, _commandProcessor);
+           workflow.CurrentStep.OnCompletion();
+           workflow.CurrentStep = workflow.CurrentStep.Next;
+           _workflowStore.SaveWorkflow(workflow);
+        }
+        
+        workflow.State = WorkflowState.Done;
     }
 
     /// <summary>
@@ -93,15 +102,5 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
         workflow.CurrentStep.OnCompletion();
         workflow.State = WorkflowState.Running;
         workflow.PendingResponses.Remove(eventType);
-    }
-    
-    /// <summary>
-    ///  Waits for a workflow event to be received.
-    /// - Stores the workflow state in the workflow store.
-    /// - Sets the workflow state to waiting.
-    /// - Sets the callback for the workflow to run on completion
-    /// </summary>
-    public void WaitOnWorkflowEvent()
-    {
     }
 }

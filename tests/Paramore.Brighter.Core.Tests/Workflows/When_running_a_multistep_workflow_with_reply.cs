@@ -13,8 +13,7 @@ public class MediatorReplyMultiStepFlowTests
     private readonly Mediator<WorkflowTestData> _mediator;
     private bool _stepCompletedOne;
     private bool _stepCompletedTwo;
-    private readonly Step<WorkflowTestData> _stepOne;
-    private readonly Step<WorkflowTestData> _stepTwo;
+    private readonly Workflow<WorkflowTestData> _flow;
 
     public MediatorReplyMultiStepFlowTests()
     {
@@ -22,7 +21,7 @@ public class MediatorReplyMultiStepFlowTests
         registry.Register<MyCommand, MyCommandHandler>();
         registry.Register<MyEvent, MyEventHandler>();
 
-        IAmACommandProcessor commandProcessor = null;
+        IAmACommandProcessor? commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactorySync((handlerType) =>
              handlerType switch
             { 
@@ -36,22 +35,20 @@ public class MediatorReplyMultiStepFlowTests
 
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
-        
-        var flow = new Workflow<WorkflowTestData>(workflowData) ;
 
-        _stepOne = new Step<WorkflowTestData>("Test of Workflow Step One",
-            new RequestAndReplyAction<MyCommand, MyEvent, WorkflowTestData>(
-                () => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! },
-                (reply) => flow.Data.Bag.Add("MyReply", ((MyEvent)reply).Value)),
-            () => { _stepCompletedOne = true; },
-            flow,
-            null);
-
-        _stepTwo = new Step<WorkflowTestData>("Test of Workflow Step Two",
-            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (flow.Data.Bag["MyValue"] as string)! }),
+        var stepTwo = new Step<WorkflowTestData>("Test of Workflow Step Two",
+            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
             () => { _stepCompletedTwo = true; },
-            flow,
-            _stepOne);
+            null);
+        
+         Step<WorkflowTestData> stepOne = new("Test of Workflow Step One",
+            new RequestAndReplyAction<MyCommand, MyEvent, WorkflowTestData>(
+                () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
+                (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value)),
+            () => { _stepCompletedOne = true; },
+            stepTwo);
+       
+        _flow = new Workflow<WorkflowTestData>(stepOne, workflowData) ;
         
         _mediator = new Mediator<WorkflowTestData>(
             commandProcessor,
@@ -65,12 +62,12 @@ public class MediatorReplyMultiStepFlowTests
         MyCommandHandler.ReceivedCommands.Clear();
         MyEventHandler.ReceivedEvents.Clear();
         
-        _mediator.RunWorkFlow(_stepOne);
-
+        _mediator.RunWorkFlow(_flow);
         _stepCompletedOne.Should().BeTrue();
         _stepCompletedTwo.Should().BeTrue();
         
         MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
         MyEventHandler.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
+        _flow.State.Should().Be(WorkflowState.Done);
     }
 }
