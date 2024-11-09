@@ -26,18 +26,18 @@ namespace Paramore.Brighter.MediatorWorkflow;
 
 using System;
 
-public interface ISpecification<T>
+public interface ISpecification<TData>  where TData : IAmTheWorkflowData
 {
-    bool IsSatisfiedBy(T entity);
+    bool IsSatisfiedBy(TData entity);
 
-    ISpecification<T> And(ISpecification<T> other);
-    ISpecification<T> Or(ISpecification<T> other);
-    ISpecification<T> Not();
-    ISpecification<T> AndNot(ISpecification<T> other);
-    ISpecification<T> OrNot(ISpecification<T> other);
+    ISpecification<TData> And(ISpecification<TData> other);
+    ISpecification<TData> Or(ISpecification<TData> other);
+    ISpecification<TData> Not();
+    ISpecification<TData> AndNot(ISpecification<TData> other);
+    ISpecification<TData> OrNot(ISpecification<TData> other);
 }
 
-public class Specification<T> : ISpecification<T>
+public class Specification<T> : ISpecification<T> where T : IAmTheWorkflowData
 {
     private readonly Func<T, bool> _expression;
 

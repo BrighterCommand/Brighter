@@ -96,3 +96,23 @@ public class RequestAndReplyAction<TRequest, TReply, TData>(Func<TRequest> reque
         state.PendingResponses.Add(typeof(TReply), (reply, _) => replyFactory(reply));
     }
 }
+
+/// <summary>
+/// Represents a workflow based on evaluating a specification to determine which one to send
+/// </summary>
+/// <param name="trueRequestFactory"></param>
+/// <param name="falseRequestFactory"></param>
+/// <param name="predicate"></param>
+/// <typeparam name="TTrueRequest"></typeparam>
+/// <typeparam name="TFalseRequest"></typeparam>
+/// <typeparam name="TData"></typeparam>
+public class ChoiceAction<TTrueRequest, TFalseRequest, TData>(Func<TTrueRequest> trueRequestFactory, Func<TFalseRequest> falseRequestFactory, ISpecification<TData> predicate) 
+    : IWorkflowAction<TData> where TTrueRequest : class, IRequest where TFalseRequest : class, IRequest where TData : IAmTheWorkflowData
+{
+    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
+    {
+        IRequest command = predicate.IsSatisfiedBy(state.Data) ? trueRequestFactory() : falseRequestFactory();
+        command.CorrelationId = state.Id;
+        commandProcessor.Send(command);
+    }
+}
