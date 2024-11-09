@@ -42,9 +42,10 @@ public class MediatorChoiceFlowTests
             null);
         
         Step<WorkflowTestData> stepOne = new("Test of Workflow Step One",
-            new RequestAndReplyAction<MyCommand, MyEvent, WorkflowTestData>(
+            new ChoiceAction<MyCommand, MyOtherCommand, WorkflowTestData>()(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
-                (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value)),
+                () => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! },
+                new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Test"),
             () => { _stepCompletedOne = true; },
             stepTwo);
        
