@@ -16,7 +16,9 @@ Brighter needs the addition of the specification pattern, for two reasons:
 2. For use when implementing the [Agreement Dispatcher](https://martinfowler.com/eaaDev/AgreementDispatcher.html) pattern from Martin Fowler. The Agreement Dispatcher pattern is used to dispatch a message to a handler based on a set of criteria. The Specification Pattern can be used to define the criteria.
 
 ## Decision
-Add the Specification Pattern to Brighter. We could have taken a dependency on an off-the-shelf implementation. Many of the Brighter team worked at Huddle Engineering, and worked on [this](https://github.com/HuddleEng/Specification) implementation of the Specification Pattern. However, this forces Brighter to take a dependency on another project, and we would like to keep Brighter as self-contained as possible. So, whilst we may be inspired by Huddle's implementation, we will write our own. In this version, we don't need some of the complexity of Huddle's usage of the Visitor pattern, as we only need to control branching.
+Add the Specification Pattern to Brighter. We could have taken a dependency on an off-the-shelf implementation. Many of the Brighter team worked at Huddle Engineering, and worked on [this](https://github.com/HuddleEng/Specification) implementation of the Specification Pattern. However, this forces Brighter to take a dependency on another project, and we would like to keep Brighter as self-contained as possible. So, whilst we may be inspired by Huddle's implementation, we will write our own. 
+
+In this version, we don't need some of the complexity of Huddle's usage of the Visitor pattern, as we only need to control branching. In addition, Huddle's version was written before the wide usage of lambda expressions via delegates in C#, so we can simplify the implementation.
 
 ## Consequences
 
