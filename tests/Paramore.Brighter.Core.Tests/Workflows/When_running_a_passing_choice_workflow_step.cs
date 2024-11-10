@@ -37,7 +37,7 @@ public class MediatorPassingChoiceFlowTests
         workflowData.Bag.Add("MyValue", "Pass");
 
          var stepOne = new Step<WorkflowTestData>("Test of Workflow Step One",
-            new ChoiceAction<MyCommand, MyOtherCommand, WorkflowTestData>(
+            new Choice<MyCommand, MyOtherCommand, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 () => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass")),

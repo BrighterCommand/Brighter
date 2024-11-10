@@ -51,63 +51,23 @@ public interface IWorkflowAction<TData> where TData : IAmTheWorkflowData
 }
 
 /// <summary>
-/// Represents a fire-and-forget action in the workflow.
-/// </summary>
-/// <typeparam name="TRequest">The type of the request.</typeparam>
-/// <typeparam name="TData">The type of the workflow data.</typeparam>
-/// <param name="requestFactory">The factory method to create the request.</param>
-public class FireAndForgetAction<TRequest, TData>(Func<TRequest> requestFactory) : IWorkflowAction<TData> where TRequest : class, IRequest where TData : IAmTheWorkflowData
-{
-    /// <summary>
-    /// Handles the fire-and-forget action.
-    /// </summary>
-    /// <param name="state">The current state of the workflow.</param>
-    /// <param name="commandProcessor">The command processor used to handle commands.</param>
-    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
-    {
-        var command = requestFactory();
-        command.CorrelationId = state.Id;
-        commandProcessor.Send(command);
-    }
-}
-
-/// <summary>
-/// Represents a request-and-reply action in the workflow.
-/// </summary>
-/// <typeparam name="TRequest">The type of the request.</typeparam>
-/// <typeparam name="TReply">The type of the reply.</typeparam>
-/// <typeparam name="TData">The type of the workflow data.</typeparam>
-/// <param name="requestFactory">The factory method to create the request.</param>
-/// <param name="replyFactory">The factory method to handle the reply.</param>
-public class RequestAndReplyAction<TRequest, TReply, TData>(Func<TRequest> requestFactory, Action<Event> replyFactory) 
-    : IWorkflowAction<TData> where TRequest : class, IRequest where TReply : class, IRequest where TData : IAmTheWorkflowData
-{
-    /// <summary>
-    /// Handles the request-and-reply action.
-    /// </summary>
-    /// <param name="state">The current state of the workflow.</param>
-    /// <param name="commandProcessor">The command processor used to handle commands.</param>
-    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
-    {
-        var command = requestFactory();
-        command.CorrelationId = state.Id;
-        commandProcessor.Send(command);
-       
-        state.PendingResponses.Add(typeof(TReply), (reply, _) => replyFactory(reply));
-    }
-}
-
-/// <summary>
 /// Represents a workflow based on evaluating a specification to determine which one to send
 /// </summary>
-/// <param name="trueRequestFactory"></param>
-/// <param name="falseRequestFactory"></param>
-/// <param name="predicate"></param>
+/// <param name="trueRequestFactory">The type of the true branch</param>
+/// <param name="falseRequestFactory">The type of the false branch</param>
+/// <param name="predicate">The rule that decides between the command issued by each branch</param>
 /// <typeparam name="TTrueRequest"></typeparam>
 /// <typeparam name="TFalseRequest"></typeparam>
 /// <typeparam name="TData"></typeparam>
-public class ChoiceAction<TTrueRequest, TFalseRequest, TData>(Func<TTrueRequest> trueRequestFactory, Func<TFalseRequest> falseRequestFactory, ISpecification<TData> predicate) 
-    : IWorkflowAction<TData> where TTrueRequest : class, IRequest where TFalseRequest : class, IRequest where TData : IAmTheWorkflowData
+public class Choice<TTrueRequest, TFalseRequest, TData>(
+    Func<TTrueRequest> trueRequestFactory, 
+    Func<TFalseRequest> falseRequestFactory, 
+    ISpecification<TData> predicate
+) 
+    : IWorkflowAction<TData> 
+    where TTrueRequest : class, IRequest 
+    where TFalseRequest : class, IRequest 
+    where TData : IAmTheWorkflowData
 {
     public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
@@ -125,5 +85,97 @@ public class ChoiceAction<TTrueRequest, TFalseRequest, TData>(Func<TTrueRequest>
             command.CorrelationId = state.Id;
             commandProcessor.Send(command);
         }
+    }
+}
+
+/// <summary>
+/// Represents a fire-and-forget action in the workflow.
+/// </summary>
+/// <typeparam name="TRequest">The type of the request.</typeparam>
+/// <typeparam name="TData">The type of the workflow data.</typeparam>
+/// <param name="requestFactory">The factory method to create the request.</param>
+public class FireAndForget<TRequest, TData>(
+    Func<TRequest> requestFactory
+    ) 
+    : IWorkflowAction<TData> 
+    where TRequest : class, IRequest 
+    where TData : IAmTheWorkflowData
+{
+    /// <summary>
+    /// Handles the fire-and-forget action.
+    /// </summary>
+    /// <param name="state">The current state of the workflow.</param>
+    /// <param name="commandProcessor">The command processor used to handle commands.</param>
+    public void Handle(
+        Workflow<TData> state, 
+        IAmACommandProcessor commandProcessor
+        )
+    {
+        var command = requestFactory();
+        command.CorrelationId = state.Id;
+        commandProcessor.Send(command);
+    }
+}
+
+/// <summary>
+/// Represents a request-and-reply action in the workflow.
+/// </summary>
+/// <typeparam name="TRequest">The type of the request.</typeparam>
+/// <typeparam name="TReply">The type of the reply.</typeparam>
+/// <typeparam name="TData">The type of the workflow data.</typeparam>
+/// <param name="requestFactory">The factory method to create the request.</param>
+/// <param name="replyFactory">The factory method to handle the reply.</param>
+public class RequestAndReaction<TRequest, TReply, TData>(
+    Func<TRequest> requestFactory, 
+    Action<TReply?> replyFactory
+    ) 
+    : IWorkflowAction<TData> 
+    where TRequest : class, IRequest
+    where TReply : Event 
+    where TData : IAmTheWorkflowData
+{
+    /// <summary>
+    /// Handles the request-and-reply action.
+    /// </summary>
+    /// <param name="state">The current state of the workflow.</param>
+    /// <param name="commandProcessor">The command processor used to handle commands.</param>
+    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
+    {
+        var command = requestFactory();
+        command.CorrelationId = state.Id;
+        commandProcessor.Send(command);
+       
+        state.PendingResponses.Add(typeof(TReply), (reply, _) => replyFactory(reply as TReply));
+    }
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <param name="requestFactory"></param>
+/// <param name="replyFactory"></param>
+/// <typeparam name="TRequest"></typeparam>
+/// <typeparam name="TReply"></typeparam>
+/// <typeparam name="TData"></typeparam>
+/// <typeparam name="TFault"></typeparam>
+public class RobustRequestAndReaction<TRequest, TReply, TFault, TData>(
+    Func<TRequest> requestFactory,
+    Action<TReply?> replyFactory,
+    Action<TFault?> faultFactory
+)
+    : IWorkflowAction<TData> 
+    where TRequest : class, IRequest
+    where TReply : Event
+    where TFault: Event
+    where TData : IAmTheWorkflowData
+{
+    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
+    {
+        var command = requestFactory();
+        command.CorrelationId = state.Id;
+        commandProcessor.Send(command);
+
+        state.PendingResponses.Add(typeof(TReply), (reply, _) => replyFactory(reply as TReply));
+        state.PendingResponses.Add(typeof(TFault), (reply, _) => faultFactory(reply as TFault));
     }
 }

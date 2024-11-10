@@ -35,8 +35,8 @@ public class MediatorReplyStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
         
-        Step<WorkflowTestData> firstStep = new("Test of Workflow",
-            new RequestAndReplyAction<MyCommand, MyEvent, WorkflowTestData>(
+         var firstStep = new Step<WorkflowTestData>("Test of Workflow",
+            new RequestAndReaction<MyCommand, MyEvent, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value)),
             () => { _stepCompleted = true; },

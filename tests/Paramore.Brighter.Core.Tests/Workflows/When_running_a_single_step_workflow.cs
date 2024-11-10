@@ -27,7 +27,7 @@ public class MediatorOneStepFlowTests
         workflowData.Bag.Add("MyValue", "Test");
         
         var firstStep = new Step<WorkflowTestData>("Test of Workflow",
-            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)!}),
+            new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)!}),
             () => { },
             null
             );
