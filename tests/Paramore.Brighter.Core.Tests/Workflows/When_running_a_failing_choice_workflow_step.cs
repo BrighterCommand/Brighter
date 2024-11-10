@@ -8,13 +8,13 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorChoiceFlowTests 
+public class MediatorFailingChoiceFlowTests 
 {
     private readonly Mediator<WorkflowTestData>? _mediator;
     private readonly Workflow<WorkflowTestData> _flow;
     private bool _stepCompletedOne;
 
-    public MediatorChoiceFlowTests()
+    public MediatorFailingChoiceFlowTests()
     {
         // arrange
         var registry = new SubscriberRegistry();
@@ -26,7 +26,7 @@ public class MediatorChoiceFlowTests
             handlerType switch
             { 
                 _ when handlerType == typeof(MyCommandHandler) => new MyCommandHandler(commandProcessor),
-                _ when handlerType == typeof(MyOtherCommandHandler) => new (commandProcessor),
+                _ when handlerType == typeof(MyOtherCommandHandler) => new MyOtherCommandHandler(commandProcessor),
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
@@ -34,7 +34,7 @@ public class MediatorChoiceFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Pass");
+        workflowData.Bag.Add("MyValue", "Fail");
 
          var stepOne = new Step<WorkflowTestData>("Test of Workflow Step One",
             new ChoiceAction<MyCommand, MyOtherCommand, WorkflowTestData>(
@@ -55,11 +55,14 @@ public class MediatorChoiceFlowTests
     [Fact]
     public void When_running_a_choice_workflow_step()
     {
+        MyCommandHandler.ReceivedCommands.Clear();
+        MyOtherCommandHandler.ReceivedCommands.Clear();
+        
         _mediator?.RunWorkFlow(_flow);
 
         _stepCompletedOne.Should().BeTrue();
-        MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Pass").Should().BeTrue();
-        MyOtherCommandHandler.ReceivedCommands.Any().Should().BeFalse();
+        MyOtherCommandHandler.ReceivedCommands.Any(c => c.Value == "Fail").Should().BeTrue();
+        MyCommandHandler.ReceivedCommands.Any().Should().BeFalse();
         _stepCompletedOne.Should().BeTrue();
     }
 }
