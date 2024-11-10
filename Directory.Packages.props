@@ -4,11 +4,11 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.402.7" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.402.11" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.405.7" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.400.43" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.43" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.405.11" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.400.47" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.47" />
     <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.43" />
     <PackageVersion Include="Azure.Identity" Version="1.13.1" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
@@ -24,7 +24,7 @@
     <PackageVersion Include="Dapper.Contrib" Version="2.0.78" />
     <PackageVersion Include="DapperExtensions" Version="1.7.0" />
     <PackageVersion Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
-    <PackageVersion Include="FluentAssertions" Version="6.12.1" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.2" />
     <PackageVersion Include="FluentMigrator" Version="6.2.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="6.2.0" />
     <PackageVersion Include="FluentMigrator.Runner.Core" Version="6.2.0" />
