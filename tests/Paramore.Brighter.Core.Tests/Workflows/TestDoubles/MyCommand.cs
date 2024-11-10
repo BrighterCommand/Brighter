@@ -26,15 +26,8 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    public class MyCommand : Command
+    public class MyCommand() : Command(Guid.NewGuid())
     {
-        public MyCommand()
-            :base(Guid.NewGuid()) 
-            
-        {}
-
-        public string Value { get; set; }
-        public bool WasCancelled { get; set; }
-        public bool TaskCompleted { get; set; }
+        public string Value { get; set; } = string.Empty;
     }
 }

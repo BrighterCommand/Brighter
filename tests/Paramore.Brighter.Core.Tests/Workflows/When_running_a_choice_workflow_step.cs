@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.MediatorWorkflow;
 using Polly.Registry;
+using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
@@ -10,23 +12,21 @@ public class MediatorChoiceFlowTests
 {
     private readonly Mediator<WorkflowTestData>? _mediator;
     private readonly Workflow<WorkflowTestData> _flow;
-    private bool _stepCompletedTwo;
     private bool _stepCompletedOne;
 
-    public MediatorChoiceFlowTests(bool stepCompletedTwo)
+    public MediatorChoiceFlowTests()
     {
-        _stepCompletedTwo = stepCompletedTwo;
         // arrange
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
-        registry.Register<MyEvent, MyEventHandler>();
+        registry.Register<MyOtherCommand, MyOtherCommandHandler>();
 
         IAmACommandProcessor? commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactorySync((handlerType) =>
             handlerType switch
             { 
                 _ when handlerType == typeof(MyCommandHandler) => new MyCommandHandler(commandProcessor),
-                _ when handlerType == typeof(MyEventHandler) => new MyEventHandler(_mediator),
+                _ when handlerType == typeof(MyOtherCommandHandler) => new (commandProcessor),
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
@@ -34,20 +34,15 @@ public class MediatorChoiceFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Test");
+        workflowData.Bag.Add("MyValue", "Pass");
 
-        var stepTwo = new Step<WorkflowTestData>("Test of Workflow Step Two",
-            new FireAndForgetAction<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            () => { _stepCompletedTwo = true; },
-            null);
-        
-        Step<WorkflowTestData> stepOne = new("Test of Workflow Step One",
-            new ChoiceAction<MyCommand, MyOtherCommand, WorkflowTestData>()(
+         var stepOne = new Step<WorkflowTestData>("Test of Workflow Step One",
+            new ChoiceAction<MyCommand, MyOtherCommand, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 () => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! },
-                new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Test"),
+                new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass")),
             () => { _stepCompletedOne = true; },
-            stepTwo);
+            null);
        
         _flow = new Workflow<WorkflowTestData>(stepOne, workflowData) ;
         
@@ -57,15 +52,14 @@ public class MediatorChoiceFlowTests
         );
     }
     
+    [Fact]
     public void When_running_a_choice_workflow_step()
     {
- 
+        _mediator?.RunWorkFlow(_flow);
 
-        // act
-        _mediator.RunWorkFlow(_flow);
-
-        // assert
         _stepCompletedOne.Should().BeTrue();
-        _stepCompletedTwo.Should().BeTrue();
+        MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Pass").Should().BeTrue();
+        MyOtherCommandHandler.ReceivedCommands.Any().Should().BeFalse();
+        _stepCompletedOne.Should().BeTrue();
     }
 }

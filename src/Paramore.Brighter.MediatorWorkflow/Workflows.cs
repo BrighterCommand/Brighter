@@ -111,8 +111,19 @@ public class ChoiceAction<TTrueRequest, TFalseRequest, TData>(Func<TTrueRequest>
 {
     public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
-        IRequest command = predicate.IsSatisfiedBy(state.Data) ? trueRequestFactory() : falseRequestFactory();
-        command.CorrelationId = state.Id;
-        commandProcessor.Send(command);
+        //NOTE: we chose the command handler by parameterized type from the argument to Send() so the type needs to be explicit here
+        // do not try to optimize this branch condition via a base type, it will not work
+        if (predicate.IsSatisfiedBy(state.Data))
+        {
+            TTrueRequest command = trueRequestFactory(); 
+            command.CorrelationId = state.Id;
+            commandProcessor.Send(command);
+        }
+        else
+        {
+            TFalseRequest command = falseRequestFactory();
+            command.CorrelationId = state.Id;
+            commandProcessor.Send(command);
+        }
     }
 }
