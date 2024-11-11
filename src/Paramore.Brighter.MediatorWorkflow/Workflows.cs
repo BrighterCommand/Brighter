@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MediatorWorkflow;
 
@@ -51,16 +52,44 @@ public interface IWorkflowAction<TData>
 }
 
 /// <summary>
-/// Represents a workflow based on evaluating a specification to determine which one to send
+/// Pauses a flow for a specified amount of time. Note that this is a blocking operation for the workflow thread.
 /// </summary>
-/// <param name="predicate">The rule that decides between the command issued by each branch</param>
+/// <typeparam name="TData">The data for the workflow; not used</typeparam>
+public class BlockingWait<TData> : IWorkflowAction<TData>
+{
+    private readonly TimeSpan _wait;
+    private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// Pauses a flow for a specified amount of time. Note that this is a blocking operation for the workflow thread.
+    /// </summary>
+    /// <param name="wait">The time to block the thread for</param>
+    /// <param name="timeProvider">The time provider; defaults to TimeProvider.System; intended to be overriden with FakeTimeProvider in testing</param>
+    /// <typeparam name="TData">The data for the workflow; not used</typeparam>
+    public BlockingWait(TimeSpan wait, TimeProvider? timeProvider = null)
+    {
+        _wait = wait;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
+    {
+        _timeProvider.Delay(_wait).Wait();
+    }
+}
+
+/// <summary>
+/// Represents a workflow based on evaluating a specification to determine which step to take next
+/// </summary>
+/// <param name="onTrue">The step to take if the specification is satisfied</param>
+/// <param name="onFalse">The step to take if the specification is not satisfied</param>
+/// <param name="predicate">The rule that decides between each branch</param>
 /// <typeparam name="TData">The workflow data, used to make the choice</typeparam>
 public class Choice<TData>(
-    Func<TData, Step<TData>> OnTrue, 
-    Func<TData, Step<TData>> OnFalse,
+    Func<TData, Step<TData>> onTrue, 
+    Func<TData, Step<TData>> onFalse,
     ISpecification<TData> predicate
-) 
-    : IWorkflowAction<TData> 
+) : IWorkflowAction<TData> 
 {
     public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
@@ -69,7 +98,7 @@ public class Choice<TData>(
 
         state.CurrentStep = state.CurrentStep with
         {
-            Next = (predicate.IsSatisfiedBy(state.Data) ? OnTrue(state.Data) : OnFalse(state.Data))
+            Next = (predicate.IsSatisfiedBy(state.Data) ? onTrue(state.Data) : onFalse(state.Data))
         };
     }
 }

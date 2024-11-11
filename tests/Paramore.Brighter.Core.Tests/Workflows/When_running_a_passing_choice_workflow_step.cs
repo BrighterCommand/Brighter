@@ -73,6 +73,8 @@ public class MediatorPassingChoiceFlowTests
         _mediator?.RunWorkFlow(_flow);
 
         _stepCompletedOne.Should().BeTrue();
+        _stepCompletedTwo.Should().BeTrue();
+        _stepCompletedThree.Should().BeFalse();
         MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Pass").Should().BeTrue();
         MyOtherCommandHandler.ReceivedCommands.Any().Should().BeFalse();
         _stepCompletedOne.Should().BeTrue();
