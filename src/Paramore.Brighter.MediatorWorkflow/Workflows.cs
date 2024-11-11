@@ -34,13 +34,13 @@ namespace Paramore.Brighter.MediatorWorkflow;
 /// <param name="Action">The action to be taken with the step.</param>
 /// <param name="OnCompletion">The action to be taken upon completion of the step.</param>
 /// <param name="Next">The next step in the sequence.</param>
-public record Step<TData>(string Name, IWorkflowAction<TData> Action, Action OnCompletion, Step<TData>? Next) where TData : IAmTheWorkflowData;
+public record Step<TData>(string Name, IWorkflowAction<TData> Action, Action OnCompletion, Step<TData>? Next);
 
 /// <summary>
 /// Defines an interface for workflow actions.
 /// </summary>
 /// <typeparam name="TData">The type of the workflow data.</typeparam>
-public interface IWorkflowAction<TData> where TData : IAmTheWorkflowData
+public interface IWorkflowAction<TData> 
 {
     /// <summary>
     /// Handles the workflow action.
@@ -67,7 +67,6 @@ public class Choice<TTrueRequest, TFalseRequest, TData>(
     : IWorkflowAction<TData> 
     where TTrueRequest : class, IRequest 
     where TFalseRequest : class, IRequest 
-    where TData : IAmTheWorkflowData
 {
     public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
@@ -99,7 +98,6 @@ public class FireAndForget<TRequest, TData>(
     ) 
     : IWorkflowAction<TData> 
     where TRequest : class, IRequest 
-    where TData : IAmTheWorkflowData
 {
     /// <summary>
     /// Handles the fire-and-forget action.
@@ -132,7 +130,6 @@ public class RequestAndReaction<TRequest, TReply, TData>(
     : IWorkflowAction<TData> 
     where TRequest : class, IRequest
     where TReply : Event 
-    where TData : IAmTheWorkflowData
 {
     /// <summary>
     /// Handles the request-and-reply action.
@@ -145,7 +142,8 @@ public class RequestAndReaction<TRequest, TReply, TData>(
         command.CorrelationId = state.Id;
         commandProcessor.Send(command);
        
-        state.PendingResponses.Add(typeof(TReply), (reply, _) => replyFactory(reply as TReply));
+        state.PendingResponses.Add(typeof(TReply), new WorkflowResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), null));
+ 
     }
 }
 
@@ -167,15 +165,13 @@ public class RobustRequestAndReaction<TRequest, TReply, TFault, TData>(
     where TRequest : class, IRequest
     where TReply : Event
     where TFault: Event
-    where TData : IAmTheWorkflowData
 {
     public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
         var command = requestFactory();
         command.CorrelationId = state.Id;
         commandProcessor.Send(command);
-
-        state.PendingResponses.Add(typeof(TReply), (reply, _) => replyFactory(reply as TReply));
-        state.PendingResponses.Add(typeof(TFault), (reply, _) => faultFactory(reply as TFault));
-    }
+        
+        state.PendingResponses.Add(typeof(TReply), new WorkflowResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), typeof(TFault)));
+        state.PendingResponses.Add(typeof(TFault), new WorkflowResponse<TData>((reply, _) => faultFactory(reply as TFault), typeof(TReply), typeof(TFault)));}
 }

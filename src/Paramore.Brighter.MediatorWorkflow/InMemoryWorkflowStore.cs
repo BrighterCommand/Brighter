@@ -31,7 +31,7 @@ public class InMemoryWorkflowStore : IAmAWorkflowStore
 {
     private readonly Dictionary<string, Workflow> _flows = new();
 
-    public void SaveWorkflow<TData>(Workflow<TData> workflow) where TData : IAmTheWorkflowData
+    public void SaveWorkflow<TData>(Workflow<TData> workflow) 
     {
         _flows[workflow.Id] = workflow;
     }

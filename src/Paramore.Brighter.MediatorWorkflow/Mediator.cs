@@ -27,11 +27,11 @@ using System;
 namespace Paramore.Brighter.MediatorWorkflow;
 
 /// <summary>
-/// The `Mediator<TData>` class orchestrates a workflow by executing each step in a sequence.
+/// The <see cref="Mediator{TData}"/> class orchestrates a workflow by executing each step in a sequence.
 /// It uses a command processor and a workflow store to manage the workflow's state and actions.
 /// </summary>
 /// <typeparam name="TData">The type of the workflow data.</typeparam>
-public class Mediator<TData> where TData : IAmTheWorkflowData
+public class Mediator<TData> 
 {
     private readonly IAmACommandProcessor _commandProcessor;
     private readonly IAmAWorkflowStore _workflowStore;
@@ -92,13 +92,16 @@ public class Mediator<TData> where TData : IAmTheWorkflowData
              
         var eventType = @event.GetType();
              
-        if (!workflow.PendingResponses.TryGetValue(eventType, out Action<Event, Workflow<TData>>? replyFactory)) 
+        if (!workflow.PendingResponses.TryGetValue(eventType, out WorkflowResponse<TData>? workflowResponse)) 
             return;
+
+        if (workflowResponse.Parser is null)
+            throw new InvalidOperationException($"Parser for event type {eventType} should not be null");
 
         if (workflow.CurrentStep is null)
             throw new InvalidOperationException($"Current step of workflow #{workflow.Id} should not be null");
              
-        replyFactory(@event, workflow);
+        workflowResponse.Parser(@event, workflow);
         workflow.CurrentStep.OnCompletion();
         workflow.State = WorkflowState.Running;
         workflow.PendingResponses.Remove(eventType);

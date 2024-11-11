@@ -11,7 +11,7 @@ public enum TestState
     Waiting
 }
 
-public class SpecificationTestState : IAmTheWorkflowData
+public class SpecificationTestState 
 {
     public TestState State { get; set; }
     public Dictionary<string, object> Bag { get; set; }

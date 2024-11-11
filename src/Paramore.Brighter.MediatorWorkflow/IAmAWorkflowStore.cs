@@ -35,7 +35,7 @@ public interface IAmAWorkflowStore
     /// Saves the workflow 
     /// </summary>
     /// <param name="workflow">The workflow</param>
-    void SaveWorkflow<TData>(Workflow<TData> workflow) where TData : IAmTheWorkflowData;
+    void SaveWorkflow<TData>(Workflow<TData> workflow);
 
     /// <summary>
     /// Retrieves a workflow via its Id

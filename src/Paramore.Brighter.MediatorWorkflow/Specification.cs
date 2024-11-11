@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MediatorWorkflow;
 
 using System;
 
-public interface ISpecification<TData>  where TData : IAmTheWorkflowData
+public interface ISpecification<TData>  
 {
     bool IsSatisfiedBy(TData entity);
 
@@ -37,7 +37,7 @@ public interface ISpecification<TData>  where TData : IAmTheWorkflowData
     ISpecification<TData> OrNot(ISpecification<TData> other);
 }
 
-public class Specification<T> : ISpecification<T> where T : IAmTheWorkflowData
+public class Specification<T> : ISpecification<T> 
 {
     private readonly Func<T, bool> _expression;
 

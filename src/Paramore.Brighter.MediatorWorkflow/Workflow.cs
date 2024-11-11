@@ -39,26 +39,39 @@ public enum WorkflowState
 }
 
 /// <summary>
+/// When we are awaiting a response for a workflow, we need to store information about how to continue the workflow
+/// after receiving the event. 
+/// </summary>
+/// <param name="parser">The parser to populate our worfkow from the event that forms the response</param>
+/// <param name="responseType">The type we expect a response to be - used to check the flow</param>
+/// <param name="errorType">The type we expect a fault to be - used to check the flow</param>
+/// <typeparam name="TData">The user-defined data, associated with a workflow</typeparam>
+public class WorkflowResponse<TData>(Action<Event, Workflow<TData>> parser, Type responseType, Type? errorType)
+{
+    public Action<Event, Workflow<TData>>? Parser { get; set; } = parser;
+    public Type? ResponseType  { get; set; } = responseType;
+    public Type? ErrorType { get; set; } = errorType;
+
+    public bool HasError() =>  ErrorType is not null; 
+}
+
+/// <summary>
 /// empty class, used as maker for the workflow data
 /// </summary>
 public abstract class Workflow { }
 
 /// <summary>
-/// Interface for the data that is passed between steps in the workflow
-/// </summary>
-public interface  IAmTheWorkflowData
-{
-    /// <summary>
-    /// Bucket for  data that is passed between steps in the workflow
-    /// </summary>
-    public Dictionary<string, object> Bag { get; set; }    
-}
-
-/// <summary>
 /// Workflow represents the current state of the workflow and tracks if it’s awaiting a response.
 /// </summary>
-public class Workflow<TData> : Workflow where TData :  IAmTheWorkflowData
+/// <typeparam name="TData">The user defined data for the workflow</typeparam>
+public class Workflow<TData> : Workflow
 {
+
+    /// <summary>
+    /// A map of user defined values. Normally, use Data to pass data between steps
+    /// </summary>
+    public Dictionary<string, object> Bag { get; } = new();
+    
     /// <summary>
     /// What step are we currently at in the workflow
     /// </summary>
@@ -74,12 +87,12 @@ public class Workflow<TData> : Workflow where TData :  IAmTheWorkflowData
     /// <summary>
     /// If we are awaiting a response, we store the type of the response and the action to take when it arrives
     /// </summary>
-    public Dictionary<Type, Action<Event, Workflow<TData>>> PendingResponses { get; private set; } = new();
+    public Dictionary<Type, WorkflowResponse<TData>> PendingResponses { get; private set; } = new();
     
     /// <summary>
     /// Is the workflow currently awaiting an event response
     /// </summary>
-    public WorkflowState State { get; set; } = WorkflowState.Ready;
+    public WorkflowState State { get; set; }
 
     /// <summary>
     ///  Constructs a new Workflow 
