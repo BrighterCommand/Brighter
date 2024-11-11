@@ -13,6 +13,8 @@ public class MediatorFailingChoiceFlowTests
     private readonly Mediator<WorkflowTestData>? _mediator;
     private readonly Workflow<WorkflowTestData> _flow;
     private bool _stepCompletedOne;
+    private bool _stepCompletedTwo;
+    private bool _stepCompletedThree;
 
     public MediatorFailingChoiceFlowTests()
     {
@@ -36,10 +38,20 @@ public class MediatorFailingChoiceFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Fail");
 
-         var stepOne = new Step<WorkflowTestData>("Test of Workflow Step One",
-            new Choice<MyCommand, MyOtherCommand, WorkflowTestData>(
-                () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
-                () => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! },
+        var stepThree = new Step<WorkflowTestData>("Test of Workflow Step Three",
+            new FireAndForget<MyOtherCommand, WorkflowTestData>(() => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            () => { _stepCompletedThree = true; },
+            null);
+        
+        var stepTwo = new Step<WorkflowTestData>("Test of Workflow Step Two",
+            new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            () => { _stepCompletedTwo = true; },
+            null);
+
+        var stepOne = new Step<WorkflowTestData>("Test of Workflow Step One",
+            new Choice<WorkflowTestData>(
+                (_) => stepTwo,
+                (_) => stepThree,
                 new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass")),
             () => { _stepCompletedOne = true; },
             null);
@@ -61,6 +73,8 @@ public class MediatorFailingChoiceFlowTests
         _mediator?.RunWorkFlow(_flow);
 
         _stepCompletedOne.Should().BeTrue();
+        _stepCompletedTwo.Should().BeFalse();
+        _stepCompletedThree.Should().BeTrue();
         MyOtherCommandHandler.ReceivedCommands.Any(c => c.Value == "Fail").Should().BeTrue();
         MyCommandHandler.ReceivedCommands.Any().Should().BeFalse();
         _stepCompletedOne.Should().BeTrue();

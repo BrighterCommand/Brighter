@@ -13,6 +13,8 @@ public class MediatorPassingChoiceFlowTests
     private readonly Mediator<WorkflowTestData>? _mediator;
     private readonly Workflow<WorkflowTestData> _flow;
     private bool _stepCompletedOne;
+    private bool _stepCompletedTwo;
+    private bool _stepCompletedThree;
 
     public MediatorPassingChoiceFlowTests()
     {
@@ -35,11 +37,21 @@ public class MediatorPassingChoiceFlowTests
 
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Pass");
+        
+        var stepThree = new Step<WorkflowTestData>("Test of Workflow Step Three",
+            new FireAndForget<MyOtherCommand, WorkflowTestData>(() => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            () => { _stepCompletedThree = true; },
+            null);
+        
+        var stepTwo = new Step<WorkflowTestData>("Test of Workflow Step Two",
+            new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            () => { _stepCompletedTwo = true; },
+            null);
 
          var stepOne = new Step<WorkflowTestData>("Test of Workflow Step One",
-            new Choice<MyCommand, MyOtherCommand, WorkflowTestData>(
-                () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
-                () => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! },
+            new Choice<WorkflowTestData>(
+                (_) => stepTwo,
+                (_) => stepThree,
                 new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass")),
             () => { _stepCompletedOne = true; },
             null);

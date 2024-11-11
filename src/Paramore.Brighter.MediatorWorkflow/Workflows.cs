@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MediatorWorkflow;
 /// <param name="Action">The action to be taken with the step.</param>
 /// <param name="OnCompletion">The action to be taken upon completion of the step.</param>
 /// <param name="Next">The next step in the sequence.</param>
-public record Step<TData>(string Name, IWorkflowAction<TData> Action, Action OnCompletion, Step<TData>? Next);
+public record Step<TData>(string Name, IWorkflowAction<TData> Action, Action OnCompletion, Step<TData>? Next, Action? OnFaulted = null, Step<TData>? FaultNext = null);
 
 /// <summary>
 /// Defines an interface for workflow actions.
@@ -53,37 +53,24 @@ public interface IWorkflowAction<TData>
 /// <summary>
 /// Represents a workflow based on evaluating a specification to determine which one to send
 /// </summary>
-/// <param name="trueRequestFactory">The type of the true branch</param>
-/// <param name="falseRequestFactory">The type of the false branch</param>
 /// <param name="predicate">The rule that decides between the command issued by each branch</param>
-/// <typeparam name="TTrueRequest"></typeparam>
-/// <typeparam name="TFalseRequest"></typeparam>
-/// <typeparam name="TData"></typeparam>
-public class Choice<TTrueRequest, TFalseRequest, TData>(
-    Func<TTrueRequest> trueRequestFactory, 
-    Func<TFalseRequest> falseRequestFactory, 
+/// <typeparam name="TData">The workflow data, used to make the choice</typeparam>
+public class Choice<TData>(
+    Func<TData, Step<TData>> OnTrue, 
+    Func<TData, Step<TData>> OnFalse,
     ISpecification<TData> predicate
 ) 
     : IWorkflowAction<TData> 
-    where TTrueRequest : class, IRequest 
-    where TFalseRequest : class, IRequest 
 {
     public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
-        //NOTE: we chose the command handler by parameterized type from the argument to Send() so the type needs to be explicit here
-        // do not try to optimize this branch condition via a base type, it will not work
-        if (predicate.IsSatisfiedBy(state.Data))
+        if (state.CurrentStep is null)
+            throw new InvalidOperationException("The workflow has not been initialized.");
+
+        state.CurrentStep = state.CurrentStep with
         {
-            TTrueRequest command = trueRequestFactory(); 
-            command.CorrelationId = state.Id;
-            commandProcessor.Send(command);
-        }
-        else
-        {
-            TFalseRequest command = falseRequestFactory();
-            command.CorrelationId = state.Id;
-            commandProcessor.Send(command);
-        }
+            Next = (predicate.IsSatisfiedBy(state.Data) ? OnTrue(state.Data) : OnFalse(state.Data))
+        };
     }
 }
 
