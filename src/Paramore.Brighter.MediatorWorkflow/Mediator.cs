@@ -66,9 +66,7 @@ public class Mediator<TData>
         
         while (workflow.CurrentStep is not null)
         {
-           workflow.CurrentStep.Action.Handle(workflow, _commandProcessor);
-           workflow.CurrentStep.OnCompletion();
-           workflow.CurrentStep = workflow.CurrentStep.Next;
+           workflow.CurrentStep.Execute(workflow, _commandProcessor);  
            _workflowStore.SaveWorkflow(workflow);
         }
         
@@ -102,7 +100,7 @@ public class Mediator<TData>
             throw new InvalidOperationException($"Current step of workflow #{workflow.Id} should not be null");
              
         workflowResponse.Parser(@event, workflow);
-        workflow.CurrentStep.OnCompletion();
+        workflow.CurrentStep.OnCompletion?.Invoke();
         workflow.State = WorkflowState.Running;
         workflow.PendingResponses.Remove(eventType);
     }

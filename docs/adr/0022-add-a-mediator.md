@@ -10,7 +10,7 @@ Proposed
 We have two approaches to a workflow: orchestration and choreography. In choreography the workflow emerges from the interaction of the participants. In orchestration, one participant executes the workflow, calling other participants as needed. Whilst choreography has low-coupling, it also has low-cohesion. At scale this can lead to the Pinball anti-pattern, where it is difficult to maintain the workflow.
 
 The [Mediator](https://www.oodesign.com/mediator-pattern) pattern provides an orchestrator that manages a workflow that involves multiple objects. In its simplest form, instead of talking to each other, objects talk to the mediator, which then calls other objects as required to execute the workflow.
-                                                                                                                                                                                                                                                                
+
 Brighter provides `IHandleRequests<>` to provide a handler for an individual request, either a command or an event. It is possible to have an emergent workflow, within Brighter, through the choreography of these handlers. However, Brighter provides no model for an orchestrator that manages a workflow that involves multiple handlers. In particular, Brighter does not support a class that can listen to multiple requests and then call other handlers as required to execute the workflow.
 
 In principle, nothing stops an end user from implementing a `Mediator` class that listens to multiple requests and then calls other handlers as required to execute the workflow.  So orchestration has always been viable, but left as an exercise to the user. However, competing OSS projects provide popular workflow functionality, suggesting there is demand for an off-the-shelf solution.
@@ -33,18 +33,18 @@ Our experience has been that many teams adopt Step Functions to gain access to i
 We will add a `Mediator` class to Brighter that will: 
 
 	1.	Manages and tracks a WorkflowState object representing the current step in the workflow.
-	2.	Supports multiple process states, including:
-	•	StartState: Initiates the workflow.
-	•	FireAndForgetProcessState: Dispatches a `Command` and immediately advances to the next state.
-	•	RequestReactionProcessState: Dispatches a `Command` and waits for an event response before advancing.
-	•	ChoiceProcessState: Evaluates conditions using the `Specification` Pattern and chooses the next `Command` to Dispatch based on the evaluation.
-	•	WaitState: Suspends execution for a specified TimeSpan before advancing.
-	3.	Uses a CommandProcessor for routing commands and events to appropriate handlers.
-	4.	Can be passed events, and uses the correlation IDs to match events to specific workflow instances and advance the workflow accordingly.
+    2. Support multiple steps: sequence, choice, parallel, wait.
+	3.	Supports multiple tasks, mapped to typical ws-messaging patterns including:
+	•	FireAndForget: Dispatches a `Command` and immediately advances to the next state.
+	•	RequestReaction: Dispatches a `Command` and waits for an event response before advancing.
+    •	RobustRequestReaction: Reaction event can kick off an error flow. 
+	4.	Uses a CommandProcessor for routing commands and events to appropriate handlers.
+    5.  Work is handled within Brighter handlers. They use glue code to call back to the workflow where necessary 
+	6.	Can be passed events, and uses the correlation IDs to match events to specific workflow instances and advance the workflow accordingly.
 
-The Specification Pattern in ChoiceProcessState allows flexible conditional logic by combining specifications with And and Or conditions, enabling complex branching decisions within the workflow.
+The Specification Pattern in a Choice steo will allow flexible conditional logic by combining specifications with And and Or conditions, enabling complex branching decisions within the workflow.
 
-We assume that the initial V10 of Brighter will contain a minimum viable product version of the `Mediator`. Additional functionality, such as process states, UIs for workflows will be a feature of later releases. Broady our goal within V10 would be to ensure that from [Workflow Patterns](http://www.workflowpatterns.com/patterns/control/index.php) we can deliver the Basic Control Flow patterns. A stretch goal would be to offer some Iteration and Cnacellation patterns.
+We assume that the initial V10 of Brighter will contain a minimum viable product version of the `Mediator`. Additional functionality, workflows, etc. will be a feature of later releases. Broady our goal within V10 would be to ensure that from [Workflow Patterns](http://www.workflowpatterns.com/patterns/control/index.php) we can deliver the Basic Control Flow patterns. A stretch goal would be to offer some Iteration and Cnacellation patterns.
 
 ## Consequences
 

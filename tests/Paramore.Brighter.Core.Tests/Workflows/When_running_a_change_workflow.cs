@@ -1,5 +1,7 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.MediatorWorkflow;
 using Polly.Registry;
@@ -7,12 +9,14 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorOneStepFlowTests 
+public class MediatorChangeStepFlowTests 
 {
     private readonly Mediator<WorkflowTestData> _mediator;
     private readonly Workflow<WorkflowTestData> _flow;
+    private readonly FakeTimeProvider _timeProvider;
+    private bool _stepCompleted;
 
-    public MediatorOneStepFlowTests()
+    public MediatorChangeStepFlowTests ()
     {
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyCommandHandler>();
@@ -26,10 +30,16 @@ public class MediatorOneStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
         
+        _timeProvider = new FakeTimeProvider();
+        
         var firstStep = new Sequence<WorkflowTestData>(
             "Test of Workflow",
-            new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)!}),
-            () => { },
+            new Change<WorkflowTestData>( (flow) =>
+            {
+                flow.Bag["MyValue"] = "Altered";
+                return flow;
+            }),
+            () => { _stepCompleted = true; },
             null
             );
         
@@ -44,11 +54,11 @@ public class MediatorOneStepFlowTests
     [Fact]
     public void When_running_a_single_step_workflow()
     {
-        MyCommandHandler.ReceivedCommands.Clear();
-        
+        //We won't really see th block in action as the test will simply block for 500ms
         _mediator.RunWorkFlow(_flow);
         
-        MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
         _flow.State.Should().Be(WorkflowState.Done);
+        _stepCompleted.Should().BeTrue();
+        _flow.Bag["MyValue"].Should().Be("Altered");
     }
 }

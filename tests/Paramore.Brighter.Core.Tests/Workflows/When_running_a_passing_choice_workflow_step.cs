@@ -38,23 +38,24 @@ public class MediatorPassingChoiceFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Pass");
         
-        var stepThree = new Step<WorkflowTestData>("Test of Workflow Step Three",
+        var stepThree = new Sequence<WorkflowTestData>(
+            "Test of Workflow SequenceStep Three",
             new FireAndForget<MyOtherCommand, WorkflowTestData>(() => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
             () => { _stepCompletedThree = true; },
             null);
         
-        var stepTwo = new Step<WorkflowTestData>("Test of Workflow Step Two",
+        var stepTwo = new Sequence<WorkflowTestData>(
+            "Test of Workflow SequenceStep Two",
             new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
             () => { _stepCompletedTwo = true; },
             null);
 
-         var stepOne = new Step<WorkflowTestData>("Test of Workflow Step One",
-            new Choice<WorkflowTestData>(
-                (_) => stepTwo,
-                (_) => stepThree,
-                new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass")),
+         var stepOne = new ExclusiveChoice<WorkflowTestData>(
+             "Test of Workflow SequenceStep One",
+             new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass"),
             () => { _stepCompletedOne = true; },
-            null);
+            stepTwo, 
+            stepThree);
        
         _flow = new Workflow<WorkflowTestData>(stepOne, workflowData) ;
         

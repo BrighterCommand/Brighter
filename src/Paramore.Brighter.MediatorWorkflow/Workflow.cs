@@ -42,16 +42,25 @@ public enum WorkflowState
 /// When we are awaiting a response for a workflow, we need to store information about how to continue the workflow
 /// after receiving the event. 
 /// </summary>
-/// <param name="parser">The parser to populate our worfkow from the event that forms the response</param>
+/// <param name="parser">The parser to populate our workflow from the event that forms the response</param>
 /// <param name="responseType">The type we expect a response to be - used to check the flow</param>
 /// <param name="errorType">The type we expect a fault to be - used to check the flow</param>
 /// <typeparam name="TData">The user-defined data, associated with a workflow</typeparam>
 public class WorkflowResponse<TData>(Action<Event, Workflow<TData>> parser, Type responseType, Type? errorType)
 {
+    /// <summary>Parses a response to a workflow sequence step</summary>
     public Action<Event, Workflow<TData>>? Parser { get; set; } = parser;
+    
+    /// <summary>The type we expect a response to be - used to check the flow</summary>
     public Type? ResponseType  { get; set; } = responseType;
+    
+    /// <summary>The type we expect a fault to be - used to check the flow</summary>
     public Type? ErrorType { get; set; } = errorType;
 
+    /// <summary>
+    /// Do we have an error
+    /// </summary>
+    /// <returns>True if we have an error, false otherwise</returns>
     public bool HasError() =>  ErrorType is not null; 
 }
 
@@ -67,31 +76,22 @@ public abstract class Workflow { }
 public class Workflow<TData> : Workflow
 {
 
-    /// <summary>
-    /// A map of user defined values. Normally, use Data to pass data between steps
-    /// </summary>
+    /// <summary> A map of user defined values. Normally, use Data to pass data between steps </summary>
     public Dictionary<string, object> Bag { get; } = new();
     
-    /// <summary>
-    /// What step are we currently at in the workflow
-    /// </summary>
+    /// <summary> What step are we currently at in the workflow </summary>
     public Step<TData>? CurrentStep { get; set; }
     
+    /// <summary> The data that is passed between steps of the workflow </summary>
     public TData Data { get; set; } 
     
-    /// <summary>
-    /// The id of the workflow, used to save-retrieve it from storage
-    /// </summary>
+    /// <summary> The id of the workflow, used to save-retrieve it from storage </summary>
     public  string Id { get; private set; } = Guid.NewGuid().ToString();
 
-    /// <summary>
-    /// If we are awaiting a response, we store the type of the response and the action to take when it arrives
-    /// </summary>
+    /// <summary> If we are awaiting a response, we store the type of the response and the action to take when it arrives </summary>
     public Dictionary<Type, WorkflowResponse<TData>> PendingResponses { get; private set; } = new();
     
-    /// <summary>
-    /// Is the workflow currently awaiting an event response
-    /// </summary>
+    /// <summary> Is the workflow currently awaiting an event response </summary>
     public WorkflowState State { get; set; }
 
     /// <summary>

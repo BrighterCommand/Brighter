@@ -28,13 +28,15 @@ public class MediatorTwoStepFlowTests
         workflowData.Bag.Add("MyValue", "Test");
         
         
-        var secondStep = new Step<WorkflowTestData>("Test of Workflow Two",
+        var secondStep = new Sequence<WorkflowTestData>(
+            "Test of Workflow Two",
             new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
             () => { },
             null
             );
         
-        var firstStep = new Step<WorkflowTestData>("Test of Workflow One",
+        var firstStep = new Sequence<WorkflowTestData>(
+            "Test of Workflow One",
             new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
             () => { workflowData.Bag["MyValue"] = "TestTwo"; }, 
             secondStep

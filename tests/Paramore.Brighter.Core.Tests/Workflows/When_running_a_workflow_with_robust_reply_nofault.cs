@@ -37,7 +37,8 @@ public class MediatorRobustReplyNoFaultStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
         
-         var firstStep = new Step<WorkflowTestData>("Test of Workflow",
+         var firstStep = new Sequence<WorkflowTestData>(
+             "Test of Workflow",
             new RobustRequestAndReaction<MyCommand, MyEvent, MyFault, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value),

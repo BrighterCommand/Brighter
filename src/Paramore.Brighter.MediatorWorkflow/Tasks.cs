@@ -23,25 +23,14 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MediatorWorkflow;
-
-/// <summary>
-/// Represents a step in the workflow. Steps form a singly linked list.
-/// </summary>
-/// <typeparam name="TData">The type of the workflow data.</typeparam>
-/// <param name="Name">The name of the step.</param>
-/// <param name="Action">The action to be taken with the step.</param>
-/// <param name="OnCompletion">The action to be taken upon completion of the step.</param>
-/// <param name="Next">The next step in the sequence.</param>
-public record Step<TData>(string Name, IWorkflowAction<TData> Action, Action OnCompletion, Step<TData>? Next, Action? OnFaulted = null, Step<TData>? FaultNext = null);
 
 /// <summary>
 /// Defines an interface for workflow actions.
 /// </summary>
 /// <typeparam name="TData">The type of the workflow data.</typeparam>
-public interface IWorkflowAction<TData> 
+public interface IStepTask<TData> 
 {
     /// <summary>
     /// Handles the workflow action.
@@ -52,54 +41,18 @@ public interface IWorkflowAction<TData>
 }
 
 /// <summary>
-/// Pauses a flow for a specified amount of time. Note that this is a blocking operation for the workflow thread.
+/// Essentially a pass through step, it alters <see cref="Workflow{TData}"/> Data property by running the transform
+/// given by onChange over it
 /// </summary>
-/// <typeparam name="TData">The data for the workflow; not used</typeparam>
-public class BlockingWait<TData> : IWorkflowAction<TData>
-{
-    private readonly TimeSpan _wait;
-    private readonly TimeProvider _timeProvider;
-
-    /// <summary>
-    /// Pauses a flow for a specified amount of time. Note that this is a blocking operation for the workflow thread.
-    /// </summary>
-    /// <param name="wait">The time to block the thread for</param>
-    /// <param name="timeProvider">The time provider; defaults to TimeProvider.System; intended to be overriden with FakeTimeProvider in testing</param>
-    /// <typeparam name="TData">The data for the workflow; not used</typeparam>
-    public BlockingWait(TimeSpan wait, TimeProvider? timeProvider = null)
-    {
-        _wait = wait;
-        _timeProvider = timeProvider ?? TimeProvider.System;
-    }
-
-    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
-    {
-        _timeProvider.Delay(_wait).Wait();
-    }
-}
-
-/// <summary>
-/// Represents a workflow based on evaluating a specification to determine which step to take next
-/// </summary>
-/// <param name="onTrue">The step to take if the specification is satisfied</param>
-/// <param name="onFalse">The step to take if the specification is not satisfied</param>
-/// <param name="predicate">The rule that decides between each branch</param>
-/// <typeparam name="TData">The workflow data, used to make the choice</typeparam>
-public class Choice<TData>(
-    Func<TData, Step<TData>> onTrue, 
-    Func<TData, Step<TData>> onFalse,
-    ISpecification<TData> predicate
-) : IWorkflowAction<TData> 
+/// <param name="onChange">Takes the <see cref="Workflow{TData}"/> Data property and transforms it</param>
+/// <typeparam name="TData">The workflow data, that we wish to transform</typeparam>
+public class Change<TData>(
+    Func<TData, TData> onChange
+) : IStepTask<TData>
 {
     public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
     {
-        if (state.CurrentStep is null)
-            throw new InvalidOperationException("The workflow has not been initialized.");
-
-        state.CurrentStep = state.CurrentStep with
-        {
-            Next = (predicate.IsSatisfiedBy(state.Data) ? onTrue(state.Data) : onFalse(state.Data))
-        };
+        state.Data = onChange(state.Data);
     }
 }
 
@@ -112,7 +65,7 @@ public class Choice<TData>(
 public class FireAndForget<TRequest, TData>(
     Func<TRequest> requestFactory
     ) 
-    : IWorkflowAction<TData> 
+    : IStepTask<TData> 
     where TRequest : class, IRequest 
 {
     /// <summary>
@@ -143,7 +96,7 @@ public class RequestAndReaction<TRequest, TReply, TData>(
     Func<TRequest> requestFactory, 
     Action<TReply?> replyFactory
     ) 
-    : IWorkflowAction<TData> 
+    : IStepTask<TData> 
     where TRequest : class, IRequest
     where TReply : Event 
 {
@@ -177,7 +130,7 @@ public class RobustRequestAndReaction<TRequest, TReply, TFault, TData>(
     Action<TReply?> replyFactory,
     Action<TFault?> faultFactory
 )
-    : IWorkflowAction<TData> 
+    : IStepTask<TData> 
     where TRequest : class, IRequest
     where TReply : Event
     where TFault: Event

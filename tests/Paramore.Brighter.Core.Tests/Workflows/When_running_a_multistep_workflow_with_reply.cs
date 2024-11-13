@@ -36,12 +36,14 @@ public class MediatorReplyMultiStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
 
-        var stepTwo = new Step<WorkflowTestData>("Test of Workflow Step Two",
+        var stepTwo = new Sequence<WorkflowTestData>(
+            "Test of Workflow SequenceStep Two",
             new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
             () => { _stepCompletedTwo = true; },
             null);
         
-         Step<WorkflowTestData> stepOne = new("Test of Workflow Step One",
+         Sequence<WorkflowTestData> stepOne = new(
+             "Test of Workflow SequenceStep One",
             new RequestAndReaction<MyCommand, MyEvent, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value)),
