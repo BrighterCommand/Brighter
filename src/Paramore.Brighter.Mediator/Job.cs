@@ -25,12 +25,12 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 
-namespace Paramore.Brighter.MediatorWorkflow;
+namespace Paramore.Brighter.Mediator;
 
 /// <summary>
 ///  What state is the workflow in
 /// </summary>
-public enum WorkflowState
+public enum JobState
 {
     Ready,
     Running,
@@ -38,44 +38,19 @@ public enum WorkflowState
     Done,
 }
 
+
+
 /// <summary>
-/// When we are awaiting a response for a workflow, we need to store information about how to continue the workflow
-/// after receiving the event. 
+/// empty class, used as marker for the branch data
 /// </summary>
-/// <param name="parser">The parser to populate our workflow from the event that forms the response</param>
-/// <param name="responseType">The type we expect a response to be - used to check the flow</param>
-/// <param name="errorType">The type we expect a fault to be - used to check the flow</param>
-/// <typeparam name="TData">The user-defined data, associated with a workflow</typeparam>
-public class WorkflowResponse<TData>(Action<Event, Workflow<TData>> parser, Type responseType, Type? errorType)
-{
-    /// <summary>Parses a response to a workflow sequence step</summary>
-    public Action<Event, Workflow<TData>>? Parser { get; set; } = parser;
-    
-    /// <summary>The type we expect a response to be - used to check the flow</summary>
-    public Type? ResponseType  { get; set; } = responseType;
-    
-    /// <summary>The type we expect a fault to be - used to check the flow</summary>
-    public Type? ErrorType { get; set; } = errorType;
-
-    /// <summary>
-    /// Do we have an error
-    /// </summary>
-    /// <returns>True if we have an error, false otherwise</returns>
-    public bool HasError() =>  ErrorType is not null; 
-}
+public abstract class Job { }
 
 /// <summary>
-/// empty class, used as maker for the workflow data
-/// </summary>
-public abstract class Workflow { }
-
-/// <summary>
-/// Workflow represents the current state of the workflow and tracks if it’s awaiting a response.
+/// Job represents the current state of the workflow and tracks if it’s awaiting a response.
 /// </summary>
 /// <typeparam name="TData">The user defined data for the workflow</typeparam>
-public class Workflow<TData> : Workflow
+public class Job<TData> : Job
 {
-
     /// <summary> A map of user defined values. Normally, use Data to pass data between steps </summary>
     public Dictionary<string, object> Bag { get; } = new();
     
@@ -89,21 +64,21 @@ public class Workflow<TData> : Workflow
     public  string Id { get; private set; } = Guid.NewGuid().ToString();
 
     /// <summary> If we are awaiting a response, we store the type of the response and the action to take when it arrives </summary>
-    public Dictionary<Type, WorkflowResponse<TData>> PendingResponses { get; private set; } = new();
+    public Dictionary<Type, TaskResponse<TData>> PendingResponses { get; private set; } = new();
     
     /// <summary> Is the workflow currently awaiting an event response </summary>
-    public WorkflowState State { get; set; }
+    public JobState State { get; set; }
 
     /// <summary>
-    ///  Constructs a new Workflow 
+    ///  Constructs a new Job 
     /// <param name="firstStep">The first step of the workflow to execute.</param>
     /// <param name="data">State which is passed between steps of the workflow</param>
     /// </summary>
-    public Workflow(Step<TData> firstStep, TData data) 
+    public Job(Step<TData> firstStep, TData data) 
     {
         CurrentStep = firstStep;
         Data = data;
-        State = WorkflowState.Ready;    
+        State = JobState.Ready;    
     }
 }
 

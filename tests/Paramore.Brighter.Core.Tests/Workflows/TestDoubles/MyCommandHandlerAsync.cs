@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,23 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MediatorWorkflow;
-
-public class InMemoryWorkflowStore : IAmAWorkflowStore
+namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    private readonly Dictionary<string, Workflow> _flows = new();
-
-    public void SaveWorkflow<TData>(Workflow<TData> workflow) 
+    internal class MyCommandHandlerAsync(IAmACommandProcessor? commandProcessor) : RequestHandlerAsync<MyCommand>
     {
-        _flows[workflow.Id] = workflow;
-    }
+        public static List<MyCommand> ReceivedCommands { get;  } = [];
 
-    public Workflow? GetWorkflow(string? id)
-    {
-        if (id is null) return null;
-        return _flows.TryGetValue(id, out var state) ? state : null;
+
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
+        {
+            LogCommand(command);
+            commandProcessor?.PublishAsync(new MyEvent(command.Value) {CorrelationId = command.CorrelationId}, cancellationToken: cancellationToken);
+            return await base.HandleAsync(command, cancellationToken);
+        }
+
+        private void LogCommand(MyCommand request)
+        {
+            ReceivedCommands.Add(request);
+        }
     }
 }

@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,24 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
+namespace Paramore.Brighter.Mediator;
+
+/// <summary>
+/// Used to store the state of a workflow
+/// </summary>
+public interface IAmAJobStoreAsync
 {
-    internal class MyCommandHandler(IAmACommandProcessor? commandProcessor) : RequestHandler<MyCommand>
-    {
-        public static List<MyCommand> ReceivedCommands { get;  } = [];
-        
-        public override MyCommand Handle(MyCommand command)
-        {
-            LogCommand(command);
-            commandProcessor?.Publish(new MyEvent(command.Value) {CorrelationId = command.CorrelationId});
-            return base.Handle(command);
-        }
+    /// <summary>
+    /// Saves the job 
+    /// </summary>
+    /// <param name="job">The job</param>
+    /// <param name="cancellationToken"></param>
+    Task SaveJobAsync<TData>(Job<TData> job, CancellationToken cancellationToken);
 
-        private void LogCommand(MyCommand request)
-        {
-            ReceivedCommands.Add(request);
-        }
-    }
+    /// <summary>
+    /// Retrieves a job via its Id
+    /// </summary>
+    /// <param name="id">The id of the job</param>
+    /// <returns>if found, the job, otherwise null</returns>
+    Task<Job?> GetJobAsync(string? id) ;
 }

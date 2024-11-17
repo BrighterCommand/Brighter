@@ -23,54 +23,44 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MediatorWorkflow;
+namespace Paramore.Brighter.Mediator;
 
 /// <summary>
-/// The <see cref="Mediator{TData}"/> class orchestrates a workflow by executing each step in a sequence.
+/// The <see cref="Scheduler{TData}"/> class orchestrates a workflow by executing each step in a sequence.
 /// It uses a command processor and a workflow store to manage the workflow's state and actions.
 /// </summary>
 /// <typeparam name="TData">The type of the workflow data.</typeparam>
-public class Mediator<TData> 
+public class Scheduler<TData> 
 {
     private readonly IAmACommandProcessor _commandProcessor;
-    private readonly IAmAWorkflowStore _workflowStore;
+    private readonly IAmAJobChannel<TData> _channel;
+    private readonly IAmAJobStoreAsync _jobStoreAsync;
 
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Mediator{TData}"/> class.
+    /// Initializes a new instance of the <see cref="Scheduler{TData}"/> class.
     /// </summary>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
-    /// <param name="workflowStore">The workflow store used to store and retrieve workflows.</param>
-    public Mediator(IAmACommandProcessor commandProcessor, IAmAWorkflowStore workflowStore)
+    /// <param name="channel">The <see cref="IAmAJobChannel{TData}"/> over which jobs flow. The <see cref="Scheduler{TData}"/> is a producer
+    /// and the <see cref="Runner{TData}"/> is the consumer from the  channel</param>
+    /// <param name="jobStoreAsync">A store for pending jobs</param>
+    public Scheduler(IAmACommandProcessor commandProcessor, IAmAJobChannel<TData> channel, IAmAJobStoreAsync jobStoreAsync)
     {
         _commandProcessor = commandProcessor;
-        _workflowStore = workflowStore;
+        _channel = channel;
+        _jobStoreAsync = jobStoreAsync;
     }
 
     /// <summary>
-    /// Runs the workflow by executing each step in the sequence.
+    /// Runs the job by executing each step in the sequence.
     /// </summary>
-    /// <param name="workflow"></param>
-    /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
-    public void RunWorkFlow(Workflow<TData> workflow)
+    /// <param name="job"></param>
+    /// <exception cref="InvalidOperationException">Thrown when the job has not been initialized.</exception>
+    public async Task ScheduleAsync(Job<TData> job)
     {
-        if (workflow.CurrentStep is null)
-        {
-            workflow.State = WorkflowState.Done;
-            return;
-        }
-        
-        workflow.State = WorkflowState.Running;
-        _workflowStore.SaveWorkflow(workflow);
-        
-        while (workflow.CurrentStep is not null)
-        {
-           workflow.CurrentStep.Execute(workflow, _commandProcessor);  
-           _workflowStore.SaveWorkflow(workflow);
-        }
-        
-        workflow.State = WorkflowState.Done;
+        await _channel.EnqueueJobAsync(job);
     }
 
     /// <summary>
@@ -78,30 +68,30 @@ public class Mediator<TData>
     /// </summary>
     /// <param name="event">The event to process.</param>
     /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
-     public void ReceiveWorkflowEvent(Event @event)
+     public async Task ReceiveWorkflowEvent(Event @event)
      {
          if (@event.CorrelationId is null)
              throw new InvalidOperationException("CorrelationId should not be null; needed to retrieve state of workflow");
          
-        var w = _workflowStore.GetWorkflow(@event.CorrelationId);
+         var w = await _jobStoreAsync.GetJobAsync(@event.CorrelationId);
         
-        if (w is not Workflow<TData> workflow)
-            throw new InvalidOperationException("Workflow has not been stored");
+         if (w is not Job<TData> job)
+             throw new InvalidOperationException("Branch has not been stored");
              
-        var eventType = @event.GetType();
+         var eventType = @event.GetType();
              
-        if (!workflow.PendingResponses.TryGetValue(eventType, out WorkflowResponse<TData>? workflowResponse)) 
-            return;
+         if (!job.PendingResponses.TryGetValue(eventType, out TaskResponse<TData>? taskResponse)) 
+             return;
 
-        if (workflowResponse.Parser is null)
-            throw new InvalidOperationException($"Parser for event type {eventType} should not be null");
+         if (taskResponse.Parser is null)
+             throw new InvalidOperationException($"Parser for event type {eventType} should not be null");
 
-        if (workflow.CurrentStep is null)
-            throw new InvalidOperationException($"Current step of workflow #{workflow.Id} should not be null");
+         if (job.CurrentStep is null)
+             throw new InvalidOperationException($"Current step of workflow #{job.Id} should not be null");
              
-        workflowResponse.Parser(@event, workflow);
-        workflow.CurrentStep.OnCompletion?.Invoke();
-        workflow.State = WorkflowState.Running;
-        workflow.PendingResponses.Remove(eventType);
+         taskResponse.Parser(@event, job);
+         job.CurrentStep.OnCompletion?.Invoke();
+         job.State = JobState.Running;
+         job.PendingResponses.Remove(eventType);
     }
 }

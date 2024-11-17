@@ -1,6 +1,6 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
-Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,25 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Paramore.Brighter.Mediator;
 
-namespace Paramore.Brighter.MediatorWorkflow;
-
-/// <summary>
-/// Used to store the state of a workflow
-/// </summary>
-public interface IAmAWorkflowStore
+namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    /// <summary>
-    /// Saves the workflow 
-    /// </summary>
-    /// <param name="workflow">The workflow</param>
-    void SaveWorkflow<TData>(Workflow<TData> workflow);
+    internal class MyEventHandlerAsync(Scheduler<WorkflowTestData>? mediator) : RequestHandlerAsync<MyEvent>
+    {
+        public static List<MyEvent> ReceivedEvents { get;  } = [];
 
-    /// <summary>
-    /// Retrieves a workflow via its Id
-    /// </summary>
-    /// <param name="id">The id of the workflow</param>
-    /// <returns>if found, the workflow, otherwise null</returns>
-    Workflow? GetWorkflow(string? id) ;
+        public override async Task<MyEvent> HandleAsync(MyEvent @event, CancellationToken cancellationToken = default)
+        {
+            LogEvent(@event);
+            mediator?.ReceiveWorkflowEvent(@event);
+            return await base.HandleAsync(@event, cancellationToken);
+        }
+        
+        private void LogEvent(MyEvent request)
+        {
+            ReceivedEvents.Add(request);
+        }
+    }
 }

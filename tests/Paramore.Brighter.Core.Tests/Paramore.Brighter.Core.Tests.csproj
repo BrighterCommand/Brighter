@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
-    <ProjectReference Include="..\..\src\Paramore.Brighter.MediatorWorkflow\Paramore.Brighter.MediatorWorkflow.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Mediator\Paramore.Brighter.Mediator.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
   </ItemGroup>

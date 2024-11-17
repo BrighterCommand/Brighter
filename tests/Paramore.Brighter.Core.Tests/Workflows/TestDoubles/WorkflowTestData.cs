@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Paramore.Brighter.MediatorWorkflow;
+using Paramore.Brighter.Mediator;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 

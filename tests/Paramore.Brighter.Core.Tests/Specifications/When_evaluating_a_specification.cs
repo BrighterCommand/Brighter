@@ -1,5 +1,5 @@
 ﻿using Paramore.Brighter.Core.Tests.Specifications.TestDoubles;
-using Paramore.Brighter.MediatorWorkflow;
+using Paramore.Brighter.Mediator;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Specifications;

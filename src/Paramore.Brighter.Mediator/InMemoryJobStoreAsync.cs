@@ -1,6 +1,6 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,23 +23,34 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using Paramore.Brighter.MediatorWorkflow;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
+namespace Paramore.Brighter.Mediator;
+
+public class InMemoryJobStoreAsync : IAmAJobStoreAsync
 {
-    internal class MyEventHandler(Mediator<WorkflowTestData>? mediator) : RequestHandler<MyEvent>
+    private readonly Dictionary<string, Job> _flows = new();
+
+    public Task SaveJobAsync<TData>(Job<TData> job, CancellationToken cancellationToken) 
     {
-        public static List<MyEvent> ReceivedEvents { get;  } = [];
-        public override MyEvent Handle(MyEvent @event)
-        {
-            LogEvent(@event);
-            mediator?.ReceiveWorkflowEvent(@event);
-            return base.Handle(@event);
-        }
+        if (cancellationToken.IsCancellationRequested) return Task.FromCanceled(cancellationToken);
         
-        private void LogEvent(MyEvent request)
+        _flows[job.Id] = job;
+        return Task.CompletedTask;
+    }
+
+    public Task<Job?> GetJobAsync(string? id)
+    {
+        var tcs = new TaskCompletionSource<Job?>();
+        if (id is null)
         {
-            ReceivedEvents.Add(request);
+            tcs.SetResult(null);
+            return tcs.Task;
         }
+
+        var job = _flows.TryGetValue(id, out var state) ? state : null;
+        tcs.SetResult( job);
+        return tcs.Task;
     }
 }

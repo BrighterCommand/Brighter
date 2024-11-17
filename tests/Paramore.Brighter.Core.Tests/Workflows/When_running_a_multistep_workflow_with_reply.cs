@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
-using Paramore.Brighter.MediatorWorkflow;
+using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
 
@@ -10,23 +11,24 @@ namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorReplyMultiStepFlowTests  
 {
-    private readonly Mediator<WorkflowTestData> _mediator;
+    private readonly Scheduler<WorkflowTestData> _scheduler;
+    private readonly Runner<WorkflowTestData> _runner;
+    private readonly Job<WorkflowTestData> _flow;
     private bool _stepCompletedOne;
     private bool _stepCompletedTwo;
-    private readonly Workflow<WorkflowTestData> _flow;
 
     public MediatorReplyMultiStepFlowTests()
     {
         var registry = new SubscriberRegistry();
-        registry.Register<MyCommand, MyCommandHandler>();
-        registry.Register<MyEvent, MyEventHandler>();
+        registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
+        registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
 
         IAmACommandProcessor? commandProcessor = null;
-        var handlerFactory = new SimpleHandlerFactorySync((handlerType) =>
+        var handlerFactory = new SimpleHandlerFactoryAsync((handlerType) =>
              handlerType switch
             { 
-                _ when handlerType == typeof(MyCommandHandler) => new MyCommandHandler(commandProcessor),
-                _ when handlerType == typeof(MyEventHandler) => new MyEventHandler(_mediator),
+                _ when handlerType == typeof(MyCommandHandlerAsync) => new MyCommandHandlerAsync(commandProcessor),
+                _ when handlerType == typeof(MyEventHandlerAsync) => new MyEventHandlerAsync(_scheduler),
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
@@ -36,40 +38,48 @@ public class MediatorReplyMultiStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
 
-        var stepTwo = new Sequence<WorkflowTestData>(
-            "Test of Workflow SequenceStep Two",
-            new FireAndForget<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+        var stepTwo = new Sequential<WorkflowTestData>(
+            "Test of Job SequenceStep Two",
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
             () => { _stepCompletedTwo = true; },
             null);
         
-         Sequence<WorkflowTestData> stepOne = new(
-             "Test of Workflow SequenceStep One",
-            new RequestAndReaction<MyCommand, MyEvent, WorkflowTestData>(
+         Sequential<WorkflowTestData> stepOne = new(
+             "Test of Job SequenceStep One",
+            new RequestAndReactionAsync<MyCommand, MyEvent, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value)),
             () => { _stepCompletedOne = true; },
             stepTwo);
        
-        _flow = new Workflow<WorkflowTestData>(stepOne, workflowData) ;
+        _flow = new Job<WorkflowTestData>(stepOne, workflowData) ;
         
-        _mediator = new Mediator<WorkflowTestData>(
-            commandProcessor,
-            new InMemoryWorkflowStore()
+        InMemoryJobStoreAsync store = new();
+        InMemoryJobChannel<WorkflowTestData> channel = new();
+        
+        _scheduler = new Scheduler<WorkflowTestData>(
+            commandProcessor, 
+            channel,
+            store
         );
+        
+        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor);
     }
     
     [Fact]
-    public void When_running_a_workflow_with_reply()
+    public async Task When_running_a_workflow_with_reply()
     {
-        MyCommandHandler.ReceivedCommands.Clear();
-        MyEventHandler.ReceivedEvents.Clear();
+        MyCommandHandlerAsync.ReceivedCommands.Clear();
+        MyEventHandlerAsync.ReceivedEvents.Clear();
         
-        _mediator.RunWorkFlow(_flow);
+        await _scheduler.ScheduleAsync(_flow);
+        await _runner.RunAsync();
+        
         _stepCompletedOne.Should().BeTrue();
         _stepCompletedTwo.Should().BeTrue();
         
-        MyCommandHandler.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
-        MyEventHandler.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
-        _flow.State.Should().Be(WorkflowState.Done);
+        MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
+        MyEventHandlerAsync.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
+        _flow.State.Should().Be(JobState.Done);
     }
 }

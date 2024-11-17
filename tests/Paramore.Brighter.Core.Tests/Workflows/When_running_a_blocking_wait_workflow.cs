@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
-using Paramore.Brighter.MediatorWorkflow;
+using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
 
@@ -11,18 +10,18 @@ namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorBlockingWaitStepFlowTests 
 {
-    private readonly Mediator<WorkflowTestData> _mediator;
-    private readonly Workflow<WorkflowTestData> _flow;
-    private readonly FakeTimeProvider _timeProvider;
+    private readonly Scheduler<WorkflowTestData> _scheduler;
+    private readonly Runner<WorkflowTestData> _runner;
+    private readonly Job<WorkflowTestData> _flow;
     private bool _stepCompleted;
 
     public MediatorBlockingWaitStepFlowTests()
     {
         var registry = new SubscriberRegistry();
-        registry.Register<MyCommand, MyCommandHandler>();
+        registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
         CommandProcessor commandProcessor = null;
-        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler(commandProcessor));
+        var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(commandProcessor));
 
         commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
@@ -30,29 +29,35 @@ public class MediatorBlockingWaitStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag.Add("MyValue", "Test");
         
-        _timeProvider = new FakeTimeProvider();
-        
-        var firstStep = new Wait<WorkflowTestData>("Test of Workflow",
+        var firstStep = new Wait<WorkflowTestData>("Test of Job",
             TimeSpan.FromMilliseconds(500),
             () => { _stepCompleted = true; },
             null
             );
         
-        _flow = new Workflow<WorkflowTestData>(firstStep, workflowData) ;
+        _flow = new Job<WorkflowTestData>(firstStep, workflowData) ;
         
-        _mediator = new Mediator<WorkflowTestData>(
+        InMemoryJobStoreAsync store = new();
+        InMemoryJobChannel<WorkflowTestData> channel = new();
+        
+        _scheduler = new Scheduler<WorkflowTestData>(
             commandProcessor, 
-            new InMemoryWorkflowStore() 
+            channel,
+            store
             );
+        
+        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor);
     }
     
     [Fact]
-    public void When_running_a_single_step_workflow()
+    public async Task When_running_a_single_step_workflow()
     {
-        //We won't really see th block in action as the test will simply block for 500ms
-        _mediator.RunWorkFlow(_flow);
+        await _scheduler.ScheduleAsync(_flow);
         
-        _flow.State.Should().Be(WorkflowState.Done);
+        //We won't really see th block in action as the test will simply block for 500ms
+        await _runner.RunAsync();
+        
+        _flow.State.Should().Be(JobState.Done);
         _stepCompleted.Should().BeTrue();
     }
 }

@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.MediatorWorkflow;
+namespace Paramore.Brighter.Mediator;
 
 using System;
 

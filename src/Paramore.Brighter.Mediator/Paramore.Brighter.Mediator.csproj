@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.Threading.Channels" />
+  </ItemGroup>
+
 </Project>

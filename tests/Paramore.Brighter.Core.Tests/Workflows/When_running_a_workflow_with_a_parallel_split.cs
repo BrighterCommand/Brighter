@@ -1,21 +1,21 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
-using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorTwoStepFlowTests 
+public class MediatorParallelSplitFlowTests 
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
     private readonly Job<WorkflowTestData> _flow;
+    private bool _firstBranchFinished;
+    private bool _secondBranchFinished;
 
-    public MediatorTwoStepFlowTests()
+    public MediatorParallelSplitFlowTests()
     {
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -27,24 +27,31 @@ public class MediatorTwoStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Test");
         
-        
-        var secondStep = new Sequential<WorkflowTestData>(
+        var secondBranch = new Sequential<WorkflowTestData>(
             "Test of Job Two",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            () => { },
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyOtherValue"] as string)! }),
+            () => { _secondBranchFinished = true; },
             null
-            );
+        );
         
-        var firstStep = new Sequential<WorkflowTestData>(
+        var firstBranch = new Sequential<WorkflowTestData>(
             "Test of Job One",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            () => { workflowData.Bag["MyValue"] = "TestTwo"; }, 
-            secondStep
-            );
+            () => {  _firstBranchFinished = true;  }, 
+            null
+        );
         
-        _flow = new Job<WorkflowTestData>(firstStep, workflowData) ;
+        var parallelSplit = new ParallelSplit<WorkflowTestData>(
+            "Test of Job Parallel Split",
+            (data) =>
+            {   data.Bag.Add("MyValue", "TestOne");
+                data.Bag["MyOtherValue"] = "TestTwo";
+            },
+        firstBranch, secondBranch
+        );
+        
+        _flow = new Job<WorkflowTestData>(parallelSplit, workflowData) ;
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
@@ -58,16 +65,17 @@ public class MediatorTwoStepFlowTests
         _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor);
     }
     
-    [Fact]
-    public async Task When_running_a_single_step_workflow()
+    public async  Task When_running_a_workflow_with_a_parallel_split()
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         
-        await _scheduler.ScheduleAsync(_flow);
-        await _runner.RunAsync();
+        _scheduler.ScheduleAsync(_flow);
+        _runner.RunAsync();
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();
-        _flow.State.Should().Be(JobState.Done);
+        _firstBranchFinished.Should().BeTrue();
+        _secondBranchFinished.Should().BeTrue();
+        _flow.State.Should().Be(JobState.Done); 
     }
 }

@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MediatorWorkflow;
+namespace Paramore.Brighter.Mediator;
 
 /// <summary>
 /// The base type for a step in the workflow.
@@ -11,13 +12,13 @@ namespace Paramore.Brighter.MediatorWorkflow;
 /// <param name="stepTask">The action to be taken with the step, null if no action</param>
 /// <param name="onCompletion">An optional callback to run, following completion of the step</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
-public abstract class Step<TData>(string name, Sequence<TData>? next, IStepTask<TData>? stepTask = null, Action? onCompletion = null) 
+public abstract class Step<TData>(string name, Sequential<TData>? next, IStepTask<TData>? stepTask = null, Action? onCompletion = null) 
 {
     /// <summary>The name of the step, used for tracing execution</summary>
     public string Name { get; init; } = name;
     
     /// <summary>The next step in the sequence, null if this is the last step</summary>
-    protected Sequence<TData>? Next { get; } = next;
+    protected Sequential<TData>? Next { get; } = next;
 
     /// <summary>An optional callback to be run, following completion of the step.</summary>
     public Action? OnCompletion { get; } = onCompletion;
@@ -25,15 +26,17 @@ public abstract class Step<TData>(string name, Sequence<TData>? next, IStepTask<
     /// <summary>The action to be taken with the step.</summary>
     protected IStepTask<TData>? StepTask { get; } = stepTask;
     
-    public virtual void Execute(Workflow<TData> state, IAmACommandProcessor commandProcessor)
+    public  virtual Task ExecuteAsync(Job<TData> job, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
-        StepTask?.Handle(state, commandProcessor);
+        StepTask?.HandleAsync(job, commandProcessor, cancellationToken);
         OnCompletion?.Invoke();
+        return Task.CompletedTask;
     }
 }
-
+                                                         
 /// <summary>
-/// Represents a step in the workflow. Steps form a singly linked list.
+/// Represents a sequential step in the workflow. Control flows to the next step in the list, or ends if next is null.
+/// A set of sequential steps for a linked list.
 /// </summary>
 /// <param name="name">The name of the step, used for tracing execution</param>
 /// <param name="stepTask">The action to be taken with the step.</param>
@@ -42,21 +45,21 @@ public abstract class Step<TData>(string name, Sequence<TData>? next, IStepTask<
 /// <param name="onFaulted">An optional callback to run, following a faulted execution of the step</param>
 /// <param name="faultNext">The next step in the sequence, following a faulted execution of the step</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
-public class Sequence<TData>(
+public class Sequential<TData>(
     string name, 
     IStepTask<TData> stepTask, 
     Action? onCompletion, 
-    Sequence<TData>? next, 
+    Sequential<TData>? next, 
     Action? onFaulted = null, 
-    Sequence<TData>? faultNext = null
+    Sequential<TData>? faultNext = null
     ) 
     : Step<TData>(name, next, stepTask, onCompletion)
 {
-    public override void Execute(Workflow<TData> state, IAmACommandProcessor commandProcessor)
+    public override Task ExecuteAsync(Job<TData> state, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
         try
         {
-            StepTask?.Handle(state, commandProcessor);
+            StepTask?.HandleAsync(state, commandProcessor, cancellationToken);
             OnCompletion?.Invoke();
             state.CurrentStep = Next;
         }
@@ -65,6 +68,7 @@ public class Sequence<TData>(
             onFaulted?.Invoke();
             state.CurrentStep = faultNext;
         }
+        return Task.CompletedTask;
     }
 }
 
@@ -81,14 +85,29 @@ public class ExclusiveChoice<TData>(
     string name,
     ISpecification<TData> predicate,
     Action? onCompletion,
-    Sequence<TData>? nextTrue,
-    Sequence<TData>? nextFalse
+    Sequential<TData>? nextTrue,
+    Sequential<TData>? nextFalse
 )
     : Step<TData>(name, null, null, onCompletion)
 {
-    public override void Execute(Workflow<TData> state, IAmACommandProcessor commandProcessor)
+    public override Task ExecuteAsync(Job<TData> state, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
         state.CurrentStep = predicate.IsSatisfiedBy(state.Data) ? nextTrue : nextFalse;
+        return Task.CompletedTask;
+    }
+}
+
+public class ParallelSplit<TData>(string name, Action<TData>? onBranch, params Step<TData>[] branches) 
+    : Step<TData>(name, null)
+{
+    public Step<TData>[] Branches { get; set; } = branches;
+    
+    public override Task ExecuteAsync(Job<TData> state, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    {
+        // Parallel split doesn't directly execute its jobs. 
+        // Execution is handled by the Scheduler, which will handle running each branch concurrently. 
+        onBranch?.Invoke(state.Data);
+        return Task.CompletedTask;
     }
 }
 
@@ -100,12 +119,12 @@ public class ExclusiveChoice<TData>(
 /// <param name="onCompletion">An optional callback to run, following completion of the step</param>
 /// <param name="next">The next step in the sequence, null if this is the last step.</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
-public class Wait<TData>(string name, TimeSpan duration, Action? onCompletion,  Sequence<TData>? next) 
+public class Wait<TData>(string name, TimeSpan duration, Action? onCompletion,  Sequential<TData>? next) 
     : Step<TData>(name, next, null, onCompletion)
 {
-    public void Handle(Workflow<TData> state, IAmACommandProcessor commandProcessor)
+    public override async Task ExecuteAsync(Job<TData> state, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
-        Task.Delay(duration).Wait();
+        await Task.Delay(duration, cancellationToken);
         OnCompletion?.Invoke();
     }
 }
