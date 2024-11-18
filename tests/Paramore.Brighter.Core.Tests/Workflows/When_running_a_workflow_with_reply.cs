@@ -18,7 +18,7 @@ public class MediatorReplyStepFlowTests
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
-    private readonly Job<WorkflowTestData> _flow;
+    private readonly Job<WorkflowTestData> _job;
     private bool _stepCompleted;
 
     public MediatorReplyStepFlowTests()
@@ -40,17 +40,18 @@ public class MediatorReplyStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Test");
+        workflowData.Bag["MyValue"] = "Test";
         
+         _job = new Job<WorkflowTestData>(workflowData) ;
+         
          var firstStep = new Sequential<WorkflowTestData>(
              "Test of Job",
             new RequestAndReactionAsync<MyCommand, MyEvent, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
-                (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value)),
+                (reply) => { workflowData.Bag["MyReply"] = ((MyEvent)reply).Value; }),
+             _job,
             () => { _stepCompleted = true; },
             null);
-        
-         _flow = new Job<WorkflowTestData>(firstStep, workflowData) ;
         
          InMemoryJobStoreAsync store = new();
          InMemoryJobChannel<WorkflowTestData> channel = new();
@@ -70,13 +71,13 @@ public class MediatorReplyStepFlowTests
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         MyEventHandlerAsync.ReceivedEvents.Clear();
         
-        await _scheduler.ScheduleAsync(_flow);
+        await _scheduler.ScheduleAsync(_job);
         await _runner.RunAsync();
 
         _stepCompleted.Should().BeTrue();
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
         MyEventHandlerAsync.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
-        _flow.State.Should().Be(JobState.Done);
+        _job.State.Should().Be(JobState.Done);
     }
 }

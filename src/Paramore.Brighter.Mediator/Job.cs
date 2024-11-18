@@ -38,8 +38,6 @@ public enum JobState
     Done,
 }
 
-
-
 /// <summary>
 /// empty class, used as marker for the branch data
 /// </summary>
@@ -55,10 +53,10 @@ public class Job<TData> : Job
     public Dictionary<string, object> Bag { get; } = new();
     
     /// <summary> What step are we currently at in the workflow </summary>
-    public Step<TData>? CurrentStep { get; set; }
+    public Step<TData>? Step { get; set; }
     
     /// <summary> The data that is passed between steps of the workflow </summary>
-    public TData Data { get; set; } 
+    public TData Data { get; } 
     
     /// <summary> The id of the workflow, used to save-retrieve it from storage </summary>
     public  string Id { get; private set; } = Guid.NewGuid().ToString();
@@ -74,11 +72,11 @@ public class Job<TData> : Job
     /// <param name="firstStep">The first step of the workflow to execute.</param>
     /// <param name="data">State which is passed between steps of the workflow</param>
     /// </summary>
-    public Job(Step<TData> firstStep, TData data) 
+    public Job(TData data) 
     {
-        CurrentStep = firstStep;
         Data = data;
         State = JobState.Ready;    
     }
 }
+
 

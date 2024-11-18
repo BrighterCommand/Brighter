@@ -29,29 +29,48 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Mediator;
 
+/// <summary>
+/// Specifies the strategy to use when the channel is full.
+/// </summary>
 public enum FullChannelStrategy
 {
+    /// <summary>
+    /// Wait for space to become available in the channel.
+    /// </summary>
     Wait,
+    
+    /// <summary>
+    /// Drop the oldest item in the channel to make space.
+    /// </summary>
     Drop
-}    
+}
 
-
+/// <summary>
+/// Represents an in-memory job channel for processing jobs.
+/// </summary>
+/// <typeparam name="TData">The type of the job data.</typeparam>
 public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
 {
     private readonly Channel<Job<TData>> _channel;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryJobChannel{TData}"/> class.
+    /// </summary>
+    /// <param name="boundedCapacity">The maximum number of jobs the channel can hold.</param>
+    /// <param name="fullChannelStrategy">The strategy to use when the channel is full.</param>
+    /// <exception cref="System.ArgumentOutOfRangeException">Thrown when the bounded capacity is less than or equal to 0.</exception>
     public InMemoryJobChannel(int boundedCapacity = 100, FullChannelStrategy fullChannelStrategy = FullChannelStrategy.Wait)
     {
         if (boundedCapacity <= 0)
             throw new System.ArgumentOutOfRangeException(nameof(boundedCapacity), "Bounded capacity must be greater than 0");
-        
+
         _channel = System.Threading.Channels.Channel.CreateBounded<Job<TData>>(new BoundedChannelOptions(boundedCapacity)
-        {          
+        {
             SingleWriter = true,
             SingleReader = false,
             AllowSynchronousContinuations = true,
-            FullMode = fullChannelStrategy == FullChannelStrategy.Wait ? 
-                BoundedChannelFullMode.Wait : 
+            FullMode = fullChannelStrategy == FullChannelStrategy.Wait ?
+                BoundedChannelFullMode.Wait :
                 BoundedChannelFullMode.DropOldest
         });
     }
@@ -59,11 +78,16 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     /// <summary>
     /// Dequeues a job from the channel.
     /// </summary>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous dequeue operation. The task result contains the dequeued job.</returns>
-    public async Task<Job<TData>> DequeueJobAsync(CancellationToken cancellationToken)
-    {
-        return await _channel.Reader.ReadAsync(cancellationToken);
+    public async Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken)
+    {                              
+        Job<TData>? item = null;
+        while (await _channel.Reader.WaitToReadAsync(cancellationToken))
+            while (_channel.Reader.TryRead(out item))
+                return item;
+
+        return item;
     }
 
     /// <summary>
@@ -84,14 +108,22 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     public bool IsClosed()
     {
         return _channel.Reader.Completion.IsCompleted;
-    } 
+    }
     
+    /// <summary>
+    /// This is mainly useful for help with testing, to stop the channel
+    /// </summary>
+    public void Stop()
+    {
+        _channel.Writer.Complete();
+    }
+
     /// <summary>
     /// Streams jobs from the channel.
     /// </summary>
     /// <returns>An asynchronous enumerable of jobs.</returns>
     public IAsyncEnumerable<Job<TData>> Stream()
-    { 
+    {
         return _channel.Reader.ReadAllAsync();
     }
 }

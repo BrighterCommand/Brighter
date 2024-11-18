@@ -47,7 +47,7 @@ public interface IAmAJobChannel<TData>
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns>A task that represents the asynchronous dequeue operation. The task result contains the dequeued job.</returns>
-    Task<Job<TData>> DequeueJobAsync(CancellationToken cancellationToken = default);
+    Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Streams jobs from the channel.

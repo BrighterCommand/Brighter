@@ -12,7 +12,7 @@ public class MediatorBlockingWaitStepFlowTests
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
-    private readonly Job<WorkflowTestData> _flow;
+    private readonly Job<WorkflowTestData> _job;
     private bool _stepCompleted;
 
     public MediatorBlockingWaitStepFlowTests()
@@ -27,15 +27,18 @@ public class MediatorBlockingWaitStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Test");
+        workflowData.Bag["MyValue"] = "Test";
+        
+        _job = new Job<WorkflowTestData>(workflowData) ;
         
         var firstStep = new Wait<WorkflowTestData>("Test of Job",
             TimeSpan.FromMilliseconds(500),
+            _job,
             () => { _stepCompleted = true; },
             null
             );
         
-        _flow = new Job<WorkflowTestData>(firstStep, workflowData) ;
+        _job.Step = firstStep;
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
@@ -52,12 +55,12 @@ public class MediatorBlockingWaitStepFlowTests
     [Fact]
     public async Task When_running_a_single_step_workflow()
     {
-        await _scheduler.ScheduleAsync(_flow);
+        await _scheduler.ScheduleAsync(_job);
         
         //We won't really see th block in action as the test will simply block for 500ms
         await _runner.RunAsync();
         
-        _flow.State.Should().Be(JobState.Done);
+        _job.State.Should().Be(JobState.Done);
         _stepCompleted.Should().BeTrue();
     }
 }

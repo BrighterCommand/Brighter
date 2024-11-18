@@ -56,12 +56,24 @@ public class Runner<TData>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
-        await Task.Factory.StartNew(() => ProcessJobs(cancellationToken), cancellationToken);
+        await Task.Factory.StartNew(async () =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            await ProcessJobs(cancellationToken);
+            
+            if (cancellationToken.IsCancellationRequested)
+                cancellationToken.ThrowIfCancellationRequested();
+            
+        }, cancellationToken);
     }
 
-    private async Task Execute(Job<TData> job, CancellationToken cancellationToken = default)
+    private async Task Execute(Job<TData>? job, CancellationToken cancellationToken = default)
     {
-        if (job.CurrentStep is null)
+        if (job is null)
+            return;
+        
+        if (job.Step is null)
         {
             job.State = JobState.Done;
             return;
@@ -70,9 +82,9 @@ public class Runner<TData>
         job.State = JobState.Running;
         await _jobStoreAsync.SaveJobAsync(job, cancellationToken);
 
-        while (job.CurrentStep is not null)
+        while (job.Step is not null)
         {
-            await job.CurrentStep.ExecuteAsync(job, _commandProcessor, cancellationToken);
+            await job.Step.ExecuteAsync(_commandProcessor, cancellationToken);
             await _jobStoreAsync.SaveJobAsync(job, cancellationToken);
         }
 

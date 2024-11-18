@@ -1,9 +1,8 @@
-﻿using System.Collections.Generic;
-using Paramore.Brighter.Mediator;
+﻿using System.Collections.Concurrent;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 
 public class WorkflowTestData 
 {
-    public Dictionary<string, object> Bag { get; set; } = new();
+    public ConcurrentDictionary<string, object> Bag { get; set; } = new();
 }

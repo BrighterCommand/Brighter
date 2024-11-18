@@ -37,10 +37,10 @@ public interface IStepTask<TData>
     /// <summary>
     /// Handles the workflow action.
     /// </summary>
-    /// <param name="state">The current state of the workflow.</param>
+    /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    Task HandleAsync(Job<TData> state, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken);
+    Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -76,21 +76,25 @@ public class TaskResponse<TData>(Action<Event, Job<TData>> parser, Type response
 /// <param name="onChange">Takes the <see cref="Job{TData}"/> Data property and transforms it</param>
 /// <typeparam name="TData">The workflow data, that we wish to transform</typeparam>
 public class ChangeAsync<TData>(
-    Func<TData, Task<TData>> onChange
+    Func<TData, Task> onChange
 ) : IStepTask<TData>
 {
     
     /// <summary>
     /// Handles the workflow action.
     /// </summary>
-    /// <param name="state">The current state of the workflow.</param>
+    /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    public async Task HandleAsync(Job<TData> state, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    public async Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
+        if (job is null)
+            return;
+        
         if (cancellationToken.IsCancellationRequested)
             return;
-        state.Data = await onChange(state.Data);
+        
+        await onChange(job.Data);
     }
 }
 
@@ -109,13 +113,16 @@ public class FireAndForgetAsync<TRequest, TData>(
     /// <summary>
     /// Handles the fire-and-forget action.
     /// </summary>
-    /// <param name="state">The current state of the workflow.</param>
+    /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    public async Task HandleAsync(Job<TData> state,  IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    public async Task HandleAsync(Job<TData>? job,  IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
+        if (job is null)
+            return;
+        
         var command = requestFactory();
-        command.CorrelationId = state.Id;
+        command.CorrelationId = job.Id;
         await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
     }
 }
@@ -139,16 +146,19 @@ public class RequestAndReactionAsync<TRequest, TReply, TData>(
     /// <summary>
     /// Handles the request-and-reply action.
     /// </summary>
-    /// <param name="state">The current state of the workflow.</param>
+    /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    public async Task HandleAsync(Job<TData> state, IAmACommandProcessor commandProcessor,  CancellationToken cancellationToken)
+    public async Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor,  CancellationToken cancellationToken)
     {
+        if (job is null)
+            return;
+        
         var command = requestFactory();
-        command.CorrelationId = state.Id;
+        command.CorrelationId = job.Id;
         await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
        
-        state.PendingResponses.Add(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), null));
+        job.PendingResponses.Add(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), null));
  
     }
 }
@@ -175,17 +185,20 @@ public class RobustRequestAndReactionAsync<TRequest, TReply, TFault, TData>(
     /// <summary>
     /// Handles the fire-and-forget action.
     /// </summary>
-    /// <param name="state">The current state of the workflow.</param>
+    /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    public async Task HandleAsync(Job<TData> state, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    public async Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
+        if (job is null)
+            return;
+        
         var command = requestFactory();
-        command.CorrelationId = state.Id;
+        command.CorrelationId = job.Id;
         await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
         
-        state.PendingResponses.Add(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), typeof(TFault)));
-        state.PendingResponses.Add(typeof(TFault), new TaskResponse<TData>((reply, _) => faultFactory(reply as TFault), typeof(TReply), typeof(TFault)));}
+        job.PendingResponses.Add(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), typeof(TFault)));
+        job.PendingResponses.Add(typeof(TFault), new TaskResponse<TData>((reply, _) => faultFactory(reply as TFault), typeof(TReply), typeof(TFault)));}
 }
 
 

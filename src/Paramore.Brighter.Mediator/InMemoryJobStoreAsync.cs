@@ -28,18 +28,35 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Mediator;
 
+/// <summary>
+/// Represents an in-memory store for jobs.
+/// </summary>
 public class InMemoryJobStoreAsync : IAmAJobStoreAsync
 {
-    private readonly Dictionary<string, Job> _flows = new();
+    private readonly Dictionary<string, Job?> _flows = new();
 
-    public Task SaveJobAsync<TData>(Job<TData> job, CancellationToken cancellationToken) 
+    /// <summary>
+    /// Saves the job asynchronously.
+    /// </summary>
+    /// <typeparam name="TData">The type of the job data.</typeparam>
+    /// <param name="job">The job to save.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous save operation.</returns>
+    public Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested) return Task.FromCanceled(cancellationToken);
         
+        if (job is null) return Task.CompletedTask;
+
         _flows[job.Id] = job;
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Retrieves a job asynchronously by its Id.
+    /// </summary>
+    /// <param name="id">The Id of the job.</param>
+    /// <returns>A task that represents the asynchronous retrieve operation. The task result contains the job if found; otherwise, null.</returns>
     public Task<Job?> GetJobAsync(string? id)
     {
         var tcs = new TaskCompletionSource<Job?>();
@@ -50,7 +67,7 @@ public class InMemoryJobStoreAsync : IAmAJobStoreAsync
         }
 
         var job = _flows.TryGetValue(id, out var state) ? state : null;
-        tcs.SetResult( job);
+        tcs.SetResult(job);
         return tcs.Task;
     }
 }

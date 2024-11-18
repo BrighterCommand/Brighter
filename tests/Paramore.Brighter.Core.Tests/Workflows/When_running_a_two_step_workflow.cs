@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
@@ -13,7 +15,7 @@ public class MediatorTwoStepFlowTests
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
-    private readonly Job<WorkflowTestData> _flow;
+    private readonly Job<WorkflowTestData> _job;
 
     public MediatorTwoStepFlowTests()
     {
@@ -27,12 +29,14 @@ public class MediatorTwoStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Test");
+        workflowData.Bag["MyValue"] = "Test";
         
+        _job = new Job<WorkflowTestData>(workflowData) ;
         
         var secondStep = new Sequential<WorkflowTestData>(
             "Test of Job Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            _job,
             () => { },
             null
             );
@@ -40,11 +44,12 @@ public class MediatorTwoStepFlowTests
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job One",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            _job,
             () => { workflowData.Bag["MyValue"] = "TestTwo"; }, 
             secondStep
             );
         
-        _flow = new Job<WorkflowTestData>(firstStep, workflowData) ;
+        _job.Step = firstStep;
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
@@ -63,11 +68,19 @@ public class MediatorTwoStepFlowTests
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         
-        await _scheduler.ScheduleAsync(_flow);
-        await _runner.RunAsync();
+        var ct = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        try
+        {
+            await _scheduler.ScheduleAsync(_job);
+            await _runner.RunAsync(ct.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            // ignored
+        }
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();
-        _flow.State.Should().Be(JobState.Done);
+        _job.State.Should().Be(JobState.Done);
     }
 }

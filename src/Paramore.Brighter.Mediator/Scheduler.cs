@@ -86,11 +86,11 @@ public class Scheduler<TData>
          if (taskResponse.Parser is null)
              throw new InvalidOperationException($"Parser for event type {eventType} should not be null");
 
-         if (job.CurrentStep is null)
+         if (job.Step is null)
              throw new InvalidOperationException($"Current step of workflow #{job.Id} should not be null");
              
          taskResponse.Parser(@event, job);
-         job.CurrentStep.OnCompletion?.Invoke();
+         job.Step.OnCompletion?.Invoke();
          job.State = JobState.Running;
          job.PendingResponses.Remove(eventType);
     }

@@ -13,7 +13,7 @@ public class MediatorPassingChoiceFlowTests
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
-    private readonly Job<WorkflowTestData> _flow;
+    private readonly Job<WorkflowTestData> _job;
     private bool _stepCompletedOne;
     private bool _stepCompletedTwo;
     private bool _stepCompletedThree;
@@ -38,28 +38,33 @@ public class MediatorPassingChoiceFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Pass");
+        workflowData.Bag["MyValue"] = "Pass";
+        
+        _job = new Job<WorkflowTestData>(workflowData) ;
         
         var stepThree = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Three",
             new FireAndForgetAsync<MyOtherCommand, WorkflowTestData>(() => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            _job,
             () => { _stepCompletedThree = true; },
             null);
         
         var stepTwo = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            _job,
             () => { _stepCompletedTwo = true; },
             null);
 
          var stepOne = new ExclusiveChoice<WorkflowTestData>(
              "Test of Job SequenceStep One",
              new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass"),
+             _job,
             () => { _stepCompletedOne = true; },
             stepTwo, 
             stepThree);
-       
-        _flow = new Job<WorkflowTestData>(stepOne, workflowData) ;
+         
+         _job.Step = stepOne;
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
@@ -79,7 +84,7 @@ public class MediatorPassingChoiceFlowTests
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         MyOtherCommandHandlerAsync.ReceivedCommands.Clear();
         
-        await _scheduler.ScheduleAsync(_flow);
+        await _scheduler.ScheduleAsync(_job);
         await _runner.RunAsync();
 
         _stepCompletedOne.Should().BeTrue();

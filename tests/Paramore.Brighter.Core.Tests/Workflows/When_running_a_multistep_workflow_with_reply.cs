@@ -13,7 +13,7 @@ public class MediatorReplyMultiStepFlowTests
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
-    private readonly Job<WorkflowTestData> _flow;
+    private readonly Job<WorkflowTestData> _job;
     private bool _stepCompletedOne;
     private bool _stepCompletedTwo;
 
@@ -36,11 +36,14 @@ public class MediatorReplyMultiStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();
 
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Test");
+        workflowData.Bag["MyValue"] = "Test";
 
+        _job = new Job<WorkflowTestData>(workflowData) ;
+        
         var stepTwo = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            _job,
             () => { _stepCompletedTwo = true; },
             null);
         
@@ -48,11 +51,12 @@ public class MediatorReplyMultiStepFlowTests
              "Test of Job SequenceStep One",
             new RequestAndReactionAsync<MyCommand, MyEvent, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
-                (reply) => workflowData.Bag.Add("MyReply", ((MyEvent)reply).Value)),
+                (reply) => workflowData.Bag["MyReply"] = ((MyEvent)reply).Value),
+             _job,
             () => { _stepCompletedOne = true; },
             stepTwo);
-       
-        _flow = new Job<WorkflowTestData>(stepOne, workflowData) ;
+         
+         _job.Step = stepOne;
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
@@ -72,7 +76,7 @@ public class MediatorReplyMultiStepFlowTests
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         MyEventHandlerAsync.ReceivedEvents.Clear();
         
-        await _scheduler.ScheduleAsync(_flow);
+        await _scheduler.ScheduleAsync(_job);
         await _runner.RunAsync();
         
         _stepCompletedOne.Should().BeTrue();
@@ -80,6 +84,6 @@ public class MediatorReplyMultiStepFlowTests
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
         MyEventHandlerAsync.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
-        _flow.State.Should().Be(JobState.Done);
+        _job.State.Should().Be(JobState.Done);
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
@@ -12,7 +14,7 @@ public class MediatorOneStepFlowTests
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
-    private readonly Job<WorkflowTestData> _flow;
+    private readonly Job<WorkflowTestData> _job;
 
     public MediatorOneStepFlowTests()
     {
@@ -26,16 +28,19 @@ public class MediatorOneStepFlowTests
         PipelineBuilder<MyCommand>.ClearPipelineCache();    
         
         var workflowData= new WorkflowTestData();
-        workflowData.Bag.Add("MyValue", "Test");
+        workflowData.Bag["MyValue"] = "Test";
+        
+        _job = new Job<WorkflowTestData>(workflowData) ;
         
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)!}),
+            _job,
             () => { },
             null
             );
-        
-        _flow = new Job<WorkflowTestData>(firstStep, workflowData) ;
+       
+        _job.Step = firstStep;
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
@@ -54,10 +59,20 @@ public class MediatorOneStepFlowTests
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         
-        await _scheduler.ScheduleAsync(_flow);
-        await _runner.RunAsync();
+        await _scheduler.ScheduleAsync(_job); 
+        
+        var ct = new CancellationTokenSource();
+        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+        try
+        {
+            await _runner.RunAsync(ct.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected
+        }
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
-        _flow.State.Should().Be(JobState.Done);
+        _job.State.Should().Be(JobState.Done);
     }
 }
