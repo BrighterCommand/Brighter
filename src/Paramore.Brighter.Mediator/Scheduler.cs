@@ -80,18 +80,17 @@ public class Scheduler<TData>
              
          var eventType = @event.GetType();
              
-         if (!job.PendingResponses.TryGetValue(eventType, out TaskResponse<TData>? taskResponse)) 
+         if (!job.FindPendingResponse(eventType, out TaskResponse<TData>? taskResponse)) 
              return;
 
-         if (taskResponse.Parser is null)
+         if (taskResponse is null || taskResponse.Parser is null)
              throw new InvalidOperationException($"Parser for event type {eventType} should not be null");
 
-         if (job.Step is null)
+         if (job.CurrentStep() is null)
              throw new InvalidOperationException($"Current step of workflow #{job.Id} should not be null");
              
          taskResponse.Parser(@event, job);
-         job.Step.OnCompletion?.Invoke();
-         job.State = JobState.Running;
-         job.PendingResponses.Remove(eventType);
+         job.CurrentStep()!.OnCompletion?.Invoke();
+         job.RemovePendingResponse(eventType);
     }
 }

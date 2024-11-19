@@ -49,7 +49,6 @@ public class MediatorReplyStepFlowTests
             new RequestAndReactionAsync<MyCommand, MyEvent, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 (reply) => { workflowData.Bag["MyReply"] = ((MyEvent)reply).Value; }),
-             _job,
             () => { _stepCompleted = true; },
             null);
         

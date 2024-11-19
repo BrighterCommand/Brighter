@@ -33,7 +33,6 @@ public class MediatorParallelSplitFlowTests
         var secondBranch = new Sequential<WorkflowTestData>(
             "Test of Job Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyOtherValue"] as string)! }),
-            _job,
             () => { _secondBranchFinished = true; },
             null
         );
@@ -41,14 +40,12 @@ public class MediatorParallelSplitFlowTests
         var firstBranch = new Sequential<WorkflowTestData>(
             "Test of Job One",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            _job,
             () => {  _firstBranchFinished = true;  }, 
             null
         );
         
         var parallelSplit = new ParallelSplit<WorkflowTestData>(
             "Test of Job Parallel Split",
-            _job,
             (data) =>
             {   data.Bag["MyValue"] = "TestOne";
                 data.Bag["MyOtherValue"] = "TestTwo";
@@ -56,6 +53,7 @@ public class MediatorParallelSplitFlowTests
         firstBranch, secondBranch
         );
         
+        _job.InitSteps(parallelSplit);
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();

@@ -43,12 +43,11 @@ public class MediatorChangeStepFlowTests
                 tcs.SetResult();
                 return tcs.Task;
             }),
-            _job,
             () => { _stepCompleted = true; },
             null
             );
         
-        _job.Step = firstStep;
+        _job.InitSteps(firstStep);
         
         var store = new InMemoryJobStoreAsync ();
         InMemoryJobChannel<WorkflowTestData> channel = new();

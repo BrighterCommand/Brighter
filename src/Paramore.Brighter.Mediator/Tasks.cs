@@ -158,7 +158,7 @@ public class RequestAndReactionAsync<TRequest, TReply, TData>(
         command.CorrelationId = job.Id;
         await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
        
-        job.PendingResponses.Add(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), null));
+        job.AddPendingResponse(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), null));
  
     }
 }
@@ -197,8 +197,8 @@ public class RobustRequestAndReactionAsync<TRequest, TReply, TFault, TData>(
         command.CorrelationId = job.Id;
         await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
         
-        job.PendingResponses.Add(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), typeof(TFault)));
-        job.PendingResponses.Add(typeof(TFault), new TaskResponse<TData>((reply, _) => faultFactory(reply as TFault), typeof(TReply), typeof(TFault)));}
+        job.AddPendingResponse(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), typeof(TFault)));
+        job.AddPendingResponse(typeof(TFault), new TaskResponse<TData>((reply, _) => faultFactory(reply as TFault), typeof(TReply), typeof(TFault)));}
 }
 
 

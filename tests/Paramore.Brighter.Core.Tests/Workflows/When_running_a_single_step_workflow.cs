@@ -35,12 +35,11 @@ public class MediatorOneStepFlowTests
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)!}),
-            _job,
             () => { },
             null
             );
        
-        _job.Step = firstStep;
+        _job.InitSteps(firstStep);
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();

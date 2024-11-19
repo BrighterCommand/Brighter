@@ -47,7 +47,6 @@ public class MediatorRobustReplyNoFaultStepFlowTests
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 (reply) => { workflowData.Bag["MyReply"] = ((MyEvent)reply).Value; },
             (fault) => { workflowData.Bag["MyFault"] = ((MyFault)fault).Value; }),
-             _job,
             () => { _stepCompleted = true; },
             null,
             () => { _stepFaulted = true; },

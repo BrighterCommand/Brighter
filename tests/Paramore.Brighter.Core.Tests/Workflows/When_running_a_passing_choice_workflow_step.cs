@@ -45,26 +45,23 @@ public class MediatorPassingChoiceFlowTests
         var stepThree = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Three",
             new FireAndForgetAsync<MyOtherCommand, WorkflowTestData>(() => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            _job,
             () => { _stepCompletedThree = true; },
             null);
         
         var stepTwo = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            _job,
             () => { _stepCompletedTwo = true; },
             null);
 
          var stepOne = new ExclusiveChoice<WorkflowTestData>(
              "Test of Job SequenceStep One",
              new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass"),
-             _job,
             () => { _stepCompletedOne = true; },
             stepTwo, 
             stepThree);
          
-         _job.Step = stepOne;
+         _job.InitSteps(stepOne); 
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();

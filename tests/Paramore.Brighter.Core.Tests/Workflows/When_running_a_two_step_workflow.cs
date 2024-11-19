@@ -36,7 +36,6 @@ public class MediatorTwoStepFlowTests
         var secondStep = new Sequential<WorkflowTestData>(
             "Test of Job Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            _job,
             () => { },
             null
             );
@@ -44,12 +43,11 @@ public class MediatorTwoStepFlowTests
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job One",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            _job,
             () => { workflowData.Bag["MyValue"] = "TestTwo"; }, 
             secondStep
             );
         
-        _job.Step = firstStep;
+        _job.InitSteps(firstStep); 
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();

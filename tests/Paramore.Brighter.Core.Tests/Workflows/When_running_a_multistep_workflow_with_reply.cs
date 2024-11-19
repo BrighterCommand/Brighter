@@ -43,7 +43,6 @@ public class MediatorReplyMultiStepFlowTests
         var stepTwo = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            _job,
             () => { _stepCompletedTwo = true; },
             null);
         
@@ -52,11 +51,10 @@ public class MediatorReplyMultiStepFlowTests
             new RequestAndReactionAsync<MyCommand, MyEvent, WorkflowTestData>(
                 () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
                 (reply) => workflowData.Bag["MyReply"] = ((MyEvent)reply).Value),
-             _job,
             () => { _stepCompletedOne = true; },
             stepTwo);
          
-         _job.Step = stepOne;
+         _job.InitSteps(stepOne); 
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();

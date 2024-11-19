@@ -13,28 +13,47 @@ namespace Paramore.Brighter.Mediator;
 /// <param name="onCompletion">An optional callback to run, following completion of the step</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
 public abstract class Step<TData>(
-    string name, 
-    Sequential<TData>? next, 
-    Job<TData> job, 
-    IStepTask<TData>? stepTask = null, 
+    string name,
+    Sequential<TData>? next,
+    IStepTask<TData>? stepTask = null,
     Action? onCompletion = null) 
 {
+    /// <summary> Which job is being executed by the step. </summary>
+    protected Job<TData>? Job ;
+    
     /// <summary>The name of the step, used for tracing execution</summary>
     public string Name { get; init; } = name;
     
     /// <summary>The next step in the sequence, null if this is the last step</summary>
     protected Sequential<TData>? Next { get; } = next;
 
-    /// <summary> Which job is being executed by the step. </summary>
-    public Job<TData> Job { get; } = job;
-
     /// <summary>An optional callback to be run, following completion of the step.</summary>
     public Action? OnCompletion { get; } = onCompletion;
     
     /// <summary>The action to be taken with the step.</summary>
-    protected IStepTask<TData>? StepTask { get; } = stepTask;
+    protected IStepTask<TData>? StepTask = stepTask;
 
     public abstract Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken);
+    
+    /// <summary>
+    /// Gets the job that is executing us
+    /// </summary>
+    /// <param name="job">The job that is executing us</param>
+    public void GetJob(Job<TData> job)
+    {
+        Job = job;
+    }
+    
+    /// <summary>
+    /// Sets the job that is executing us
+    /// </summary>
+    /// <param name="job">The job that we are executing under</param>
+    public void AddToJob(Job<TData> job)
+    {
+        Job = job;
+    }
+    
+    
 }
 
 /// <summary>
@@ -49,32 +68,37 @@ public abstract class Step<TData>(
 public class ExclusiveChoice<TData>(
     string name,
     ISpecification<TData> predicate,
-    Job<TData> job,
     Action? onCompletion,
     Sequential<TData>? nextTrue,
     Sequential<TData>? nextFalse
 )
-    : Step<TData>(name, null, job, null, onCompletion)
+    : Step<TData>(name, null, null, onCompletion)
 {
     public override Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
-        Job.Step = predicate.IsSatisfiedBy(Job.Data) ? nextTrue : nextFalse;
+        if (Job is null)
+            throw new InvalidOperationException("Job is null");
+        
+        var step = predicate.IsSatisfiedBy(Job.Data) ? nextTrue : nextFalse;
+        Job.NextStep(step);
         return Task.CompletedTask;
     }
 }
 
 public class ParallelSplit<TData>(
     string name, 
-    Job<TData> job,
     Action<TData>? onBranch, 
     params Step<TData>[] branches
     ) 
-    : Step<TData>(name, null, job)
+    : Step<TData>(name, null)
 {
     public Step<TData>[] Branches { get; set; } = branches;
     
     public override Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
+        if (Job is null)
+            throw new InvalidOperationException("Job is null");
+        
         // Parallel split doesn't directly execute its jobs. 
         // Execution is handled by the Scheduler, which will handle running each branch concurrently. 
         onBranch?.Invoke(Job.Data);
@@ -96,26 +120,28 @@ public class ParallelSplit<TData>(
 public class Sequential<TData>(
     string name, 
     IStepTask<TData> stepTask, 
-    Job<TData> job,
     Action? onCompletion, 
     Sequential<TData>? next, 
     Action? onFaulted = null, 
     Sequential<TData>? faultNext = null
 ) 
-    : Step<TData>(name, next, job, stepTask, onCompletion)
+    : Step<TData>(name, next, stepTask, onCompletion)
 {
     public override Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
+        if (Job is null)
+            throw new InvalidOperationException("Job is null");
+        
         try
         {
             StepTask?.HandleAsync(Job, commandProcessor, cancellationToken);
             OnCompletion?.Invoke();
-            Job.Step = Next;
+            Job.NextStep(Next);
         }
         catch (Exception)
         {
             onFaulted?.Invoke();
-            Job.Step = faultNext;
+            Job.NextStep(faultNext); 
         }
         return Task.CompletedTask;
     }
@@ -132,11 +158,10 @@ public class Sequential<TData>(
 public class Wait<TData>(
     string name, 
     TimeSpan duration, 
-    Job<TData> job,
     Action? onCompletion,  
     Sequential<TData>? next
     ) 
-    : Step<TData>(name, next, job, null, onCompletion)
+    : Step<TData>(name, next, null, onCompletion)
 {
     public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {

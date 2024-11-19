@@ -33,12 +33,11 @@ public class MediatorBlockingWaitStepFlowTests
         
         var firstStep = new Wait<WorkflowTestData>("Test of Job",
             TimeSpan.FromMilliseconds(500),
-            _job,
             () => { _stepCompleted = true; },
             null
             );
         
-        _job.Step = firstStep;
+        _job.InitSteps(firstStep); 
         
         InMemoryJobStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
