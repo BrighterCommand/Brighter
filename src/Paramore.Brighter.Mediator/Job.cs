@@ -83,8 +83,7 @@ public class Job<TData> : Job
     /// <param name="firstStep">The first step of the workflow to execute.</param>
     public void InitSteps(Step<TData>? firstStep)
     {
-        _step = firstStep;
-        if (_step is not null) _step.AddToJob(this);
+        NextStep(firstStep);
     }
 
     /// <summary>
@@ -124,7 +123,10 @@ public class Job<TData> : Job
     public void NextStep(Step<TData>? nextStep)
     {
         _step = nextStep;
-        if (_step is not null) _step.AddToJob(this);
+        if (_step is not null)
+            _step.AddToJob(this);
+        else 
+            if (State != JobState.Waiting) State = JobState.Done;
     }
     
     /// <summary>
