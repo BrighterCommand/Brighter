@@ -56,7 +56,7 @@ public class MediatorRobustReplyNoFaultStepFlowTests
             () => { _stepFaulted = true; },
          null);
         
-         InMemoryJobStoreAsync store = new();
+         InMemoryStateStoreAsync store = new();
          InMemoryJobChannel<WorkflowTestData> channel = new();
         
          _scheduler = new Scheduler<WorkflowTestData>(

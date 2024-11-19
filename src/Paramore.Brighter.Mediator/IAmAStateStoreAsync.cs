@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Mediator;
 /// <summary>
 /// Used to store the state of a workflow
 /// </summary>
-public interface IAmAJobStoreAsync
+public interface IAmAStateStoreAsync
 {
     /// <summary>
     /// Saves the job 

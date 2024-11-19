@@ -60,7 +60,7 @@ public class MediatorReplyMultiStepFlowTests
          
          _job.InitSteps(stepOne); 
         
-        InMemoryJobStoreAsync store = new();
+        InMemoryStateStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(

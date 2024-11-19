@@ -45,7 +45,7 @@ public class MediatorOneStepFlowTests
        
         _job.InitSteps(firstStep);
         
-        InMemoryJobStoreAsync store = new();
+        InMemoryStateStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(

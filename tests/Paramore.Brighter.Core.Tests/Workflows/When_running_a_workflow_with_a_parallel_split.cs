@@ -61,7 +61,7 @@ public class MediatorParallelSplitFlowTests
         
         _job.InitSteps(parallelSplit);
         
-        InMemoryJobStoreAsync store = new();
+        InMemoryStateStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(

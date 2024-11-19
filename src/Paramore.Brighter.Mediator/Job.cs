@@ -55,11 +55,8 @@ public class Job<TData> : Job
     /// <summary>The next step. Steps are a linked list. The final step in the list has null for it's next step. </summary>
     private Step<TData>? _step;
 
-    /// <summary> A map of user defined values. Normally, use Data to pass data between steps </summary>
-    public Dictionary<string, object> Bag { get; } = new();
-
     /// <summary> The data that is passed between steps of the workflow </summary>
-    public TData Data { get; }
+    public TData Data { get; private set; }
 
     /// <summary> The id of the workflow, used to save-retrieve it from storage </summary>
     public string Id { get; private set; } = Guid.NewGuid().ToString();
@@ -134,10 +131,13 @@ public class Job<TData> : Job
     /// </summary>
     /// <param name="eventType">The type of event that we expect</param>
     /// <returns></returns>
-    public bool RemovePendingResponse(Type eventType)
+    public bool ResumeAfterEvent(Type eventType)
     {
+        if (_step is null) return false;
         
         var success = _pendingResponses.Remove(eventType);
+        _step.OnCompletion?.Invoke();
+        _step = _step.Next;
         if (success) State = JobState.Running;
         return success;
     }

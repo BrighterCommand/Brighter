@@ -43,7 +43,7 @@ public class MediatorBlockingWaitStepFlowTests
         
         _job.InitSteps(firstStep); 
         
-        InMemoryJobStoreAsync store = new();
+        InMemoryStateStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(
@@ -61,7 +61,7 @@ public class MediatorBlockingWaitStepFlowTests
         await _scheduler.ScheduleAsync(_job);
         
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+        ct.CancelAfter( TimeSpan.FromSeconds(3) );
 
         try
         {

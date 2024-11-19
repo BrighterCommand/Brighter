@@ -60,14 +60,14 @@ public class MediatorFailingChoiceFlowTests
 
         var stepOne = new ExclusiveChoice<WorkflowTestData>(
             "Test of Job SequenceStep One",
-            new Specification<WorkflowTestData>(x => x.Bag["MyValue"] as string == "Pass"),
+            new Specification<WorkflowTestData>(data => data.Bag["MyValue"] as string == "Pass"),
             () => { _stepCompletedOne = true; },
             stepTwo,
             stepThree);
        
         _job.InitSteps(stepOne);
         
-        InMemoryJobStoreAsync store = new();
+        InMemoryStateStoreAsync store = new();
         InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(

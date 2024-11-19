@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Mediator;
 /// <summary>
 /// Represents an in-memory store for jobs.
 /// </summary>
-public class InMemoryJobStoreAsync : IAmAJobStoreAsync
+public class InMemoryStateStoreAsync : IAmAStateStoreAsync
 {
     private readonly Dictionary<string, Job?> _flows = new();
 

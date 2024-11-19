@@ -36,7 +36,7 @@ public class Scheduler<TData>
 {
     private readonly IAmACommandProcessor _commandProcessor;
     private readonly IAmAJobChannel<TData> _channel;
-    private readonly IAmAJobStoreAsync _jobStoreAsync;
+    private readonly IAmAStateStoreAsync _stateStoreAsync;
 
 
     /// <summary>
@@ -45,12 +45,12 @@ public class Scheduler<TData>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="channel">The <see cref="IAmAJobChannel{TData}"/> over which jobs flow. The <see cref="Scheduler{TData}"/> is a producer
     /// and the <see cref="Runner{TData}"/> is the consumer from the  channel</param>
-    /// <param name="jobStoreAsync">A store for pending jobs</param>
-    public Scheduler(IAmACommandProcessor commandProcessor, IAmAJobChannel<TData> channel, IAmAJobStoreAsync jobStoreAsync)
+    /// <param name="stateStoreAsync">A store for pending jobs</param>
+    public Scheduler(IAmACommandProcessor commandProcessor, IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStoreAsync)
     {
         _commandProcessor = commandProcessor;
         _channel = channel;
-        _jobStoreAsync = jobStoreAsync;
+        _stateStoreAsync = stateStoreAsync;
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public class Scheduler<TData>
          if (@event.CorrelationId is null)
              throw new InvalidOperationException("CorrelationId should not be null; needed to retrieve state of workflow");
          
-         var w = await _jobStoreAsync.GetJobAsync(@event.CorrelationId);
+         var w = await _stateStoreAsync.GetJobAsync(@event.CorrelationId);
         
          if (w is not Job<TData> job)
              throw new InvalidOperationException("Branch has not been stored");
@@ -90,7 +90,8 @@ public class Scheduler<TData>
              throw new InvalidOperationException($"Current step of workflow #{job.Id} should not be null");
              
          taskResponse.Parser(@event, job);
-         job.CurrentStep()!.OnCompletion?.Invoke();
-         job.RemovePendingResponse(eventType);
+         job.ResumeAfterEvent(eventType);
+         
+         await ScheduleAsync(job);
     }
 }

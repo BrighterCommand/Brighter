@@ -36,10 +36,10 @@ public class MediatorChangeStepFlowTests
         
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job",
-            new ChangeAsync<WorkflowTestData>( (flow) =>
+            new ChangeAsync<WorkflowTestData>( (data) =>
             {
                 var tcs = new TaskCompletionSource();
-                flow.Bag["MyValue"] = "Altered";
+                data.Bag["MyValue"] = "Altered";
                 tcs.SetResult();
                 return tcs.Task;
             }),
@@ -49,7 +49,7 @@ public class MediatorChangeStepFlowTests
         
         _job.InitSteps(firstStep);
         
-        var store = new InMemoryJobStoreAsync ();
+        var store = new InMemoryStateStoreAsync ();
         InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(
@@ -62,7 +62,7 @@ public class MediatorChangeStepFlowTests
     }
     
     [Fact]
-    public async Task When_running_a_single_step_workflow()
+    public async Task When_running_a_change_workflow()
     {
         await _scheduler.ScheduleAsync(_job);
 
@@ -81,6 +81,6 @@ public class MediatorChangeStepFlowTests
         
         _job.State.Should().Be(JobState.Done);
         _stepCompleted.Should().BeTrue();
-        _job.Bag["MyValue"].Should().Be("Altered");
+        _job.Data.Bag["MyValue"].Should().Be("Altered");
     }
 }

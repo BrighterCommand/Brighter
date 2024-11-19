@@ -25,24 +25,23 @@ public abstract class Step<TData>(
     public string Name { get; init; } = name;
     
     /// <summary>The next step in the sequence, null if this is the last step</summary>
-    protected Sequential<TData>? Next { get; } = next;
+    protected internal Step<TData>? Next { get; } = next;
 
     /// <summary>An optional callback to be run, following completion of the step.</summary>
-    public Action? OnCompletion { get; } = onCompletion;
+    protected internal Action? OnCompletion { get; } = onCompletion;
     
     /// <summary>The action to be taken with the step.</summary>
     protected IStepTask<TData>? StepTask = stepTask;
 
-    public abstract Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken);
-    
     /// <summary>
-    /// Gets the job that is executing us
+    ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
+    ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
+    ///  The purpose of the step is to orchestrate the workflow, not to do the work.
     /// </summary>
-    /// <param name="job">The job that is executing us</param>
-    public void GetJob(Job<TData> job)
-    {
-        Job = job;
-    }
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
+    /// <returns></returns>
+    public abstract Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken);
     
     /// <summary>
     /// Sets the job that is executing us
@@ -52,8 +51,6 @@ public abstract class Step<TData>(
     {
         Job = job;
     }
-    
-    
 }
 
 /// <summary>
@@ -81,6 +78,7 @@ public class ExclusiveChoice<TData>(
         
         var step = predicate.IsSatisfiedBy(Job.Data) ? nextTrue : nextFalse;
         Job.NextStep(step);
+        OnCompletion?.Invoke();
         return Task.CompletedTask;
     }
 }
