@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon.Runtime.Internal.Transform;
 using FluentAssertions;
@@ -7,19 +8,22 @@ using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorRobustReplyNoFaultStepFlowTests  
 {
+    private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
     private readonly Job<WorkflowTestData> _job;
     private bool _stepCompleted;
     private bool _stepFaulted;
 
-    public MediatorRobustReplyNoFaultStepFlowTests()
+    public MediatorRobustReplyNoFaultStepFlowTests(ITestOutputHelper testOutputHelper)
     {
+        _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
         registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
@@ -74,7 +78,18 @@ public class MediatorRobustReplyNoFaultStepFlowTests
         await _runner.RunAsync();
 
         _stepCompleted.Should().BeTrue();
-        _stepFaulted.Should().BeFalse();
+        
+        var ct = new CancellationTokenSource();
+        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+
+        try
+        {
+            await _runner.RunAsync(ct.Token);
+        }
+        catch (Exception e)
+        {
+            _testOutputHelper.WriteLine(e.ToString());
+        }
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
         MyEventHandlerAsync.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();

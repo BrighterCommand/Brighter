@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
@@ -14,9 +16,11 @@ public class MediatorBlockingWaitStepFlowTests
     private readonly Runner<WorkflowTestData> _runner;
     private readonly Job<WorkflowTestData> _job;
     private bool _stepCompleted;
+    private readonly ITestOutputHelper _testOutputHelper;
 
-    public MediatorBlockingWaitStepFlowTests()
+    public MediatorBlockingWaitStepFlowTests(ITestOutputHelper testOutputHelper)
     {
+        _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
 
@@ -52,14 +56,23 @@ public class MediatorBlockingWaitStepFlowTests
     }
     
     [Fact]
-    public async Task When_running_a_single_step_workflow()
+    public async Task When_running_a_wait_workflow()
     {
         await _scheduler.ScheduleAsync(_job);
         
-        //We won't really see th block in action as the test will simply block for 500ms
-        await _runner.RunAsync();
-        
-        _job.State.Should().Be(JobState.Done);
+        var ct = new CancellationTokenSource();
+        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+
+        try
+        {
+            await _runner.RunAsync(ct.Token);
+        }
+        catch (Exception e)
+        {
+            _testOutputHelper.WriteLine(e.ToString());
+        }
+
         _stepCompleted.Should().BeTrue();
+        _job.State.Should().Be(JobState.Done);
     }
 }

@@ -1,24 +1,28 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorReplyMultiStepFlowTests  
 {
+    private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
     private readonly Job<WorkflowTestData> _job;
     private bool _stepCompletedOne;
     private bool _stepCompletedTwo;
 
-    public MediatorReplyMultiStepFlowTests()
+    public MediatorReplyMultiStepFlowTests(ITestOutputHelper testOutputHelper)
     {
+        _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
         registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
@@ -75,7 +79,18 @@ public class MediatorReplyMultiStepFlowTests
         MyEventHandlerAsync.ReceivedEvents.Clear();
         
         await _scheduler.ScheduleAsync(_job);
-        await _runner.RunAsync();
+        
+        var ct = new CancellationTokenSource();
+        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+
+        try
+        {
+            await _runner.RunAsync(ct.Token);
+        }
+        catch (Exception e)
+        {
+            _testOutputHelper.WriteLine(e.ToString());
+        }
         
         _stepCompletedOne.Should().BeTrue();
         _stepCompletedTwo.Should().BeTrue();

@@ -73,12 +73,6 @@ public class Runner<TData>
         if (job is null)
             return;
         
-        if (job.CurrentStep() is null)
-        {
-            job.State = JobState.Done;
-            return;
-        }
-
         job.State = JobState.Running;
         await _jobStoreAsync.SaveJobAsync(job, cancellationToken);
 
@@ -87,8 +81,6 @@ public class Runner<TData>
             await job.CurrentStep()!.ExecuteAsync(_commandProcessor, cancellationToken);
             await _jobStoreAsync.SaveJobAsync(job, cancellationToken);
         }
-
-        job.State = JobState.Done;
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken)

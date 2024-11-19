@@ -1,22 +1,28 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorParallelSplitFlowTests 
 {
+    private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
     private readonly Job<WorkflowTestData> _job;
     private bool _firstBranchFinished;
     private bool _secondBranchFinished;
 
-    public MediatorParallelSplitFlowTests()
+    public MediatorParallelSplitFlowTests(ITestOutputHelper testOutputHelper)
     {
+        _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
         
@@ -67,12 +73,24 @@ public class MediatorParallelSplitFlowTests
         _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor);
     }
     
+    //[Fact]
     public async  Task When_running_a_workflow_with_a_parallel_split()
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         
         _scheduler.ScheduleAsync(_job);
-        _runner.RunAsync();
+        
+        var ct = new CancellationTokenSource();
+        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+
+        try
+        {
+            await _runner.RunAsync(ct.Token);
+        }
+        catch (Exception e)
+        {
+            _testOutputHelper.WriteLine(e.ToString());
+        }
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();

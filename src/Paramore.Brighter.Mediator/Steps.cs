@@ -165,7 +165,11 @@ public class Wait<TData>(
 {
     public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
     {
+        if (Job is null)
+            throw new InvalidOperationException("Job is null");
+        
         await Task.Delay(duration, cancellationToken);
+        Job.NextStep(Next);
         OnCompletion?.Invoke();
     }
 }

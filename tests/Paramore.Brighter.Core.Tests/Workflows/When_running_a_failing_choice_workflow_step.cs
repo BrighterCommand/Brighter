@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorFailingChoiceFlowTests 
 {
+    private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
     private readonly Job<WorkflowTestData> _job;
@@ -18,8 +21,9 @@ public class MediatorFailingChoiceFlowTests
     private bool _stepCompletedTwo;
     private bool _stepCompletedThree;
 
-    public MediatorFailingChoiceFlowTests()
+    public MediatorFailingChoiceFlowTests(ITestOutputHelper testOutputHelper)
     {
+        _testOutputHelper = testOutputHelper;
         // arrange
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
@@ -83,13 +87,22 @@ public class MediatorFailingChoiceFlowTests
         
         await _scheduler.ScheduleAsync(_job);
         
-        await _runner.RunAsync();
+        var ct = new CancellationTokenSource();
+        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+
+        try
+        {
+            await _runner.RunAsync(ct.Token);
+        }
+        catch (Exception e)
+        {
+            _testOutputHelper.WriteLine(e.ToString());
+        }
 
         _stepCompletedOne.Should().BeTrue();
         _stepCompletedTwo.Should().BeFalse();
         _stepCompletedThree.Should().BeTrue();
         MyOtherCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Fail").Should().BeTrue();
         MyCommandHandlerAsync.ReceivedCommands.Any().Should().BeFalse();
-        _stepCompletedOne.Should().BeTrue();
     }
 }

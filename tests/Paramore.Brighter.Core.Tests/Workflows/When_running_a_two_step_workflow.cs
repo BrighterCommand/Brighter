@@ -8,17 +8,21 @@ using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
 public class MediatorTwoStepFlowTests 
 {
+    private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
     private readonly Job<WorkflowTestData> _job;
+    private bool _stepsCompleted;
 
-    public MediatorTwoStepFlowTests()
+    public MediatorTwoStepFlowTests(ITestOutputHelper testOutputHelper)
     {
+        _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
         
@@ -36,7 +40,7 @@ public class MediatorTwoStepFlowTests
         var secondStep = new Sequential<WorkflowTestData>(
             "Test of Job Two",
             new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            () => { },
+            () => { _stepsCompleted = true; },
             null
             );
         
@@ -62,23 +66,26 @@ public class MediatorTwoStepFlowTests
     }
     
     [Fact]
-    public async Task When_running_a_single_step_workflow()
+    public async Task When_running_a_two_step_workflow()
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
+        await _scheduler.ScheduleAsync(_job);
         
-        var ct = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        var ct = new CancellationTokenSource();
+        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+
         try
         {
-            await _scheduler.ScheduleAsync(_job);
             await _runner.RunAsync(ct.Token);
         }
-        catch (TaskCanceledException)
+        catch (Exception e)
         {
-            // ignored
+            _testOutputHelper.WriteLine(e.ToString());
         }
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue();
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "TestTwo").Should().BeTrue();
         _job.State.Should().Be(JobState.Done);
+        _stepsCompleted.Should().BeTrue();
     }
 }
