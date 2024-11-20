@@ -12,7 +12,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorRobustReplyNoFaultStepFlowTests  
+public class MediatorRobustReplyFaultStepFlowTests  
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private readonly Scheduler<WorkflowTestData> _scheduler;
@@ -21,19 +21,21 @@ public class MediatorRobustReplyNoFaultStepFlowTests
     private bool _stepCompleted;
     private bool _stepFaulted;
 
-    public MediatorRobustReplyNoFaultStepFlowTests(ITestOutputHelper testOutputHelper)
+    public MediatorRobustReplyFaultStepFlowTests(ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
         registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
+        registry.RegisterAsync<MyFault, MyFaultHandlerAsync>();
 
         IAmACommandProcessor commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync((handlerType) =>
              handlerType switch
             { 
-                _ when handlerType == typeof(MyCommandHandlerAsync) => new MyCommandHandlerAsync(commandProcessor),
+                _ when handlerType == typeof(MyCommandHandlerAsync) => new MyCommandHandlerAsync(commandProcessor, raiseFault: true),
                 _ when handlerType == typeof(MyEventHandlerAsync) => new MyEventHandlerAsync(_scheduler),
+                _ when handlerType == typeof(MyFaultHandlerAsync) => new MyFaultHandlerAsync(_scheduler),
                 _ => throw new InvalidOperationException($"The handler type {handlerType} is not supported")
             });
 
@@ -81,7 +83,7 @@ public class MediatorRobustReplyNoFaultStepFlowTests
 
         
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+        ct.CancelAfter( TimeSpan.FromSeconds(180) );
 
         try
         {
@@ -93,10 +95,10 @@ public class MediatorRobustReplyNoFaultStepFlowTests
         }
         
         MyCommandHandlerAsync.ReceivedCommands.Any(c => c.Value == "Test").Should().BeTrue(); 
-        MyEventHandlerAsync.ReceivedEvents.Any(e => e.Value == "Test").Should().BeTrue();
-        MyFaultHandlerAsync.ReceivedFaults.Should().BeEmpty();
+        MyFaultHandlerAsync.ReceivedFaults.Any(e => e.Value == "Test").Should().BeTrue();
+        MyEventHandlerAsync.ReceivedEvents.Should().BeEmpty();
         _job.Data.Bag["MyValue"].Should().Be("Test");    
-        _job.Data.Bag["MyReply"].Should().Be("Test");
+        _job.Data.Bag["MyFault"].Should().Be("Test");
         _job.State.Should().Be(JobState.Done);
         _stepCompleted.Should().BeTrue();
         _stepFaulted.Should().BeFalse();

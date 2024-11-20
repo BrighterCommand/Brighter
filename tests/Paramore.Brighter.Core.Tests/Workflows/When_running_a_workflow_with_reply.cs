@@ -79,7 +79,7 @@ public class MediatorReplyStepFlowTests
         await _scheduler.ScheduleAsync(_job);
         
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(180) );
+        ct.CancelAfter( TimeSpan.FromSeconds(3) );
 
         try
         {

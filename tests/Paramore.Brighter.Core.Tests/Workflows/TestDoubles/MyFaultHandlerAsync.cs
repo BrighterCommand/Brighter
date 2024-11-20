@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,29 +25,24 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Mediator;
 
 namespace Paramore.Brighter.Core.Tests.Workflows.TestDoubles
 {
-    internal class MyCommandHandlerAsync(IAmACommandProcessor? commandProcessor, bool raiseFault = false) : RequestHandlerAsync<MyCommand>
+    internal class MyFaultHandlerAsync(Scheduler<WorkflowTestData>? scheduler) : RequestHandlerAsync<MyFault>
     {
-        public static List<MyCommand> ReceivedCommands { get;  } = [];
+        public static List<MyFault> ReceivedFaults { get;  } = [];
 
-
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
+        public override async Task<MyFault> HandleAsync(MyFault @event, CancellationToken cancellationToken = default)
         {
-            LogCommand(command);
-            if (!raiseFault) 
-                await commandProcessor?.PublishAsync(new MyEvent(command.Value) {CorrelationId = command.CorrelationId}, cancellationToken: cancellationToken);
-            else
-                 await commandProcessor?.PublishAsync(new MyFault(command.Value) {CorrelationId = command.CorrelationId}, cancellationToken: cancellationToken);
-                 
-            
-            return await base.HandleAsync(command, cancellationToken);
+            LogEvent(@event);
+            scheduler?.ResumeAfterEvent(@event);
+            return await base.HandleAsync(@event, cancellationToken);
         }
-
-        private void LogCommand(MyCommand request)
+        
+        private void LogEvent(MyFault request)
         {
-            ReceivedCommands.Add(request);
+            ReceivedFaults.Add(request);
         }
     }
 }
