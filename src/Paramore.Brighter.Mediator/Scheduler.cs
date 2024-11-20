@@ -68,7 +68,7 @@ public class Scheduler<TData>
     /// </summary>
     /// <param name="event">The event to process.</param>
     /// <exception cref="InvalidOperationException">Thrown when the workflow has not been initialized.</exception>
-     public async Task ReceiveWorkflowEvent(Event @event)
+     public async Task ResumeAfterEvent(Event @event)
      {
          if (@event.CorrelationId is null)
              throw new InvalidOperationException("CorrelationId should not be null; needed to retrieve state of workflow");

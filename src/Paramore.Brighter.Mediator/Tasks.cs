@@ -39,8 +39,9 @@ public interface IStepTask<TData>
     /// </summary>
     /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
+    /// <param name="stateStore">Used to store the state of a job, if it is altered in the handler</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken);
+    Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -85,8 +86,14 @@ public class ChangeAsync<TData>(
     /// </summary>
     /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
+    /// <param name="stateStore">Used to store the state of a job, if it is altered in the handler</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    public async Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    public async Task HandleAsync(
+        Job<TData>? job, 
+        IAmACommandProcessor commandProcessor, 
+        IAmAStateStoreAsync stateStore, 
+        CancellationToken cancellationToken
+        )
     {
         if (job is null)
             return;
@@ -115,8 +122,14 @@ public class FireAndForgetAsync<TRequest, TData>(
     /// </summary>
     /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
+    /// <param name="stateStore">Used to store the state of a job, if it is altered in the handler</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    public async Task HandleAsync(Job<TData>? job,  IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    public async Task HandleAsync(
+        Job<TData>? job,  
+        IAmACommandProcessor commandProcessor, 
+        IAmAStateStoreAsync stateStore, 
+        CancellationToken cancellationToken
+        )
     {
         if (job is null)
             return;
@@ -146,20 +159,36 @@ public class RequestAndReactionAsync<TRequest, TReply, TData>(
     /// <summary>
     /// Handles the request-and-reply action.
     /// </summary>
+    /// <remarks>The logic here has to add the pending response, before the call to send the request. This is because the call to publish is not
+    /// over a bus, so it occurs sequentially within the Send before it exits. The event handler calls the <see cref="Scheduler{TData}"/>'s
+    /// ResumeAfterEvent method to schedule handling the response. This will look up the pending response. So it needs to be stored prior
+    /// to this call completing</remarks>
     /// <param name="job">The current job of the workflow.</param>
+    /// <param name="stateStore">The state store, required so that we can save the job state before sending the message</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    public async Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor,  CancellationToken cancellationToken)
+    public async Task HandleAsync(
+        Job<TData>? job, 
+        IAmACommandProcessor commandProcessor, 
+        IAmAStateStoreAsync stateStore, 
+        CancellationToken cancellationToken
+        )
     {
         if (job is null)
             return;
         
         var command = requestFactory();
         command.CorrelationId = job.Id;
+        
+        job.AddPendingResponse(
+            typeof(TReply), 
+            new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), 
+                null
+                )
+            );
+        await stateStore.SaveJobAsync(job, cancellationToken);
+        
         await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
-       
-        job.AddPendingResponse(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), null));
- 
     }
 }
 
@@ -187,18 +216,42 @@ public class RobustRequestAndReactionAsync<TRequest, TReply, TFault, TData>(
     /// </summary>
     /// <param name="job">The current job of the workflow.</param>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
+    /// <param name="stateStore">The state store, required so that we can save the job state before sending the message</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    public async Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    public async Task HandleAsync(
+        Job<TData>? job, 
+        IAmACommandProcessor commandProcessor,
+        IAmAStateStoreAsync stateStore, 
+        CancellationToken cancellationToken
+        )
     {
         if (job is null)
             return;
-        
+
         var command = requestFactory();
+
         command.CorrelationId = job.Id;
-        await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
         
-        job.AddPendingResponse(typeof(TReply), new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), typeof(TFault)));
-        job.AddPendingResponse(typeof(TFault), new TaskResponse<TData>((reply, _) => faultFactory(reply as TFault), typeof(TReply), typeof(TFault)));}
+        job.AddPendingResponse(
+            typeof(TReply), 
+            new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), 
+                typeof(TReply), 
+                typeof(TFault)
+                )
+            );
+        job.AddPendingResponse(
+            typeof(TFault), 
+            new TaskResponse<TData>((reply, _) => faultFactory(reply as TFault), 
+                typeof(TReply), 
+                typeof(TFault)
+                )
+            );
+        await stateStore.SaveJobAsync(job, cancellationToken);
+        
+        await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
+
+    }
+
 }
 
 

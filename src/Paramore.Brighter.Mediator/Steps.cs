@@ -39,9 +39,10 @@ public abstract class Step<TData>(
     ///  The purpose of the step is to orchestrate the workflow, not to do the work.
     /// </summary>
     /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
     /// <returns></returns>
-    public abstract Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken);
+    public abstract Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken);
     
     /// <summary>
     /// Sets the job that is executing us
@@ -71,7 +72,15 @@ public class ExclusiveChoice<TData>(
 )
     : Step<TData>(name, null, null, onCompletion)
 {
-    public override Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    /// <summary>
+    ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
+    ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
+    ///  The purpose of the step is to orchestrate the workflow, not to do the work.
+    /// </summary>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
+    public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken)
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
@@ -79,7 +88,7 @@ public class ExclusiveChoice<TData>(
         var step = predicate.IsSatisfiedBy(Job.Data) ? nextTrue : nextFalse;
         Job.NextStep(step);
         OnCompletion?.Invoke();
-        return Task.CompletedTask;
+        await stateStore.SaveJobAsync(Job, cancellationToken);
     }
 }
 
@@ -92,7 +101,15 @@ public class ParallelSplit<TData>(
 {
     public Step<TData>[] Branches { get; set; } = branches;
     
-    public override Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    /// <summary>
+    ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
+    ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
+    ///  The purpose of the step is to orchestrate the workflow, not to do the work.
+    /// </summary>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
+    public override Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken)
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
@@ -125,23 +142,32 @@ public class Sequential<TData>(
 ) 
     : Step<TData>(name, next, stepTask, onCompletion)
 {
-    public override Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    /// <summary>
+    ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
+    ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
+    ///  The purpose of the step is to orchestrate the workflow, not to do the work.
+    /// </summary>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
+    public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken)
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
         
         try
         {
-            StepTask?.HandleAsync(Job, commandProcessor, cancellationToken);
+            StepTask?.HandleAsync(Job, commandProcessor, stateStore, cancellationToken);
             OnCompletion?.Invoke();
             Job.NextStep(Next);
+            await stateStore.SaveJobAsync(Job, cancellationToken);
         }
         catch (Exception)
         {
             onFaulted?.Invoke();
             Job.NextStep(faultNext); 
+            await stateStore.SaveJobAsync(Job, cancellationToken);
         }
-        return Task.CompletedTask;
     }
 }
 
@@ -161,14 +187,23 @@ public class Wait<TData>(
     ) 
     : Step<TData>(name, next, null, onCompletion)
 {
-    public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+    /// <summary>
+    ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
+    ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
+    ///  The purpose of the step is to orchestrate the workflow, not to do the work.
+    /// </summary>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
+    public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken)
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
         
         await Task.Delay(duration, cancellationToken);
-        Job.NextStep(Next);
         OnCompletion?.Invoke();
+        Job.NextStep(Next);
+        await stateStore.SaveJobAsync(Job, cancellationToken);
     }
 }
 

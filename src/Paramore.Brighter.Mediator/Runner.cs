@@ -34,19 +34,19 @@ namespace Paramore.Brighter.Mediator;
 public class Runner<TData>
 {
     private readonly IAmAJobChannel<TData> _channel;
-    private readonly IAmAStateStoreAsync _stateStoreAsync;
+    private readonly IAmAStateStoreAsync _stateStore;
     private readonly IAmACommandProcessor _commandProcessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Runner{TData}"/> class.
     /// </summary>
     /// <param name="channel">The job channel to process jobs from.</param>
-    /// <param name="stateStoreAsync">The job store to save job states.</param>
+    /// <param name="stateStore">The job store to save job states.</param>
     /// <param name="commandProcessor">The command processor to handle commands.</param>
-    public Runner(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStoreAsync, IAmACommandProcessor commandProcessor)
+    public Runner(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStore, IAmACommandProcessor commandProcessor)
     {
         _channel = channel;
-        _stateStoreAsync = stateStoreAsync;
+        _stateStore = stateStore;
         _commandProcessor = commandProcessor;
     }
 
@@ -74,17 +74,18 @@ public class Runner<TData>
             return;
         
         job.State = JobState.Running;
-        await _stateStoreAsync.SaveJobAsync(job, cancellationToken);
+        await _stateStore.SaveJobAsync(job, cancellationToken);
 
         while (job.CurrentStep() is not null)
         {
-            await job.CurrentStep()!.ExecuteAsync(_commandProcessor, cancellationToken);
-            await _stateStoreAsync.SaveJobAsync(job, cancellationToken);
+            await job.CurrentStep()!.ExecuteAsync(_commandProcessor, _stateStore, cancellationToken);
             
             //if the job  has a pending step, finish execution of this job.
             if (job.State == JobState.Waiting)
                 break;
         }
+        
+        if (job.State != JobState.Waiting) job.State = JobState.Done;
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken)

@@ -37,7 +37,7 @@ public interface IAmAStateStoreAsync
     /// </summary>
     /// <param name="job">The job</param>
     /// <param name="cancellationToken"></param>
-    Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken);
+    Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves a job via its Id

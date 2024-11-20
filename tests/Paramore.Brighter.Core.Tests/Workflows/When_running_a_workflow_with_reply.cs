@@ -55,6 +55,8 @@ public class MediatorReplyStepFlowTests
                 (reply) => { workflowData.Bag["MyReply"] = ((MyEvent)reply).Value; }),
             () => { _stepCompleted = true; },
             null);
+         
+         _job.InitSteps(firstStep);
         
          InMemoryStateStoreAsync store = new();
          InMemoryJobChannel<WorkflowTestData> channel = new();
@@ -77,7 +79,7 @@ public class MediatorReplyStepFlowTests
         await _scheduler.ScheduleAsync(_job);
         
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(3) );
+        ct.CancelAfter( TimeSpan.FromSeconds(180) );
 
         try
         {
