@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -85,7 +86,8 @@ public class Runner<TData>
                 break;
         }
         
-        if (job.State != JobState.Waiting) job.State = JobState.Done;
+        if (job.State != JobState.Waiting) 
+            job.State = JobState.Done;
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken)

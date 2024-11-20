@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter.Mediator;
@@ -49,6 +50,9 @@ public abstract class Job { }
 /// <typeparam name="TData">The user defined data for the workflow</typeparam>
 public class Job<TData> : Job
 {
+    /// <summary>Used to manage access to state, as the job may be updated from multiple threads</summary>
+    private readonly object _lockObject = new();
+    
     /// <summary> If we are awaiting a response, we store the type of the response and the action to take when it arrives </summary>
     private readonly Dictionary<Type, TaskResponse<TData>?> _pendingResponses = new();
 
@@ -99,8 +103,11 @@ public class Job<TData> : Job
     /// <param name="taskResponse">The task response to add.</param>
     public void AddPendingResponse(Type responseType, TaskResponse<TData>? taskResponse)
     {
-        State = JobState.Waiting;
-        _pendingResponses.Add(responseType, taskResponse);
+        lock (_lockObject)
+        {
+            State = JobState.Waiting;
+            _pendingResponses.Add(responseType, taskResponse);
+        }
     }
 
     /// <summary>
@@ -119,11 +126,15 @@ public class Job<TData> : Job
     /// <param name="nextStep">The next step to set.</param>
     public void NextStep(Step<TData>? nextStep)
     {
-        _step = nextStep;
-        if (_step is not null)
-            _step.AddToJob(this);
-        else 
-            if (State != JobState.Waiting) State = JobState.Done;
+        lock (_lockObject)
+        {
+            _step = nextStep;
+            if (_step is not null)
+                _step.AddToJob(this);
+            else 
+            if (State != JobState.Waiting) 
+                State = JobState.Done;
+        }
     }
     
     /// <summary>
@@ -134,11 +145,14 @@ public class Job<TData> : Job
     public bool ResumeAfterEvent(Type eventType)
     {
         if (_step is null) return false;
-        
-        var success = _pendingResponses.Remove(eventType);
-        _step.OnCompletion?.Invoke();
-        _step = _step.Next;
-        if (success) State = JobState.Running;
-        return success;
+
+        lock (_lockObject)
+        {
+            var success = _pendingResponses.Remove(eventType);
+            _step.OnCompletion?.Invoke();
+            _step = _step.Next;
+            if (success) State = JobState.Running;
+            return success;
+        }
     }
 }

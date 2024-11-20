@@ -83,7 +83,7 @@ public class MediatorRobustReplyFaultStepFlowTests
 
         
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(180) );
+        ct.CancelAfter( TimeSpan.FromSeconds(1) );
 
         try
         {
