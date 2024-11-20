@@ -21,7 +21,7 @@ namespace GreetingsSender
             serviceCollection.AddLogging();
 
             //TODO: add your ASB qualified name here
-            var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
+            var asbClientProvider = new ServiceBusConnectionStringClientProvider("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
 
             var producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 asbClientProvider,
@@ -30,17 +30,21 @@ namespace GreetingsSender
                     new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.event"),
-                        RequestType = typeof(GreetingEvent)
+                        RequestType = typeof(GreetingEvent),
+                        MakeChannels = OnMissingChannel.Assume
                     },
                     new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.addGreetingCommand"),
-                        RequestType = typeof(AddGreetingCommand)
+                        RequestType = typeof(AddGreetingCommand),
+                        MakeChannels = OnMissingChannel.Assume
+                        
                     },
                     new AzureServiceBusPublication
                     {
                         Topic = new RoutingKey("greeting.Asyncevent"),
-                        RequestType = typeof(GreetingAsyncEvent)
+                        RequestType = typeof(GreetingAsyncEvent),
+                        MakeChannels = OnMissingChannel.Assume
                     }
                 }
             ).Create();
