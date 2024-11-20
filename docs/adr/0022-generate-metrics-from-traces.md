@@ -12,7 +12,7 @@ For consistency OpenTelemetry terms are used over .NET terms:
 - Attribute over Tag
 
 ## Context
-[adr/0010-brighter-semantic-conventions](0010-brighter-semantic-conventions.md) outlines semantic conventions of interest and how OpenTelemetry traces will be implemented in Brighter. Traces can answer questions to how an individual request performed, it's also useful to see how an operation performs in aggregate. Brighter does not yet provide this out of the box.
+[adr/0010-brighter-semantic-conventions](0010-brighter-semantic-conventions.md#command-processor-operations) outlines semantic conventions of interest and how OpenTelemetry traces will be implemented in Brighter. Traces can answer questions to how an individual request performed, it's also useful to see how an operation performs in aggregate. Brighter does not yet provide this out of the box.
 
 ## Decision
 
@@ -28,12 +28,12 @@ Spans can have high cardinality attributes like `paramore.brighter.requestid` wh
 By default, OpenTelemetry [implements the following buckets](https://opentelemetry.io/docs/specs/semconv/messaging/messaging-metrics/#common-metrics) `[ 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10 ]` which the application can override with [views](https://opentelemetry.io/docs/concepts/signals/metrics/#views).
 
 ### Sampling
-Traces are often sampled to control costs ranging from application performance to vendor ingestion. Metrics are not exposed to costs in the same way traces are, the main lever for histograms being bucket boundaries. [Head-based sampling](https://opentelemetry.io/docs/concepts/sampling/#head-sampling) will distort metrics, applications should prefer to apply a [tail-based sampler](https://opentelemetry.io/docs/concepts/sampling/#tail-sampling) anywhere in the [pipeline](https://opentelemetry.io/docs/collector/architecture/#pipelines) after the Brighter metrics processor.
+Traces are often sampled to control costs ranging from application performance to vendor ingestion. Metrics are not exposed to costs in the same way traces are, with the main lever for histograms being bucket boundaries. [Head-based sampling](https://opentelemetry.io/docs/concepts/sampling/#head-sampling) will distort metrics, applications should prefer to apply a [tail-based sampler](https://opentelemetry.io/docs/concepts/sampling/#tail-sampling) anywhere in the [pipeline](https://opentelemetry.io/docs/collector/architecture/#pipelines) after the Brighter metrics processor.
 
 This means sampling will not reduce costs belonging to tracing before export.
 
 ### Meters
-[Microsoft docs states](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#best-practices):
+[Microsoft docs state](https://learn.microsoft.com/en-us/dotnet/core/diagnostics/metrics-instrumentation#best-practices):
 > Each library or library subcomponent can (and often should) create its own Meter. Consider creating a new Meter rather than reusing an existing one if you anticipate app developers would appreciate being able to easily enable and disable the groups of metrics separately.
 
 All existing spans are related by being command processor operations which applications will likely want to toggle together. Therefore, all of these metrics will be under a single meter.
