@@ -104,6 +104,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.AzureServiceBus.Tests", "tests\Paramore.Brighter.AzureServiceBus.Tests\Paramore.Brighter.AzureServiceBus.Tests.csproj", "{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ASBTaskQueue", "ASBTaskQueue", "{48D0EECA-B928-4B80-BE46-2C08CF3A946B}"
+	ProjectSection(SolutionItems) = preProject
+		samples\TaskQueue\ASBTaskQueue\Config.Json = samples\TaskQueue\ASBTaskQueue\Config.Json
+		samples\TaskQueue\ASBTaskQueue\.env = samples\TaskQueue\ASBTaskQueue\.env
+		samples\TaskQueue\ASBTaskQueue\Docker-Compose.yml = samples\TaskQueue\ASBTaskQueue\Docker-Compose.yml
+		samples\TaskQueue\ASBTaskQueue\Readme.md = samples\TaskQueue\ASBTaskQueue\Readme.md
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MsSql", "src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj", "{36CADB1E-3777-4A7E-86E3-BF650A951AC9}"
 EndProject
