@@ -70,7 +70,7 @@ public class MediatorChangeStepFlowTests
         ct.CancelAfter( TimeSpan.FromSeconds(1) );
         try
         {
-            await _runner.RunAsync(ct.Token);
+            _runner.RunAsync(ct.Token);
         }
         catch (Exception ex)
         {

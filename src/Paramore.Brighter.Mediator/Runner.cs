@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -39,6 +40,7 @@ public class Runner<TData>
     private readonly IAmAStateStoreAsync _stateStore;
     private readonly IAmACommandProcessor _commandProcessor;
     private readonly Scheduler<TData> _scheduler;
+    private readonly string _runnerName = Guid.NewGuid().ToString("N");
 
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Runner<TData>>();
 
@@ -61,9 +63,11 @@ public class Runner<TData>
     /// Runs the job processing loop.
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    public async Task RunAsync(CancellationToken cancellationToken = default)
+    public void RunAsync(CancellationToken cancellationToken = default)
     {
-        await Task.Factory.StartNew(async () =>
+        s_logger.LogInformation("Starting runner {RunnerName}", _runnerName);
+        
+        var task = Task.Factory.StartNew(async () =>
         {
             cancellationToken.ThrowIfCancellationRequested();
             
@@ -73,6 +77,10 @@ public class Runner<TData>
                 cancellationToken.ThrowIfCancellationRequested();
             
         }, cancellationToken);
+        
+        Task.WaitAll([task], cancellationToken);
+        
+        s_logger.LogInformation("Finished runner {RunnerName}", _runnerName);
     }
 
     private async Task Execute(Job<TData>? job, CancellationToken cancellationToken = default)
@@ -80,12 +88,15 @@ public class Runner<TData>
         if (job is null)
             return;
         
+        s_logger.LogInformation("Executing job {JobId} on runner {RunnerName}", job.Id, _runnerName);
+        
         job.State = JobState.Running;
         await _stateStore.SaveJobAsync(job, cancellationToken);
 
         var step = job.CurrentStep();
         while (step is not null)
         {
+            s_logger.LogInformation("Step is {StepName} with state {StepStste}", step.Name, step.State);
             if (step.State == StepState.Queued)
             {
                 await step.ExecuteAsync(_stateStore, _commandProcessor, _scheduler, cancellationToken);
@@ -95,26 +106,38 @@ public class Runner<TData>
             if (job.State == JobState.Waiting)
                 break;
             
+            //assume execute determines next step
             step = job.CurrentStep();
+            s_logger.LogInformation(
+                "Next step is {StepName} with state {StepState}", 
+                step is not null ? step.Name : "flow ends", 
+                step is not null ? step.State : StepState.Done);
         }
         
         if (job.State != JobState.Waiting) 
             job.State = JobState.Done;
         
+        s_logger.LogInformation("Finished executing job {JobId} on {RunnerName}", job.Id, _runnerName);
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken)
     {
-        while (!_channel.IsClosed())
+        while (true)
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
+            
+            if (_channel.IsClosed())
+                break;
 
+            s_logger.LogInformation("Looking for jobs on {RunnerName}", _runnerName);
             var job = await _channel.DequeueJobAsync(cancellationToken);
             if (job is null)
                 continue;
             
+            s_logger.LogInformation("Executing job {JobId} on {RunnerName}", job.Id, _runnerName);
             await Execute(job, cancellationToken);
+            s_logger.LogInformation("Finished job {JobId} on {RunnerName}", job.Id, _runnerName);
         }
     }
 }

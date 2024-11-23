@@ -141,9 +141,14 @@ public class ExclusiveChoice<TData>(
         State = StepState.Running;
         
         var step = predicate.IsSatisfiedBy(Job.Data) ? nextTrue : nextFalse;
+
+        State = StepState.Done;
+        
+        if (step != null)
+            step.State = StepState.Queued;
+        
         Job.NextStep(step);
         OnCompletion?.Invoke();
-        State = StepState.Done;
         await stateStore.SaveJobAsync(Job, cancellationToken);
         
     }
@@ -245,14 +250,22 @@ public class Sequential<TData>(
         {
             await StepTask.HandleAsync(Job, commandProcessor, stateStore, cancellationToken);
             OnCompletion?.Invoke();
-            Job.NextStep(Next);
             State = StepState.Done;
+            
+            if(Next != null)
+                Next.State = StepState.Queued;
+            
+            Job.NextStep(Next);
             await stateStore.SaveJobAsync(Job, cancellationToken);
         }
         catch (Exception)
         {
             Job.State = JobState.Faulted;
             onFaulted?.Invoke();
+            
+            if (faultNext != null)
+                faultNext.State = StepState.Queued;
+            
             Job.NextStep(faultNext); 
             State = StepState.Faulted;
             await stateStore.SaveJobAsync(Job, cancellationToken);
@@ -263,17 +276,24 @@ public class Sequential<TData>(
 /// <summary>
 /// Allows the workflow to pause. This is a blocking operation that pauses the executing thread
 /// </summary>
-/// <param name="name">The name of the step, used for tracing execution</param>
-/// <param name="duration">The period for which we pause</param>
-/// <param name="onCompletion">An optional callback to run, following completion of the step</param>
-/// <param name="next">The next step in the sequence, null if this is the last step.</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
-public class Wait<TData>(
-    string name,
-    TimeSpan duration,
-    Sequential<TData>? next) 
-    : Step<TData>(name, next)
+public class Wait<TData> : Step<TData>
 {
+    private readonly TimeSpan _duration;
+
+    /// <summary>
+    /// Allows the workflow to pause. This is a blocking operation that pauses the executing thread
+    /// </summary>
+    /// <param name="name">The name of the step, used for tracing execution</param>
+    /// <param name="duration">The period for which we pause</param>
+    /// <param name="next">The next step in the sequence, null if this is the last step.</param>
+    /// <typeparam name="TData">The data that the step operates over</typeparam>
+    public Wait(string name, TimeSpan duration, Sequential<TData>? next) 
+        : base(name, next)
+    {
+        _duration = duration;
+    }
+
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
     ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
@@ -296,13 +316,26 @@ public class Wait<TData>(
         
         if (scheduler is null)
             throw new InvalidOperationException("Scheduler is null; a Wait Step must have a scheduler to schedule the next step");
+
+        if (Next == null)
+        {
+            throw new InvalidOperationException("Next step is empty; wait schedule the next step, so it cannot be empty");
+        }
         
         State = StepState.Running;
         
-        Job.DueTime = DateTime.UtcNow.Add(duration);
-        Job.State = JobState.Waiting;
+        Job.DueTime = DateTime.UtcNow.Add(_duration);
+        
         State = StepState.Done;
-        await scheduler.ScheduleAtAsync(Job, duration, cancellationToken);
+        
+        Next.State = StepState.Queued;
+        
+        Job.NextStep(Next);
+        
+        Job.State = JobState.Waiting;
+        
+        //this call will save the state of the Job, so no need to do it twice
+        await scheduler.ScheduleAtAsync(Job, _duration, cancellationToken);
     }
 }
 

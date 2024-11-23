@@ -91,7 +91,7 @@ public class MediatorPassingChoiceFlowTests
 
         try
         {
-            await _runner.RunAsync(ct.Token);
+            _runner.RunAsync(ct.Token);
         }
         catch (Exception e)
         {

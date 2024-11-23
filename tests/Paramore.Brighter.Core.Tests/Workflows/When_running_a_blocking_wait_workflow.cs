@@ -46,7 +46,7 @@ public class MediatorWaitStepFlowTests
         );
         
         var firstStep = new Wait<WorkflowTestData>("Test of Job",
-            TimeSpan.FromMilliseconds(500),
+            TimeSpan.FromMilliseconds(100),
             secondStep
             );
         
@@ -76,10 +76,11 @@ public class MediatorWaitStepFlowTests
             
             _timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
             
-             var jobExecutionTask = _runner.RunAsync(ct.Token);
-             var jobWakerTask = _waker.RunAsync(ct.Token);
-             
-             await Task.WhenAny( jobExecutionTask, jobWakerTask);
+            _runner.RunAsync(ct.Token);
+            _waker.RunAsync(ct.Token);
+
+            await Task.Delay(5, ct.Token);
+
         }
         catch (Exception e)
         {

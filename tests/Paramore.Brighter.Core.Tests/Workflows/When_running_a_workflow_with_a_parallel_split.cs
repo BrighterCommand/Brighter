@@ -84,7 +84,7 @@ public class MediatorParallelSplitFlowTests
 
         try
         {
-            await _runner.RunAsync(ct.Token);
+            _runner.RunAsync(ct.Token);
         }
         catch (Exception e)
         {

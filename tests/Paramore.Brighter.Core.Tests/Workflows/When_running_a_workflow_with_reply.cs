@@ -82,7 +82,7 @@ public class MediatorReplyStepFlowTests
 
         try
         {
-            await _runner.RunAsync(ct.Token);
+            _runner.RunAsync(ct.Token);
         }
         catch (Exception e)
         {

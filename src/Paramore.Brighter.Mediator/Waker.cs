@@ -25,6 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -36,6 +38,9 @@ public class Waker<TData>
 {
     private readonly TimeSpan _jobAge;
     private readonly Scheduler<TData> _scheduler;
+    private readonly string _wakerName = Guid.NewGuid().ToString("N");
+    
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Waker<TData>>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Waker{TData}"/> class.
@@ -54,9 +59,11 @@ public class Waker<TData>
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous run operation.</returns>
-    public async Task RunAsync(CancellationToken cancellationToken = default)
+    public void RunAsync(CancellationToken cancellationToken = default)
     {
-        await Task.Factory.StartNew(async () =>
+        s_logger.LogInformation("Starting waker {WakerName}", _wakerName);
+        
+        var task = Task.Factory.StartNew(async () =>
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -66,6 +73,10 @@ public class Waker<TData>
                 cancellationToken.ThrowIfCancellationRequested();
 
         }, cancellationToken);
+        
+        Task.WaitAll([task], cancellationToken);
+        
+        s_logger.LogInformation("Finished waker {WakerName}", _wakerName);
     }
 
     private async Task Wake(CancellationToken cancellationToken)
