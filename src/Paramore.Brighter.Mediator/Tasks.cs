@@ -41,7 +41,7 @@ public interface IStepTask<TData>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="stateStore">Used to store the state of a job, if it is altered in the handler</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    Task HandleAsync(Job<TData>? job, IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken);
+    Task HandleAsync(Job<TData>? job, IAmACommandProcessor? commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -90,7 +90,7 @@ public class ChangeAsync<TData>(
     /// <param name="cancellationToken">The cancellation token for this task</param>
     public async Task HandleAsync(
         Job<TData>? job, 
-        IAmACommandProcessor commandProcessor, 
+        IAmACommandProcessor? commandProcessor, 
         IAmAStateStoreAsync stateStore, 
         CancellationToken cancellationToken
         )
@@ -126,13 +126,16 @@ public class FireAndForgetAsync<TRequest, TData>(
     /// <param name="cancellationToken">The cancellation token for this task</param>
     public async Task HandleAsync(
         Job<TData>? job,  
-        IAmACommandProcessor commandProcessor, 
+        IAmACommandProcessor? commandProcessor, 
         IAmAStateStoreAsync stateStore, 
         CancellationToken cancellationToken
         )
     {
         if (job is null)
             return;
+        
+        if (commandProcessor is null)
+            throw new ArgumentNullException(nameof(commandProcessor));
         
         var command = requestFactory();
         command.CorrelationId = job.Id;
@@ -169,13 +172,16 @@ public class RequestAndReactionAsync<TRequest, TReply, TData>(
     /// <param name="cancellationToken">The cancellation token for this task</param>
     public async Task HandleAsync(
         Job<TData>? job, 
-        IAmACommandProcessor commandProcessor, 
+        IAmACommandProcessor? commandProcessor, 
         IAmAStateStoreAsync stateStore, 
         CancellationToken cancellationToken
         )
     {
         if (job is null)
             return;
+        
+        if (commandProcessor is null)
+            throw new ArgumentNullException(nameof(commandProcessor));
         
         var command = requestFactory();
         command.CorrelationId = job.Id;
@@ -220,13 +226,16 @@ public class RobustRequestAndReactionAsync<TRequest, TReply, TFault, TData>(
     /// <param name="cancellationToken">The cancellation token for this task</param>
     public async Task HandleAsync(
         Job<TData>? job, 
-        IAmACommandProcessor commandProcessor,
+        IAmACommandProcessor? commandProcessor,
         IAmAStateStoreAsync stateStore, 
         CancellationToken cancellationToken
         )
     {
         if (job is null)
             return;
+        
+        if (commandProcessor is null)
+            throw new ArgumentNullException(nameof(commandProcessor));
 
         var command = requestFactory();
 
@@ -249,9 +258,7 @@ public class RobustRequestAndReactionAsync<TRequest, TReply, TFault, TData>(
         await stateStore.SaveJobAsync(job, cancellationToken);
         
         await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
-
     }
-
 }
 
 

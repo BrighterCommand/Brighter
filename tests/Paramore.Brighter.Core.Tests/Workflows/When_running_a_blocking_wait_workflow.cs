@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -10,15 +11,17 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Workflows;
 
-public class MediatorBlockingWaitStepFlowTests 
+public class MediatorWaitStepFlowTests 
 {
     private readonly Scheduler<WorkflowTestData> _scheduler;
     private readonly Runner<WorkflowTestData> _runner;
     private readonly Job<WorkflowTestData> _job;
     private bool _stepCompleted;
     private readonly ITestOutputHelper _testOutputHelper;
+    private readonly FakeTimeProvider _timeProvider = new();
+    private readonly Waker<WorkflowTestData> _waker;
 
-    public MediatorBlockingWaitStepFlowTests(ITestOutputHelper testOutputHelper)
+    public MediatorWaitStepFlowTests(ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
         var registry = new SubscriberRegistry();
@@ -33,39 +36,50 @@ public class MediatorBlockingWaitStepFlowTests
         var workflowData= new WorkflowTestData();
         workflowData.Bag["MyValue"] = "Test";
         
-        _job = new Job<WorkflowTestData>(workflowData) ;
+        _job = new Job<WorkflowTestData>(workflowData);
+        
+        var secondStep = new Sequential<WorkflowTestData>(
+            "Test of Job",
+            new ChangeAsync<WorkflowTestData>( (_) => Task.CompletedTask),
+            () => { _stepCompleted = true; },
+            null
+        );
         
         var firstStep = new Wait<WorkflowTestData>("Test of Job",
             TimeSpan.FromMilliseconds(500),
-            () => { _stepCompleted = true; },
-            null
+            secondStep
             );
         
-        _job.InitSteps(firstStep); 
-        
-        InMemoryStateStoreAsync store = new();
+        _job.InitSteps(firstStep);
+
+        InMemoryStateStoreAsync store = new(_timeProvider);
         InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(
-            commandProcessor, 
             channel,
             store
             );
         
-        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor);
+        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
+        _waker = new Waker<WorkflowTestData>(TimeSpan.FromMilliseconds(100), _scheduler);
     }
     
     [Fact]
     public async Task When_running_a_wait_workflow()
     {
-        await _scheduler.ScheduleAsync(_job);
-        
         var ct = new CancellationTokenSource();
-        //ct.CancelAfter( TimeSpan.FromSeconds(1) );
+        ct.CancelAfter( TimeSpan.FromSeconds(3));
 
         try
         {
-            await _runner.RunAsync(ct.Token);
+            await _scheduler.ScheduleAsync(_job);
+            
+            _timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
+            
+             var jobExecutionTask = _runner.RunAsync(ct.Token);
+             var jobWakerTask = _waker.RunAsync(ct.Token);
+             
+             await Task.WhenAny( jobExecutionTask, jobWakerTask);
         }
         catch (Exception e)
         {

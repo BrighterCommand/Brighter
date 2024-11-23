@@ -1,8 +1,42 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
+
+public enum StepState
+{
+    Queued,
+    Running, 
+    Done,
+    Faulted
+}
 
 /// <summary>
 /// The base type for a step in the workflow.
@@ -20,6 +54,9 @@ public abstract class Step<TData>(
 {
     /// <summary> Which job is being executed by the step. </summary>
     protected Job<TData>? Job ;
+
+    /// <summary> The logger for the step. </summary>
+    protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Step<TData>>();
     
     /// <summary>The name of the step, used for tracing execution</summary>
     public string Name { get; init; } = name;
@@ -31,18 +68,26 @@ public abstract class Step<TData>(
     protected internal Action? OnCompletion { get; } = onCompletion;
     
     /// <summary>The action to be taken with the step.</summary>
-    protected IStepTask<TData>? StepTask = stepTask;
+    protected readonly IStepTask<TData>? StepTask = stepTask;
+    
+    public StepState? State { get; set; }
 
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
     ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
     ///  The purpose of the step is to orchestrate the workflow, not to do the work.
     /// </summary>
-    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
     /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="scheduler">The scheduler, used for queuing jobs that need to wait</param>
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
     /// <returns></returns>
-    public abstract Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken);
+    public abstract Task ExecuteAsync(
+        IAmAStateStoreAsync stateStore, 
+        IAmACommandProcessor? commandProcessor = null, 
+        Scheduler<TData>? scheduler = null,
+        CancellationToken cancellationToken = default
+        );
     
     /// <summary>
     /// Sets the job that is executing us
@@ -51,6 +96,7 @@ public abstract class Step<TData>(
     public void AddToJob(Job<TData> job)
     {
         Job = job;
+        State = StepState.Queued;
     }
 }
 
@@ -77,18 +123,29 @@ public class ExclusiveChoice<TData>(
     ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
     ///  The purpose of the step is to orchestrate the workflow, not to do the work.
     /// </summary>
-    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
     /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="scheduler">The scheduler, used for queuing jobs that need to wait</param>
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
-    public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken)
+    /// <returns></returns>
+    public override async Task ExecuteAsync(
+        IAmAStateStoreAsync stateStore, 
+        IAmACommandProcessor? commandProcessor = null, 
+        Scheduler<TData>? scheduler = null,
+        CancellationToken cancellationToken = default
+    )   
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
         
+        State = StepState.Running;
+        
         var step = predicate.IsSatisfiedBy(Job.Data) ? nextTrue : nextFalse;
         Job.NextStep(step);
         OnCompletion?.Invoke();
+        State = StepState.Done;
         await stateStore.SaveJobAsync(Job, cancellationToken);
+        
     }
 }
 
@@ -106,17 +163,29 @@ public class ParallelSplit<TData>(
     ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
     ///  The purpose of the step is to orchestrate the workflow, not to do the work.
     /// </summary>
-    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
     /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="scheduler">The scheduler, used for queuing jobs that need to wait</param>
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
-    public override Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken)
+    /// <returns></returns>
+    public override Task ExecuteAsync(
+        IAmAStateStoreAsync stateStore, 
+        IAmACommandProcessor? commandProcessor = null, 
+        Scheduler<TData>? scheduler = null,
+        CancellationToken cancellationToken = default
+    )   
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
         
+        State = StepState.Running;
+        
         // Parallel split doesn't directly execute its jobs. 
         // Execution is handled by the Scheduler, which will handle running each branch concurrently. 
         onBranch?.Invoke(Job.Data);
+        
+        State = StepState.Done;
+        
         return Task.CompletedTask;
     }
 }
@@ -147,25 +216,45 @@ public class Sequential<TData>(
     ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
     ///  The purpose of the step is to orchestrate the workflow, not to do the work.
     /// </summary>
-    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
     /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="scheduler">The scheduler, used for queuing jobs that need to wait</param>
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
-    public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken)
+    /// <returns></returns>
+    public override async Task ExecuteAsync(
+        IAmAStateStoreAsync stateStore, 
+        IAmACommandProcessor? commandProcessor = null, 
+        Scheduler<TData>? scheduler = null,
+        CancellationToken cancellationToken = default
+    )    
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
         
+        if (StepTask is null)
+        {
+            s_logger.LogWarning("No task to execute for {Name}", Name);
+            State = StepState.Done;
+            await stateStore.SaveJobAsync(Job, cancellationToken);
+            return;
+        }
+        
+        State = StepState.Running;
+
         try
         {
-            StepTask?.HandleAsync(Job, commandProcessor, stateStore, cancellationToken);
+            await StepTask.HandleAsync(Job, commandProcessor, stateStore, cancellationToken);
             OnCompletion?.Invoke();
             Job.NextStep(Next);
+            State = StepState.Done;
             await stateStore.SaveJobAsync(Job, cancellationToken);
         }
         catch (Exception)
         {
+            Job.State = JobState.Faulted;
             onFaulted?.Invoke();
             Job.NextStep(faultNext); 
+            State = StepState.Faulted;
             await stateStore.SaveJobAsync(Job, cancellationToken);
         }
     }
@@ -180,30 +269,40 @@ public class Sequential<TData>(
 /// <param name="next">The next step in the sequence, null if this is the last step.</param>
 /// <typeparam name="TData">The data that the step operates over</typeparam>
 public class Wait<TData>(
-    string name, 
-    TimeSpan duration, 
-    Action? onCompletion,  
-    Sequential<TData>? next
-    ) 
-    : Step<TData>(name, next, null, onCompletion)
+    string name,
+    TimeSpan duration,
+    Sequential<TData>? next) 
+    : Step<TData>(name, next)
 {
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
     ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
     ///  The purpose of the step is to orchestrate the workflow, not to do the work.
     /// </summary>
-    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
     /// <param name="stateStore">If the step updates the job, it needs to save its new state</param>
+    /// <param name="commandProcessor">The command processor, used to send requests to complete steps</param>
+    /// <param name="scheduler">The scheduler, used for queuing jobs that need to wait</param>
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
-    public override async Task ExecuteAsync(IAmACommandProcessor commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken)
+    /// <returns></returns>
+    public override async Task ExecuteAsync(
+        IAmAStateStoreAsync stateStore, 
+        IAmACommandProcessor? commandProcessor = null, 
+        Scheduler<TData>? scheduler = null,
+        CancellationToken cancellationToken = default
+    )   
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
         
-        await Task.Delay(duration, cancellationToken);
-        OnCompletion?.Invoke();
-        Job.NextStep(Next);
-        await stateStore.SaveJobAsync(Job, cancellationToken);
+        if (scheduler is null)
+            throw new InvalidOperationException("Scheduler is null; a Wait Step must have a scheduler to schedule the next step");
+        
+        State = StepState.Running;
+        
+        Job.DueTime = DateTime.UtcNow.Add(duration);
+        Job.State = JobState.Waiting;
+        State = StepState.Done;
+        await scheduler.ScheduleAtAsync(Job, duration, cancellationToken);
     }
 }
 

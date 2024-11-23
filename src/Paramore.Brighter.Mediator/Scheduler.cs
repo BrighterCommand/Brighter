@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Mediator;
@@ -32,35 +33,25 @@ namespace Paramore.Brighter.Mediator;
 /// It uses a command processor and a workflow store to manage the workflow's state and actions.
 /// </summary>
 /// <typeparam name="TData">The type of the workflow data.</typeparam>
-public class Scheduler<TData> 
+public class Scheduler<TData>
 {
-    private readonly IAmACommandProcessor _commandProcessor;
     private readonly IAmAJobChannel<TData> _channel;
-    private readonly IAmAStateStoreAsync _stateStoreAsync;
+    private readonly IAmAStateStoreAsync _stateStore;
+    private readonly TimeProvider _timeProvider;
 
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Scheduler{TData}"/> class.
     /// </summary>
-    /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="channel">The <see cref="IAmAJobChannel{TData}"/> over which jobs flow. The <see cref="Scheduler{TData}"/> is a producer
-    /// and the <see cref="Runner{TData}"/> is the consumer from the  channel</param>
-    /// <param name="stateStoreAsync">A store for pending jobs</param>
-    public Scheduler(IAmACommandProcessor commandProcessor, IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStoreAsync)
+    ///     and the <see cref="Runner{TData}"/> is the consumer from the  channel</param>
+    /// <param name="stateStore">A store for pending jobs</param>
+    /// <param name="timeProvider">Provides the time for scheduling, defaults to TimeProvider.System</param>
+    public Scheduler(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStore, TimeProvider? timeProvider = null)
     {
-        _commandProcessor = commandProcessor;
+        _timeProvider =  timeProvider ?? TimeProvider.System;
         _channel = channel;
-        _stateStoreAsync = stateStoreAsync;
-    }
-
-    /// <summary>
-    /// Runs the job by executing each step in the sequence.
-    /// </summary>
-    /// <param name="job"></param>
-    /// <exception cref="InvalidOperationException">Thrown when the job has not been initialized.</exception>
-    public async Task ScheduleAsync(Job<TData> job)
-    {
-        await _channel.EnqueueJobAsync(job);
+        _stateStore = stateStore;
     }
 
     /// <summary>
@@ -73,7 +64,7 @@ public class Scheduler<TData>
          if (@event.CorrelationId is null)
              throw new InvalidOperationException("CorrelationId should not be null; needed to retrieve state of workflow");
          
-         var w = await _stateStoreAsync.GetJobAsync(@event.CorrelationId);
+         var w = await _stateStore.GetJobAsync(@event.CorrelationId);
         
          if (w is not Job<TData> job)
              throw new InvalidOperationException("Branch has not been stored");
@@ -94,4 +85,51 @@ public class Scheduler<TData>
          
          await ScheduleAsync(job);
     }
+
+    /// <summary>
+    /// Runs the job by executing each step in the sequence.
+    /// </summary>
+    /// <param name="job">The job that we want a runner to execute</param>
+    /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
+    /// <exception cref="InvalidOperationException">Thrown when the job has not been initialized.</exception>
+    public async Task ScheduleAsync(Job<TData> job, CancellationToken cancellationToken = default)
+    {
+        await _channel.EnqueueJobAsync(job, cancellationToken);
+        job.DueTime = null; // Clear any due time after queuing
+        await _stateStore.SaveJobAsync(job, cancellationToken);
+    }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="job">The job that we want a runner to execute</param>
+    /// <param name="delay">The delay after which to schedule the job</param>
+    /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
+    /// <exception cref="InvalidOperationException">Thrown when the job has not been initialized.</exception>
+    public async Task ScheduleAtAsync(Job<TData> job, TimeSpan delay, CancellationToken cancellationToken = default)
+    {
+        job.DueTime = _timeProvider.GetUtcNow().Add(delay);
+        await _stateStore.SaveJobAsync(job, cancellationToken);
+    }
+    
+    /// <summary>
+    /// Finds any jobs that are due to run and schedules them
+    /// </summary>
+    /// <param name="jobAge">A job is due now, less the jobAge span</param>
+    /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
+    public async Task TriggerDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken)
+    {
+        var dueJobs = await _stateStore.GetDueJobsAsync(jobAge, cancellationToken);
+
+        foreach (var j in dueJobs)
+        {
+            var job = j as Job<TData>; 
+            
+            if (job is null)
+                continue;
+            
+            await ScheduleAsync(job, cancellationToken); 
+        }
+    }
+
 }

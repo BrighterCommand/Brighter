@@ -23,36 +23,31 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Runtime.Serialization;
 
 namespace Paramore.Brighter.Mediator;
 
 /// <summary>
-/// Used to store the state of a workflow
+/// Represents errors that occur during task execution.
 /// </summary>
-public interface IAmAStateStoreAsync
+[Serializable]
+public class TaskException : Exception
 {
     /// <summary>
-    /// Saves the job 
+    /// Initializes a new instance of the <see cref="TaskException"/> class.
     /// </summary>
-    /// <param name="job">The job</param>
-    /// <param name="cancellationToken"></param>
-    Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken = default);
+    public TaskException() { }
 
     /// <summary>
-    /// Retrieves a job via its Id
+    /// Initializes a new instance of the <see cref="TaskException"/> class with a specified error message.
     /// </summary>
-    /// <param name="id">The id of the job</param>
-    /// <returns>if found, the job, otherwise null</returns>
-    Task<Job?> GetJobAsync(string? id) ;
+    /// <param name="message">The message that describes the error.</param>
+    public TaskException(string message) : base(message) { }
 
     /// <summary>
-    /// 
+    /// Initializes a new instance of the <see cref="TaskException"/> class with a specified error message and a reference to the inner exception that is the cause of this exception.
     /// </summary>
-    /// <param name="jobAge">The time before now at which becomes scheduled</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    Task<IEnumerable<Job>> GetDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken);
+    /// <param name="message">The error message that explains the reason for the exception.</param>
+    /// <param name="innerException">The exception that is the cause of the current exception, or a null reference if no inner exception is specified.</param>
+    public TaskException(string message, Exception innerException) : base(message, innerException) { }
 }

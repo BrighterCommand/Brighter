@@ -22,9 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -37,6 +38,9 @@ public class Runner<TData>
     private readonly IAmAJobChannel<TData> _channel;
     private readonly IAmAStateStoreAsync _stateStore;
     private readonly IAmACommandProcessor _commandProcessor;
+    private readonly Scheduler<TData> _scheduler;
+
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Runner<TData>>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Runner{TData}"/> class.
@@ -44,11 +48,13 @@ public class Runner<TData>
     /// <param name="channel">The job channel to process jobs from.</param>
     /// <param name="stateStore">The job store to save job states.</param>
     /// <param name="commandProcessor">The command processor to handle commands.</param>
-    public Runner(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStore, IAmACommandProcessor commandProcessor)
+    /// <param name="scheduler">The scheduler which allows us to queue work that should be deferred</param>
+    public Runner(IAmAJobChannel<TData> channel, IAmAStateStoreAsync stateStore, IAmACommandProcessor commandProcessor, Scheduler<TData> scheduler)
     {
         _channel = channel;
         _stateStore = stateStore;
         _commandProcessor = commandProcessor;
+        _scheduler = scheduler;
     }
 
     /// <summary>
@@ -77,17 +83,24 @@ public class Runner<TData>
         job.State = JobState.Running;
         await _stateStore.SaveJobAsync(job, cancellationToken);
 
-        while (job.CurrentStep() is not null)
+        var step = job.CurrentStep();
+        while (step is not null)
         {
-            await job.CurrentStep()!.ExecuteAsync(_commandProcessor, _stateStore, cancellationToken);
-            
+            if (step.State == StepState.Queued)
+            {
+                await step.ExecuteAsync(_stateStore, _commandProcessor, _scheduler, cancellationToken);
+            }
+
             //if the job  has a pending step, finish execution of this job.
             if (job.State == JobState.Waiting)
                 break;
+            
+            step = job.CurrentStep();
         }
         
         if (job.State != JobState.Waiting) 
             job.State = JobState.Done;
+        
     }
 
     private async Task ProcessJobs(CancellationToken cancellationToken)
@@ -98,6 +111,9 @@ public class Runner<TData>
                 break;
 
             var job = await _channel.DequeueJobAsync(cancellationToken);
+            if (job is null)
+                continue;
+            
             await Execute(job, cancellationToken);
         }
     }

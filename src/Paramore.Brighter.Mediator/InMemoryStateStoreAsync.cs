@@ -22,9 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -33,23 +38,38 @@ namespace Paramore.Brighter.Mediator;
 /// </summary>
 public class InMemoryStateStoreAsync : IAmAStateStoreAsync
 {
-    private readonly Dictionary<string, Job?> _flows = new();
+    private readonly ConcurrentDictionary<string, Job?> _jobs = new();
+    private readonly TimeProvider _timeProvider;
+    private DateTimeOffset _sinceTime;
+    
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryStateStoreAsync>();
 
     /// <summary>
-    /// Saves the job asynchronously.
+    /// Represents an in-memory store for jobs.
     /// </summary>
-    /// <typeparam name="TData">The type of the job data.</typeparam>
-    /// <param name="job">The job to save.</param>
-    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    /// <returns>A task that represents the asynchronous save operation.</returns>
-    public Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken)
+    public InMemoryStateStoreAsync(TimeProvider? timeProvider = null)
     {
-        if (cancellationToken.IsCancellationRequested) return Task.FromCanceled(cancellationToken);
-        
-        if (job is null) return Task.CompletedTask;
+        _timeProvider = timeProvider ??  TimeProvider.System;
+    }
 
-        _flows[job.Id] = job;
-        return Task.CompletedTask;
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="jobAge">A job is due now, less the jobAge span</param>
+    /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
+    /// <returns></returns>
+    public Task<IEnumerable<Job>> GetDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken)
+    {
+        var dueJobs = _jobs.Values
+            .Where(job =>
+            {
+                if (job is null || !job.IsScheduled)  return false;
+                _sinceTime = _timeProvider.GetUtcNow().Subtract(jobAge);
+                return  job.DueTime > _sinceTime;
+            })
+            .ToList();
+
+        return Task.FromResult((IEnumerable<Job>)dueJobs);
     }
 
     /// <summary>
@@ -66,8 +86,33 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
             return tcs.Task;
         }
 
-        var job = _flows.TryGetValue(id, out var state) ? state : null;
+        var job = _jobs.TryGetValue(id, out var state) ? state : null;
         tcs.SetResult(job);
         return tcs.Task;
+    }
+    
+    /// <summary>
+    /// Saves the job asynchronously.
+    /// </summary>
+    /// <typeparam name="TData">The type of the job data.</typeparam>
+    /// <param name="job">The job to save.</param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+    /// <returns>A task that represents the asynchronous save operation.</returns>
+    public Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return Task.FromCanceled(cancellationToken);
+
+        if (job is null) return Task.CompletedTask;
+
+        try
+        {
+            _jobs[job.Id] = job;
+            return Task.FromResult(true);
+        }
+        catch (Exception e)
+        {
+            s_logger.LogError($"Error saving job {job.Id} to in-memory store: {e.Message}"); 
+            return Task.FromException(e);
+        }
     }
 }

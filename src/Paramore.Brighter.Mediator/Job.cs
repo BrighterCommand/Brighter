@@ -37,12 +37,29 @@ public enum JobState
     Running,
     Waiting,
     Done,
+    Faulted
 }
 
 /// <summary>
 /// empty class, used as marker for the branch data
 /// </summary>
-public abstract class Job { }
+public abstract class Job
+{
+    /// <summary>Used to manage access to state, as the job may be updated from multiple threads</summary>
+    protected readonly object LockObject = new();
+    
+    /// <summary> The time the job is due to run </summary>
+    public DateTimeOffset? DueTime { get; set; }
+
+    /// <summary> The id of the workflow, used to save-retrieve it from storage </summary>
+    public string Id { get; private set; } = Guid.NewGuid().ToString();
+    
+    /// <summary> Is the job scheduled to run?</summary>
+    public bool IsScheduled => DueTime.HasValue;
+    
+    /// <summary> Is the job waiting to be run, running, waiting for a response or finished </summary>
+    public JobState State { get; set; }
+}
 
 /// <summary>
 /// Job represents the current state of the workflow and tracks if it’s awaiting a response.
@@ -50,9 +67,7 @@ public abstract class Job { }
 /// <typeparam name="TData">The user defined data for the workflow</typeparam>
 public class Job<TData> : Job
 {
-    /// <summary>Used to manage access to state, as the job may be updated from multiple threads</summary>
-    private readonly object _lockObject = new();
-    
+     
     /// <summary> If we are awaiting a response, we store the type of the response and the action to take when it arrives </summary>
     private readonly Dictionary<Type, TaskResponse<TData>?> _pendingResponses = new();
 
@@ -61,12 +76,7 @@ public class Job<TData> : Job
 
     /// <summary> The data that is passed between steps of the workflow </summary>
     public TData Data { get; private set; }
-
-    /// <summary> The id of the workflow, used to save-retrieve it from storage </summary>
-    public string Id { get; private set; } = Guid.NewGuid().ToString();
     
-    /// <summary> Is the job waiting to be run, running, waiting for a response or finished </summary>
-    public JobState State { get; set; }
 
     /// <summary>
     ///  Constructs a new Job
@@ -103,7 +113,7 @@ public class Job<TData> : Job
     /// <param name="taskResponse">The task response to add.</param>
     public void AddPendingResponse(Type responseType, TaskResponse<TData>? taskResponse)
     {
-        lock (_lockObject)
+        lock (LockObject)
         {
             State = JobState.Waiting;
             _pendingResponses.Add(responseType, taskResponse);
@@ -126,7 +136,7 @@ public class Job<TData> : Job
     /// <param name="nextStep">The next step to set.</param>
     public void NextStep(Step<TData>? nextStep)
     {
-        lock (_lockObject)
+        lock (LockObject)
         {
             _step = nextStep;
             if (_step is not null)
@@ -146,7 +156,7 @@ public class Job<TData> : Job
     {
         if (_step is null) return false;
 
-        lock (_lockObject)
+        lock (LockObject)
         {
             var success = _pendingResponses.Remove(eventType);
             _step.OnCompletion?.Invoke();

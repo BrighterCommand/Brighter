@@ -65,12 +65,11 @@ public class MediatorParallelSplitFlowTests
         InMemoryJobChannel<WorkflowTestData> channel = new();
         
         _scheduler = new Scheduler<WorkflowTestData>(
-            commandProcessor, 
             channel,
             store
         );
         
-        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor);
+        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
     }
     
     //[Fact]
