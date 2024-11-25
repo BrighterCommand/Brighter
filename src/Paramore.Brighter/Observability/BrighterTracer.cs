@@ -81,13 +81,13 @@ public class BrighterTracer : IAmABrighterTracer
         
         if (exceptionList .Length == 1)
         {
-            span.RecordException(exceptionList[0]);
+            span.AddException(exceptionList[0]);
             span.SetStatus(ActivityStatusCode.Error, exceptionList[0].Message);
             return;
         }
 
         var exception = new  AggregateException("Operation failed, see inner exceptions for details",  exceptionList); 
-        span.RecordException(exception);
+        span.AddException(exception);
         span.SetStatus(ActivityStatusCode.Error, exception.Message);
     }
 
@@ -302,7 +302,7 @@ public class BrighterTracer : IAmABrighterTracer
         else
             activity = ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
         
-        activity?.RecordException(messagePumpException);
+        activity?.AddException(messagePumpException);
         activity?.SetStatus(ActivityStatusCode.Error, messagePumpException.Message);
         
         if(activity is not null)

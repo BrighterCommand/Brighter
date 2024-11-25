@@ -3,7 +3,7 @@
     <PropertyGroup>
       <Description>This is the common components required to connect to MsSql for Inbox, Outbox, and Messaging Gateway.</Description>
       <Authors>Paul Reardon</Authors>
-      <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
+      <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
       <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     </PropertyGroup>
 
