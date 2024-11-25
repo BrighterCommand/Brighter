@@ -53,5 +53,11 @@ We would expect a some point to implement the Simple Merge step to allow paralle
 * Increased Complexity in State Management: Tracking multiple branches requires more complex state management to ensure each branch persists and resumes accurately. 
 * Concurrency Overhead in the Mediator: Managing multiple threads of control adds overhead. We now have both a Runner and a Scheduler. 
 
-### Related ADRs
+### Use of Middleware or Db for The Job Channel
+* We could use a middleware library to manage the job channel. Brighter itself manages a queue or stream of work with a single-threaded pump
+* This would mean the scheduler uses the commandprocessor to deposit a job on a queue, and the runner would be our existing message pump, which would pass to a job handler that executed the workflow.
+* The alternative here is to use the database as the job channel. This would mean that the scheduler would write a job to the database, and the runner would read from the database. 
+* For now, we defer this decision to a later ADR. First we want to understand the whole scope of the work, through an in-memory implementation, then we will determine what an out-of-process implementation would look like.
+
+### Merge of parallel branches 
 * Future ADR for implementing Simple Merge Step for synchronization of parallel branches.

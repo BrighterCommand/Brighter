@@ -32,9 +32,9 @@ Our experience has been that many teams adopt Step Functions to gain access to i
 
 We will add a `Mediator` class to Brighter that will: 
 
-	1.	Manages and tracks a WorkflowState object representing the current step in the workflow.
+	1. Manages and tracks a WorkflowState object representing the current step in the workflow.
     2. Support multiple steps: sequence, choice, parallel, wait.
-	3.	Supports multiple tasks, mapped to typical ws-messaging patterns including:
+	3. Supports multiple tasks, mapped to typical ws-messaging patterns including:
 	•	FireAndForget: Dispatches a `Command` and immediately advances to the next state.
 	•	RequestReaction: Dispatches a `Command` and waits for an event response before advancing.
     •	RobustRequestReaction: Reaction event can kick off an error flow. 
@@ -42,7 +42,7 @@ We will add a `Mediator` class to Brighter that will:
     5.  Work is handled within Brighter handlers. They use glue code to call back to the workflow where necessary 
 	6.	Can be passed events, and uses the correlation IDs to match events to specific workflow instances and advance the workflow accordingly.
 
-The Specification Pattern in a Choice steo will allow flexible conditional logic by combining specifications with And and Or conditions, enabling complex branching decisions within the workflow.
+The Specification Pattern in a Choice step will allow flexible conditional logic by combining specifications with And and Or conditions, enabling complex branching decisions within the workflow.
 
 We assume that the initial V10 of Brighter will contain a minimum viable product version of the `Mediator`. Additional functionality, workflows, etc. will be a feature of later releases. Broady our goal within V10 would be to ensure that from [Workflow Patterns](http://www.workflowpatterns.com/patterns/control/index.php) we can deliver the Basic Control Flow patterns. A stretch goal would be to offer some Iteration and Cnacellation patterns.
 
