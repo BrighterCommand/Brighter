@@ -16,7 +16,6 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Diagnostics;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MySql;
-using Paramore.Brighter.Observability;
 using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;

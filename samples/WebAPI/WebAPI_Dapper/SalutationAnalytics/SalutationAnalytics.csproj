@@ -40,10 +40,4 @@
     </Content>
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="Npgsql">
-      <HintPath>..\..\..\libs\Npgsql\net6.0\Npgsql.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>
