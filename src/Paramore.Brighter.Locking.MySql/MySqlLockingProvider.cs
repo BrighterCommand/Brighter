@@ -29,7 +29,7 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
     /// <returns>The id of the lock that has been acquired or null if no lock was able to be acquired</returns>
     public async Task<string> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
-        if (!_connections.ContainsKey(resource))
+        if (_connections.ContainsKey(resource))
         {
             return null;
         }
@@ -44,9 +44,7 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
 
         command.Parameters.Add(new MySqlParameter("@TIMEOUT", MySqlDbType.UInt32)
         {
-            // Infinity timeout
-            // MariaDB doesn't support -1 value, see: https://stackoverflow.com/questions/49792089/set-infinite-timeout-get-lock-in-mariadb/49809919
-            Value = 0xffffffff
+            Value = 1 
         });
 
         var result = await command.ExecuteScalarAsync(cancellationToken) ?? -1;

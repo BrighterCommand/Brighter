@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,11 +10,11 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.LockingProvider;
 
 [Trait("Category", "MySql")]
-public class MsSqlLockingProviderTests
+public class MySqlLockingProviderTests
 {
     private readonly MySqlTestHelper _msSqlTestHelper;
 
-    public MsSqlLockingProviderTests()
+    public MySqlLockingProviderTests()
     {
         _msSqlTestHelper = new MySqlTestHelper();
         _msSqlTestHelper.SetupMessageDb();
@@ -23,10 +22,10 @@ public class MsSqlLockingProviderTests
 
 
     [Fact]
-    public async Task GivenAMsSqlLockingProvider_WhenLockIsCalled_LockCanBeObtainedAndThenReleased()
+    public async Task GivenAMySqlLockingProvider_WhenLockIsCalled_LockCanBeObtainedAndThenReleased()
     {
         var provider = new MySqlLockingProvider((MySqlConnectionProvider)_msSqlTestHelper.ConnectionProvider);
-        var resource = "Sweeper";
+        const string resource = "Sweeper";
 
         var result = await provider.ObtainLockAsync(resource, CancellationToken.None);
 
@@ -85,7 +84,7 @@ public class MsSqlLockingProviderTests
         command.Parameters.Add(new MySqlParameter("@RESOURCE_NAME", MySqlDbType.String));
         command.Parameters["@RESOURCE_NAME"].Value = resource;
         command.Parameters.Add(new MySqlParameter("@TIMEOUT", MySqlDbType.UInt32));
-        command.Parameters["@TIMEOUT"].Value = -1;
+        command.Parameters["@TIMEOUT"].Value = 1;
 
         var respone = await command.ExecuteScalarAsync(CancellationToken.None);
 
