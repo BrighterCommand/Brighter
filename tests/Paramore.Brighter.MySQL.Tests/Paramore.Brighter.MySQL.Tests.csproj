@@ -23,6 +23,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.MySql\Paramore.Brighter.Inbox.MySql.csproj" />
+      <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MySql\Paramore.Brighter.Locking.MySql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj" />
     </ItemGroup>
 
