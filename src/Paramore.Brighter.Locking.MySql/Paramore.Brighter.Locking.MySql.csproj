@@ -3,7 +3,7 @@
     <Description>This is an implementation of the locking using MySQL.</Description>
     <Authors>Rafael Lillo</Authors>
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-    <PackageTags>Postgres;Brighter;</PackageTags>
+    <PackageTags>MySql;Brighter;</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
   <ItemGroup>
