@@ -63,7 +63,7 @@ public class Runner<TData>
     /// Runs the job processing loop.
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-    public void RunAsync(CancellationToken cancellationToken = default)
+    public void RunAsync(CancellationToken cancellationToken = default(CancellationToken))
     {
         s_logger.LogInformation("Starting runner {RunnerName}", _runnerName);
         
@@ -73,8 +73,7 @@ public class Runner<TData>
             
             await ProcessJobs(cancellationToken);
             
-            if (cancellationToken.IsCancellationRequested)
-                cancellationToken.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
             
         }, cancellationToken);
         
@@ -83,7 +82,7 @@ public class Runner<TData>
         s_logger.LogInformation("Finished runner {RunnerName}", _runnerName);
     }
 
-    private async Task Execute(Job<TData>? job, CancellationToken cancellationToken = default)
+    private async Task Execute(Job<TData>? job, CancellationToken cancellationToken = default(CancellationToken))
     {
         if (job is null)
             return;
@@ -120,7 +119,7 @@ public class Runner<TData>
         s_logger.LogInformation("Finished executing job {JobId} on {RunnerName}", job.Id, _runnerName);
     }
 
-    private async Task ProcessJobs(CancellationToken cancellationToken)
+    private async Task ProcessJobs(CancellationToken cancellationToken = default(CancellationToken))
     {
         while (true)
         {

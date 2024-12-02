@@ -39,7 +39,7 @@ public interface IAmAStateStoreAsync
     /// </summary>
     /// <param name="job">The job</param>
     /// <param name="cancellationToken"></param>
-    Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken = default);
+    Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken = default(CancellationToken));
 
     /// <summary>
     /// Retrieves a job via its Id
@@ -54,5 +54,5 @@ public interface IAmAStateStoreAsync
     /// <param name="jobAge">The time before now at which becomes scheduled</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<IEnumerable<Job>> GetDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken);
+    Task<IEnumerable<Job>> GetDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken = default(CancellationToken));
 }

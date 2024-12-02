@@ -92,7 +92,7 @@ public class Scheduler<TData>
     /// <param name="job">The job that we want a runner to execute</param>
     /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
     /// <exception cref="InvalidOperationException">Thrown when the job has not been initialized.</exception>
-    public async Task ScheduleAsync(Job<TData> job, CancellationToken cancellationToken = default)
+    public async Task ScheduleAsync(Job<TData> job,CancellationToken cancellationToken = default(CancellationToken))
     {
         await _channel.EnqueueJobAsync(job, cancellationToken);
         job.DueTime = null; // Clear any due time after queuing
@@ -106,7 +106,7 @@ public class Scheduler<TData>
     /// <param name="delay">The delay after which to schedule the job</param>
     /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
     /// <exception cref="InvalidOperationException">Thrown when the job has not been initialized.</exception>
-    public async Task ScheduleAtAsync(Job<TData> job, TimeSpan delay, CancellationToken cancellationToken = default)
+    public async Task ScheduleAtAsync(Job<TData> job, TimeSpan delay, CancellationToken cancellationToken = default(CancellationToken))
     {
         job.DueTime = _timeProvider.GetUtcNow().Add(delay);
         await _stateStore.SaveJobAsync(job, cancellationToken);
@@ -117,7 +117,7 @@ public class Scheduler<TData>
     /// </summary>
     /// <param name="jobAge">A job is due now, less the jobAge span</param>
     /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
-    public async Task TriggerDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken)
+    public async Task TriggerDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken = default(CancellationToken))
     {
         var dueJobs = await _stateStore.GetDueJobsAsync(jobAge, cancellationToken);
 

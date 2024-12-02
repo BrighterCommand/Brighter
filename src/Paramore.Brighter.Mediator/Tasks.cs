@@ -41,7 +41,7 @@ public interface IStepTask<TData>
     /// <param name="commandProcessor">The command processor used to handle commands.</param>
     /// <param name="stateStore">Used to store the state of a job, if it is altered in the handler</param>
     /// <param name="cancellationToken">The cancellation token for this task</param>
-    Task HandleAsync(Job<TData>? job, IAmACommandProcessor? commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken);
+    Task HandleAsync(Job<TData>? job, IAmACommandProcessor? commandProcessor, IAmAStateStoreAsync stateStore, CancellationToken cancellationToken = default(CancellationToken));
 }
 
 /// <summary>
@@ -92,7 +92,7 @@ public class ChangeAsync<TData>(
         Job<TData>? job, 
         IAmACommandProcessor? commandProcessor, 
         IAmAStateStoreAsync stateStore, 
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken = default(CancellationToken)
         )
     {
         if (job is null)
@@ -128,7 +128,7 @@ public class FireAndForgetAsync<TRequest, TData>(
         Job<TData>? job,  
         IAmACommandProcessor? commandProcessor, 
         IAmAStateStoreAsync stateStore, 
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken = default(CancellationToken)
         )
     {
         if (job is null)
@@ -174,7 +174,7 @@ public class RequestAndReactionAsync<TRequest, TReply, TData>(
         Job<TData>? job, 
         IAmACommandProcessor? commandProcessor, 
         IAmAStateStoreAsync stateStore, 
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken = default(CancellationToken)
         )
     {
         if (job is null)
@@ -228,7 +228,7 @@ public class RobustRequestAndReactionAsync<TRequest, TReply, TFault, TData>(
         Job<TData>? job, 
         IAmACommandProcessor? commandProcessor,
         IAmAStateStoreAsync stateStore, 
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken = default(CancellationToken)
         )
     {
         if (job is null)

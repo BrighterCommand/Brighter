@@ -22,6 +22,7 @@
     <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
     <PackageReference Include="Serilog.Extensions.Hosting" />
     <PackageReference Include="Serilog.Sinks.TestCorrelator" />
+    <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Reflection.TypeExtensions" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">

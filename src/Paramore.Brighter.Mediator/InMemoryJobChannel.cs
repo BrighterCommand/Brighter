@@ -80,7 +80,7 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous dequeue operation. The task result contains the dequeued job.</returns>
-    public async Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken)
+    public async Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken = default(CancellationToken))
     {                              
         Job<TData>? item = null;
         while (await _channel.Reader.WaitToReadAsync(cancellationToken))
@@ -96,7 +96,7 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     /// <param name="job">The job to enqueue.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous enqueue operation.</returns>
-    public async Task EnqueueJobAsync(Job<TData> job, CancellationToken cancellationToken = default)
+    public async Task EnqueueJobAsync(Job<TData> job, CancellationToken cancellationToken = default(CancellationToken))
     {
         await _channel.Writer.WriteAsync(job, cancellationToken);
     }
