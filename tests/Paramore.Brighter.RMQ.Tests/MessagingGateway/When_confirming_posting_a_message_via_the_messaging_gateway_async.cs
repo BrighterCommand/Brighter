@@ -68,13 +68,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //we need a queue to avoid a discard
             new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_message.Header.Topic))
-                .Create(TimeSpan.FromMilliseconds(3000));
+                .Create()
+                .Wait();
         }
 
         [Fact]
         public async Task When_confirming_posting_a_message_via_the_messaging_gateway_async()
         {
-            //The RMQ client doesn't support async, so this is async over sync, but let's check it works all the same
             await _messageProducer.SendAsync(_message);
 
             await Task.Delay(500);

@@ -39,7 +39,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageProducer = new RmqMessageProducer(rmqConnection);
             _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName , topics, false, false);
 
-             new QueueFactory(rmqConnection, queueName, topics).Create(TimeSpan.FromMilliseconds(3000));
+             new QueueFactory(rmqConnection, queueName, topics).Create().Wait();
         }
 
         [Fact]

@@ -68,7 +68,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //we need a queue to avoid a discard
             new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_message.Header.Topic))
-                .Create(TimeSpan.FromMilliseconds(3000));
+                .Create()
+                .Wait();
         }
 
         [Fact]
