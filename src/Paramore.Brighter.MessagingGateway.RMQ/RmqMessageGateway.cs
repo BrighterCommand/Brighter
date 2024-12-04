@@ -25,152 +25,172 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Polly;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ;
+
+/// <summary>
+///     Class RmqMessageGateway.
+///     Base class for messaging gateway used by a <see cref="Brighter.Channel" /> to communicate with a RabbitMQ server,
+///     to consume messages from the server or
+///     <see cref="CommandProcessor.Post{T}" /> to send a message to the RabbitMQ server.
+///     A channel is associated with a queue name, which binds to a <see cref="MessageHeader.Topic" /> when
+///     <see cref="CommandProcessor.Post{T}" /> sends over a task queue.
+///     So to listen for messages on that Topic you need to bind to the matching queue name.
+///     The configuration holds a &lt;serviceActivatorConnections&gt; section which in turn contains a &lt;connections&gt;
+///     collection that contains a set of connections.
+///     Each subscription identifies a mapping between a queue name and a <see cref="IRequest" /> derived type. At runtime we
+///     read this list and listen on the associated channels.
+///     The <see cref="MessagePump" /> then uses the <see cref="IAmAMessageMapper" /> associated with the configured
+///     request type in <see cref="IAmAMessageMapperRegistry" /> to translate between the
+///     on-the-wire message and the <see cref="Command" /> or <see cref="Event" />
+/// </summary>
+public class RmqMessageGateway : IDisposable, IAsyncDisposable
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGateway>();
+    private readonly Policy _circuitBreakerPolicy;
+    private readonly ConnectionFactory _connectionFactory;
+    private readonly Policy _retryPolicy;
+    protected readonly RmqMessagingGatewayConnection Connection;
+    protected IChannel Channel;
+
     /// <summary>
-    ///     Class RmqMessageGateway.
-    ///     Base class for messaging gateway used by a <see cref="Brighter.Channel" /> to communicate with a RabbitMQ server,
-    ///     to consume messages from the server or
-    ///     <see cref="CommandProcessor.Post{T}" /> to send a message to the RabbitMQ server.
-    ///     A channel is associated with a queue name, which binds to a <see cref="MessageHeader.Topic" /> when
-    ///     <see cref="CommandProcessor.Post{T}" /> sends over a task queue.
-    ///     So to listen for messages on that Topic you need to bind to the matching queue name.
-    ///     The configuration holds a &lt;serviceActivatorConnections&gt; section which in turn contains a &lt;connections&gt;
-    ///     collection that contains a set of connections.
-    ///     Each subscription identifies a mapping between a queue name and a <see cref="IRequest" /> derived type. At runtime we
-    ///     read this list and listen on the associated channels.
-    ///     The <see cref="MessagePump" /> then uses the <see cref="IAmAMessageMapper" /> associated with the configured
-    ///     request type in <see cref="IAmAMessageMapperRegistry" /> to translate between the
-    ///     on-the-wire message and the <see cref="Command" /> or <see cref="Event" />
+    /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
+    ///  Use if you need to inject a test logger
     /// </summary>
-    public class RmqMessageGateway : IDisposable
+    /// <param name="connection">The amqp uri and exchange to connect to</param>
+    protected RmqMessageGateway(RmqMessagingGatewayConnection connection)
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGateway>();
-        private readonly Policy _circuitBreakerPolicy;
-        private readonly ConnectionFactory _connectionFactory;
-        private readonly Policy _retryPolicy;
-        protected readonly RmqMessagingGatewayConnection Connection;
-        protected IModel Channel;
+        Connection = connection;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
-        ///  Use if you need to inject a test logger
-        /// </summary>
-        /// <param name="connection">The amqp uri and exchange to connect to</param>
-        /// <param name="batchSize">How many messages to read from a channel at one time. Only used by consumer, defaults to 1</param>
-        protected RmqMessageGateway(RmqMessagingGatewayConnection connection)
+        var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
+
+        _retryPolicy = connectionPolicyFactory.RetryPolicy;
+        _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
+
+        _connectionFactory = new ConnectionFactory
         {
-            Connection = connection;
+            Uri = Connection.AmpqUri.Uri,
+            RequestedHeartbeat = TimeSpan.FromSeconds(connection.Heartbeat),
+            ContinuationTimeout = TimeSpan.FromSeconds(connection.ContinuationTimeout)
+        };
 
-            var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
+        DelaySupported = Connection.Exchange.SupportDelay;
+    }
 
-            _retryPolicy = connectionPolicyFactory.RetryPolicy;
-            _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
+    /// <summary>
+    ///     Gets if the current provider configuration is able to support delayed delivery of messages.
+    /// </summary>
+    public bool DelaySupported { get; }
 
-            _connectionFactory = new ConnectionFactory
-            {
-                Uri = Connection.AmpqUri.Uri,
-                RequestedHeartbeat = TimeSpan.FromSeconds(connection.Heartbeat),
-                ContinuationTimeout = TimeSpan.FromSeconds(connection.ContinuationTimeout)
-            };
+    /// <summary>
+    ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    /// </summary>
+    public virtual void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
-            DelaySupported = Connection.Exchange.SupportDelay;
+    /// <summary>
+    /// Connects the specified queue name.
+    /// </summary>
+    /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
+    /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
+    /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+    protected void EnsureBroker(ChannelName queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
+    {
+        queueName ??= new ChannelName("Producer Channel");
+
+        ConnectWithCircuitBreaker(queueName, makeExchange);
+    }
+
+    private void ConnectWithCircuitBreaker(ChannelName queueName, OnMissingChannel makeExchange)
+    {
+        _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName, makeExchange));
+    }
+
+    private void ConnectWithRetry(ChannelName queueName, OnMissingChannel makeExchange)
+    {
+        _retryPolicy.Execute(_ => ConnectToBroker(makeExchange),
+            new Dictionary<string, object> { { "queueName", queueName.Value } });
+    }
+
+    protected virtual async Task ConnectToBroker(OnMissingChannel makeExchange,
+        CancellationToken cancellationToken = default)
+    {
+        if (Channel == null || Channel.IsClosed)
+        {
+            var connection =
+                new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(
+                    _connectionFactory);
+
+            connection.ConnectionBlockedAsync += HandleBlocked;
+            connection.ConnectionUnblockedAsync += HandleUnBlocked;
+
+            s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}",
+                Connection.AmpqUri.GetSanitizedUri());
+
+            Channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+
+            //desired state configuration of the exchange
+            await Channel.DeclareExchangeForConnection(Connection, makeExchange, cancellationToken: cancellationToken);
+        }
+    }
+
+    private Task HandleBlocked(object sender, ConnectionBlockedEventArgs args)
+    {
+        s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}",
+            Connection.AmpqUri.GetSanitizedUri(), args.Reason);
+
+        return Task.CompletedTask;
+    }
+
+    private Task HandleUnBlocked(object sender, AsyncEventArgs args)
+    {
+        s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked",
+            Connection.AmpqUri.GetSanitizedUri());
+        return Task.CompletedTask;
+    }
+
+    protected void ResetConnectionToBroker()
+    {
+        new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
+    }
+
+    ~RmqMessageGateway()
+    {
+        Dispose(false);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Channel != null)
+        {
+            await Channel.AbortAsync();
+            await Channel.DisposeAsync();
+            Channel = null;
         }
 
-        /// <summary>
-        ///     Gets if the current provider configuration is able to support delayed delivery of messages.
-        /// </summary>
-        public bool DelaySupported { get; }
+        new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
+    }
 
-        /// <summary>
-        ///     Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public virtual void Dispose()
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+            Channel?.AbortAsync().Wait();
+            Channel?.Dispose();
+            Channel = null;
 
-        /// <summary>
-        /// Connects the specified queue name.
-        /// </summary>
-        /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
-        /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
-        /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected void EnsureBroker(ChannelName queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
-        {
-            queueName ??= new ChannelName("Producer Channel");
-            
-            ConnectWithCircuitBreaker(queueName, makeExchange);
-        }
-
-        private void ConnectWithCircuitBreaker(ChannelName queueName, OnMissingChannel makeExchange)
-        {
-            _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName, makeExchange));
-        }
-
-        private void ConnectWithRetry(ChannelName queueName, OnMissingChannel makeExchange)
-        {
-            _retryPolicy.Execute((ctx) => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName.Value}});
-        }
-
-        protected virtual void ConnectToBroker(OnMissingChannel makeExchange)
-        {
-            if (Channel == null || Channel.IsClosed)
-            {
-                var connection = new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(_connectionFactory);
-
-                connection.ConnectionBlocked += HandleBlocked;
-                connection.ConnectionUnblocked += HandleUnBlocked;
-
-                s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}",
-                    Connection.AmpqUri.GetSanitizedUri());
-
-                Channel = connection.CreateModel();
-
-                //desired state configuration of the exchange
-                Channel.DeclareExchangeForConnection(Connection, makeExchange);
-            }
-        }
-
-        private void HandleBlocked(object sender, ConnectionBlockedEventArgs args)
-        {
-            s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}", 
-                Connection.AmpqUri.GetSanitizedUri(), args.Reason);
-        }
-
-        private void HandleUnBlocked(object sender, EventArgs args)
-        { 
-            s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked", Connection.AmpqUri.GetSanitizedUri());
-        }
-
-        protected void ResetConnectionToBroker()
-        {
-            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
-        }
-
-        ~RmqMessageGateway()
-        {
-            Dispose(false);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-
-                Channel?.Abort();
-                Channel?.Dispose();
-                Channel = null;
-
-                new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
-            }
+            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(
+                _connectionFactory);
         }
     }
 }
