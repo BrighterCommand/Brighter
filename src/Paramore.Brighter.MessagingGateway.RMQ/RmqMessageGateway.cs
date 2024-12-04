@@ -122,29 +122,35 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
             new Dictionary<string, object> { { "queueName", queueName.Value } });
     }
 
-    protected virtual async Task ConnectToBroker(OnMissingChannel makeExchange,
+    protected virtual void ConnectToBroker(OnMissingChannel makeExchange) =>
+        ConnectToBrokerAsync(makeExchange).GetAwaiter().GetResult();
+
+    protected virtual async Task ConnectToBrokerAsync(OnMissingChannel makeExchange,
         CancellationToken cancellationToken = default)
     {
         if (Channel == null || Channel.IsClosed)
         {
-            var connection =
-                new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(
-                    _connectionFactory);
+            var connection = await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
+                .GetConnectionAsync(_connectionFactory, cancellationToken);
 
-            connection.ConnectionBlockedAsync += HandleBlocked;
-            connection.ConnectionUnblockedAsync += HandleUnBlocked;
+            connection.ConnectionBlockedAsync += HandleBlockedAsync;
+            connection.ConnectionUnblockedAsync += HandleUnBlockedAsync;
 
             s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}",
                 Connection.AmpqUri.GetSanitizedUri());
 
-            Channel = await connection.CreateChannelAsync(cancellationToken: cancellationToken);
+            Channel = await connection.CreateChannelAsync(
+                new CreateChannelOptions(
+                    publisherConfirmationsEnabled: true,
+                    publisherConfirmationTrackingEnabled: true),
+                cancellationToken);
 
             //desired state configuration of the exchange
             await Channel.DeclareExchangeForConnection(Connection, makeExchange, cancellationToken: cancellationToken);
         }
     }
 
-    private Task HandleBlocked(object sender, ConnectionBlockedEventArgs args)
+    private Task HandleBlockedAsync(object sender, ConnectionBlockedEventArgs args)
     {
         s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}",
             Connection.AmpqUri.GetSanitizedUri(), args.Reason);
@@ -152,7 +158,7 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    private Task HandleUnBlocked(object sender, AsyncEventArgs args)
+    private Task HandleUnBlockedAsync(object sender, AsyncEventArgs args)
     {
         s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked",
             Connection.AmpqUri.GetSanitizedUri());

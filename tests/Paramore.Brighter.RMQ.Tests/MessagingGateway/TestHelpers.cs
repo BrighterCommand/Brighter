@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,53 +23,50 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+internal class QueueFactory
 {
+    private readonly RmqMessagingGatewayConnection _connection;
+    private readonly ChannelName _channelName;
+    private readonly RoutingKeys _routingKeys;
 
-    internal class QueueFactory
+    public QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys)
     {
-        private readonly RmqMessagingGatewayConnection _connection;
-        private readonly ChannelName _channelName;
-        private readonly RoutingKeys _routingKeys;
-
-        public QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys)
-        {
-            _connection = connection;
-            _channelName = channelName;
-            _routingKeys = routingKeys;
-        }
-
-        public void Create(TimeSpan timeToDelayForCreation)
-        {
-            var connectionFactory = new ConnectionFactory {Uri = _connection.AmpqUri.Uri};
-            using (var connection = connectionFactory.CreateConnection())
-            {
-                using (var channel = connection.CreateModel())
-                {
-                    channel.DeclareExchangeForConnection(_connection, OnMissingChannel.Create);
-                    channel.QueueDeclare(_channelName.Value, false, false, false, null);
-                    if (_routingKeys.Any())
-                    {
-                        foreach (RoutingKey routingKey in _routingKeys)
-                            channel.QueueBind(_channelName.Value, _connection.Exchange.Name, routingKey);
-                    }
-                    else
-                    {
-                        channel.QueueBind(_channelName.Value, _connection.Exchange.Name, _channelName);
-                    }
-
-                }
-            }
-
-            //We need to delay to actually create these queues before we send to them
-            Task.Delay(timeToDelayForCreation).Wait();
-        }
+        _connection = connection;
+        _channelName = channelName;
+        _routingKeys = routingKeys;
     }
-}    
 
+    public async Task Create()
+    {
+        var connectionFactory = new ConnectionFactory { Uri = _connection.AmpqUri.Uri };
+        await using var connection = await connectionFactory.CreateConnectionAsync();
+        await using var channel =
+            await connection.CreateChannelAsync(new CreateChannelOptions(
+                publisherConfirmationsEnabled: true,
+                publisherConfirmationTrackingEnabled: true));
+
+        await channel.DeclareExchangeForConnection(_connection, OnMissingChannel.Create);
+        await channel.QueueDeclareAsync(_channelName.Value, false, false, false, null);
+        if (_routingKeys.Any())
+        {
+            foreach (RoutingKey routingKey in _routingKeys)
+            {
+                await channel.QueueBindAsync(_channelName.Value, _connection.Exchange.Name, routingKey);
+            }
+        }
+        else
+        {
+            await channel.QueueBindAsync(_channelName.Value, _connection.Exchange.Name, _channelName);
+        }
+
+        //We need to delay to actually create these queues before we send to them
+        // await Task.Delay(timeToDelayForCreation);
+    }
+}
