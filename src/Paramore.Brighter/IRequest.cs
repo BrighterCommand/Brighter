@@ -35,9 +35,15 @@ namespace Paramore.Brighter
     public interface IRequest
     {
         /// <summary>
+        /// If we are participating in a conversation, the correlation id  allows us to correlate a request with other messages in the conversation
+        /// </summary>
+        string? CorrelationId { get; set; }
+        
+        /// <summary>
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
         string Id { get; set; }
+        
     }
 }

@@ -31,6 +31,12 @@ namespace Paramore.Brighter
     /// </summary>
     public class Command : ICommand
     {
+        /// <summary>
+        /// If we are participating in a conversation, the correlation id  allows us to correlate a request with other messages in the conversation
+        /// </summary>
+        public string? CorrelationId { get; set; }
+
+        /// <summary>
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
@@ -50,7 +56,7 @@ namespace Paramore.Brighter
         /// Initializes a new instance of the <see cref="Command"/> class. 
         /// </summary>
         /// <param name="id">The identifier</param>
-        public Command(Guid id)
+        protected Command(Guid id)
         {
            Id = id.ToString(); 
         }

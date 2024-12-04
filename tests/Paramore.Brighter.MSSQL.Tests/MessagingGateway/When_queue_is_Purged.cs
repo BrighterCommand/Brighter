@@ -99,19 +99,5 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
     }
 
-    public class ExampleCommand : ICommand
-    {
-
-        public string Id { get; set; }
-
-        public ExampleCommand()
-        {
-            Id = Guid.NewGuid().ToString();
-        }
-        
-        /// <summary>
-        /// Gets or sets the span that this operation live within
-        /// </summary>
-        public Activity Span { get; set; }
-    }
+    public class ExampleCommand() : Command(Guid.NewGuid());
 }

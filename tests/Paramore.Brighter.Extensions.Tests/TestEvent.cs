@@ -3,10 +3,5 @@ using Paramore.Brighter;
 
 namespace Tests
 {
-    public class TestEvent : Event
-    {
-        public TestEvent() : base(Guid.NewGuid())
-        {
-        }
-    }
+    public class TestEvent() : Event(Guid.NewGuid().ToString());
 }
