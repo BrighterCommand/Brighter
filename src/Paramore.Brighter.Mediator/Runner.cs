@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -105,7 +106,7 @@ public class Runner<TData>
             if (job.State == JobState.Waiting)
                 break;
             
-            //assume execute determines next step
+            //assume execute has advanced he step, if you your step loops endlessly it has not advanced the step!!
             step = job.CurrentStep();
             s_logger.LogInformation(
                 "Next step is {StepName} with state {StepState}", 

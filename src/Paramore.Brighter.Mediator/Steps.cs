@@ -204,7 +204,9 @@ public class ParallelSplit<TData>(
         
         State = StepState.Done;
         
-        return;
+        //NOTE: parallel split is a final step - this might change when we bring in merge
+        Job.NextStep(null);
+        await stateStore.SaveJobAsync(Job, cancellationToken);
     }
 }
 
