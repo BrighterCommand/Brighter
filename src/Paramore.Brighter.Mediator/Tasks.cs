@@ -112,7 +112,7 @@ public class ChangeAsync<TData>(
 /// <typeparam name="TData">The type of the workflow data.</typeparam>
 /// <param name="requestFactory">The factory method to create the request.</param>
 public class FireAndForgetAsync<TRequest, TData>(
-    Func<TRequest> requestFactory
+    Func<TData, TRequest> requestFactory
     ) 
     : IStepTask<TData> 
     where TRequest : class, IRequest 
@@ -137,7 +137,7 @@ public class FireAndForgetAsync<TRequest, TData>(
         if (commandProcessor is null)
             throw new ArgumentNullException(nameof(commandProcessor));
         
-        var command = requestFactory();
+        var command = requestFactory(job.Data);
         command.CorrelationId = job.Id;
         await commandProcessor.SendAsync(command, cancellationToken: cancellationToken);
     }
@@ -152,8 +152,8 @@ public class FireAndForgetAsync<TRequest, TData>(
 /// <param name="requestFactory">The factory method to create the request.</param>
 /// <param name="replyFactory">The factory method to handle the reply.</param>
 public class RequestAndReactionAsync<TRequest, TReply, TData>(
-    Func<TRequest> requestFactory, 
-    Action<TReply?> replyFactory
+    Func<TData, TRequest> requestFactory, 
+    Action<TReply?, TData> replyFactory
     ) 
     : IStepTask<TData> 
     where TRequest : class, IRequest
@@ -183,12 +183,12 @@ public class RequestAndReactionAsync<TRequest, TReply, TData>(
         if (commandProcessor is null)
             throw new ArgumentNullException(nameof(commandProcessor));
         
-        var command = requestFactory();
+        var command = requestFactory(job.Data);
         command.CorrelationId = job.Id;
         
         job.AddPendingResponse(
             typeof(TReply), 
-            new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), typeof(TReply), 
+            new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply, job.Data), typeof(TReply), 
                 null
                 )
             );
@@ -208,9 +208,9 @@ public class RequestAndReactionAsync<TRequest, TReply, TData>(
 /// <typeparam name="TData"></typeparam>
 /// <typeparam name="TFault"></typeparam>
 public class RobustRequestAndReactionAsync<TRequest, TReply, TFault, TData>(
-    Func<TRequest> requestFactory,
-    Action<TReply?> replyFactory,
-    Action<TFault?> faultFactory
+    Func<TData, TRequest> requestFactory,
+    Action<TReply?, TData> replyFactory,
+    Action<TFault?, TData> faultFactory
 )
     : IStepTask<TData> 
     where TRequest : class, IRequest
@@ -237,20 +237,20 @@ public class RobustRequestAndReactionAsync<TRequest, TReply, TFault, TData>(
         if (commandProcessor is null)
             throw new ArgumentNullException(nameof(commandProcessor));
 
-        var command = requestFactory();
+        var command = requestFactory(job.Data);
 
         command.CorrelationId = job.Id;
         
         job.AddPendingResponse(
             typeof(TReply), 
-            new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply), 
+            new TaskResponse<TData>((reply, _) => replyFactory(reply as TReply, job.Data), 
                 typeof(TReply), 
                 typeof(TFault)
                 )
             );
         job.AddPendingResponse(
             typeof(TFault), 
-            new TaskResponse<TData>((reply, _) => faultFactory(reply as TFault), 
+            new TaskResponse<TData>((reply, _) => faultFactory(reply as TFault, job.Data), 
                 typeof(TReply), 
                 typeof(TFault)
                 )

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -97,6 +98,19 @@ public class Scheduler<TData>
         await _channel.EnqueueJobAsync(job, cancellationToken);
         job.DueTime = null; // Clear any due time after queuing
         await _stateStore.SaveJobAsync(job, cancellationToken);
+    }
+    
+    /// <summary>
+    /// Schedules a list of jobs
+    /// </summary>
+    /// <param name="jobs">The jobs to schedule</param>
+    /// <param name="cancellationToken">A cancellation token to terminate the asynchronous operation</param>
+    public async Task ScheduleAsync(IEnumerable<Job<TData>> jobs, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        foreach (var job in jobs)
+        {
+            await ScheduleAsync(job, cancellationToken);
+        }
     }
     
     /// <summary>

@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Workflows.TestDoubles;
 using Paramore.Brighter.Mediator;
 using Polly.Registry;
@@ -31,7 +30,7 @@ public class MediatorReplyStepFlowTests
         registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
         registry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
 
-        IAmACommandProcessor commandProcessor = null;
+        IAmACommandProcessor? commandProcessor = null;
         var handlerFactory = new SimpleHandlerFactoryAsync((handlerType) =>
              handlerType switch
             { 
@@ -51,8 +50,8 @@ public class MediatorReplyStepFlowTests
          var firstStep = new Sequential<WorkflowTestData>(
              "Test of Job",
             new RequestAndReactionAsync<MyCommand, MyEvent, WorkflowTestData>(
-                () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
-                (reply) => { workflowData.Bag["MyReply"] = ((MyEvent)reply).Value; }),
+                (data) => new MyCommand { Value = (data.Bag["MyValue"] as string)! },
+                (reply,data) => { data.Bag["MyReply"] = reply!.Value; }),
             () => { _stepCompleted = true; },
             null);
          

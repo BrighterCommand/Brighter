@@ -47,14 +47,16 @@ public class MediatorParallelSplitFlowTests
                 
                 var secondBranch = new Sequential<WorkflowTestData>(
                     "Test of Job Two",
-                    new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyOtherValue"] as string)! }),
+                    new FireAndForgetAsync<MyCommand, WorkflowTestData>((d) => 
+                        new MyCommand { Value = (d.Bag["MyOtherValue"] as string)! }),
                     () => { _secondBranchFinished = true; },
                     null
                 );
         
                 var firstBranch = new Sequential<WorkflowTestData>(
                     "Test of Job One",
-                    new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+                    new FireAndForgetAsync<MyCommand, WorkflowTestData>((d) => 
+                        new MyCommand { Value = (d.Bag["MyValue"] as string)! }),
                     () => {  _firstBranchFinished = true;  }, 
                     null
                 );

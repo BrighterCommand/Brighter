@@ -38,7 +38,8 @@ public class MediatorOneStepFlowTests
         
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)!}),
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) => 
+                new MyCommand { Value = (workflowData.Bag["MyValue"] as string)!}),
             () => { _stepCompleted = true; },
             null
             );
