@@ -1,4 +1,27 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus.Administration;
@@ -38,6 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         
         /// <summary>
         /// Check if a Topic exists
+        /// Sync over async but alright in the context of checking topic existence
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <returns>True if the Topic exists.</returns>
@@ -71,6 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         /// <summary>
         /// Check if a Queue exists
+        /// Sync over async but runs in the context of checking queue existence
         /// </summary>
         /// <param name="queueName">The name of the Queue.</param>
         /// <returns>True if the Queue exists.</returns>
@@ -104,6 +129,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         /// <summary>
         /// Create a Queue
+        /// Sync over async but alright in the context of creating a queue
         /// </summary>
         /// <param name="queueName">The name of the Queue</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
@@ -130,6 +156,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         
         /// <summary>
         /// Create a Topic
+        /// Sync over async but runs in the context of creating a topic
         /// </summary>
         /// <param name="topicName">The name of the Topic</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>

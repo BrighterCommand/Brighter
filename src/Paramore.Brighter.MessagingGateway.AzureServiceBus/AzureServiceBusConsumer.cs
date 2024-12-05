@@ -38,6 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
         /// the processing of those messages or requeue them.
         /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
+        /// Sync over async,
         /// </summary>
         /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
         /// <returns>Message.</returns>

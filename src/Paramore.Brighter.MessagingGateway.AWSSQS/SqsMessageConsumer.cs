@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -19,7 +19,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-#endregion*
+#endregion
 
 using System;
 using System.Collections.Generic;
@@ -71,6 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         /// <summary>
         /// Receives the specified queue name.
+        /// Sync over async 
         /// </summary>
         /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
         public Message[] Receive(TimeSpan? timeOut = null)
@@ -220,7 +221,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
 
         /// <summary>
-        /// Requeues the specified message.
+        /// Re-queues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Time to delay delivery of the message. AWS uses seconds. 0s is immediate requeue. Default is 0ms</param>
@@ -253,15 +254,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogError(exception, "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
                 return false;
             }
-        }
-
-        private string FindTopicArnByName(RoutingKey topicName)
-        {
-            using var snsClient = _clientFactory.CreateSnsClient();
-            var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
-            if (topic == null)
-                throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");
-            return topic.TopicArn;
         }
 
         /// <summary>
