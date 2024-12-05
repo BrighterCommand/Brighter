@@ -74,7 +74,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 }
                 else
                 {
-                    Task.Delay(pause).Wait();
+                    Task.Delay(pause).Wait();  //-- pause pump; blocks consuming thread on empty queue; in async code continuation runs on BrighterSynchronizationContext
                 }
                 now = DateTime.UtcNow;
             }
