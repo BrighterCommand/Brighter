@@ -151,7 +151,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private static void DelayReconnecting()
         {
-            Task.Delay(jitter.Next(5, 100)).Wait();
+            Task.Delay(jitter.Next(5, 100)).Wait(); //will block thread whilst reconnects; ok as nothing will be happening on this thread until connected
         }
 
 

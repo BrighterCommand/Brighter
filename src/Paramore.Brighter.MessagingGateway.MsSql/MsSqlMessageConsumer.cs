@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             
             var rc = _sqlMessageQueue.TryReceive(_topic, timeOut.Value);
             var message = !rc.IsDataValid ? new Message() : rc.Message;
-            return new Message[]{message};
+            return [message];
         }
 
         /// <summary>
@@ -62,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
          {
              s_logger.LogInformation(
                  "MsSqlMessagingConsumer: rejecting message with topic {Topic} and id {Id}, NOT IMPLEMENTED",
-                 message.Header.Topic, message.Id.ToString());
+                 message.Header.Topic, message.Id);
          }
 
         /// <summary>
@@ -78,18 +77,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Delay to delivery of the message. 0 for immediate requeue. Default to 0</param>
+        /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
         /// <returns>True when message is requeued</returns>
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
             delay ??= TimeSpan.Zero;
-
-            //TODO: This blocks, use a time evern instead to requeue after an interval
-            if (delay.Value > TimeSpan.Zero)
-            {
-                Task.Delay(delay.Value).Wait();
-            }
-
+            
+            // delay is not natively supported - don't block with Task.Delay
             var topic = message.Header.Topic;
 
             s_logger.LogDebug("MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}", topic,
