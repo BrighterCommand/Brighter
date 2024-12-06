@@ -86,7 +86,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         }
 
         /// <summary>
-        ///     Try receiving a message
+        ///   Try receiving a message
+        ///    Sync over Async
         /// </summary>
         /// <param name="topic">The topic name</param>
         /// <param name="timeOut">Timeout for reading a message of the queue; -1 or null for default timeout</param>
@@ -102,7 +103,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             var timeLeft = timeout.Value.TotalMilliseconds;
             while (!rc.IsDataValid && timeLeft > 0)
             {
-                Task.Delay(RetryDelay).Wait();
+                Task.Delay(RetryDelay)
+                    .GetAwaiter()
+                    .GetResult();
                 timeLeft -= RetryDelay;
                 rc = TryReceive(topic);
             }

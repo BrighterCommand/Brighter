@@ -146,7 +146,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if(ServiceBusReceiver == null)
                     GetMessageReceiverProvider();
 
-                ServiceBusReceiver?.Complete(lockToken).Wait();
+                ServiceBusReceiver?.Complete(lockToken)
+                    .GetAwaiter()
+                    .GetResult();
+                
                 if (SubscriptionConfiguration.RequireSession)
                     ServiceBusReceiver?.Close();
             }
@@ -173,6 +176,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         /// <summary>
         /// Rejects the specified message.
+        /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
         public void Reject(Message message)
@@ -189,7 +193,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if(ServiceBusReceiver == null)
                     GetMessageReceiverProvider();
                 
-                ServiceBusReceiver?.DeadLetter(lockToken).Wait();
+                ServiceBusReceiver?.DeadLetter(lockToken)
+                    .GetAwaiter()
+                    .GetResult();
                 if (SubscriptionConfiguration.RequireSession)
                     ServiceBusReceiver?.Close();
             }

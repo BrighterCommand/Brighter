@@ -252,13 +252,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         /// <summary>
         /// Create a Subscription.
+        /// Sync over Async but alright in the context of creating a subscription
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         public void CreateSubscription(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
         {
-            CreateSubscriptionAsync(topicName, subscriptionName, subscriptionConfiguration).Wait();
+            CreateSubscriptionAsync(topicName, subscriptionName, subscriptionConfiguration)
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <summary>

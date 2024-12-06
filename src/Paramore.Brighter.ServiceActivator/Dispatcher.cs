@@ -371,7 +371,9 @@ namespace Paramore.Brighter.ServiceActivator
 
             while (State != DispatcherState.DS_RUNNING)
             {
-                Task.Delay(100).Wait(); //Block main Dispatcher thread whilst control plane starts
+                Task.Delay(100)
+                    .GetAwaiter()
+                    .GetResult(); //Block main Dispatcher thread whilst control plane starts
             }
         }
 

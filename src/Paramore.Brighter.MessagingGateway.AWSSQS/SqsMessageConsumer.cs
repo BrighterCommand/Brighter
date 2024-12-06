@@ -137,6 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         /// <summary>
         /// Acknowledges the specified message.
+        /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
@@ -150,7 +151,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 using var client = _clientFactory.CreateSqsClient();
                 var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle)).Wait();
+                client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle))
+                    .GetAwaiter()
+                    .GetResult();
 
                 s_logger.LogInformation("SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}", message.Id, receiptHandle,
                     urlResponse.QueueUrl);
@@ -164,6 +167,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         /// <summary>
         /// Rejects the specified message.
+        /// Sync over async
         /// </summary>
         /// <param name="message">The message.</param>
         public void Reject(Message message)
@@ -184,11 +188,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
                 if (_hasDlq)
                 {
-                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
+                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0))
+                        .GetAwaiter()
+                        .GetResult();
                 }
                 else
                 {
-                    client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle).Wait();
+                    client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle)
+                        .GetAwaiter()
+                        .GetResult();
                 }
             }
             catch (Exception exception)
@@ -200,6 +208,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         /// <summary>
         /// Purges the specified queue name.
+        /// Sync over Async
         /// </summary>
         public void Purge()
         {
@@ -209,7 +218,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
 
                 var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                client.PurgeQueueAsync(urlResponse.QueueUrl).Wait();
+                client.PurgeQueueAsync(urlResponse.QueueUrl)
+                    .GetAwaiter()
+                    .GetResult();
 
                 s_logger.LogInformation("SqsMessageConsumer: Purged the queue {ChannelName}", _queueName);
             }
@@ -222,6 +233,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         /// <summary>
         /// Re-queues the specified message.
+        /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Time to delay delivery of the message. AWS uses seconds. 0s is immediate requeue. Default is 0ms</param>
@@ -242,7 +254,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 using (var client = _clientFactory.CreateSqsClient())
                 {
                     var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, delay.Value.Seconds)).Wait();
+                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, delay.Value.Seconds))
+                        .GetAwaiter()
+                        .GetResult();
                 }
 
                 s_logger.LogInformation("SqsMessageConsumer: re-queued the message {Id}", message.Id);

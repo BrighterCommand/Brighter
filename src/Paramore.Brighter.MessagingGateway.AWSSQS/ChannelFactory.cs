@@ -71,6 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         /// <summary>
         /// Creates the input channel.
+        /// Sync over Async is used here; should be alright in context of channel creation.
         /// </summary>
         /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
         /// <returns>An instance of <see cref="IAmAChannel"/>.</returns>
@@ -82,7 +83,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 SqsSubscription sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels).Wait();
+                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels)
+                    .GetAwaiter()
+                    .GetResult();
                 EnsureQueue();
 
                 return new Channel(
@@ -376,6 +379,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         /// <summary>
         /// Deletes the queue.
+        /// Sync over async is used here; should be alright in context of channel deletion.
         /// </summary>
         public void DeleteQueue()
         {
@@ -389,7 +393,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 try
                 {
-                    sqsClient.DeleteQueueAsync(queueExists.name).Wait();
+                    sqsClient.DeleteQueueAsync(queueExists.name)
+                        .GetAwaiter()
+                        .GetResult();
                 }
                 catch (Exception)
                 {

@@ -152,7 +152,7 @@ namespace Paramore.Brighter.ServiceActivator
                     s_logger.LogWarning("MessagePump: BrokenCircuitException messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                      var errorSpan = _tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, _instrumentationOptions);
                     _tracer?.EndSpan(errorSpan);
-                    Task.Delay(ChannelFailureDelay).Wait(); //-- pause pump; blocks consuming thread on empty queue; in async code continuation runs on BrighterSynchronizationContext
+                    Task.Delay(ChannelFailureDelay).GetAwaiter().GetResult(); //-- pause pump; blocks consuming thread on empty queue; in async code continuation runs on BrighterSynchronizationContext
                     continue;
                 }
                 catch (ChannelFailureException ex)
@@ -160,7 +160,7 @@ namespace Paramore.Brighter.ServiceActivator
                     s_logger.LogWarning("MessagePump: ChannelFailureException messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
                      var errorSpan = _tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, _instrumentationOptions);
                     _tracer?.EndSpan(errorSpan );
-                    Task.Delay(ChannelFailureDelay).Wait(); //-- pause pump; blocks consuming thread on empty queue; in async code continuation runs on BrighterSynchronizationContext
+                    Task.Delay(ChannelFailureDelay).GetAwaiter().GetResult(); //-- pause pump; blocks consuming thread on empty queue; in async code continuation runs on BrighterSynchronizationContext
                     continue;
                 }
                 catch (Exception ex)
@@ -183,7 +183,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     span?.SetStatus(ActivityStatusCode.Ok);
                     _tracer?.EndSpan(span);
-                    Task.Delay(EmptyChannelDelay).Wait();  //-- pause pump; blocks consuming thread on empty queue; in async code continuation runs on BrighterSynchronizationContext
+                    Task.Delay(EmptyChannelDelay).GetAwaiter().GetResult();  //-- pause pump; blocks consuming thread on empty queue; in async code continuation runs on BrighterSynchronizationContext
                     continue;
                 }
 
