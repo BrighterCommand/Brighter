@@ -38,6 +38,8 @@ As a result we do not use the thread pool for our Performers and those threads a
 
 Non-blocking I/O may be useful if the handler called by the message pump thread performs I/O, when we can yield to another Performer. 
 
+Brighter has a custom SynchronizationContext, BrighterSynchronizationContext, that forces continuations to run on the message pump thread. This prevents non-blocking i/o waiting on the thread pool, with potential deadlocks. This synchronization context is used within the Performer for both the non-blocking i/o of the message pump and the non-blocking i/o in the transformer pipeline. Because our performer's only thread processes a single message at a time, there is no danger of this synchronization context deadlocking.
+
 ## Decision
 
 If the underlying SDK does not support non-blocking I/O, then the Proactor model is forced to use blocking I/O. If the underlying SDK does not support blocking I/O, then the Reactor model is forced to use non-blocking I/O.
@@ -50,7 +52,11 @@ Although this uses an extra thread, the impact for an application starting up on
 
 For the Performer, within the message pump, we use non-blocking I/O if the transport supports it. 
 
-Brighter has a custom SynchronizationContext, BrighterSynchronizationContext, that forces continuations to run on the message pump thread. This prevents non-blocking i/o waiting on the thread pool, with potential deadlocks. This synchronization context is used within the Performer for both the non-blocking i/o of the message pump and the non-blocking i/o in the transformer pipeline. Because our performer's only thread processes a single message at a time, there is no danger of this synchronization context deadlocking.
+Currently, Brighter only supports only an IAmAMessageConsumer interface and does not support an IAmAMessageConsumerAsync interface. This means that within a Proactor, we cannot take advantage of the non-blocking I/O and we are forced to block on the non-blocking I/O. We will address this by adding that interface, so as to allow a Proactor to take advantage of non-blocking I/O.
+
+To avoid duplicated code we will use the same code IAmAMessageConsumer implementations can use the [Flag Argument Hack](https://learn.microsoft.com/en-us/archive/msdn-magazine/2015/july/async-programming-brownfield-async-development) to share code where useful. 
+
+We will need to make changes to the Proactor to use async code within the pump, and to use the non-blocking I/O where possible.
 
 ## Consequences
 
