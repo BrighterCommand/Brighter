@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
-public class InMemoryConsumerReceiveTests
+public class AsyncInMemoryConsumerReceiveTests
 {
     private readonly InMemoryConsumerRequeueTests _inMemoryConsumerRequeueTests = new InMemoryConsumerRequeueTests();
     private readonly InMemoryConsumerAcknowledgeTests _inMemoryConsumerAcknowledgeTests = new InMemoryConsumerAcknowledgeTests();
     private readonly InMemoryConsumerRejectTests _inMemoryConsumerRejectTests = new InMemoryConsumerRejectTests();
 
     [Fact]
-    public void When_reading_messages_via_a_consumer()
+    public async Task When_reading_messages_via_a_consumer()
     {
         //arrange
         const string myTopic = "my topic";
@@ -29,11 +30,12 @@ public class InMemoryConsumerReceiveTests
         var consumer = new InMemoryMessageConsumer(routingKey, bus, new FakeTimeProvider(), TimeSpan.FromMilliseconds(1000));
         
         //act
-        var receivedMessage = consumer.Receive().Single();
-        consumer.Acknowledge(receivedMessage);
+        var receivedMessage = await consumer.ReceiveAsync();
+        var message = receivedMessage.Single();
+        await consumer.AcknowledgeAsync(message);
 
         //assert
-        Assert.Equal(expectedMessage, receivedMessage);
+        Assert.Equal(expectedMessage, message);
         Assert.Empty(bus.Stream(routingKey));
     }
 }
