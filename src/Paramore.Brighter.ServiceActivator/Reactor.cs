@@ -37,7 +37,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Lower throughput than async
     /// </summary>
     /// <typeparam name="TRequest"></typeparam>
-    public class MessagePumpBlocking<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
+    public class Reactor<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
         private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
 
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
-        public MessagePumpBlocking(
+        public Reactor(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistry messageMapperRegistry, 
             IAmAMessageTransformerFactory messageTransformerFactory,

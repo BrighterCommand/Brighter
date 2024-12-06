@@ -40,7 +40,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Based on https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
     /// </summary>
     /// <typeparam name="TRequest">The Request on the Data Type Channel</typeparam>
-    public class MessagePumpAsync<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
+    public class Proactor<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
         private readonly UnwrapPipelineAsync<TRequest> _unwrapPipeline;
 
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
-        public MessagePumpAsync(
+        public Proactor(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistryAsync messageMapperRegistry, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactory,

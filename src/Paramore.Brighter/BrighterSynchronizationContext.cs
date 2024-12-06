@@ -56,21 +56,11 @@ namespace Paramore.Brighter
                 var evt = new ManualResetEventSlim();
                 try
                 {
-                    _queue.Add(new Message(
-                        s =>
+                    _queue.Add(new Message(s =>
                         {
-                            try
-                            {
-                                d(state);
-                            }
-                            catch (Exception ex)
-                            {
-                                caughtException = ex;
-                            }
-                            finally
-                            {
-                                evt.Set();
-                            }
+                            try { d(state); }
+                            catch (Exception ex) { caughtException = ex; }
+                            finally { evt.Set(); }
                         },
                         state,
                         evt));
@@ -101,7 +91,10 @@ namespace Paramore.Brighter
         }
 
         /// <summary>Notifies the context that no more work will arrive.</summary>
-        private void Complete() { _queue.CompleteAdding(); }
+        private void Complete()
+        {
+            _queue.CompleteAdding();
+        }
         
         private struct Message(SendOrPostCallback callback, object? state, ManualResetEventSlim? finishedEvent = null)
         {
