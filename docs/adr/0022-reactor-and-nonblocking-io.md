@@ -8,15 +8,35 @@ Accepted
 
 ## Context
 
+### Reactor and Proactor
+
 As [outlined](0002-use-a-single-threaded-message-pump.md), Brighter offers two concurrency models, a Reactor model and a Proactor model. 
 
 The Reactor model uses a single-threaded message pump to read from the queue, and then dispatches the message to a handler. If a higher throughput is desired with a single threaded pump, then you can create multiple pumps (Peformers in Brighter's taxonomy). For a queue this is the competing consumers pattern, each Performer is its own message pump and another consumer; for a stream this is the partition worker pattern, each Performer is a single thread reading from one of your stream's partitions. 
 
-The Proactor model uses the same single-threaded message pump, or Performer, but uses non-blocking I/O. As the message pump waits for the non-blocking I/O to complete, it will not process additional messages whilst waiting for the I/O to complete. It will yield to other Peformers, which will process messages whilst the I/O is waiting to complete. But the main benefit here is lower CPU usage, as the Performer shares resources better with others on the same host. 
+The Proactor model uses the same single-threaded message pump, or Performer, but uses non-blocking I/O. As the message pump waits for the non-blocking I/O to complete, it will not process additional messages whilst waiting for the I/O to complete; instead it will yield to other Peformers, which will process messages whilst the I/O is waiting to complete. 
 
-The trade-off here is the Reactor model offers better performance, as it does not require the overhead of the thread pool, and the context switching that occurs when using the thread pool. The Reactor model is also more predictable, as it does not rely on the thread pool, which can be unpredictable in terms of the number of threads available. 
+The benefit of the Proactor approach is throughput, as the Performer shares resources better. If you run multiple performers, each in their own thread, such as competing consumers of a queue, or consumers of individual partitions of a stream, the Proactor model ensures that when one is awaiting I/O, the others can continue to process messages.
 
-But this trade-off assumes that Brighter can implement the Reactor and Proactor preference for blocking I/O vs non-blocking I/O top-to-bottom. What happens for the Proactor model the underlying SDK does not support non-blocking I/O or the Proactor model if the underlying SDK does not support non-blocking I/O.
+The trade-off here is the Reactor model can offer better performance, as it does not require the overhead of waiting for I/O completion. 
+
+Of course, this assumes that Brighter can implement the Reactor and Proactor preference for blocking I/O vs non-blocking I/O top-to-bottom. What happens for the Proactor model the underlying SDK does not support non-blocking I/O or the Proactor model if the underlying SDK does not support non-blocking I/O.
+
+### Thread Pool vs. Long Running Threads
+
+A web server, receiving HTTP requests can schedule an incoming request to a pool of threads, and threads can be returned to the pool to service other requests whilst I/O is occuring. This allows it to make the most efficient usage of resources because non-blocking I/O returns threads to the pool to service new requests. 
+
+If I want to maintain ordering, I need to use a single-threaded message pump. Nothing else guarantees that I will read and process those messages in sequence. This is particularly important if I am doing stream processing, as I need to maintain the order of messages in the stream.
+
+A consumer of a stream has a constrained choice if it needs to maintain its sequence. In that case, only one thread can consume the stream at a time. When a consumer is processing a record, we block consuming other records on the same stream so that we process them sequentially. To scale, we partition the stream, and allow up to as many threads as we have partitions. Kafka is a good example of this, where the consumer can choose to read from multiple partitions, but within a partition, it can only use a single thread to process the stream.
+
+When consuming messages from a queue, where we do not care about ordering, we can use the competing consumers pattern, where each consumer is a single-threaded message pump. However, we do want to be able to throttle the rate at which we read from the queue, in order to be able to apply backpressure, and slow the rate of consumption. So again, we only tend to use a limited number of threads, and we can find value in being able to explicitly choose that value. 
+
+As our Performer, message pump, threads are long-running, we do not use a thread pool thread for them. The danger here is that work could become stuck in a message pump thread's local queue, and not be processed.
+
+As a result we do not use the thread pool for our Performers and those threads are never returned to the pool. So the only thread pool threads we have are those being used for non-blocking I/O. 
+
+Non-blocking I/O may be useful if the handler called by the message pump thread performs I/O, when we can yield to another Performer. 
 
 ## Decision
 
