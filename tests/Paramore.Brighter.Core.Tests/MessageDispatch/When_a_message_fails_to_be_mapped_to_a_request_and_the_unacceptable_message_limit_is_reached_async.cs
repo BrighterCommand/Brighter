@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            Channel channel = new(
+            var channel = new ChannelAsync(
                 new (Channel), _routingKey, 
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 
                 2

@@ -74,9 +74,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async is used here; should be alright in context of channel creation.
         /// </summary>
         /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
-        /// <returns>An instance of <see cref="IAmAChannel"/>.</returns>
+        /// <returns>An instance of <see cref="IAmAChannelSync"/>.</returns>
         /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-        public IAmAChannel CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateChannel(Subscription subscription)
         {
             var channel = _retryPolicy.Execute(() =>
             {

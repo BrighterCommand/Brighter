@@ -27,7 +27,9 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Actions;
 using Paramore.Brighter.Observability;
+using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -40,7 +42,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Based on https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
     /// </summary>
     /// <typeparam name="TRequest">The Request on the Data Type Channel</typeparam>
-    public class Proactor<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
+    public class Proactor<TRequest> : MessagePump<TRequest>, IAmAMessagePump where TRequest : class, IRequest
     {
         private readonly UnwrapPipelineAsync<TRequest> _unwrapPipeline;
 
@@ -51,6 +53,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
+        /// <param name="channel">The channel to read messages from</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         public Proactor(
@@ -58,13 +61,212 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapperRegistryAsync messageMapperRegistry, 
             IAmAMessageTransformerFactoryAsync messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAChannel channel,
+            IAmAChannelAsync channel,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
-            : base(commandProcessorProvider, requestContextFactory, tracer, channel, instrumentationOptions)
+            : base(commandProcessorProvider, requestContextFactory, tracer, instrumentationOptions)
         {
             var transformPipelineBuilder = new TransformPipelineBuilderAsync(messageMapperRegistry, messageTransformerFactory);
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
+            Channel = channel;
+        }
+
+        /// <summary>
+        /// The channel to receive messages from
+        /// </summary>
+        public IAmAChannelAsync Channel { get; set; }
+        
+               /// <summary>
+        /// Runs the message pump, performing the following:
+        /// - Gets a message from a queue/stream
+        /// - Translates the message to the local type system
+        /// - Dispatches the message to waiting handlers
+        /// - Handles any exceptions that occur during the dispatch and tries to keep the pump alive  
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        public void Run()
+        {
+            var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
+            do
+            {
+                if (UnacceptableMessageLimitReached())
+                {
+                    Channel.Dispose();
+                    break;
+                }
+
+                s_logger.LogDebug("MessagePump: Receiving messages from channel {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+
+                Activity? span = null;
+                Message? message = null;
+                try
+                {
+                    message = RunReceive(async () => await Channel.ReceiveAsync(TimeOut));
+                    span = Tracer?.CreateSpan(MessagePumpSpanOperation.Receive, message, MessagingSystem.InternalBus, InstrumentationOptions);
+                }
+                catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
+                {
+                    s_logger.LogWarning("MessagePump: BrokenCircuitException messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    var errorSpan = Tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, InstrumentationOptions);
+                    Tracer?.EndSpan(errorSpan);
+                    RunDelay(Delay, ChannelFailureDelay); 
+                    continue;
+                }
+                catch (ChannelFailureException ex)
+                {
+                    s_logger.LogWarning("MessagePump: ChannelFailureException messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    var errorSpan = Tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, InstrumentationOptions);
+                    Tracer?.EndSpan(errorSpan );
+                    RunDelay(Delay, ChannelFailureDelay); 
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    s_logger.LogError(ex, "MessagePump: Exception receiving messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    var errorSpan = Tracer?.CreateMessagePumpExceptionSpan(ex, Channel.RoutingKey, MessagePumpSpanOperation.Receive, MessagingSystem.InternalBus, InstrumentationOptions);
+                    Tracer?.EndSpan(errorSpan );
+                }
+
+                if (message is null)
+                {
+                    Channel.Dispose();
+                    span?.SetStatus(ActivityStatusCode.Error, "Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
+                    Tracer?.EndSpan(span);
+                    throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
+                }
+
+                // empty queue
+                if (message.Header.MessageType == MessageType.MT_NONE)
+                {
+                    span?.SetStatus(ActivityStatusCode.Ok);
+                    Tracer?.EndSpan(span);
+                    RunDelay(Delay, EmptyChannelDelay); 
+                    continue;
+                }
+
+                // failed to parse a message from the incoming data
+                if (message.Header.MessageType == MessageType.MT_UNACCEPTABLE)
+                {
+                    s_logger.LogWarning("MessagePump: Failed to parse a message from the incoming message with id {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to parse a message from the incoming message with id {message.Id} from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
+                    Tracer?.EndSpan(span);
+                    IncrementUnacceptableMessageLimit();
+                    RunAcknowledge(Acknowledge, message);
+
+                    continue;
+                }
+ 
+                // QUIT command
+                if (message.Header.MessageType == MessageType.MT_QUIT)
+                {
+                    s_logger.LogInformation("MessagePump: Quit receiving messages from {ChannelName} on thread #{ManagementThreadId}", Channel.Name, Environment.CurrentManagedThreadId);
+                    span?.SetStatus(ActivityStatusCode.Ok);
+                    Tracer?.EndSpan(span);
+                    Channel.Dispose();
+                    break;
+                }
+
+                // Serviceable message
+                try
+                {
+                    RequestContext context = InitRequestContext(span, message);
+
+                    var request = TranslateMessage(message, context);
+                    
+                    CommandProcessorProvider.CreateScope();
+                    
+                    DispatchRequest(message.Header, request, context);
+
+                    span?.SetStatus(ActivityStatusCode.Ok);
+                }
+                catch (AggregateException aggregateException)
+                {
+                    var stop = false;
+                    var defer = false;
+  
+                    foreach (var exception in aggregateException.InnerExceptions)
+                    {
+                        if (exception is ConfigurationException configurationException)
+                        {
+                            s_logger.LogCritical(configurationException, "MessagePump: Stopping receiving of messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                            stop = true;
+                            break;
+                        }
+
+                        if (exception is DeferMessageAction)
+                        {
+                            defer = true;
+                            continue;
+                        }
+
+                        s_logger.LogError(exception, "MessagePump: Failed to dispatch message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    }
+
+                    if (defer)
+                    {
+                        s_logger.LogDebug("MessagePump: Deferring message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                        span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
+                        if (RunRequeue(RequeueMessage, message))
+                            continue;
+                    }
+
+                    if (stop)
+                    {
+                        RunReject(RejectMessage, message);
+                        span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
+                        Channel.Dispose();
+                        break;
+                    }
+
+                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to dispatch message {message.Id} from {Channel.Name} with {Channel.RoutingKey}  on thread # {Environment.CurrentManagedThreadId}");
+                }
+                catch (ConfigurationException configurationException)
+                {
+                    s_logger.LogCritical(configurationException,"MessagePump: Stopping receiving of messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    RunReject(RejectMessage, message);
+                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
+                    Channel.Dispose();
+                    break;
+                }
+                catch (DeferMessageAction)
+                {
+                    s_logger.LogDebug("MessagePump: Deferring message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+                    
+                    span?.SetStatus(ActivityStatusCode.Error, $"Deferring message {message.Id} for later action");
+                    
+                    if (RunRequeue(RequeueMessage, message)) continue;
+                }
+                catch (MessageMappingException messageMappingException)
+                {
+                    s_logger.LogWarning(messageMappingException, "MessagePump: Failed to map message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+
+                    IncrementUnacceptableMessageLimit();
+                    
+                    span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Failed to map message {message.Id} from {Channel.Name} with {Channel.RoutingKey} on thread # {Thread.CurrentThread.ManagedThreadId}");
+                }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e,
+                        "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}",
+                        message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+
+                    span?.SetStatus(ActivityStatusCode.Error,$"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
+                }
+                finally
+                {
+                    Tracer?.EndSpan(span);
+                    CommandProcessorProvider.ReleaseScope();
+                }
+
+                RunAcknowledge(Acknowledge, message);
+
+            } while (true);
+
+            s_logger.LogInformation(
+                "MessagePump0: Finished running message loop, no longer receiving messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}",
+                Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
+            Tracer?.EndSpan(pumpSpan);
+
         }
 
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
@@ -103,6 +305,77 @@ namespace Paramore.Brighter.ServiceActivator
             return RunTranslate(TranslateAsync, message, requestContext);
         }
 
+        public async Task Acknowledge(Message message)
+        {
+            s_logger.LogDebug(
+                "MessagePump: Acknowledge message {Id} read from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}",
+                message.Id, Channel.Name, Channel.RoutingKey, Environment.CurrentManagedThreadId);
+
+            await Channel.AcknowledgeAsync(message);
+        }
+
+        public static async Task Delay(TimeSpan delay)
+        {
+            await Task.Delay(delay);
+        }
+        
+        private static void RunAcknowledge(Func<Message, Task> act, Message message)
+        {
+            if (act == null) throw new ArgumentNullException(nameof(act));
+
+            var prevCtx = SynchronizationContext.Current;
+            try
+            {
+                // Establish the new context
+                var context = new BrighterSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(context);
+
+                context.OperationStarted();
+
+                var future = act(message);
+
+                context.OperationCompleted();
+
+                // Pump continuations and propagate any exceptions
+                context.RunOnCurrentThread();
+
+                future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
+
+                // Pump continuations and propagate any exceptions
+                context.RunOnCurrentThread();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(prevCtx);
+            }
+        }
+        
+        private static void RunDelay(Func<TimeSpan, Task> act, TimeSpan delay)
+        {
+            if (act == null) throw new ArgumentNullException(nameof(act));
+
+            var prevCtx = SynchronizationContext.Current;
+            try
+            {
+                // Establish the new context
+                var context = new BrighterSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(context);
+
+                context.OperationStarted();
+
+                var future = act(delay);
+
+                future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
+
+                // Pump continuations and propagate any exceptions
+                context.RunOnCurrentThread();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(prevCtx);
+            }
+        }
+
         private static void RunDispatch(
             Action<TRequest, RequestContext, CancellationToken> act, TRequest request, 
             RequestContext requestContext, 
@@ -127,6 +400,88 @@ namespace Paramore.Brighter.ServiceActivator
 
                 // Pump continuations and propagate any exceptions
                 context.RunOnCurrentThread();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(prevCtx);
+            }
+        }
+        
+        private static void RunReject(Func<Message, Task> act, Message message)
+        {
+            if (act == null) throw new ArgumentNullException(nameof(act));
+
+            var prevCtx = SynchronizationContext.Current;
+            try
+            {
+                // Establish the new context
+                var context = new BrighterSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(context);
+
+                context.OperationStarted();
+
+                act(message);
+
+                context.OperationCompleted();
+
+                // Pump continuations and propagate any exceptions
+                context.RunOnCurrentThread();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(prevCtx);
+            }
+        }
+        
+        private static Message RunReceive(Func<Task<Message>> act)
+        {
+            if (act == null) throw new ArgumentNullException(nameof(act));
+
+            var prevCtx = SynchronizationContext.Current;
+            try
+            {
+                // Establish the new context
+                var context = new BrighterSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(context);
+
+                context.OperationStarted();
+
+                var future = act();
+
+                future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
+
+                // Pump continuations and propagate any exceptions
+                context.RunOnCurrentThread();
+
+                return future.GetAwaiter().GetResult();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(prevCtx);
+            }
+        }
+        
+        private static bool RunRequeue(Func<Message, Task<bool>> act, Message message )
+        {
+            if (act == null) throw new ArgumentNullException(nameof(act));
+
+            var prevCtx = SynchronizationContext.Current;
+            try
+            {
+                // Establish the new context
+                var context = new BrighterSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(context);
+
+                context.OperationStarted();
+
+                var future = act(message );
+
+                future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
+
+                // Pump continuations and propagate any exceptions
+                context.RunOnCurrentThread();
+
+                return future.GetAwaiter().GetResult();
             }
             finally
             {
@@ -199,6 +554,81 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
             }
+        }
+        
+        private RequestContext InitRequestContext(Activity? span, Message message)
+        {
+            var context = RequestContextFactory.Create();
+            context.Span = span;
+            context.OriginatingMessage = message;
+            context.Bag.AddOrUpdate("ChannelName", Channel.Name, (_, _) => Channel.Name);
+            context.Bag.AddOrUpdate("RequestStart", DateTime.UtcNow, (_, _) => DateTime.UtcNow);
+            return context;
+        }
+
+        private async Task RejectMessage(Message message)
+        {
+            s_logger.LogWarning("MessagePump: Rejecting message {Id} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}", message.Id, Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
+            IncrementUnacceptableMessageLimit();
+
+            await Channel.RejectAsync(message);
+        }
+
+        /// <summary>
+        /// Requeue Message
+        /// </summary>
+        /// <param name="message">Message to be Requeued</param>
+        /// <returns>Returns True if the message should be acked, false if the channel has handled it</returns>
+        private async Task<bool> RequeueMessage(Message message)
+        {
+            message.Header.UpdateHandledCount();
+
+            if (DiscardRequeuedMessagesEnabled())
+            {
+                if (message.HandledCountReached(RequeueCount))
+                {
+                    var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object? value) ? value.ToString() : null;
+
+                    s_logger.LogError(
+                        "MessagePump: Have tried {RequeueCount} times to handle this message {Id}{OriginalMessageId} from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}, dropping message.",
+                        RequeueCount,
+                        message.Id,
+                        string.IsNullOrEmpty(originalMessageId)
+                            ? string.Empty
+                            : $" (original message id {originalMessageId})",
+                        Channel.Name,
+                        Channel.RoutingKey,
+                        Thread.CurrentThread.ManagedThreadId);
+
+                    RunReject(RejectMessage, message);
+                    return false;
+                }
+            }
+
+            s_logger.LogDebug(
+                "MessagePump: Re-queueing message {Id} from {ManagementThreadId} on thread # {ChannelName} with {RoutingKey}", message.Id,
+                Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
+
+            return await Channel.RequeueAsync(message, RequeueDelay);
+        }
+
+        private bool UnacceptableMessageLimitReached()
+        {
+            if (UnacceptableMessageLimit == 0) return false;
+
+            if (UnacceptableMessageCount >= UnacceptableMessageLimit)
+            {
+                s_logger.LogCritical(
+                    "MessagePump: Unacceptable message limit of {UnacceptableMessageLimit} reached, stopping reading messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}",
+                    UnacceptableMessageLimit,
+                    Channel.Name,
+                    Channel.RoutingKey,
+                    Environment.CurrentManagedThreadId
+                );
+                
+                return true;
+            }
+            return false;
         }
     }
 }

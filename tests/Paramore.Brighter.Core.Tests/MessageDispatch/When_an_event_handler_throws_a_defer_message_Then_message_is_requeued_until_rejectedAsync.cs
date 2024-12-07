@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly InternalBus _bus;
-        private readonly Channel _channel;
+        private readonly ChannelAsync _channel;
 
         public MessagePumpEventProcessingDeferMessageActionTestsAsync()
         {
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 
             _bus = new InternalBus();
-            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
+            _channel = new ChannelAsync(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,

@@ -3,7 +3,7 @@
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     /// <summary>
-    /// Creates instances of <see cref="IAmAChannel"/>channels using Azure Service Bus.
+    /// Creates instances of <see cref="IAmAChannelSync"/>channels using Azure Service Bus.
     /// </summary>
     public class AzureServiceBusChannelFactory : IAmAChannelFactory
     {
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="subscription">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateChannel(Subscription subscription)
         {
             if (!(subscription is AzureServiceBusSubscription azureServiceBusSubscription))
             {

@@ -15,13 +15,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _timeProvider = new();
         private readonly IAmAMessagePump _messagePump;
-        private readonly Channel _channel;
+        private readonly ChannelAsync _channel;
 
         public MessagePumpFailingMessageTranslationTestsAsync()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            _channel = new Channel(
+            _channel = new ChannelAsync(
                 new(ChannelName), _routingKey, 
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
             );

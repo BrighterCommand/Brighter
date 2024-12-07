@@ -16,7 +16,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
     {
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly RoutingKey _routingKey;
 
         public SqsRawMessageDeliveryTests()

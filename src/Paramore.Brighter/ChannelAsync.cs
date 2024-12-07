@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
@@ -35,9 +37,9 @@ namespace Paramore.Brighter
     ///   <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     ///   and acknowledging receipt of those messages
     /// </summary>
-    public class Channel : IAmAChannelSync
+    public class ChannelAsync : IAmAChannelAsync
     {
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageConsumerAsync _messageConsumer;
         private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
@@ -63,10 +65,10 @@ namespace Paramore.Brighter
         /// <param name="routingKey"></param>
         /// <param name="messageConsumer">The messageConsumer.</param>
         /// <param name="maxQueueLength">What is the maximum buffer size we will accept</param>
-        public Channel(
+        public ChannelAsync(
             ChannelName channelName, 
             RoutingKey routingKey, 
-            IAmAMessageConsumer messageConsumer,
+            IAmAMessageConsumerAsync messageConsumer,
             int maxQueueLength = 1
             )
         {
@@ -87,9 +89,10 @@ namespace Paramore.Brighter
         ///  Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public virtual void Acknowledge(Message message)
+        /// <param name="cancellationToken">Cancels the acknowledge operation</param>
+        public virtual async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
         {
-            _messageConsumer.Acknowledge(message);
+            await _messageConsumer.AcknowledgeAsync(message, cancellationToken);
         }
 
         /// <summary>
@@ -116,9 +119,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Purges the queue
         /// </summary>
-        public virtual void Purge()
+        /// <param name="cancellationToken">Cancels the acknowledge operation</param>
+        public virtual async Task PurgeAsync(CancellationToken cancellationToken = default)
         {
-            _messageConsumer.Purge();
+            await _messageConsumer.PurgeAsync(cancellationToken);
             _queue = new ConcurrentQueue<Message>();
         }
 
@@ -126,14 +130,15 @@ namespace Paramore.Brighter
         ///  The timeout to recieve wihtin.
         /// </summary>
         /// <param name="timeout">The <see cref="TimeSpan"/>"> timeout. If null default to 1s</param>
+        /// <param name="cancellationToken">Cancel the receive operation</param>
         /// <returns>Message.</returns>
-        public virtual Message Receive(TimeSpan? timeout = null)
+        public virtual async Task<Message> ReceiveAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default)
         {
             timeout ??= TimeSpan.FromSeconds(1);
             
             if (!_queue.TryDequeue(out Message? message))
             {
-                Enqueue(_messageConsumer.Receive(timeout));
+                Enqueue(await _messageConsumer.ReceiveAsync(timeout, cancellationToken));
                 if (!_queue.TryDequeue(out message))
                 {
                     message = s_noneMessage; //Will be MT_NONE
@@ -147,9 +152,10 @@ namespace Paramore.Brighter
         ///  Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public virtual void Reject(Message message)
+        /// <param name="cancellationToken">Cancel the rekect operation</param>
+        public virtual async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
         {
-            _messageConsumer.Reject(message);
+            await _messageConsumer.RejectAsync(message, cancellationToken);
         }
 
         /// <summary>
@@ -157,10 +163,11 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="timeOut">How long should we delay before requeueing</param>
+        /// <param name="cancellationToken">Cancels the requeue operation</param>
         /// <returns>True if the message was re-queued false otherwise </returns>
-        public virtual bool Requeue(Message message, TimeSpan? timeOut = null)
+        public virtual async Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
         {
-            return _messageConsumer.Requeue(message, timeOut);
+            return await _messageConsumer.RequeueAsync(message, timeOut, cancellationToken);
         }
 
         /// <summary>
@@ -188,7 +195,7 @@ namespace Paramore.Brighter
             }
         }
 
-        ~Channel()
+        ~ChannelAsync()
         {
             Dispose(false);
         }

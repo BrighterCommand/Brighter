@@ -57,7 +57,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// How long to pause when there is a channel failure in milliseconds
         /// </summary>
-        public int ChannelFailureDelay { get; set; }
+        public TimeSpan ChannelFailureDelay { get; set; }
 
         /// <summary>
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
@@ -68,7 +68,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// How long to pause when a channel is empty in milliseconds
         /// </summary>
-        public int EmptyChannelDelay { get; set; }
+        public TimeSpan EmptyChannelDelay { get; set; }
 
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
@@ -156,8 +156,8 @@ namespace Paramore.Brighter
             bool runAsync = false,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000)
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null)
         {
             DataType = dataType;
             Name = name ?? new SubscriptionName(dataType.FullName!);
@@ -174,8 +174,8 @@ namespace Paramore.Brighter
             RunAsync = runAsync;
             ChannelFactory = channelFactory;
             MakeChannels = makeChannels;
-            EmptyChannelDelay = emptyChannelDelay;
-            ChannelFailureDelay = channelFailureDelay;
+            EmptyChannelDelay = emptyChannelDelay ?? TimeSpan.FromMilliseconds(500);
+            ChannelFailureDelay = channelFailureDelay ?? TimeSpan.FromMilliseconds(1000);
         }
 
         public void SetNumberOfPerformers(int numberOfPerformers)
@@ -217,8 +217,8 @@ namespace Paramore.Brighter
             bool runAsync = false,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000)
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null)
             : base(
                 typeof(T),
                 name,

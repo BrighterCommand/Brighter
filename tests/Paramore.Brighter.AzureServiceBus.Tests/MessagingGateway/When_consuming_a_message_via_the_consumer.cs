@@ -16,7 +16,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
     public class ASBConsumerTests : IDisposable
     {
         private readonly Message _message;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly string _correlationId;
         private readonly string _contentType;

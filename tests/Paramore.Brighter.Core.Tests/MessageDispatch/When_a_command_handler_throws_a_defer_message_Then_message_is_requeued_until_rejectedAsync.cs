@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private const string Topic = "MyCommand";
         private const string ChannelName = "myChannel";
         private readonly IAmAMessagePump _messagePump;
-        private readonly Channel _channel;
+        private readonly ChannelAsync _channel;
         private readonly int _requeueCount = 5;
         private readonly InternalBus _bus = new();
         private readonly RoutingKey _routingKey = new(Topic);
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             SpyRequeueCommandProcessor commandProcessor = new();
             var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 
-            _channel = new Channel(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
+            _channel = new ChannelAsync(new(ChannelName),_routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,

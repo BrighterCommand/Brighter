@@ -22,11 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading.Tasks;
+
 namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAChannelFactory
-    /// Creates instances of <see cref="IAmAChannel"/>channels. We provide support for some Application Layer channels, and provide factories for those:
+    /// Creates instances of <see cref="IAmAChannelSync"/>channels. We provide support for some Application Layer channels, and provide factories for those:
     /// <list type="bullet">
     /// <item>AMQP</item>
     /// <item>RestML</item>
@@ -40,6 +42,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="subscription">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAChannel CreateChannel(Subscription subscription);
+        IAmAChannelSync CreateChannel(Subscription subscription);
+        
+        /// <summary>
+        /// Creates the input channel.
+        /// </summary>
+        /// <param name="subscription">The parameters with which to create the channel for the transport</param>
+        /// <returns>IAmAnInputChannel.</returns>
+        IAmAChannelAsync CreateChannelAsync(Subscription subscription);
     }
 }

@@ -20,7 +20,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
     public class SqsMessageProducerDlqTests : IDisposable
     {
         private readonly SqsMessageProducer _sender;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
         private readonly AWSMessagingGatewayConnection _awsConnection;

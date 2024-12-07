@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -27,28 +27,43 @@ using System;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmASendMessageGateway
-    /// Abstracts away the Application Layer used to push messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
-    /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannelSync"/> derived class.
-    /// We provide the following default gateway applications
-    /// <list type="bullet">
-    /// <item>AMQP</item>
-    /// <item>RESTML</item>
-    /// </list>
+    /// Interface IAmAChannelSync 
+    /// An <see cref="IAmAChannelSync"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// and acknowledging receipt of those messages
     /// </summary>
-    public interface IAmAMessageProducerSync : IAmAMessageProducer
+    public interface IAmAChannelSync : IAmAChannel
     {
         /// <summary>
-        /// Sends the specified message.
+        /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        void Send(Message message);
+        void Acknowledge(Message message);
+
+        /// <summary>
+        /// Clears the queue
+        /// </summary>
+        void Purge();
         
         /// <summary>
-        /// Send the specified message with specified delay
+        /// The timeout for the channel to receive a message.
+        /// </summary>
+        /// <param name="timeout">The <see cref="TimeSpan"/> timeout; if null default to 1 second</param>
+        /// <returns>Message.</returns>
+        Message Receive(TimeSpan? timeout);
+
+        /// <summary>
+        /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delay">Delay delivery of the message. 0 is no delay. Defaults to 0</param>
-        void SendWithDelay(Message message, TimeSpan? delay);
-     }
+        void Reject(Message message);
+
+        /// <summary>
+        /// Requeues the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="timeOut">The delay to the delivery of the message.</param>
+        /// <returns>True if the message should be Acked, false otherwise</returns>
+        bool Requeue(Message message, TimeSpan? timeOut = null);
+
+   }
 }

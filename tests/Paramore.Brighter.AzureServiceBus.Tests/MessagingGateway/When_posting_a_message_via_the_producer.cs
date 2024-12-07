@@ -13,8 +13,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
     [Trait("Fragile", "CI")]
     public class ASBProducerTests : IDisposable
     {
-        private readonly IAmAChannel _topicChannel;
-        private readonly IAmAChannel _queueChannel;
+        private readonly IAmAChannelSync _topicChannel;
+        private readonly IAmAChannelSync _queueChannel;
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly ASBTestCommand _command;
         private readonly string _correlationId;

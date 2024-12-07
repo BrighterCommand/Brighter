@@ -24,7 +24,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;
         private readonly string _dlqChannelName;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly SqsMessageProducer _sender;
         private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly SqsSubscription<MyCommand> _subscription;

@@ -17,7 +17,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly RmqMessageProducer _sender;
         private readonly RmqMessageConsumer _deadLetterConsumer;
         private readonly RmqSubscription<MyCommand> _subscription;

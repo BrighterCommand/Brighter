@@ -56,7 +56,9 @@ Currently, Brighter only supports only an IAmAMessageConsumer interface and does
 
 To avoid duplicated code we will use the same code IAmAMessageConsumer implementations can use the [Flag Argument Hack](https://learn.microsoft.com/en-us/archive/msdn-magazine/2015/july/async-programming-brownfield-async-development) to share code where useful. 
 
-We will need to make changes to the Proactor to use async code within the pump, and to use the non-blocking I/O where possible.
+We will need to make changes to the Proactor to use async code within the pump, and to use the non-blocking I/O where possible. To do this we need to add an async version of the IAmAChannel interface, IAmAChannelAsync. This also means that we need to implement a ChannelAsync which derives from that.
+
+As a result we need to move methods down onto a Proactor and Reactor version of the MessagePump (renamed from Blocking and NonBlocking), that depend on Channel, as we will have a different Channel for the Proactor and Reactor models.
 
 ## Consequences
 
