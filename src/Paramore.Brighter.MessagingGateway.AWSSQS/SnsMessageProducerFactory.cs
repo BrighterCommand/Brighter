@@ -44,6 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
 
         /// <inheritdoc />
+        ///  Sync over async used here, alright in the context of producer creation
         public Dictionary<RoutingKey,IAmAMessageProducer> Create()
         {
             var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();

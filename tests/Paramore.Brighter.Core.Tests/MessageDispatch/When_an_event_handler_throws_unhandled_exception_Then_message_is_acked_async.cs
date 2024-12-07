@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private const string Topic = "MyEvent";
         private const string Channel = "MyChannel";
         private readonly IAmAMessagePump _messagePump;
-        private readonly Channel _channel;
+        private readonly ChannelAsync _channel;
         private readonly int _requeueCount = 5;
         private readonly RoutingKey _routingKey = new(Topic);
         private readonly FakeTimeProvider _timeProvider = new();
@@ -52,14 +52,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var bus = new InternalBus();
 
-            _channel = new Channel(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
+            _channel = new ChannelAsync(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             
             var messageMapperRegistry = new MessageMapperRegistry(
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-            _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
+            _messagePump = new Proactor<MyEvent>(commandProcessorProvider, messageMapperRegistry, null, new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };

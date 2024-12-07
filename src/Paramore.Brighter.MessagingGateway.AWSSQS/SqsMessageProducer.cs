@@ -106,6 +106,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         /// <summary>
         /// Sends the specified message.
+        /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
         public void Send(Message message)

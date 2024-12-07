@@ -22,6 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MQTTMessagePublisher"/> class.
+        /// Sync over async, but necessary as we are in the ctor
         /// </summary>
         /// <param name="config">The Publisher configuration.</param>
         public MQTTMessagePublisher(MQTTMessagingGatewayConfiguration config)
@@ -68,6 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         /// <summary>
         /// Sends the specified message.
+        /// Sync over async
         /// </summary>
         /// <param name="message">The message.</param>
         public void PublishMessage(Message message)
@@ -82,11 +84,11 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <returns>Task.</returns>
         public async Task PublishMessageAsync(Message message)
         {
-            MqttApplicationMessage mqttMessage = createMQTTMessage(message);
+            MqttApplicationMessage mqttMessage = CreateMqttMessage(message);
             await _mqttClient.PublishAsync(mqttMessage, CancellationToken.None);
         }
 
-        private MqttApplicationMessage createMQTTMessage(Message message)
+        private MqttApplicationMessage CreateMqttMessage(Message message)
         {
             string payload = JsonSerializer.Serialize(message);
             MqttApplicationMessageBuilder outMessage = new MqttApplicationMessageBuilder()

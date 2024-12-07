@@ -38,6 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
         /// the processing of those messages or requeue them.
         /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
+        /// Sync over async,
         /// </summary>
         /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
         /// <returns>Message.</returns>
@@ -145,7 +146,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if(ServiceBusReceiver == null)
                     GetMessageReceiverProvider();
 
-                ServiceBusReceiver?.Complete(lockToken).Wait();
+                ServiceBusReceiver?.Complete(lockToken)
+                    .GetAwaiter()
+                    .GetResult();
+                
                 if (SubscriptionConfiguration.RequireSession)
                     ServiceBusReceiver?.Close();
             }
@@ -172,6 +176,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         /// <summary>
         /// Rejects the specified message.
+        /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
         public void Reject(Message message)
@@ -188,7 +193,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 if(ServiceBusReceiver == null)
                     GetMessageReceiverProvider();
                 
-                ServiceBusReceiver?.DeadLetter(lockToken).Wait();
+                ServiceBusReceiver?.DeadLetter(lockToken)
+                    .GetAwaiter()
+                    .GetResult();
                 if (SubscriptionConfiguration.RequireSession)
                     ServiceBusReceiver?.Close();
             }

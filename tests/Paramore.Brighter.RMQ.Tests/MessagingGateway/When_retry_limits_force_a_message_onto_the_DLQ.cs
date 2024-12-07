@@ -17,7 +17,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly RmqMessageProducer _sender;
         private readonly RmqMessageConsumer _deadLetterConsumer;
         private readonly RmqSubscription<MyCommand> _subscription;
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
+            _messagePump = new Reactor<MyDeferredCommand>(provider, messageMapperRegistry, 
                 new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3

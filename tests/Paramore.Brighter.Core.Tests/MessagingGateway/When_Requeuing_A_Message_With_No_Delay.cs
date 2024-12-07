@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
     public class ChannelRequeueWithoutDelayTest
     {
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly RoutingKey _routingKey = new("myTopic");
         private const string ChannelName = "myChannel";
         private readonly InternalBus _bus = new();

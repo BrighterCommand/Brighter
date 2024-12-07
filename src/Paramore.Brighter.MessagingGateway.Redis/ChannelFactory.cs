@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 {
     /// <summary>
     /// Class RMQInputChannelFactory.
-    /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
+    /// Creates instances of <see cref="IAmAChannelSync"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
     public class ChannelFactory : IAmAChannelFactory
     {
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateChannel(Subscription subscription)
         {
             RedisSubscription rmqSubscription = subscription as RedisSubscription;  
             if (rmqSubscription == null)

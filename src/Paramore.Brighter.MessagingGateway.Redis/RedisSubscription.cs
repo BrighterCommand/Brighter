@@ -60,8 +60,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             bool runAsync = false, 
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {

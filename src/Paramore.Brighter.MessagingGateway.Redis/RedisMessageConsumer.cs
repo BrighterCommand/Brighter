@@ -160,19 +160,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="delay"> Time to delay delivery of the message. 0 is no delay. Defaults to 0</param>
+        /// <param name="delay">Delay is not supported</param>
         /// <returns>True if the message was requeued</returns>
          public bool Requeue(Message message, TimeSpan? delay = null)
         {
-           delay ??= TimeSpan.Zero;
-
-           //TODO: This blocks. We should use a thread to repost to the queue after n milliseconds, using a Timer
-           if (delay > TimeSpan.Zero)
-           {
-               Task.Delay(delay.Value).Wait();
-               message.Header.Delayed = delay.Value;
-           }
-
            message.Header.HandledCount++;
             using var client = Pool.Value.GetClient();
             if (_inflight.ContainsKey(message.Id))

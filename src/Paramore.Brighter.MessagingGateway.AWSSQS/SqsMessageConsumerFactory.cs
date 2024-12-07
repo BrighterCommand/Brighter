@@ -45,6 +45,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(Subscription subscription)
         {
+            return CreateImpl(subscription);
+        }
+
+        public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
+        {
+            return CreateImpl(subscription);
+        }
+
+
+        private SqsMessageConsumer CreateImpl(Subscription subscription)
+        {
             SqsSubscription sqsSubscription = subscription as SqsSubscription;
             if (sqsSubscription == null) throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
             
@@ -55,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 batchSize: subscription.BufferSize,
                 hasDLQ: sqsSubscription.RedrivePolicy == null,
                 rawMessageDelivery: sqsSubscription.RawMessageDelivery
-                );
+            );
         }
     }
 }

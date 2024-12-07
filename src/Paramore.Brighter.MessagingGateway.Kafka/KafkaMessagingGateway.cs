@@ -48,6 +48,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         protected short ReplicationFactor;
         protected TimeSpan TopicFindTimeout;
 
+        /// <summary>
+        /// Ensure that the topic exists,  behaviour based on the MakeChannels flag of the publication
+        /// Sync over async, but alright as we in topic creation
+        /// </summary>
+        /// <exception cref="ChannelFailureException"></exception>
         protected void EnsureTopic()
         {
             if (MakeChannels == OnMissingChannel.Assume)
