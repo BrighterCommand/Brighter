@@ -1,14 +1,16 @@
-using System;
-using System.Collections.Concurrent;
-using System.Reflection;
-using System.Threading;
+
 
 //Based on:
 // https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
 // https://www.codeproject.com/Articles/5274751/Understanding-the-SynchronizationContext-in-NET-wi
 // https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
 
-namespace Paramore.Brighter
+using System;
+using System.Collections.Concurrent;
+using System.Reflection;
+using System.Threading;
+
+namespace Paramore.Brighter.ServiceActivator
 {
     public class BrighterSynchronizationContext : SynchronizationContext
     {

@@ -20,7 +20,13 @@ The benefit of the Proactor approach is throughput, as the Performer shares reso
 
 The trade-off here is the Reactor model can offer better performance, as it does not require the overhead of waiting for I/O completion. 
 
-Of course, this assumes that Brighter can implement the Reactor and Proactor preference for blocking I/O vs non-blocking I/O top-to-bottom. What happens for the Proactor model the underlying SDK does not support non-blocking I/O or the Proactor model if the underlying SDK does not support non-blocking I/O.
+For the Reactor model there is a cost to using transports and stores that do non-blocking I/O, that is an additional thread will be needed to run the continuation. This is because the message pump thread is blocked on I/O, and cannot run the continuation. As our message pump is single-threaded, this will be the maximum number of threads required though for the Reactor model. With the message pump thread suspended, awaiting, during non-blocking I/O, there will be no additional messages processed, until after the I/O completes.
+
+This is not a significant issue but if you use an SDK that does not support blocking I/O natively (Azure Service Bus, SNS/SQS, RabbitMQ), then you need to be aware of the additional cost for those SDKs (an additional thread pool thread). You may be better off explicity using the Proactor model with these transports, unless your own application cannot support that concurrency model.
+
+For the Proactor model there is a cost to using blocking I/O, as the Performer cannot yield to other Performers whilst waiting for I/O to complete. This means the Proactor has both the throughput issue of the Reactor, but does not gain the performance benefit of the Reactor, as it is forced to use an additional thread to provide sync over async. 
+
+In versions before V10, the Proactor message pump already supports user code in transformers and handlers running asynchronously (including the Outbox and Inbox), so we can take advantage of non-blocking I/O in the Proactor model. However, prior to V10 it did not take advantage of asynchronous code in a transport SDK, where the SDK supported non-blocking I/O. Brighter treated all transports as having blocking I/O, and so we blocked on the non-blocking I/O.
 
 ### Thread Pool vs. Long Running Threads
 
@@ -32,42 +38,51 @@ A consumer of a stream has a constrained choice if it needs to maintain its sequ
 
 When consuming messages from a queue, where we do not care about ordering, we can use the competing consumers pattern, where each consumer is a single-threaded message pump. However, we do want to be able to throttle the rate at which we read from the queue, in order to be able to apply backpressure, and slow the rate of consumption. So again, we only tend to use a limited number of threads, and we can find value in being able to explicitly choose that value. 
 
-As our Performer, message pump, threads are long-running, we do not use a thread pool thread for them. The danger here is that work could become stuck in a message pump thread's local queue, and not be processed.
+For our Performer, which runs the message pump, we choose to have threads are long-running, and not thread pool threads. The danger of a thread pool thread, for long-running work, is that work could become stuck in a message pump thread's local queue, and not be processed. As we do not use the thread pool for our Performers and those threads are never returned to the pool. So the only thread pool threads we use are for non-blocking I/O. 
 
-As a result we do not use the thread pool for our Performers and those threads are never returned to the pool. So the only thread pool threads we have are those being used for non-blocking I/O. 
+For us then, non-blocking I/O in either user code, a handler or tranfomer, or transport code, retrieving or acknowledging work, that is called by the message pump thread performs I/O, mainly has the benefit that we can yield to another Performer.
 
-Non-blocking I/O may be useful if the handler called by the message pump thread performs I/O, when we can yield to another Performer. 
+### Synchronization Context
 
-Brighter has a custom SynchronizationContext, BrighterSynchronizationContext, that forces continuations to run on the message pump thread. This prevents non-blocking i/o waiting on the thread pool, with potential deadlocks. This synchronization context is used within the Performer for both the non-blocking i/o of the message pump and the non-blocking i/o in the transformer pipeline. Because our performer's only thread processes a single message at a time, there is no danger of this synchronization context deadlocking.
+Brighter has a custom SynchronizationContext, BrighterSynchronizationContext, that forces continuations to run on the message pump thread. This prevents non-blocking I/O waiting on the thread pool, with potential deadlocks. This synchronization context is used within the Performer for both the non-blocking I/O of the message pump. Because our performer's only thread processes a single message at a time, there is no danger of this synchronization context deadlocking.
 
 ## Decision
 
-If the underlying SDK does not support non-blocking I/O, then the Proactor model is forced to use blocking I/O. If the underlying SDK does not support blocking I/O, then the Reactor model is forced to use non-blocking I/O.
+### Reactor and Proactor
 
-We support both the Reactor and Proactor models across all of our transports. We do this to avoid forcing a concurrency model onto users of Brighter. As we cannot know your context, we do not want to make decisions for you: the performace of blocking i/o or the throughput of non-blocking I/O.
+We have chosen to support both the Reactor and Proactor models across all of our transports. We do this to avoid forcing a concurrency model onto users of Brighter. As we cannot know your context, we do not want to make decisions for you: the performace of blocking i/o or the throughput of non-blocking I/O.
 
-To provide a common programming model, within our setup code our API uses blocking I/O. Where the underlying SDK only supports non-blocking I/O, we use non-blocking I/O and then use GetAwaiter().GetResult() to block on that. We prefer GetAwaiter().GetResult() to .Wait() as it will rework the stack trace to take all the asynchronous context into account.
+To make the two models more explicit, within the code, we have decided to rename the derived message pump classes to Proactor and Reactor, from Blocking and NonBlocking.
+
+### In Setup use Blocking I/O
+
+Within our setup code our API can safely perovide a common abstraction using blocking I/O. Where the underlying SDK only supports non-blocking I/O, we use non-blocking I/O and then use GetAwaiter().GetResult() to block on that. We prefer GetAwaiter().GetResult() to .Wait() as it will rework the stack trace to take all the asynchronous context into account.
+                                    
+### Use Blocking I/O  in Reactor
+
+If the underlying SDK does not support blocking I/O, then the Reactor model is forced to use non-blocking I/O. As with our setup code, where the underlying SDK only supports non-blocking I/O, we use non-blocking I/O and then use GetAwaiter().GetResult() to block on that. Again, we prefer GetAwaiter().GetResult() to .Wait() as it will rework the stack trace to take all the asynchronous context into account.
+
+### Use Non-Blocking I/O in Proactor
+
+For the Performer, within the message pump, we want to use non-blocking I/O if the transport supports it. Although we will only use a limited number of threads here, whilst waiting for I/O with the broker, we want to yield, to increase our throughput. 
 
 Although this uses an extra thread, the impact for an application starting up on the thread pool is minimal. We will not starve the thread pool and deadlock during start-up.
 
-For the Performer, within the message pump, we use non-blocking I/O if the transport supports it. 
+Our custom SynchronizationContext, BrighterSynchronizationContext, can ensure that continuations run on the message pump thread, and not on the thread pool. 
 
-Currently, Brighter only supports only an IAmAMessageConsumer interface and does not support an IAmAMessageConsumerAsync interface. This means that within a Proactor, we cannot take advantage of the non-blocking I/O and we are forced to block on the non-blocking I/O. We will address this by adding that interface, so as to allow a Proactor to take advantage of non-blocking I/O.
+in V9, we have only use the synchronization context for user code, the transformer and hander calls. From V10 we want to extend the support to calls to the transport, whist we are waiting for I/O.
+
+### Extending Transport Support for Async
+
+Currently, Brighter only supports an IAmAMessageConsumer interface and does not support an IAmAMessageConsumerAsync interface. This means that within a Proactor, we cannot take advantage of the non-blocking I/O and we are forced to block on the non-blocking I/O. We will address this by adding that interface, so as to allow a Proactor to take advantage of non-blocking I/O.
+
+With V10 we will add IAmAMessageConsumerAsync. We will need to make changes to the Proactor to use async code within the pump, and to use the non-blocking I/O where possible. To do this we need to add an async version of the IAmAChannel interface, IAmAChannelAsync. This also means that we need to implement a ChannelAsync which derives from that.
+
+As a result we will have a different Channel for the Proactor and Reactor models. As a result we need to extend the ChannelFactory to create both Channel and ChannelAsync, reflecting the needs of the chosen pipeline. However, there is underlying commonality that we can factor into a base class. This helps the Performer. It only needs to be able to Stop the Channel. By extracting that into a common interface we can avoid having to duplicate the Peformer code.
 
 To avoid duplicated code we will use the same code IAmAMessageConsumer implementations can use the [Flag Argument Hack](https://learn.microsoft.com/en-us/archive/msdn-magazine/2015/july/async-programming-brownfield-async-development) to share code where useful. 
 
-We will need to make changes to the Proactor to use async code within the pump, and to use the non-blocking I/O where possible. To do this we need to add an async version of the IAmAChannel interface, IAmAChannelAsync. This also means that we need to implement a ChannelAsync which derives from that.
-
-As a result we need to move methods down onto a Proactor and Reactor version of the MessagePump (renamed from Blocking and NonBlocking), that depend on Channel, as we will have a different Channel for the Proactor and Reactor models.
-
 ## Consequences
-
-Because setup is only run at application startup, the performance impact of blocking on non-blocking i/o is minimal, using .GetAwaiter().GetResult() normally an additional thread from the pool.
-
-For the Reactor model there is a cost to using non-blocking I/O, that is an additional thread will be needed to run the continuation. This is because the message pump thread is blocked on I/O, and cannot run the continuation. As our message pump is single-threaded, this will be the maximum number of threads required though for the Reactor model. With the message pump thread suspended, awaiting, during non-blocking I/O, there will be no additional messages processed, until after the I/O completes.
-
-This is not a significant issue but if you use an SDK that does not support blocking I/O natively (Azure Service Bus, SNS/SQS, RabbitMQ), then you need to be aware of the additional cost for those SDKs (an additional thread pool thread). You may be better off explicity using the Proactor model with these transports, unless your own application cannot support that concurrency model.
 
 Brighter offers you explicit control, through the number of Performers you run, over how many threads are required, instead of implicit scaling through the pool. This has significant advantages for messaging consumers, as it allows you to maintain ordering, such as when consuming a stream instead of a queue.
 
-For the Proactor model this is less cost in using a transport that only supports blocking I/O.  

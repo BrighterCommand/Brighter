@@ -24,6 +24,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
@@ -34,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Read messages from an SQS queue
     /// </summary>
-    public class SqsMessageConsumer : IAmAMessageConsumer
+    public class SqsMessageConsumer : IAmAMessageConsumer, IAmAMessageConsumerAsync
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
@@ -70,22 +72,150 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
 
         /// <summary>
+        /// Acknowledges the specified message.
+        /// Sync over Async
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Acknowledge(Message message)
+        {
+            AcknowledgeAsync(message).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Acknowledges the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Cancels the ackowledge operation</param>
+        public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
+                return;
+
+            var receiptHandle = value.ToString();
+
+            try
+            {
+                using var client = _clientFactory.CreateSqsClient();
+                var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
+                await client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle), cancellationToken);
+
+                s_logger.LogInformation("SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}", message.Id, receiptHandle,
+                    urlResponse.QueueUrl);
+            }
+            catch (Exception exception)
+            {
+                s_logger.LogError(exception, "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Rejects the specified message.
+        /// Sync over async
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Reject(Message message)
+        {
+            RejectAsync(message).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Rejects the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Cancel the reject operation</param>
+        public async Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
+                return;
+
+            var receiptHandle = value.ToString();
+
+            try
+            {
+                s_logger.LogInformation(
+                    "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
+                    message.Id, receiptHandle, _queueName
+                );
+
+                using var client = _clientFactory.CreateSqsClient();
+                var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
+                if (_hasDlq)
+                {
+                    await client.ChangeMessageVisibilityAsync(
+                        new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0), 
+                        cancellationToken
+                        );
+                }
+                else
+                {
+                    await client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle, cancellationToken);
+                }
+            }
+            catch (Exception exception)
+            {
+                s_logger.LogError(exception, "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Purges the specified queue name.
+        /// Sync over Async
+        /// </summary>
+        public void Purge()
+        {
+            PurgeAsync().GetAwaiter().GetResult(); 
+        }
+        
+        /// <summary>
+        /// Purges the specified queue name.
+        /// </summary>
+        public async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            try
+            {
+                using var client = _clientFactory.CreateSqsClient();
+                s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
+
+                var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
+                await client.PurgeQueueAsync(urlResponse.QueueUrl, cancellationToken);
+
+                s_logger.LogInformation("SqsMessageConsumer: Purged the queue {ChannelName}", _queueName);
+            }
+            catch (Exception exception)
+            {
+                s_logger.LogError(exception, "SqsMessageConsumer: Error purging queue {ChannelName}", _queueName);
+                throw;
+            }
+        }
+        
+         /// <summary>
         /// Receives the specified queue name.
         /// Sync over async 
         /// </summary>
         /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
         public Message[] Receive(TimeSpan? timeOut = null)
         {
+            return ReceiveAsync(timeOut).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Receives the specified queue name.
+        /// </summary>
+        /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
+        /// <param name="cancellationToken">Cancel the receive operation</param>
+        public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
             AmazonSQSClient client = null;
             Amazon.SQS.Model.Message[] sqsMessages;
             try
             {
                 client = _clientFactory.CreateSqsClient();
-                var urlResponse = client.GetQueueUrlAsync(_queueName).GetAwaiter().GetResult();
+                var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
                 timeOut ??= TimeSpan.Zero;
 
-                s_logger.LogDebug("SqsMessageConsumer: Preparing to retrieve next message from queue {URL}",
-                    urlResponse.QueueUrl);
+                s_logger.LogDebug("SqsMessageConsumer: Preparing to retrieve next message from queue {URL}",  urlResponse.QueueUrl);
 
                 var request = new ReceiveMessageRequest(urlResponse.QueueUrl)
                 {
@@ -94,7 +224,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     MessageAttributeNames = new List<string> {"All"},
                 };
 
-                var receiveResponse = client.ReceiveMessageAsync(request).GetAwaiter().GetResult();
+                var receiveResponse = await client.ReceiveMessageAsync(request, cancellationToken);
 
                 sqsMessages = receiveResponse.Messages.ToArray();
             }
@@ -133,112 +263,23 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
 
             return messages;
-        }
+        }      
 
-        /// <summary>
-        /// Acknowledges the specified message.
-        /// Sync over Async
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
+
+        public bool Requeue(Message message, TimeSpan? delay = null)
         {
-            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
-                return;
-
-            var receiptHandle = value.ToString();
-
-            try
-            {
-                using var client = _clientFactory.CreateSqsClient();
-                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle))
-                    .GetAwaiter()
-                    .GetResult();
-
-                s_logger.LogInformation("SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}", message.Id, receiptHandle,
-                    urlResponse.QueueUrl);
-            }
-            catch (Exception exception)
-            {
-                s_logger.LogError(exception, "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Rejects the specified message.
-        /// Sync over async
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Reject(Message message)
-        {
-            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
-                return;
-
-            var receiptHandle = value.ToString();
-
-            try
-            {
-                s_logger.LogInformation(
-                    "SqsMessageConsumer: Rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
-                    message.Id, receiptHandle, _queueName
-                    );
-
-                using var client = _clientFactory.CreateSqsClient();
-                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                if (_hasDlq)
-                {
-                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0))
-                        .GetAwaiter()
-                        .GetResult();
-                }
-                else
-                {
-                    client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle)
-                        .GetAwaiter()
-                        .GetResult();
-                }
-            }
-            catch (Exception exception)
-            {
-                s_logger.LogError(exception, "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Purges the specified queue name.
-        /// Sync over Async
-        /// </summary>
-        public void Purge()
-        {
-            try
-            {
-                using var client = _clientFactory.CreateSqsClient();
-                s_logger.LogInformation("SqsMessageConsumer: Purging the queue {ChannelName}", _queueName);
-
-                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                client.PurgeQueueAsync(urlResponse.QueueUrl)
-                    .GetAwaiter()
-                    .GetResult();
-
-                s_logger.LogInformation("SqsMessageConsumer: Purged the queue {ChannelName}", _queueName);
-            }
-            catch (Exception exception)
-            {
-                s_logger.LogError(exception, "SqsMessageConsumer: Error purging queue {ChannelName}", _queueName);
-                throw;
-            }
+            return RequeueAsync(message, delay).GetAwaiter().GetResult(); 
         }
 
         /// <summary>
         /// Re-queues the specified message.
-        /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Time to delay delivery of the message. AWS uses seconds. 0s is immediate requeue. Default is 0ms</param>
+        /// <param name="cancellationToken">Cancels the requeue</param>
         /// <returns>True if the message was requeued successfully</returns>
-        public bool Requeue(Message message, TimeSpan? delay = null)
+        public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
                 return false;
@@ -253,10 +294,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 using (var client = _clientFactory.CreateSqsClient())
                 {
-                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, delay.Value.Seconds))
-                        .GetAwaiter()
-                        .GetResult();
+                    var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
+                    await client.ChangeMessageVisibilityAsync(
+                        new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, delay.Value.Seconds), 
+                        cancellationToken
+                        );
                 }
 
                 s_logger.LogInformation("SqsMessageConsumer: re-queued the message {Id}", message.Id);
@@ -273,8 +315,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }

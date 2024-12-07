@@ -136,8 +136,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             Dictionary<string,string> tags = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool rawMessageDelivery = true,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null
         )
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
@@ -210,8 +210,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             Dictionary<string,string> tags = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool rawMessageDelivery = true,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null
         )
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, 
                 unacceptableMessageLimit, runAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod,findTopicBy, 

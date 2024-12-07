@@ -99,6 +99,29 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return channel;
         }
 
+        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        {
+            var channel = _retryPolicy.Execute(() =>
+            {
+                SqsSubscription sqsSubscription = subscription as SqsSubscription;
+                _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+
+                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels)
+                    .GetAwaiter()
+                    .GetResult();
+                EnsureQueue();
+
+                return new ChannelAsync(
+                    subscription.ChannelName.ToValidSQSQueueName(),
+                    subscription.RoutingKey.ToValidSNSTopicName(),
+                    _messageConsumerFactory.CreateAsync(subscription),
+                    subscription.BufferSize
+                );
+            });
+
+            return channel;
+        }
+
         /// <summary>
         /// Ensures the queue exists.
         /// </summary>

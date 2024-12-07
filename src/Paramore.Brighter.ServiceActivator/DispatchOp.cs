@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,34 +23,41 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.ServiceActivator
+using System;
+using System.Threading;
+
+namespace Paramore.Brighter.ServiceActivator;
+
+internal static class DispatchOp
 {
-    public class CommandProcessorProvider : IAmACommandProcessorProvider
+    public static void RunAsync<TRequest>(
+        Action<TRequest, RequestContext, CancellationToken> act, TRequest request,
+        RequestContext requestContext,
+        CancellationToken cancellationToken = default
+    )
     {
-        private readonly IAmACommandProcessor _commandProcessor;
+        if (act == null) throw new ArgumentNullException(nameof(act));
 
-        public CommandProcessorProvider(IAmACommandProcessor commandProcessor)
-        {
-            _commandProcessor = commandProcessor;
-        }
-        public void Dispose()
-        {
-            //Nothing to Dispose
-        }
+        var prevCtx = SynchronizationContext.Current;
 
-        public IAmACommandProcessor Get()
+        try
         {
-            return _commandProcessor;
-        }
+            // Establish the new context
+            var context = new BrighterSynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(context);
 
-        public void CreateScope()
-        {
-            //This is not Scoped
-        }
+            context.OperationStarted();
 
-        public void ReleaseScope()
+            act(request, requestContext, cancellationToken);
+
+            context.OperationCompleted();
+
+            // Pump continuations and propagate any exceptions
+            context.RunOnCurrentThread();
+        }
+        finally
         {
-            //This is not scoped
+            SynchronizationContext.SetSynchronizationContext(prevCtx);
         }
     }
 }

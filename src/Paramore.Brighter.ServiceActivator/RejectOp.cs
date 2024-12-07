@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,34 +23,37 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.ServiceActivator
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Paramore.Brighter.ServiceActivator;
+
+internal class RejectOp
 {
-    public class CommandProcessorProvider : IAmACommandProcessorProvider
+    public static void RunReject(Func<Message, Task> act, Message message)
     {
-        private readonly IAmACommandProcessor _commandProcessor;
+        if (act == null) throw new ArgumentNullException(nameof(act));
 
-        public CommandProcessorProvider(IAmACommandProcessor commandProcessor)
+        var prevCtx = SynchronizationContext.Current;
+        try
         {
-            _commandProcessor = commandProcessor;
-        }
-        public void Dispose()
-        {
-            //Nothing to Dispose
-        }
+            // Establish the new context
+            var context = new BrighterSynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(context);
 
-        public IAmACommandProcessor Get()
-        {
-            return _commandProcessor;
-        }
+            context.OperationStarted();
 
-        public void CreateScope()
-        {
-            //This is not Scoped
-        }
+            act(message);
 
-        public void ReleaseScope()
+            context.OperationCompleted();
+
+            // Pump continuations and propagate any exceptions
+            context.RunOnCurrentThread();
+        }
+        finally
         {
-            //This is not scoped
+            SynchronizationContext.SetSynchronizationContext(prevCtx);
         }
     }
 }
