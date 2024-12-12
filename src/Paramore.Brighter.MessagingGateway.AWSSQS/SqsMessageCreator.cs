@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
             var topic = HeaderResult<RoutingKey>.Empty();
-            var messageId = HeaderResult<string>.Empty();
+            var messageId = HeaderResult<string?>.Empty();
             var contentType = HeaderResult<string>.Empty();
             var correlationId = HeaderResult<string>.Empty();
             var handledCount = HeaderResult<int>.Empty();
@@ -75,23 +75,25 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 replyTo = ReadReplyTo(sqsMessage);
                 receiptHandle = ReadReceiptHandle(sqsMessage);
 
+                var bodyType = (contentType.Success ? contentType.Result : "plain/text");
+                
                 var messageHeader = new MessageHeader(
-                    messageId: messageId.Result,
-                    topic: topic.Result,
+                    messageId: messageId.Result ?? string.Empty,
+                    topic: topic.Result ?? RoutingKey.Empty,
                     messageType.Result,
                     source: null,
-                    type: "",
+                    type: string.Empty,
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                    correlationId:correlationId.Success ? correlationId.Result : "",
-                    replyTo: replyTo.Success ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
-                    contentType: contentType.Success ? contentType.Result : "",
+                    correlationId: correlationId.Success ? correlationId.Result : string.Empty,
+                    replyTo: replyTo.Success ? new RoutingKey(replyTo.Result!) : RoutingKey.Empty,
+                    contentType: bodyType!,
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: null,
                     delayed: TimeSpan.Zero
                 );
 
-                message = new Message(messageHeader, ReadMessageBody(sqsMessage, messageHeader.ContentType));
+                message = new Message(messageHeader, ReadMessageBody(sqsMessage, bodyType!));
                     
                 //deserialize the bag 
                 var bag = ReadMessageBag(sqsMessage);
@@ -101,7 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
 
                 if(receiptHandle.Success)
-                    message.Header.Bag.Add("ReceiptHandle", receiptHandle.Result);
+                    message.Header.Bag.Add("ReceiptHandle", receiptHandle.Result!);
             }
             catch (Exception e)
             {
@@ -109,13 +111,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 message = FailureMessage(topic, messageId);
             }
             
-            
             return message;
         }
 
         private static MessageBody ReadMessageBody(Amazon.SQS.Model.Message sqsMessage, string contentType)
         {
-            if(contentType == CompressPayloadTransformerAsync.GZIP || contentType == CompressPayloadTransformerAsync.DEFLATE || contentType == CompressPayloadTransformerAsync.BROTLI)
+            if(contentType == CompressPayloadTransformerAsync.GZIP 
+               || contentType == CompressPayloadTransformerAsync.DEFLATE 
+               || contentType == CompressPayloadTransformerAsync.BROTLI)
                 return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
             
             return new MessageBody(sqsMessage.Body, contentType);
@@ -123,12 +126,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue? value))
             {
                 try
                 {
                     var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(value.StringValue, JsonSerialisationOptions.Options);
-                    return bag;
+                    if (bag != null)
+                        return bag;
                 }
                 catch (Exception)
                 {
@@ -140,7 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private HeaderResult<string> ReadReplyTo(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ReplyTo, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ReplyTo, out MessageAttributeValue? value))
             {
                 return new HeaderResult<string>(value.StringValue, true);
             }
@@ -149,7 +153,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         
         private HeaderResult<DateTime> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out MessageAttributeValue? value))
             {
                 if (DateTime.TryParse(value.StringValue, out DateTime timestamp))
                 {
@@ -161,7 +165,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private HeaderResult<MessageType> ReadMessageType(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue? value))
             {
                 if (Enum.TryParse(value.StringValue, out MessageType messageType))
                 {
@@ -173,7 +177,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private HeaderResult<int> ReadHandledCount(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.HandledCount, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.HandledCount, out MessageAttributeValue? value))
             {
                 if (int.TryParse(value.StringValue, out int handledCount))
                 {
@@ -185,7 +189,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private HeaderResult<string> ReadCorrelationid(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CorrelationId, out MessageAttributeValue correlationId))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.CorrelationId, out MessageAttributeValue? correlationId))
             {
                 return new HeaderResult<string>(correlationId.StringValue, true);
             }
@@ -194,25 +198,25 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private HeaderResult<string> ReadContentType(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ContentType, out MessageAttributeValue value))
-            {
-                return new HeaderResult<string>(value.StringValue, true);
-            }
-            return new HeaderResult<string>(String.Empty, true);
-        }
-
-        private HeaderResult<string> ReadMessageId(Amazon.SQS.Model.Message sqsMessage)
-        {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Id, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ContentType, out MessageAttributeValue? value))
             {
                 return new HeaderResult<string>(value.StringValue, true);
             }
             return new HeaderResult<string>(string.Empty, true);
         }
 
+        private HeaderResult<string?> ReadMessageId(Amazon.SQS.Model.Message sqsMessage)
+        {
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Id, out MessageAttributeValue? value))
+            {
+                return new HeaderResult<string?>(value.StringValue, true);
+            }
+            return new HeaderResult<string?>(string.Empty, true);
+        }
+
         private HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue? value))
             {
                 //we have an arn, and we want the topic
                 var arnElements = value.StringValue.Split(':');

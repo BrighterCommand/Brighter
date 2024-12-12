@@ -33,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private readonly AmazonSimpleNotificationServiceClient _snsClient;
 
-        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
+        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null)
         {
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _snsClient = clientFactory.CreateSnsClient();
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         //Note that we assume here that topic names are globally unique, if not provide the topic ARN directly in the SNSAttributes of the subscription
         //This approach can have be rate throttled at scale. AWS limits to 30 ListTopics calls per second, so it you have a lot of clients starting
         //you may run into issues
-        public async Task<(bool, string TopicArn)> ValidateAsync(string topicName)
+        public async Task<(bool, string? TopicArn)> ValidateAsync(string topicName)
         {
             var topic = await _snsClient.FindTopicAsync(topicName);
             return (topic != null, topic?.TopicArn);

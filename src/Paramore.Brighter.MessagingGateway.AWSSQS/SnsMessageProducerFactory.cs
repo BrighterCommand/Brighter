@@ -28,19 +28,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class SnsMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly AWSMessagingGatewayConnection _connection;
-        private readonly IEnumerable<SnsPublication> _snsPublications;
+        private readonly IEnumerable<SnsPublication> _publications;
 
         /// <summary>
         /// Creates a collection of SNS message producers from the SNS publication information
         /// </summary>
         /// <param name="connection">The Connection to use to connect to AWS</param>
-        /// <param name="snsPublications">The publications describing the SNS topics that we want to use</param>
+        /// <param name="publications">The publications describing the SNS topics that we want to use</param>
         public SnsMessageProducerFactory(
             AWSMessagingGatewayConnection connection,
-            IEnumerable<SnsPublication> snsPublications)
+            IEnumerable<SnsPublication> publications)
         {
             _connection = connection;
-            _snsPublications = snsPublications;
+            _publications = publications;
         }
 
         /// <inheritdoc />
@@ -48,8 +48,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public Dictionary<RoutingKey,IAmAMessageProducer> Create()
         {
             var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
-            foreach (var p in _snsPublications)
+            foreach (var p in _publications)
             {
+                if (p.Topic is null)
+                    throw new ConfigurationException($"Missing topic on Publication"); 
+                
                 var producer = new SqsMessageProducer(_connection, p);
                 if (producer.ConfirmTopicExistsAsync().GetAwaiter().GetResult())
                     producers[p.Topic] = producer;

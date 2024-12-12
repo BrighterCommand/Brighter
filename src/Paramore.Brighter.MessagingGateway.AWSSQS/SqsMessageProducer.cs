@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
@@ -63,17 +63,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         }
         
-       public async Task<bool> ConfirmTopicExistsAsync(string topic = null)
+       public async Task<bool> ConfirmTopicExistsAsync(string? topic = null)
        {
            //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
-           if (string.IsNullOrEmpty(ChannelTopicArn))
-           {
-               await EnsureTopicAsync(
-                   topic != null ? new RoutingKey(topic) : _publication.Topic,
-                   _publication.SnsAttributes,
-                   _publication.FindTopicBy,
-                   _publication.MakeChannels);
-           }
+           if (!string.IsNullOrEmpty(ChannelTopicArn)) return !string.IsNullOrEmpty(ChannelTopicArn);
+           
+           RoutingKey? routingKey = null;
+           if (topic is null && _publication.Topic is not null)
+               routingKey = _publication.Topic;
+           else if (topic is not null)
+               routingKey = new RoutingKey(topic);
+               
+           if (routingKey is null)
+               throw new ConfigurationException("No topic specified for producer");
+               
+           await EnsureTopicAsync(
+               routingKey,
+               _publication.FindTopicBy,
+               _publication.SnsAttributes, _publication.MakeChannels);
 
            return !string.IsNullOrEmpty(ChannelTopicArn);
        }
@@ -88,20 +95,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                message.Header.Topic, message.Id, message.Body);
             
            await ConfirmTopicExistsAsync(message.Header.Topic);
+           
+           if (string.IsNullOrEmpty(ChannelTopicArn))
+               throw new InvalidOperationException($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body} as the topic does not exist");
 
            using var client = _clientFactory.CreateSnsClient();
-           var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
+           var publisher = new SqsMessagePublisher(ChannelTopicArn!, client);
            var messageId = await publisher.PublishAsync(message);
-           if (messageId != null)
-           {
-               s_logger.LogDebug(
-                   "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-                   message.Header.Topic, message.Id, messageId);
-               return;
-           }
-
-           throw new InvalidOperationException(
-               string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
+           
+           if (messageId == null)
+               throw new InvalidOperationException($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
+           
+           s_logger.LogDebug(
+               "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+               message.Header.Topic, message.Id, messageId);
        }
 
         /// <summary>

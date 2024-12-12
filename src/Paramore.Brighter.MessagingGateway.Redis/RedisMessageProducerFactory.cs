@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             foreach (var publication in _publications)
             {
-                producers[publication.Topic] = new RedisMessageProducer(_redisConfiguration, publication);
+                producers[publication.Topic!] = new RedisMessageProducer(_redisConfiguration, publication);
             }
 
             return producers;

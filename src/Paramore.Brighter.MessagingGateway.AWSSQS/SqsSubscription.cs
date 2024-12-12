@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         ///  The JSON serialization of the queue's access control policy.
         /// </summary>
-        public string IAMPolicy { get; }
+        public string? IAMPolicy { get; }
 
         /// <summary>
         /// Indicate that the Raw Message Delivery setting is enabled or disabled
@@ -74,18 +74,18 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// The policy that controls when we send messages to a DLQ after too many requeue attempts
         /// </summary>
-        public RedrivePolicy RedrivePolicy { get; }
+        public RedrivePolicy? RedrivePolicy { get; }
         
         /// <summary>
         /// The attributes of the topic. If TopicARN is set we will always assume that we do not
         /// need to create or validate the SNS Topic
         /// </summary>
-        public SnsAttributes SnsAttributes { get; }
+        public SnsAttributes? SnsAttributes { get; }
 
         /// <summary>
         /// A list of resource tags to use when creating the queue
         /// </summary>
-        public Dictionary<string, string> Tags { get; }
+        public Dictionary<string, string>? Tags { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -114,10 +114,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="rawMessageDelivery">The indication of Raw Message Delivery setting is enabled or disabled</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        public SqsSubscription(Type dataType,
-            SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+        public SqsSubscription(
+            Type dataType,
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -125,15 +126,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             int lockTimeout = 10,
             int delaySeconds = 0,
             int messageRetentionPeriod = 345600,
             TopicFindBy findTopicBy = TopicFindBy.Name,
-            string iAmPolicy = null,
-            RedrivePolicy redrivePolicy = null,
-            SnsAttributes snsAttributes = null,
-            Dictionary<string,string> tags = null,
+            string? iAmPolicy = null,
+            RedrivePolicy? redrivePolicy = null,
+            SnsAttributes? snsAttributes = null,
+            Dictionary<string,string>? tags = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool rawMessageDelivery = true,
             TimeSpan? emptyChannelDelay = null,
@@ -189,9 +190,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="rawMessageDelivery">The indication of Raw Message Delivery setting is enabled or disabled</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        public SqsSubscription(SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+        public SqsSubscription(
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -199,15 +201,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             int lockTimeout = 10,
             int delaySeconds = 0,
             int messageRetentionPeriod = 345600,
             TopicFindBy findTopicBy = TopicFindBy.Name,
-            string iAmPolicy = null,
-            RedrivePolicy redrivePolicy = null,
-            SnsAttributes snsAttributes = null,
-            Dictionary<string,string> tags = null,
+            string? iAmPolicy = null,
+            RedrivePolicy? redrivePolicy = null,
+            SnsAttributes? snsAttributes = null,
+            Dictionary<string,string>? tags = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool rawMessageDelivery = true,
             TimeSpan? emptyChannelDelay = null,

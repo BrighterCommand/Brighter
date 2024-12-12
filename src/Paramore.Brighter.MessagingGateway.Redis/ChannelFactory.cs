@@ -45,10 +45,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Creates the input channel.
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
-        /// <returns>IAmAnInputChannel.</returns>
+        /// <returns>An <see cref="IAmAChannel"/> that provides access to a stream or queue</returns>
         public IAmAChannelSync CreateChannel(Subscription subscription)
         {
-            RedisSubscription rmqSubscription = subscription as RedisSubscription;  
+            RedisSubscription? rmqSubscription = subscription as RedisSubscription;  
             if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
             
@@ -56,6 +56,25 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 subscription.ChannelName, 
                 subscription.RoutingKey, 
                 _messageConsumerFactory.Create(subscription),
+                subscription.BufferSize
+                );
+        }
+
+        /// <summary>
+        /// Creates the input channel.
+        /// </summary>
+        /// <param name="subscription">The subscription parameters with which to create the channel</param>
+        /// <returns>An <see cref="IAmAChannelAsync"/> that provides access to a stream or queue</returns>
+         public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        {
+            RedisSubscription? rmqSubscription = subscription as RedisSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
+            
+            return new ChannelAsync(
+                subscription.ChannelName, 
+                subscription.RoutingKey, 
+                _messageConsumerFactory.CreateAsync(subscription),
                 subscription.BufferSize
                 );
         }

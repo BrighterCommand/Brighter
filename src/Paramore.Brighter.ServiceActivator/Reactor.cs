@@ -38,6 +38,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Will guarantee strict ordering of the messages on the queue
     /// Predictable performance as only one thread, allows you to configure number of performers for number of threads to use
     /// Lower throughput than async
+    /// See <a href="https://www.dre.vanderbilt.edu/~schmidt/PDF/reactor-siemens.pdf">Reactor Pattern</a> for more on this approach
     /// </summary>
     /// <typeparam name="TRequest"></typeparam>
     public class Reactor<TRequest> : MessagePump<TRequest>, IAmAMessagePump where TRequest : class, IRequest

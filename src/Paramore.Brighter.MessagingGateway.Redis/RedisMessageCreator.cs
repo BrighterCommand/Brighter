@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             using var reader = new StringReader(redisMessage);
             var header = reader.ReadLine();
-            if (header.TrimEnd() != "<HEADER")
+            if (header is null || header.TrimEnd() != "<HEADER")
             {
                 s_logger.LogError("Expected message to begin with <HEADER, but was {ErrorMessage}", redisMessage);
                 return message;
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var messageHeader = ReadHeader(reader.ReadLine());
                 
             header = reader.ReadLine();
-            if (header.TrimStart() != "HEADER/>")
+            if (header is null || header.TrimStart() != "HEADER/>")
             {
                 s_logger.LogError("Expected message to find end of HEADER/>, but was {ErrorMessage}", redisMessage);
                 return message;
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="headersJson">The raw header JSON</param>
         /// <returns></returns>
-        private MessageHeader ReadHeader(string headersJson)
+        private MessageHeader ReadHeader(string? headersJson)
         {
             var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);  
             //Read Message Id

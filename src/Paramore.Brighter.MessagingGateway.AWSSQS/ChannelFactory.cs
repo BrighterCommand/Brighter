@@ -45,9 +45,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
-        private SqsSubscription _subscription;
-        private string _queueUrl;
-        private string _dlqARN;
+        private SqsSubscription? _subscription;
+        private string? _queueUrl;
+        private string? _dlqARN;
         private readonly RetryPolicy _retryPolicy;
 
         /// <summary>
@@ -58,7 +58,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             : base(awsConnection)
         {
             _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
-            var delay = Backoff.LinearBackoff(TimeSpan.FromSeconds(2), retryCount: 3, factor: 2.0, fastFirst: true);
             _retryPolicy = Policy
                 .Handle<InvalidOperationException>()
                 .WaitAndRetry(new[]
@@ -80,10 +79,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             var channel = _retryPolicy.Execute(() =>
             {
-                SqsSubscription sqsSubscription = subscription as SqsSubscription;
+                SqsSubscription? sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels)
+                EnsureTopicAsync(_subscription.RoutingKey, _subscription.FindTopicBy, _subscription.SnsAttributes, _subscription.MakeChannels)
                     .GetAwaiter()
                     .GetResult();
                 EnsureQueue();
@@ -103,10 +102,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             var channel = _retryPolicy.Execute(() =>
             {
-                SqsSubscription sqsSubscription = subscription as SqsSubscription;
+                SqsSubscription? sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels)
+                EnsureTopicAsync(_subscription.RoutingKey, _subscription.FindTopicBy, _subscription.SnsAttributes, _subscription.MakeChannels)
                     .GetAwaiter()
                     .GetResult();
                 EnsureQueue();
@@ -128,6 +127,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <exception cref="QueueDoesNotExistException">Thrown when the queue does not exist and validation is required.</exception>
         private void EnsureQueue()
         {
+            if (_subscription is null)
+                throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
+            
             if (_subscription.MakeChannels == OnMissingChannel.Assume)
                 return;
 
@@ -169,6 +171,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <exception cref="ChannelFailureException">Thrown when the queue cannot be created due to a recent deletion.</exception>
         private void CreateQueue(AmazonSQSClient sqsClient)
         {
+            if (_subscription is null)
+                throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
+            
             s_logger.LogDebug("Queue does not exist, creating queue: {ChannelName} subscribed to {Topic} on {Region}", _subscription.ChannelName.Value, _subscription.RoutingKey.Value, _awsConnection.Region);
             _queueUrl = null;
             try
@@ -244,6 +249,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <exception cref="ChannelFailureException">Thrown when the dead letter queue cannot be created due to a recent deletion.</exception>
         private void CreateDLQ(AmazonSQSClient sqsClient)
         {
+            if (_subscription is null)
+                throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
+            
+            if (_subscription.RedrivePolicy == null)
+                throw new InvalidOperationException("ChannelFactory: RedrivePolicy cannot be null when creating a DLQ");
+            
             try
             {
                 var request = new CreateQueueRequest(_subscription.RedrivePolicy.DeadlLetterQueueName.Value);
@@ -321,11 +332,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <exception cref="InvalidOperationException">Thrown when the subscription cannot be created.</exception>
         private void SubscribeToTopic(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
         {
-            var subscription = snsClient.SubscribeQueueAsync(ChannelTopicArn, sqsClient, _queueUrl).Result;
-            if (!string.IsNullOrEmpty(subscription))
+            var arn = snsClient.SubscribeQueueAsync(ChannelTopicArn, sqsClient, _queueUrl).Result;
+            if (!string.IsNullOrEmpty(arn))
             {
                 var response = snsClient.SetSubscriptionAttributesAsync(
-                        new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", _subscription.RawMessageDelivery.ToString())
+                        new SetSubscriptionAttributesRequest(arn, "RawMessageDelivery", _subscription?.RawMessageDelivery.ToString())
                     ).Result;
                 if (response.HttpStatusCode != HttpStatusCode.OK)
                 {
@@ -344,10 +355,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="client">The SQS client.</param>
         /// <param name="channelName">The name of the channel.</param>
         /// <returns>A tuple indicating whether the queue exists and its URL.</returns>
-        private (bool, string) QueueExists(AmazonSQSClient client, string channelName)
+        private (bool exists, string? queueUrl) QueueExists(AmazonSQSClient client, string? channelName)
         {
+            if (string.IsNullOrEmpty(channelName))
+                return (false, null);
+            
             bool exists = false;
-            string queueUrl = null;
+            string? queueUrl = null;
             try
             {
                 var response = client.GetQueueUrlAsync(channelName).Result;
@@ -384,7 +398,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <exception cref="BrokerUnreachableException">Thrown when the queue ARN cannot be found.</exception>
         private bool SubscriptionExists(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
         {
-            string queueArn = GetQueueARNForChannel(sqsClient);
+            string? queueArn = GetQueueArnForChannel(sqsClient);
 
             if (queueArn == null)
                 throw new BrokerUnreachableException($"Could not find queue ARN for queue {_queueUrl}");
@@ -406,23 +420,23 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         public void DeleteQueue()
         {
-            if (_subscription == null)
+            if (_subscription?.ChannelName is null)
                 return;
 
             using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
-            (bool exists, string name) queueExists = QueueExists(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
+            (bool exists, string? queueUrl) queueExists = QueueExists(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
 
-            if (queueExists.exists)
+            if (queueExists.exists && queueExists.queueUrl != null)
             {
                 try
                 {
-                    sqsClient.DeleteQueueAsync(queueExists.name)
+                    sqsClient.DeleteQueueAsync(queueExists.queueUrl)
                         .GetAwaiter()
                         .GetResult();
                 }
                 catch (Exception)
                 {
-                    s_logger.LogError("Could not delete queue {ChannelName}", queueExists.name);
+                    s_logger.LogError("Could not delete queue {ChannelName}", queueExists.queueUrl);
                 }
             }
         }
@@ -435,9 +449,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (_subscription == null)
                 return;
+            
+            if (ChannelTopicArn == null)
+                return;
 
             using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
-            (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).ValidateAsync(ChannelTopicArn).GetAwaiter().GetResult();
+            (bool exists, string? _) = new ValidateTopicByArn(snsClient).ValidateAsync(ChannelTopicArn).GetAwaiter().GetResult();
             if (exists)
             {
                 try
@@ -468,7 +485,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="sqsClient">The SQS client.</param>
         /// <returns>The ARN of the queue.</returns>
-        private string GetQueueARNForChannel(AmazonSQSClient sqsClient)
+        private string? GetQueueArnForChannel(AmazonSQSClient sqsClient)
         {
             var result = sqsClient.GetQueueAttributesAsync(
                 new GetQueueAttributesRequest { QueueUrl = _queueUrl, AttributeNames = new List<string> { "QueueArn" } }

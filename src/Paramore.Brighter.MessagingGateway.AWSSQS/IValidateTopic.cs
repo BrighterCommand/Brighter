@@ -27,6 +27,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     internal interface IValidateTopic
     {
-        Task<(bool, string TopicArn)> ValidateAsync(string topic);
+        Task<(bool, string? TopicArn)> ValidateAsync(string topic);
     }
 }

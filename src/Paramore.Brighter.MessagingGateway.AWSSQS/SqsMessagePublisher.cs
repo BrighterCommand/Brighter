@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _client = client;
         }
 
-        public async Task<string> PublishAsync(Message message)
+        public async Task<string?> PublishAsync(Message message)
         {
             var messageString = message.Body.Value;
             var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);

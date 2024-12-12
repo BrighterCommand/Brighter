@@ -46,11 +46,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        public RedisSubscription(
+        protected RedisSubscription(
             Type dataType, 
-            SubscriptionName name = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null, 
+            SubscriptionName? name = null, 
+            ChannelName? channelName = null, 
+            RoutingKey? routingKey = null, 
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
             bool runAsync = false, 
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
         /// <param name="timeOut">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelay">The period to delay adding a requeue</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -88,9 +88,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public RedisSubscription(
-            SubscriptionName name = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null, 
+            SubscriptionName? name = null, 
+            ChannelName? channelName = null, 
+            RoutingKey? routingKey = null, 
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -98,10 +98,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
             bool runAsync = false, 
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null) 
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {

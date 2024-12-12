@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private AmazonSimpleNotificationServiceClient _snsClient;
 
-        public ValidateTopicByArn(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
+        public ValidateTopicByArn(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null)
         {
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _snsClient = clientFactory.CreateSnsClient();
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _snsClient = snsClient;
         }
 
-        public virtual async Task<(bool, string TopicArn)> ValidateAsync(string topicArn)
+        public virtual async Task<(bool, string? TopicArn)> ValidateAsync(string topicArn)
         {
             //List topics does not work across accounts - GetTopicAttributesRequest works within the region
             //List Topics is rate limited to 30 ListTopic transactions per second, and can be rate limited

@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="credentials">The AWS credentials.</param>
         /// <param name="region">The AWS region.</param>
         /// <param name="clientConfigAction">An optional action to configure the client.</param>
-        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
+        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null)
             : base(credentials, region, clientConfigAction)
         {
             _region = region;
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="topic">The topic to validate.</param>
         /// <returns>A tuple indicating whether the topic is valid and its ARN.</returns>
-        public override async Task<(bool, string TopicArn)> ValidateAsync(string topic)
+        public override async Task<(bool, string? TopicArn)> ValidateAsync(string topic)
         {
             var topicArn = await GetArnFromTopic(topic);
             return await base.ValidateAsync(topicArn);

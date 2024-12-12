@@ -52,20 +52,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="awsConnection">The awsConnection details used to connect to the SQS queue.</param>
         /// <param name="queueName">The name of the SQS Queue</param>
-        /// <param name="routingKey">the SNS Topic we subscribe to</param>
         /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
         /// <param name="hasDLQ">Do we have a DLQ attached to this queue?</param>
         /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
-        public SqsMessageConsumer(
-            AWSMessagingGatewayConnection awsConnection,
-            string queueName,
-            RoutingKey routingKey,
+        public SqsMessageConsumer(AWSMessagingGatewayConnection awsConnection,
+            string? queueName,
             int batchSize = 1,
             bool hasDLQ = false,
             bool rawMessageDelivery = true)
         {
+            if (string.IsNullOrEmpty(queueName))
+                throw new ConfigurationException("QueueName is mandatory");
+            
             _clientFactory = new AWSClientFactory(awsConnection);
-            _queueName = queueName;
+             _queueName = queueName!;
             _batchSize = batchSize;
             _hasDlq = hasDLQ;
             _rawMessageDelivery = rawMessageDelivery;
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="cancellationToken">Cancels the ackowledge operation</param>
         public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
                 return;
 
             var receiptHandle = value.ToString();
@@ -126,7 +126,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="cancellationToken">Cancel the reject operation</param>
         public async Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
                 return;
 
             var receiptHandle = value.ToString();
@@ -207,7 +207,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="cancellationToken">Cancel the receive operation</param>
         public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            AmazonSQSClient client = null;
+            AmazonSQSClient? client = null;
             Amazon.SQS.Model.Message[] sqsMessages;
             try
             {
@@ -281,7 +281,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object value))
+            if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
                 return false;
             
             delay ??= TimeSpan.Zero;

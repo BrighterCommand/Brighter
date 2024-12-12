@@ -35,11 +35,7 @@ namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
     /// Used when we don't want to block for I/O, but queue on a completion port and be notified when done
-    /// Adopts a single-threaded apartment model. We have one thread, all work - messages and calbacks is queued to that a single work queue
-    /// When a callback is signalled it is queued next, and will be picked up when the current message completes or waits itself
-    /// Strict ordering of messages will be lost as no guarantee what order I/O operations will complete - do not use if strict ordering required
-    /// Only used one thread, so predictable performance, but may have many messages queued. Once queue length exceeds buffer size, we will stop reading new work
-    /// Based on https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
+    /// <remarks>See <a href ="https://www.dre.vanderbilt.edu/~schmidt/PDF/Proactor.pdf">Proactor Pattern</a></remarks> 
     /// </summary>
     /// <typeparam name="TRequest">The Request on the Data Type Channel</typeparam>
     public class Proactor<TRequest> : MessagePump<TRequest>, IAmAMessagePump where TRequest : class, IRequest
