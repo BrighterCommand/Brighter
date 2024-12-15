@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -23,18 +25,44 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Initializes an Instance of <see cref="AzureServiceBusQueueConsumer"/> for Service Bus Topics
         /// </summary>
         /// <param name="subscription">An Azure Service Bus Subscription.</param>
-        /// <param name="messageProducerSync">An instance of the Messaging Producer used for Requeue.</param>
+        /// <param name="messageProducer">An instance of the Messaging Producer used for Requeue.</param>
         /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
         /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
-        public AzureServiceBusTopicConsumer(AzureServiceBusSubscription subscription,
-            IAmAMessageProducerSync messageProducerSync,
+        public AzureServiceBusTopicConsumer(
+            AzureServiceBusSubscription subscription,
+            IAmAMessageProducer messageProducer,
             IAdministrationClientWrapper administrationClientWrapper,
-            IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
-            messageProducerSync, administrationClientWrapper)
+            IServiceBusReceiverProvider serviceBusReceiverProvider) 
+            : base(subscription, messageProducer, administrationClientWrapper)
         {
             _subscriptionName = subscription.ChannelName.Value;
             _serviceBusReceiverProvider = serviceBusReceiverProvider;
         }
+        
+        /// <summary>
+        /// Purges the specified queue name.
+        /// </summary>
+        public override void Purge()
+        {
+            Logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}",
+                SubscriptionName, Topic);
+
+            AdministrationClientWrapper.DeleteTopicAsync(Topic).GetAwaiter().GetResult();
+            EnsureChannel();
+        }
+        
+        /// <summary>
+        /// Purges the specified queue name.
+        /// </summary>
+        public override async Task PurgeAsync(CancellationToken ct = default)
+        {
+            Logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}",
+                SubscriptionName, Topic);
+
+            await AdministrationClientWrapper.DeleteTopicAsync(Topic);
+            EnsureChannel();
+        }
+
 
         protected override void GetMessageReceiverProvider()
         {
@@ -53,19 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     Topic, _subscriptionName);
             }
         }
-
-        /// <summary>
-        /// Purges the specified queue name.
-        /// </summary>
-        public override void Purge()
-        {
-            Logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}",
-                SubscriptionName, Topic);
-
-            AdministrationClientWrapper.DeleteTopicAsync(Topic);
-            EnsureChannel();
-        }
-
+ 
         protected override void EnsureChannel()
         {
             if (_subscriptionCreated || Subscription.MakeChannels.Equals(OnMissingChannel.Assume))

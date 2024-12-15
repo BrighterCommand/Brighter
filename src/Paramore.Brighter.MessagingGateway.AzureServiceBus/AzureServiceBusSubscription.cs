@@ -43,8 +43,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000)
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null)
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, emptyChannelDelay, 
                 channelFailureDelay)
@@ -91,8 +91,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000)
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
                 timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, 
                 subscriptionConfiguration, emptyChannelDelay, channelFailureDelay)

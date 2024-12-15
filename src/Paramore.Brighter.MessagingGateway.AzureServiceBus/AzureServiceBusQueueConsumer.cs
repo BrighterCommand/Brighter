@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -22,14 +24,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Initializes an Instance of <see cref="AzureServiceBusQueueConsumer"/> for Service Bus Queus
         /// </summary>
         /// <param name="subscription">An Azure Service Bus Subscription.</param>
-        /// <param name="messageProducerSync">An instance of the Messaging Producer used for Requeue.</param>
+        /// <param name="messageProducer">An instance of the Messaging Producer used for Requeue.</param>
         /// <param name="administrationClientWrapper">An Instance of Administration Client Wrapper.</param>
         /// <param name="serviceBusReceiverProvider">An Instance of <see cref="ServiceBusReceiverProvider"/>.</param>
         public AzureServiceBusQueueConsumer(AzureServiceBusSubscription subscription,
-            IAmAMessageProducerSync messageProducerSync,
+            IAmAMessageProducerSync messageProducer,
             IAdministrationClientWrapper administrationClientWrapper,
             IServiceBusReceiverProvider serviceBusReceiverProvider) : base(subscription,
-            messageProducerSync, administrationClientWrapper)
+            messageProducer, administrationClientWrapper)
         {
             _serviceBusReceiverProvider = serviceBusReceiverProvider;
         }
@@ -55,10 +57,20 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         public override void Purge()
         {
-            Logger.LogInformation("Purging messages from Queue {Queue}", 
-                Topic);
+            Logger.LogInformation("Purging messages from Queue {Queue}", Topic);
 
-            AdministrationClientWrapper.DeleteQueueAsync(Topic);
+            AdministrationClientWrapper.DeleteQueueAsync(Topic).GetAwaiter().GetResult();
+            EnsureChannel();
+        }
+        
+        /// <summary>
+        /// Purges the specified queue name.
+        /// </summary>
+        public override async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            Logger.LogInformation("Purging messages from Queue {Queue}", Topic);
+
+            await AdministrationClientWrapper.DeleteQueueAsync(Topic);
             EnsureChannel();
         }
 

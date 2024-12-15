@@ -45,25 +45,12 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         Task SendAsync(Message message);
-    }
-
-    /// <summary>
-    /// Interface IAmAMessageProducerSupportingDelay
-    /// Abstracts away the Application Layer used to push messages with async/await support onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
-    /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannelSync"/> derived class.
-    /// We provide the following default gateway applications
-    /// <list type="bullet">
-    /// <item>AMQP</item>
-    /// <item>RESTML</item>
-    /// </list>
-    /// </summary>
-    public interface IAmAnAsyncMessageProducerSupportingDelay : IAmAMessageProducerAsync, IAmAMessageGatewaySupportingDelay
-    {
+        
         /// <summary>
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0</param>
-        Task SendWithDelay(Message message, TimeSpan? delay);
+        Task SendWithDelayAsync(Message message, TimeSpan? delay);
     }
 }
