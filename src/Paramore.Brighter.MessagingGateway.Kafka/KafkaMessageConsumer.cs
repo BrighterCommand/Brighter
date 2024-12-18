@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// This dual strategy prevents low traffic topics having batches that are 'pending' for long periods, causing a risk that the consumer
     /// will end before committing its offsets.
     /// </summary>
-    public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumer
+    public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumer, IAmAMessageConsumerAsync
     {
         private IConsumer<string, byte[]> _consumer;
         private readonly KafkaMessageCreator _creator;
@@ -222,12 +222,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         /// <summary>
         /// Acknowledges the specified message.
+        /// </summary>
+        /// <remarks>
         /// We do not have autocommit on and this stores the message that has just been processed.
         /// We use the header bag to store the partition offset of the message when  reading it from Kafka. This enables us to get hold of it when
         /// we acknowledge the message via Brighter. We store the offset via the consumer, and keep an in-memory list of offsets. If we have hit the
         /// batch size we commit the offsets. if not, we trigger the sweeper, which will commit the offset once the specified time interval has passed if
         /// a batch has not done so.
-        /// </summary>
+        /// </remarks>
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
@@ -237,7 +239,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
-            
+                if (topicPartitionOffset == null)
+                {
+                    s_logger.LogInformation("Cannot acknowledge message {MessageId} as no offset data", message.Id);
+                    return;
+                }
+
                 var offset = new TopicPartitionOffset(topicPartitionOffset.TopicPartition, new Offset(topicPartitionOffset.Offset + 1));
 
                 s_logger.LogInformation("Storing offset {Offset} to topic {Topic} for partition {ChannelName}",
@@ -261,10 +268,32 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
-       /// <summary>
-        /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
-        /// thus skipping over anything that exists at that point.
+        /// <summary>
+        /// Acknowledges the specified message.
         /// </summary>
+        /// <remarks>
+        /// We do not have autocommit on and this stores the message that has just been processed.
+        /// We use the header bag to store the partition offset of the message when  reading it from Kafka. This enables us to get hold of it when
+        /// we acknowledge the message via Brighter. We store the offset via the consumer, and keep an in-memory list of offsets. If we have hit the
+        /// batch size we commit the offsets. if not, we trigger the sweeper, which will commit the offset once the specified time interval has passed if
+        /// a batch has not done so.
+        /// This just calls the sync method, which does not block
+        /// </remarks>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">A cancellation token - not used as calls the sync method which does not block</param>
+        public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            Acknowledge(message);
+            return Task.CompletedTask;
+        }
+
+       /// <summary>
+       /// Purges the specified queue name.
+       /// </summary>
+       /// <remarks>
+       /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
+       /// thus skipping over anything that exists at that point.
+       /// </remarks>
         public void Purge()
         {
             if (!_consumer.Assignment.Any())
@@ -275,12 +304,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 _consumer.Seek(new TopicPartitionOffset(topicPartition, Offset.End));
             }
         }
+       
+        /// <summary>
+        /// Purges the specified queue name.
+        /// </summary>
+        /// <remarks>
+        /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
+        /// thus skipping over anything that exists at that point.
+        /// As the Confluent library does not support async, this is sync over async and would block the main performer thread
+        /// so we use a new thread pool thread to run this and await that. This could lead to thread pool exhaustion but Purge is rarely used
+        /// in production code
+        /// </remarks>
+       /// <param name="cancellationToken"></param>
+        public Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.Run(this.Purge, cancellationToken);
+        }
 
         /// <summary>
         /// Receives from the specified topic. Used by a <see cref="Channel"/> to provide access to the stream.
+        /// </summary>
+        /// <remarks>
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
         /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message. 
-        /// </summary>
+        /// </remarks>
         /// <param name="timeOut">The timeout for receiving a message. Defaults to 300ms</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
         /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
@@ -346,14 +393,50 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
+        /// <summary>
+        /// Receives from the specified topic. Used by a <see cref="Channel"/> to provide access to the stream.
+        /// </summary>
+        /// <remarks>
+        /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
+        /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
+        /// Kafka does not support an async consumer, and probably never will. See <a href="https://github.com/confluentinc/confluent-kafka-dotnet/issues/487">Confluent Kafka</a>
+        /// As a result we use Task.Run to encapsulate the call. This will cost a thread, and be slower than the sync version. However, given our pump characeristics this would not result
+        /// in thread pool exhaustion.
+        /// </remarks>
+        /// <param name="timeOut">The timeout for receiving a message. Defaults to 300ms</param>
+        /// <param name="cancellationToken">The cancellation token - not used as this is async over sync</param>
+        /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
+        /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
+        public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return await Task.Run(() => Receive(timeOut), cancellationToken);
+        }
 
         /// <summary>
-        /// Rejects the specified message. This is just a commit of the offset to move past the record without processing it
+        /// Rejects the specified message. 
         /// </summary>
+        /// <remarks>
+        /// This is just a commit of the offset to move past the record without processing it
+        /// </remarks>
         /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
             Acknowledge(message);
+        }
+
+        /// <summary>
+        /// Rejects the specified message. 
+        /// </summary>
+        /// <remarks>
+        /// This is just a commit of the offset to move past the record without processing it
+        /// Calls the underlying sync method, which is non-blocking
+        /// </remarks>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Cancels the reject; not used as non-blocking</param>
+        public Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            Reject(message);
+            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -365,6 +448,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
             return false;
+        }
+
+        /// <summary>
+        /// Requeues the specified message. A no-op on Kafka as the stream is immutable
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="delay">Number of seconds to delay delivery of the message.</param>
+        /// <param name="cancellationToken">Cancellation token - not used as not implemented for Kafka</param>
+        /// <returns>False as no requeue support on Kafka</returns>
+        public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.FromResult(false);
         }
         
         private void CheckHasPartitions()
@@ -630,5 +725,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             GC.SuppressFinalize(this);
         }
 
-   }
+       
+    }
 }

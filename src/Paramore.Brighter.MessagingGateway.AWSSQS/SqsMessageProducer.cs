@@ -118,11 +118,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            SendAsync(message).Wait();
+            SendAsync(message).GetAwaiter().GetResult();
         }
 
         /// <summary>
-        /// Sends the specified message.
+        /// Sends the specified message, with a delay.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">The sending delay</param>
@@ -133,6 +133,18 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             Send(message);
         }
         
+        /// <summary>
+        /// Sends the specified message, with a delay
+        /// </summary>
+        /// <param name="message">The message</param>
+        /// <param name="delay">The sending delay</param>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        {
+            //TODO: Delay should set the visibility timeout
+            await SendAsync(message);
+        }
+
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

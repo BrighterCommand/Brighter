@@ -152,8 +152,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             EnsureTopic();
         }
- 
-
+        
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <exception cref="ArgumentNullException">The message was missing</exception>
+        /// <exception cref="ChannelFailureException">The Kafka client  has entered an unrecoverable state</exception>
         public void Send(Message message)
         {
             if (message == null)
@@ -220,7 +225,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Send(message);
         }
         
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        {
+            //TODO: No delay support implemented
+            await SendAsync(message);
+        }
         
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <remarks>
+        ///  Usage of the Kafka async producer is much slower than the sync producer. This is because the async producer
+        /// produces a single message and waits for the result before producing the next message. By contrast the synchronous
+        /// producer queues work and uses a dedicated thread to dispatch
+        /// </remarks>
+        /// <param name="message">The message.</param>
         public async Task SendAsync(Message message)
         {
             if (message == null)
@@ -271,6 +290,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
+        /// <summary>
+        /// Dispose of the producer 
+        /// </summary>
+        /// <param name="disposing">Are we disposing or being called by the GC</param>
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposedValue)
