@@ -63,6 +63,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
        }
 
         /// <summary>
+        /// Acknowledge the message, removing it from the queue 
+        /// </summary>
+        /// <remarks>
         /// This a 'do nothing operation' as with Redis we pop the message from the queue to read;
         /// this allows us to have competing consumers, and thus a message is always 'consumed' even
         /// if we fail to process it.
@@ -70,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// the job to run to completion. Brighter uses run to completion if shut down properly, but not if you
         /// just kill the process.
         /// If you need the level of reliability that unprocessed messages that return to the queue don't use Redis.
-        /// </summary>
+        /// </remarks>
         /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
@@ -79,6 +82,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
         
         /// <summary>
+        /// Acknowledge the message, removing it from the queue 
+        /// </summary>
+        /// <remarks>
         /// This a 'do nothing operation' as with Redis we pop the message from the queue to read;
         /// this allows us to have competing consumers, and thus a message is always 'consumed' even
         /// if we fail to process it.
@@ -86,18 +92,22 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// the job to run to completion. Brighter uses run to completion if shut down properly, but not if you
         /// just kill the process.
         /// If you need the level of reliability that unprocessed messages that return to the queue don't use Redis.
-        /// </summary>
+        /// This is async over sync as the underlying operation does not block
+        /// </remarks>
+        /// <param name="message"></param>
         public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
             Acknowledge(message);
             return Task.CompletedTask;
         }
 
-
         /// <summary>
+        /// Dispose of the Redis consumer
+        /// </summary>
+        /// <remarks>
         /// Free up our RedisMangerPool, connections not held open between invocations of Receive, so you can create
         /// a consumer and keep it for program lifetime, disposing at the end only, without fear of a leak
-        /// </summary>
+        /// </remarks> 
         public void Dispose()
         {
             DisposePool();
