@@ -37,7 +37,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //This creates the infrastructure we want
             new QueueFactory(rmqConnection, queueName, new RoutingKeys(routingKey))
-                .Create(TimeSpan.FromMilliseconds(3000));
+                .CreateAsync()
+                .GetAwaiter()
+                .GetResult();
         }
         
         [Fact]

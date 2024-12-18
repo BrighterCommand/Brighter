@@ -16,6 +16,9 @@ public class FakeMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducer
         return Task.CompletedTask;
     }
 
+    public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        => Send(message);
+
     public void Send(Message message)
         => SentMessages.Add(message);
 

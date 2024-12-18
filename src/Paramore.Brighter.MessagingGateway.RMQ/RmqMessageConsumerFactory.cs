@@ -61,5 +61,25 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 rmqSubscription.MaxQueueLength,
                 subscription.MakeChannels);
         }
+
+        public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
+        {
+            RmqSubscription rmqSubscription = subscription as RmqSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
+            
+            return new RmqMessageConsumer(
+                _rmqConnection, 
+                rmqSubscription.ChannelName, //RMQ Queue Name 
+                rmqSubscription.RoutingKey, 
+                rmqSubscription.IsDurable, 
+                rmqSubscription.HighAvailability,
+                rmqSubscription.BufferSize,
+                rmqSubscription.DeadLetterChannelName,
+                rmqSubscription.DeadLetterRoutingKey,
+                rmqSubscription.Ttl,
+                rmqSubscription.MaxQueueLength,
+                subscription.MakeChannels);
+        }
     }
 }

@@ -63,5 +63,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 maxQueueLength: subscription.BufferSize
                 );
         }
+
+        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        {
+            RmqSubscription rmqSubscription = subscription as RmqSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
+
+            var messageConsumer = _messageConsumerFactory.CreateAsync(rmqSubscription);
+            
+            return new ChannelAsync(
+                channelName: subscription.ChannelName, 
+                routingKey: subscription.RoutingKey, 
+                messageConsumer: messageConsumer, 
+                maxQueueLength: subscription.BufferSize
+            );    
+        }
     }
 }

@@ -27,7 +27,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_channelName, routingKey:_routingKey, isDurable:false, highAvailability:false, batchSize:BatchSize);
             
             //create the queue, so that we can receive messages posted to it
-            new QueueFactory(rmqConnection, _channelName, new RoutingKeys([_routingKey])).Create(TimeSpan.FromMilliseconds(3000));
+            new QueueFactory(rmqConnection, _channelName, new RoutingKeys(_routingKey)).CreateAsync().GetAwaiter().GetResult();
         }
 
         [Fact]
