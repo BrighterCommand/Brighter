@@ -3,7 +3,7 @@
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     /// <summary>
-    /// Creates instances of <see cref="IAmAChannel"/>channels using Azure Service Bus.
+    /// Creates instances of <see cref="IAmAChannelSync"/>channels using Azure Service Bus.
     /// </summary>
     public class AzureServiceBusChannelFactory : IAmAChannelFactory
     {
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="subscription">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateChannel(Subscription subscription)
         {
             if (!(subscription is AzureServiceBusSubscription azureServiceBusSubscription))
             {
@@ -44,6 +44,34 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 messageConsumer: messageConsumer,
                 maxQueueLength: subscription.BufferSize
             );
+        }
+
+        /// <summary>
+        /// Creates the input channel.
+        /// </summary>
+        /// <param name="subscription">The parameters with which to create the channel for the transport</param>
+        /// <returns>IAmAnInputChannel.</returns>
+        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        {
+            if (!(subscription is AzureServiceBusSubscription azureServiceBusSubscription))
+            {
+                throw new ConfigurationException("We expect an AzureServiceBusSubscription or AzureServiceBusSubscription<T> as a parameter");
+            }
+
+            if (subscription.TimeOut < TimeSpan.FromMilliseconds(400))
+            {
+                throw new ArgumentException("The minimum allowed timeout is 400 milliseconds");
+            }
+
+            IAmAMessageConsumerAsync messageConsumer =
+                _azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
+
+            return new ChannelAsync(
+                channelName: subscription.ChannelName,
+                routingKey: subscription.RoutingKey,
+                messageConsumer: messageConsumer,
+                maxQueueLength: subscription.BufferSize
+                );
         }
     }
 }

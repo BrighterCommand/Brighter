@@ -1,6 +1,7 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,12 +23,37 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace HelloWorldInternalBus
+namespace Paramore.Brighter.ServiceActivator;
+
+internal class RejectOp
 {
-    public class GreetingCommand(string name) : Command(Guid.NewGuid())
+    public static void RunReject(Func<Message, Task> act, Message message)
     {
-        public string Name { get; } = name;
+        if (act == null) throw new ArgumentNullException(nameof(act));
+
+        var prevCtx = SynchronizationContext.Current;
+        try
+        {
+            // Establish the new context
+            var context = new BrighterSynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(context);
+
+            context.OperationStarted();
+
+            act(message);
+
+            context.OperationCompleted();
+
+            // Pump continuations and propagate any exceptions
+            context.RunOnCurrentThread();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(prevCtx);
+        }
     }
 }

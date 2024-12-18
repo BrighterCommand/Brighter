@@ -30,13 +30,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaSubscription : Subscription
     {
         /// <summary>
-        /// <summary>
         /// We commit processed work (marked as acked or rejected) when a batch size worth of work has been completed
         /// If the batch size is 1, then there is a low risk of offsets not being committed and therefore duplicates appearing
         /// in the stream, but the latency per request and load on the broker increases. As the batch size rises the risk of
         /// a crashing worker process failing to commit a batch that is then represented rises.
         /// </summary>
-        public long CommitBatchSize { get; set; } = 10;
+        public long CommitBatchSize { get; set; }
         
         /// <summary>
         /// Only one consumer in a group can read from a partition at any one time; this preserves ordering
@@ -47,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Default to read only committed messages, change if you want to read uncommited messages. May cause duplicates.
         /// </summary>
-        public IsolationLevel IsolationLevel { get; set; } = IsolationLevel.ReadCommitted;
+        public IsolationLevel IsolationLevel { get; set; }
         
         /// <summary>
         /// How often the consumer needs to poll for new messages to be considered alive, polling greater than this interval triggers a rebalance
@@ -59,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// How many partitions on this topic?
         /// </summary>
-        public int NumPartitions { get; set; } = 1;
+        public int NumPartitions { get; set; }
 
         /// <summary>
         /// What do we do if there is no offset stored in ZooKeeper for this consumer
@@ -67,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// AutoOffsetReset.Latest - Start from now i.e. only consume messages after we start
         /// AutoOffsetReset.Error - Consider it an error to be lacking a reset
         /// </summary>
-        public AutoOffsetReset OffsetDefault { get; set; } = AutoOffsetReset.Earliest;
+        public AutoOffsetReset OffsetDefault { get; set; }
         
         /// <summary>
         /// How should we assign partitions to consumers in the group?
@@ -85,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// What is the replication factor? How many nodes is the topic copied to on the broker?
         /// </summary>
-        public short ReplicationFactor { get; set; } = 1;
+        public short ReplicationFactor { get; set; }
         
         /// <summary>
         /// If Kafka does not receive a heartbeat from the consumer within this time window, trigger a re-balance
@@ -154,8 +153,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000,
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
@@ -228,8 +227,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000,
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeOut, 
                 requeueCount, requeueDelay, unacceptableMessageLimit, offsetDefault, commitBatchSize, 

@@ -112,7 +112,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
                 new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000))
             );
             
-            var messagePump = new MessagePumpBlocking<MyRequest>(provider, _messageMapperRegistry, 
+            var messagePump = new Reactor<MyRequest>(provider, _messageMapperRegistry, 
                     new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 

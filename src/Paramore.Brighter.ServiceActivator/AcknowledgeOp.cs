@@ -23,22 +23,42 @@ THE SOFTWARE. */
 
 #endregion
 
-using HelloWorld;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-var host = Host.CreateDefaultBuilder()
-    .ConfigureServices((context, collection) =>
+namespace Paramore.Brighter.ServiceActivator;
+
+internal static class AcknowledgeOp
+{
+    public static void RunAsync(Func<Message, Task> act, Message message)
     {
-        collection.AddBrighter().AutoFromAssemblies();
-    })
-    .UseConsoleLifetime()
-    .Build();
+        if (act == null) throw new ArgumentNullException(nameof(act));
 
-var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
+        var prevCtx = SynchronizationContext.Current;
+        try
+        {
+            // Establish the new context
+            var context = new BrighterSynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(context);
 
-commandProcessor.Send(new GreetingCommand("Ian"));
+            context.OperationStarted();
 
-host.WaitForShutdown();
+            var future = act(message);
+
+            context.OperationCompleted();
+
+            // Pump continuations and propagate any exceptions
+            context.RunOnCurrentThread();
+
+            future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
+
+            // Pump continuations and propagate any exceptions
+            context.RunOnCurrentThread();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(prevCtx);
+        }
+    }
+}

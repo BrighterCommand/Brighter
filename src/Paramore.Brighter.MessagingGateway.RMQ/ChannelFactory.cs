@@ -28,7 +28,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class RMQInputChannelFactory.
-    /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
+    /// Creates instances of <see cref="IAmAChannelSync"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
     public class ChannelFactory : IAmAChannelFactory
     {
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="subscription">An RmqSubscription with parameters to create the queue with</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateChannel(Subscription subscription)
         {
             RmqSubscription rmqSubscription = subscription as RmqSubscription;  
             if (rmqSubscription == null)

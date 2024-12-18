@@ -192,7 +192,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="timeout">Time to delay delivery of the message.</param>
+        /// <param name="timeout">Time to delay delivery of the message. Only supported if RMQ delay supported</param>
         /// <returns>True if message deleted, false otherwise</returns>
         public bool Requeue(Message message, TimeSpan? timeout = null)
         {
@@ -210,7 +210,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 }
                 else
                 {
-                    if (timeout > TimeSpan.Zero) Task.Delay(timeout.Value).Wait();
+                    //can't block thread 
                     rmqMessagePublisher.RequeueMessage(message, _queueName, TimeSpan.Zero);
                 }
 

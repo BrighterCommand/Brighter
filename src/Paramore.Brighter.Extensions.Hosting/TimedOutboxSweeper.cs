@@ -129,7 +129,10 @@ namespace Paramore.Brighter.Extensions.Hosting
                 }
                 finally
                 {
-                    _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None).Wait();
+                    //on a timer thread, so blocking is OK
+                    _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None)
+                        .GetAwaiter()
+                        .GetResult();
                     scope.Dispose();
                 }
             }

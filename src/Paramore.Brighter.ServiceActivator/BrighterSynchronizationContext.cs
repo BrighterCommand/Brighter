@@ -1,57 +1,120 @@
+
+
+//Based on:
+// https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
+// https://www.codeproject.com/Articles/5274751/Understanding-the-SynchronizationContext-in-NET-wi
+// https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
+
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
-
-//Based on https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
 
 namespace Paramore.Brighter.ServiceActivator
 {
-    internal class BrighterSynchronizationContext : SynchronizationContext
+    /// <summary>
+    /// Provides a SynchronizationContext that processes work on a single thread.
+    /// </summary>
+    /// <remarks>
+    /// Adopts a single-threaded apartment model. We have one thread, all work - messages and callbacks are queued to a single work queue.
+    /// When a callback is signaled, it is queued next and will be picked up when the current message completes or waits itself.
+    /// Strict ordering of messages will be lost as there is no guarantee what order I/O operations will complete - do not use if strict ordering is required.
+    /// Only uses one thread, so predictable performance, but may have many messages queued. Once queue length exceeds buffer size, we will stop reading new work.
+    /// </remarks>
+    public class BrighterSynchronizationContext : SynchronizationContext
     {
-       private readonly BlockingCollection<KeyValuePair<SendOrPostCallback, object?>> _queue = new();
-       private int _operationCount;
-       
-       /// <summary>
-       /// When we have completed the operations, we can exit
-       /// </summary>
-       public override void OperationCompleted()
-       {
-           if (Interlocked.Decrement(ref _operationCount) == 0)
-               Complete();
-       }
-       
-       /// <summary>
-       /// Tracks the number of ongoing operations, so we know when 'done'
-       /// </summary>
-       public override void OperationStarted()
-       {
-           Interlocked.Increment(ref _operationCount);
-       }
+        private readonly BlockingCollection<Message> _queue = new();
+        private int _operationCount;
+        private readonly int _ownedThreadId = Environment.CurrentManagedThreadId;
 
-        /// <summary>Dispatches an asynchronous message to the synchronization context.</summary>
-        /// <param name="d">The System.Threading.SendOrPostCallback delegate to call.</param>
-        /// <param name="state">The object passed to the delegate.</param>
+        /// <inheritdoc/>
+        public override void OperationCompleted()
+        {
+            if (Interlocked.Decrement(ref _operationCount) == 0)
+                Complete();
+        }
+
+        /// <inheritdoc/>
+        public override void OperationStarted()
+        {
+            Interlocked.Increment(ref _operationCount);
+        }
+
+        /// <inheritdoc/>
         public override void Post(SendOrPostCallback d, object? state)
         {
             if (d == null) throw new ArgumentNullException(nameof(d));
-            _queue.Add(new KeyValuePair<SendOrPostCallback, object?>(d, state));
+            _queue.Add(new Message(d, state));
         }
 
-        /// <summary>Not supported.</summary>
+        /// <inheritdoc/>
         public override void Send(SendOrPostCallback d, object? state)
         {
-            throw new NotSupportedException("Synchronously sending is not supported.");
+            if (_ownedThreadId == Environment.CurrentManagedThreadId)
+            {
+                try
+                {
+                    d(state);
+                }
+                catch (Exception ex)
+                {
+                    throw new TargetInvocationException(ex);
+                }
+            }
+            else
+            {
+                Exception? caughtException = null;
+                var evt = new ManualResetEventSlim();
+                try
+                {
+                    _queue.Add(new Message(s =>
+                        {
+                            try { d(state); }
+                            catch (Exception ex) { caughtException = ex; }
+                            finally { evt.Set(); }
+                        },
+                        state,
+                        evt));
+
+                    evt.Wait();
+
+                    if (caughtException != null)
+                    {
+                        throw new TargetInvocationException(caughtException);
+                    }
+                }
+                finally
+                {
+                    evt.Dispose();
+                }
+            }
         }
 
-        /// <summary>Runs a loop to process all queued work items.</summary>
+        /// <summary>
+        /// Runs a loop to process all queued work items.
+        /// </summary>
         public void RunOnCurrentThread()
         {
-            foreach (var workItem in _queue.GetConsumingEnumerable())
-                workItem.Key(workItem.Value);
+            foreach (var message in _queue.GetConsumingEnumerable())
+            {
+                message.Callback(message.State);
+                message.FinishedEvent?.Set();
+            }
         }
 
-        /// <summary>Notifies the context that no more work will arrive.</summary>
-        private void Complete() { _queue.CompleteAdding(); }
+        /// <summary>
+        /// Notifies the context that no more work will arrive.
+        /// </summary>
+        private void Complete()
+        {
+            _queue.CompleteAdding();
+        }
+
+        private struct Message(SendOrPostCallback callback, object? state, ManualResetEventSlim? finishedEvent = null)
+        {
+            public readonly SendOrPostCallback Callback = callback;
+            public readonly object? State = state;
+            public readonly ManualResetEventSlim? FinishedEvent = finishedEvent;
+        }
     }
 }

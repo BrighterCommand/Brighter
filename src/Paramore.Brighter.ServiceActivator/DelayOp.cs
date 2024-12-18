@@ -1,6 +1,7 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,22 +24,36 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter;
-using Paramore.Brighter.Logging.Attributes;
 
-namespace HelloWorldAsync
+namespace Paramore.Brighter.ServiceActivator;
+
+internal static class DelayOp
 {
-    internal class GreetingCommandRequestHandlerAsync : RequestHandlerAsync<GreetingCommand>
+    public static void RunAsync(Func<TimeSpan, Task> act, TimeSpan delay)
     {
-        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
-        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)
-        {
-            Console.WriteLine("Hello {0}}", command.Name);
+        if (act == null) throw new ArgumentNullException(nameof(act));
 
-            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+        var prevCtx = SynchronizationContext.Current;
+        try
+        {
+            // Establish the new context
+            var context = new BrighterSynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(context);
+
+            context.OperationStarted();
+
+            var future = act(delay);
+
+            future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
+
+            // Pump continuations and propagate any exceptions
+            context.RunOnCurrentThread();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(prevCtx);
         }
     }
 }

@@ -102,7 +102,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delay">Delay to delivery of the message.</param>
+        /// <param name="delay">Delay to delivery of the message. Only available if delay supported on RMQ</param>
         /// <returns>Task.</returns>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
@@ -137,8 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     }
                     else
                     {
-                        //TODO: Replace with a Timer, don't block
-                        Task.Delay(delay.Value).Wait();
+                        //don't block by waiting if delay not supported 
                         rmqMessagePublisher.PublishMessage(message, TimeSpan.Zero);
                     }
 

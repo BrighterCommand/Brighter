@@ -148,13 +148,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         /// <summary>
         /// Send the specified message with specified delay
+        /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Delay to delivery of the message.</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
             delay ??= TimeSpan.Zero;
-            SendWithDelayAsync(message, delay).Wait();
+            SendWithDelayAsync(message, delay)
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <summary>

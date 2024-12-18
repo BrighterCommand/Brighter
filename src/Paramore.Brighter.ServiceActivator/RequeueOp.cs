@@ -1,6 +1,7 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,12 +24,38 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace HelloWorld
+namespace Paramore.Brighter.ServiceActivator;
+
+internal class RequeueOp
 {
-    public class GreetingCommand(string name) : Command(Guid.NewGuid())
+    public static bool RunAsync(Func<Message, Task<bool>> act, Message message)
     {
-        public string Name { get; } = name;
+        if (act == null) throw new ArgumentNullException(nameof(act));
+
+        var prevCtx = SynchronizationContext.Current;
+        try
+        {
+            // Establish the new context
+            var context = new BrighterSynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(context);
+
+            context.OperationStarted();
+
+            var future = act(message);
+
+            future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
+
+            // Pump continuations and propagate any exceptions
+            context.RunOnCurrentThread();
+
+            return future.GetAwaiter().GetResult();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(prevCtx);
+        }
     }
 }

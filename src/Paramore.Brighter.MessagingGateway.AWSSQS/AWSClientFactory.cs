@@ -9,9 +9,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     internal class AWSClientFactory
     {
-        private AWSCredentials _credentials;
-        private RegionEndpoint _region;
-        private Action<ClientConfig> _clientConfigAction;
+        private readonly AWSCredentials _credentials;
+        private readonly RegionEndpoint _region;
+        private readonly Action<ClientConfig>? _clientConfigAction;
 
         public AWSClientFactory(AWSMessagingGatewayConnection connection)
         {
@@ -20,7 +20,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _clientConfigAction = connection.ClientConfigAction;
         }
 
-        public AWSClientFactory(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction)
+        public AWSClientFactory(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction)
         {
             _credentials = credentials;
             _region = region;

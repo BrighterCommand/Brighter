@@ -132,6 +132,28 @@ namespace Paramore.Brighter
                 TimeSpan.Zero
             );
         }
+  
+        /// <summary>
+        /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay
+        /// The delay is simulated by the <see cref="TimeProvider"/>
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="delay">The delay of the send</param>
+        public Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        {
+            delay ??= TimeSpan.FromMilliseconds(0);
+
+            //we don't want to block, so we use a timer to invoke the requeue after a delay
+            _requeueTimer = timeProvider.CreateTimer(
+                msg => SendAsync((Message)msg!),
+                message,
+                delay.Value,
+                TimeSpan.Zero
+            );
+            
+            return Task.CompletedTask;
+        }
+
 
         private void SendNoDelay(Message message)
         {

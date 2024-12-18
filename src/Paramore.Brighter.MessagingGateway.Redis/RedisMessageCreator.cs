@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             using var reader = new StringReader(redisMessage);
             var header = reader.ReadLine();
-            if (header.TrimEnd() != "<HEADER")
+            if (header is null || header.TrimEnd() != "<HEADER")
             {
                 s_logger.LogError("Expected message to begin with <HEADER, but was {ErrorMessage}", redisMessage);
                 return message;
@@ -69,13 +69,19 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var messageHeader = ReadHeader(reader.ReadLine());
                 
             header = reader.ReadLine();
-            if (header.TrimStart() != "HEADER/>")
+            if (header is null || header.TrimStart() != "HEADER/>")
             {
                 s_logger.LogError("Expected message to find end of HEADER/>, but was {ErrorMessage}", redisMessage);
                 return message;
             }
 
             var body = reader.ReadLine();
+            if (body is null)
+            {
+                s_logger.LogError("Expected message to have a body, but was {ErrorMessage}", redisMessage);
+                return message;
+            }
+            
             if (body.TrimEnd() != "<BODY")
             {
                 s_logger.LogError("Expected message to have beginning of <BODY, but was {ErrorMessage}", redisMessage);
@@ -85,6 +91,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var messageBody = ReadBody(reader);
 
             body = reader.ReadLine();
+            if (body is null)
+            {
+                s_logger.LogError("Expected message to have a body, but was {ErrorMessage}", redisMessage);
+                return message;
+            }
+            
             if (body.TrimStart() != "BODY/>")
             {
                 s_logger.LogError("Expected message to find end of BODY/>, but was {ErrorMessage}", redisMessage);
@@ -108,9 +120,24 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="headersJson">The raw header JSON</param>
         /// <returns></returns>
-        private MessageHeader ReadHeader(string headersJson)
+        private MessageHeader ReadHeader(string? headersJson)
         {
+            if (headersJson is null)
+            {
+                return FailureMessageHeader(
+                    new HeaderResult<RoutingKey>(RoutingKey.Empty, false), 
+                    new HeaderResult<string>(string.Empty, false)
+                );
+            }
+            
             var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);  
+            
+            if (headers is null)
+                return FailureMessageHeader(
+                    new HeaderResult<RoutingKey>(RoutingKey.Empty, false), 
+                    new HeaderResult<string>(string.Empty, false)
+                );
+            
             //Read Message Id
             var messageId = ReadMessageId(headers);
             //Read TimeStamp
@@ -199,7 +226,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private HeaderResult<string> ReadContentType(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.CONTENT_TYPE, out string header))
+            if (headers.TryGetValue(HeaderNames.CONTENT_TYPE, out string? header))
             {
                 return new HeaderResult<string>(header, true);
             }
@@ -210,7 +237,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             var newCorrelationId = string.Empty;
             
-            if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string correlatonId))
+            if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string? correlatonId))
             {
                 return new HeaderResult<string>(correlatonId, true);
             }
@@ -220,7 +247,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private HeaderResult<TimeSpan> ReadDelay(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out string header))
+            if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out string? header))
             {
                 if (int.TryParse(header, out int delayedMilliseconds))
                 {
@@ -232,7 +259,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out string header))
+            if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out string? header))
             {
                 if (int.TryParse(header, out int handledCount))
                 {
@@ -254,9 +281,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, string> headers)
         {
 
-            if (headers.TryGetValue(HeaderNames.BAG, out string header))
+            if (headers.TryGetValue(HeaderNames.BAG, out string? header))
             {
                 var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(header, JsonSerialisationOptions.Options);
+                if (bag is null)
+                    return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
+                
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
             return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
@@ -265,7 +295,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
          private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.MESSAGE_TYPE, out string header))
+            if (headers.TryGetValue(HeaderNames.MESSAGE_TYPE, out string? header))
             {
                 if (Enum.TryParse(header, out MessageType messageType))
                 {
@@ -278,7 +308,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private HeaderResult<string> ReadMessageId(IDictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string header))
+            if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string? header))
             {
                     return new HeaderResult<string>(header, true);
             }
@@ -288,7 +318,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private HeaderResult<string> ReadReplyTo(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.REPLY_TO, out string header))
+            if (headers.TryGetValue(HeaderNames.REPLY_TO, out string? header))
             {
                 return new HeaderResult<string>(header, true);
             }
@@ -302,7 +332,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>The result, always a success because we don't break for missing timestamp, just use now</returns>
         private HeaderResult<DateTime> ReadTimeStamp(Dictionary<string, string> headers)
         {
-            if (headers.TryGetValue(HeaderNames.TIMESTAMP, out string header))
+            if (headers.TryGetValue(HeaderNames.TIMESTAMP, out string? header))
             {
                 if(DateTime.TryParse(header, out DateTime timestamp))
                 {
@@ -315,7 +345,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private HeaderResult<RoutingKey> ReadTopic(Dictionary<string, string> headers)
         {
             var topic = string.Empty;
-            if (headers.TryGetValue(HeaderNames.TOPIC, out string header))
+            if (headers.TryGetValue(HeaderNames.TOPIC, out string? header))
             {
                 return new HeaderResult<RoutingKey>(new RoutingKey(header), false);
             }

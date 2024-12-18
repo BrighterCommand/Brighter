@@ -72,5 +72,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     receiverProvider);
             }
         }
+
+        /// <summary>
+        /// Creates a consumer for the specified queue.
+        /// </summary>
+        /// <param name="subscription">The queue to connect to</param>
+        /// <returns>IAmAMessageConsumer</returns>
+        public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
+        {
+            var consumer = Create(subscription) as IAmAMessageConsumerAsync;   
+            if (consumer == null)
+                throw new ChannelFailureException("AzureServiceBusConsumerFactory: Failed to create an async consumer");
+            return consumer;
+        }
     }
 }

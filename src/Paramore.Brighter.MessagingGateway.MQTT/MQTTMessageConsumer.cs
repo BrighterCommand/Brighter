@@ -30,6 +30,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MQTTMessageConsumer" /> class.
+        /// Sync over Async within constructor
         /// </summary>
         /// <param name="configuration"></param>
         public MQTTMessageConsumer(MQTTMessagingGatewayConsumerConfiguration configuration)
@@ -62,7 +63,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             });
 
             Task connectTask = Connect(configuration.ConnectionAttempts);
-            connectTask.Wait();
+            connectTask
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <summary>

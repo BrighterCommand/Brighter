@@ -1,6 +1,7 @@
-#region Licence
+﻿#region Licence
+
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,18 +24,40 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter;
-using Paramore.Brighter.Logging.Attributes;
+using System.Threading;
 
-namespace HelloWorld
+namespace Paramore.Brighter.ServiceActivator;
+
+internal static class DispatchOp
 {
-    internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
+    public static void RunAsync<TRequest>(
+        Action<TRequest, RequestContext, CancellationToken> act, TRequest request,
+        RequestContext requestContext,
+        CancellationToken cancellationToken = default
+    )
     {
-        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-        public override GreetingCommand Handle(GreetingCommand command)
+        if (act == null) throw new ArgumentNullException(nameof(act));
+
+        var prevCtx = SynchronizationContext.Current;
+
+        try
         {
-            Console.WriteLine("Hello {0}", command.Name);
-            return base.Handle(command);
+            // Establish the new context
+            var context = new BrighterSynchronizationContext();
+            SynchronizationContext.SetSynchronizationContext(context);
+
+            context.OperationStarted();
+
+            act(request, requestContext, cancellationToken);
+
+            context.OperationCompleted();
+
+            // Pump continuations and propagate any exceptions
+            context.RunOnCurrentThread();
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(prevCtx);
         }
     }
 }

@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
     public class ChannelAcknowledgeTests
     {
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly InternalBus _bus = new();
         private readonly FakeTimeProvider _fakeTimeProvider = new();
         private readonly RoutingKey Topic = new("myTopic");

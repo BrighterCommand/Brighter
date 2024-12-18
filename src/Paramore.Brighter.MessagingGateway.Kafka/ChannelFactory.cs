@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns></returns>
-        public IAmAChannel CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateChannel(Subscription subscription)
         {
             KafkaSubscription rmqSubscription = subscription as KafkaSubscription;  
             if (rmqSubscription == null)
@@ -54,6 +54,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 subscription.ChannelName, 
                 subscription.RoutingKey, 
                 _kafkaMessageConsumerFactory.Create(subscription), 
+                subscription.BufferSize);
+        }
+
+        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        {
+            KafkaSubscription rmqSubscription = subscription as KafkaSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an KafkaSubscription or KafkaSubscription<T> as a parameter");
+            
+            return new ChannelAsync(
+                subscription.ChannelName, 
+                subscription.RoutingKey, 
+                _kafkaMessageConsumerFactory.CreateAsync(subscription), 
                 subscription.BufferSize);
         }
     }

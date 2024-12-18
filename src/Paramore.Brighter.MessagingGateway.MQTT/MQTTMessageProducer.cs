@@ -60,20 +60,28 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             await _mqttMessagePublisher.PublishMessageAsync(message);
         }
-
-
+        
         /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Delay to delivery of the message.</param>
+        /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            delay ??= TimeSpan.Zero;
-            
-            //TODO: This is a blocking call, we should replace with a Time call
-            Task.Delay(delay.Value);
+            // delay is not natively supported
             Send(message);
         }
+        
+        /// <summary>
+        /// Sens the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        {
+            // delay is not natively supported
+            await SendAsync(message);
+        }
+
     }
 }
