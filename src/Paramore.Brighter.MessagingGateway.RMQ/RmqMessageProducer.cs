@@ -103,8 +103,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// <param name="message">The message.</param>
     /// <param name="delay">Delay to delivery of the message.</param>
     /// <returns>Task.</returns>
-    public void SendWithDelay(Message message, TimeSpan? delay = null)
-        => SendWithDelayAsync(message, delay).GetAwaiter().GetResult();
+    public void SendWithDelay(Message message, TimeSpan? delay = null) => SendWithDelayAsync(message, delay).GetAwaiter().GetResult();
 
     /// <summary>
     /// Sends the specified message
@@ -112,11 +111,13 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public async Task SendAsync(Message message)
-        => await SendWithDelayAsync(message, null);
+    public async Task SendAsync(Message message) => await SendWithDelayAsync(message, null);
 
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
     {
+        if (Connection.Exchange is null) throw new ConfigurationException("RmqMessageProducer: Exchange is not set");
+        if (Connection.AmpqUri is null) throw new ConfigurationException("RmqMessageProducer: Broker URL is not set");
+        
         delay ??= TimeSpan.Zero;
 
         await s_lock.WaitAsync();
@@ -124,7 +125,10 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
         {
             s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {ExchangeName}",
                 Connection.Exchange.Name);
+            
             EnsureBroker(makeExchange: _publication.MakeChannels);
+            
+            if (Channel is null) throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
 
             var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
 

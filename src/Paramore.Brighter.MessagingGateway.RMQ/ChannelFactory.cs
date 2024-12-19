@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAChannelSync CreateChannel(Subscription subscription)
         {
-            RmqSubscription rmqSubscription = subscription as RmqSubscription;  
+            RmqSubscription? rmqSubscription = subscription as RmqSubscription;  
             if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
         {
-            RmqSubscription rmqSubscription = subscription as RmqSubscription;  
+            RmqSubscription? rmqSubscription = subscription as RmqSubscription;  
             if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 

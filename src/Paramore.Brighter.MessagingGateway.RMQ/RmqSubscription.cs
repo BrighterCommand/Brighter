@@ -32,12 +32,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// The name of  the queue to send rejects messages to
         /// </summary>
-        public ChannelName DeadLetterChannelName { get; }
+        public ChannelName? DeadLetterChannelName { get; }
 
         /// <summary>
         /// The routing key for dead letter messages
         /// </summary>
-        public RoutingKey DeadLetterRoutingKey { get; }
+        public RoutingKey? DeadLetterRoutingKey { get; }
         
         /// <summary>
         /// Is the channel mirrored across node in the cluster
@@ -90,9 +90,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="maxQueueLength">The maximum number of messages in a queue before we reject messages; defaults to no limit</param>
         public RmqSubscription(
             Type dataType, 
-            SubscriptionName name = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null, 
+            SubscriptionName? name = null, 
+            ChannelName? channelName = null, 
+            RoutingKey? routingKey = null, 
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -101,10 +101,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             int unacceptableMessageLimit = 0, 
             bool isDurable = false, 
             bool runAsync = false, 
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory? channelFactory = null, 
             bool highAvailability = false, 
-            ChannelName deadLetterChannelName = null, 
-            RoutingKey deadLetterRoutingKey = null, 
+            ChannelName? deadLetterChannelName = null, 
+            RoutingKey? deadLetterRoutingKey = null, 
             TimeSpan? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
@@ -145,9 +145,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        public RmqSubscription(SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+        public RmqSubscription(
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -156,10 +157,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             int unacceptableMessageLimit = 0,
             bool isDurable = false,
             bool runAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            IAmAChannelFactory? channelFactory = null,
             bool highAvailability = false,
-            ChannelName deadLetterChannelName = null, 
-            RoutingKey deadLetterRoutingKey = null, 
+            ChannelName? deadLetterChannelName = null, 
+            RoutingKey? deadLetterRoutingKey = null, 
             TimeSpan? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,

@@ -91,12 +91,14 @@ internal class RmqMessagePublisher
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> that cancels the Publish operation</param>
     public async Task PublishMessageAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
     {
+        if (_connection.Exchange is null) throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
+        
         var messageId = message.Id;
         var deliveryTag = message.Header.Bag.ContainsKey(HeaderNames.DELIVERY_TAG)
             ? message.DeliveryTag.ToString()
             : null;
 
-        var headers = new Dictionary<string, object>
+        var headers = new Dictionary<string, object?>
         {
             { HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString() },
             { HeaderNames.TOPIC, message.Header.Topic.Value },
@@ -112,7 +114,7 @@ internal class RmqMessagePublisher
         });
 
         if (!string.IsNullOrEmpty(deliveryTag))
-            headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag);
+            headers.Add(HeaderNames.DELIVERY_TAG, deliveryTag!);
 
         if (delay > TimeSpan.Zero)
             headers.Add(HeaderNames.DELAY_MILLISECONDS, delay.Value.TotalMilliseconds);
@@ -125,8 +127,8 @@ internal class RmqMessagePublisher
                 messageId,
                 message.Header.TimeStamp,
                 message.Body.ContentType,
-                message.Header.ContentType,
-                message.Header.ReplyTo,
+                message.Header.ContentType ?? "plain/text",
+                message.Header.ReplyTo ?? string.Empty,
                 message.Persist,
                 headers),
             message.Body.Bytes, cancellationToken);
@@ -148,7 +150,7 @@ internal class RmqMessagePublisher
             "RmqMessagePublisher: Regenerating message {Id} with DeliveryTag of {1} to {2} with DeliveryTag of {DeliveryTag}",
             message.Id, deliveryTag, messageId, 1);
 
-        var headers = new Dictionary<string, object>
+        var headers = new Dictionary<string, object?>
         {
             { HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString() },
             { HeaderNames.TOPIC, message.Header.Topic.Value },
@@ -185,16 +187,21 @@ internal class RmqMessagePublisher
                 messageId,
                 message.Header.TimeStamp,
                 message.Body.ContentType,
-                message.Header.ContentType,
-                message.Header.ReplyTo,
+                message.Header.ContentType ?? "plain/text",
+                message.Header.ReplyTo ?? string.Empty,
                 message.Persist,
                 headers),
             message.Body.Bytes, cancellationToken);
     }
 
-    private static BasicProperties CreateBasicProperties(string id, DateTimeOffset timeStamp, string type,
+    private static BasicProperties CreateBasicProperties(
+        string id,
+        DateTimeOffset timeStamp, 
+        string type,
         string contentType,
-        string replyTo, bool persistMessage, IDictionary<string, object> headers = null)
+        string replyTo, 
+        bool persistMessage, 
+        IDictionary<string, object?>? headers = null)
     {
         var basicProperties = new BasicProperties
         {
@@ -214,7 +221,7 @@ internal class RmqMessagePublisher
         {
             foreach (var header in headers)
             {
-                if (!IsAnAmqpType(header.Value))
+                if (header.Value is not null && !IsAnAmqpType(header.Value))
                 {
                     throw new ConfigurationException(
                         $"The value {header.Value} is type {header.Value.GetType()} for header {header.Key} value only supports the AMQP 0-8/0-9 standard entry types S, I, D, T and F, as well as the QPid-0-8 specific b, d, f, l, s, t, x and V types and the AMQP 0-9-1 A type.");}

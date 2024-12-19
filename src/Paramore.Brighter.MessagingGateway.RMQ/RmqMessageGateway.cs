@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ;
 ///     collection that contains a set of connections.
 ///     Each subscription identifies a mapping between a queue name and a <see cref="IRequest" /> derived type. At runtime we
 ///     read this list and listen on the associated channels.
-///     The <see cref="MessagePump" /> then uses the <see cref="IAmAMessageMapper" /> associated with the configured
+///     The Message Pump (Reactor or Proactor) then uses the <see cref="IAmAMessageMapper" /> associated with the configured
 ///     request type in <see cref="IAmAMessageMapperRegistry" /> to translate between the
 ///     on-the-wire message and the <see cref="Command" /> or <see cref="Event" />
 /// </summary>
@@ -58,7 +58,7 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
     private readonly ConnectionFactory _connectionFactory;
     private readonly Policy _retryPolicy;
     protected readonly RmqMessagingGatewayConnection Connection;
-    protected IChannel Channel;
+    protected IChannel? Channel;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -73,6 +73,8 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
 
         _retryPolicy = connectionPolicyFactory.RetryPolicy;
         _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
+        
+       if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
         _connectionFactory = new ConnectionFactory
         {
@@ -80,6 +82,8 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
             RequestedHeartbeat = TimeSpan.FromSeconds(connection.Heartbeat),
             ContinuationTimeout = TimeSpan.FromSeconds(connection.ContinuationTimeout)
         };
+        
+        if (Connection.Exchange is null) throw new InvalidOperationException("RMQMessagingGateway: No Exchange specified");
 
         DelaySupported = Connection.Exchange.SupportDelay;
     }
@@ -104,7 +108,7 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
     /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
     /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
     /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-    protected void EnsureBroker(ChannelName queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
+    protected void EnsureBroker(ChannelName? queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
     {
         queueName ??= new ChannelName("Producer Channel");
 
@@ -132,12 +136,13 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
         {
             var connection = await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat)
                 .GetConnectionAsync(_connectionFactory, cancellationToken);
+            
+           if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
             connection.ConnectionBlockedAsync += HandleBlockedAsync;
             connection.ConnectionUnblockedAsync += HandleUnBlockedAsync;
 
-            s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}",
-                Connection.AmpqUri.GetSanitizedUri());
+            s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}", Connection.AmpqUri.GetSanitizedUri());
 
             Channel = await connection.CreateChannelAsync(
                 new CreateChannelOptions(
@@ -152,6 +157,8 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     private Task HandleBlockedAsync(object sender, ConnectionBlockedEventArgs args)
     {
+       if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
+        
         s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}",
             Connection.AmpqUri.GetSanitizedUri(), args.Reason);
 
@@ -160,8 +167,9 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
 
     private Task HandleUnBlockedAsync(object sender, AsyncEventArgs args)
     {
-        s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked",
-            Connection.AmpqUri.GetSanitizedUri());
+       if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
+        
+        s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked", Connection.AmpqUri.GetSanitizedUri());
         return Task.CompletedTask;
     }
 
@@ -184,7 +192,7 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
             Channel = null;
         }
 
-        new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
+        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnectionAsync(_connectionFactory);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -195,8 +203,7 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
             Channel?.Dispose();
             Channel = null;
 
-            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(
-                _connectionFactory);
+            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
         }
     }
 }

@@ -34,23 +34,24 @@ using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ;
 
-public class PullConsumer : AsyncDefaultBasicConsumer
+public class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(channel)
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 
     //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
     //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
-    private readonly ConcurrentQueue<BasicDeliverEventArgs> _messages = new ConcurrentQueue<BasicDeliverEventArgs>();
+    private readonly ConcurrentQueue<BasicDeliverEventArgs> _messages = new();
 
-    public PullConsumer(IChannel channel, ushort batchSize)
-        : base(channel)
+    /// <summary>
+    /// Sets the number of messages to fetch from the broker in a single batch
+    /// </summary>
+    /// <remarks>
+    /// Works on BasicConsume, no impact on BasicGet§
+    /// </remarks>
+    /// <param name="batchSize">The batch size defaults to 1 unless set on subscription</param>
+    public async Task SetChannelBatchSizeAsync(ushort batchSize = 1)
     {
-        //set the number of messages to fetch -- defaults to 1 unless set on subscription, no impact on
-        //BasicGet, only works on BasicConsume
-        //Sync over async as we are in the constructor
-        channel.BasicQosAsync(0, batchSize, false)
-            .GetAwaiter()
-            .GetResult();
+        await Channel.BasicQosAsync(0, batchSize, false);
     }
 
     /// <summary>
@@ -59,7 +60,7 @@ public class PullConsumer : AsyncDefaultBasicConsumer
     /// <param name="timeOut">The total time to spend waiting for the buffer to fill up to bufferSize</param>
     /// <param name="bufferSize">The size of the buffer we want to fill wit messages</param>
     /// <returns>A tuple containing: the number of messages in the buffer, and the buffer itself</returns>
-    public async Task<(int, BasicDeliverEventArgs[])>DeQueue(TimeSpan timeOut, int bufferSize)
+    public async Task<(int bufferIndex, BasicDeliverEventArgs[]? buffer)> DeQueue(TimeSpan timeOut, int bufferSize)
     {
         var now = DateTime.UtcNow;
         var end = now.Add(timeOut);
@@ -72,7 +73,7 @@ public class PullConsumer : AsyncDefaultBasicConsumer
 
         while (now < end && bufferIndex < bufferSize)
         {
-            if (_messages.TryDequeue(out BasicDeliverEventArgs result))
+            if (_messages.TryDequeue(out BasicDeliverEventArgs? result))
             {
                 buffer[bufferIndex] = result;
                 ++bufferIndex;

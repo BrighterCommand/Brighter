@@ -53,10 +53,11 @@ public static class ExchangeConfigurationHelper
         }
     }
 
-    private static async Task CreateExchange(IChannel channel, RmqMessagingGatewayConnection connection,
-        CancellationToken cancellationToken)
+    private static async Task CreateExchange(IChannel channel, RmqMessagingGatewayConnection connection, CancellationToken cancellationToken)
     {
-        var arguments = new Dictionary<string, object>();
+        if (connection.Exchange is null) throw new ConfigurationException("RabbitMQ Exchange is not set");
+        
+        var arguments = new Dictionary<string, object?>();
         if (connection.Exchange.SupportDelay)
         {
             arguments.Add("x-delayed-type", connection.Exchange.Type);
@@ -83,9 +84,10 @@ public static class ExchangeConfigurationHelper
         }
     }
 
-    private static async Task ValidateExchange(IChannel channel, RmqMessagingGatewayConnection connection,
-        CancellationToken cancellationToken)
+    private static async Task ValidateExchange(IChannel channel, RmqMessagingGatewayConnection connection, CancellationToken cancellationToken)
     {
+        if (connection.Exchange is null) throw new ConfigurationException("RabbitMQ Exchange is not set");
+        
         try
         {
             await channel.ExchangeDeclarePassiveAsync(connection.Exchange.Name, cancellationToken);

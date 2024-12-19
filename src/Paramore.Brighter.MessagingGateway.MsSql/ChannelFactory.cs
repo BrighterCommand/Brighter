@@ -37,5 +37,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 _msSqlMessageConsumerFactory.Create(subscription),
                 subscription.BufferSize);
         }
+
+        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
