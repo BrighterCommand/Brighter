@@ -2,13 +2,8 @@
 
 namespace Paramore.Brighter.ServiceActivator.Control.Events;
 
-public record NodeStatusEvent : IEvent
+public class NodeStatusEvent() : Event(Guid.NewGuid().ToString())
 {
-    /// <summary>
-    /// The event Id
-    /// </summary>
-    public string Id { get; set; } = null!;
-
     /// <summary>
     /// The Diagnostics Span
     /// </summary>
@@ -32,7 +27,7 @@ public record NodeStatusEvent : IEvent
     /// <summary>
     /// Is this node Healthy
     /// </summary>
-    public bool IsHealthy { get; init; } = false;
+    public bool IsHealthy { get; init; }
 
     /// <summary>
     /// The Number of Performers currently running on the Node
