@@ -77,6 +77,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             Send(message);
         }
    
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        {
+            //No delay support implemented
+            await SendAsync(message);
+        }
+
 
         public async Task SendAsync(Message message)
         {
@@ -88,8 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             await _sqlQ.SendAsync(message, topic, TimeSpan.Zero);
         }
 
-        public void Dispose()
-        {
-        }
+ 
+        public void Dispose() { }
     }
 }
