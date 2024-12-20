@@ -11,8 +11,8 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
     [Trait("Category", "Redis")]
     public class RedisMessageConsumerRedisNotAvailableTests : IDisposable
     {
-        private const string QueueName = "test";
-        private const string Topic = "test";
+        private readonly ChannelName _queueName = new ChannelName("test");
+        private readonly RoutingKey _topic = new RoutingKey("test");
         private readonly RedisMessageConsumer _messageConsumer;
         private Exception _exception;
 
@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         {
             var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
 
-            _messageConsumer = new RedisMessageConsumerSocketErrorOnGetClient(configuration, QueueName, Topic);
+            _messageConsumer = new RedisMessageConsumerSocketErrorOnGetClient(configuration, _queueName, _topic);
 
         }
 

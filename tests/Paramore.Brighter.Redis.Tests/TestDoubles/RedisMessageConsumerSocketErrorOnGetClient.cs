@@ -4,18 +4,14 @@ using ServiceStack.Redis;
 
 namespace Paramore.Brighter.Redis.Tests.TestDoubles
 {
-    public class RedisMessageConsumerSocketErrorOnGetClient : RedisMessageConsumer
+    public class RedisMessageConsumerSocketErrorOnGetClient(
+        RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
+        ChannelName queueName,
+        RoutingKey topic)
+        : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic)
     {
         private const string SocketException =
             "localhost:6379";
-        
-        public RedisMessageConsumerSocketErrorOnGetClient(
-            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
-            string queueName, 
-            string topic) 
-                : base(redisMessagingGatewayConfiguration, queueName, topic)
-        {
-        }
 
         protected override IRedisClient GetClient()
         {

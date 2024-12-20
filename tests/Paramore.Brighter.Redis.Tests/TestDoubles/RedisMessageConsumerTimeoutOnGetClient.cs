@@ -4,18 +4,14 @@ using ServiceStack.Redis;
 
 namespace Paramore.Brighter.Redis.Tests.TestDoubles
 {
-    public class RedisMessageConsumerTimeoutOnGetClient : RedisMessageConsumer
+    public class RedisMessageConsumerTimeoutOnGetClient(
+        RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
+        ChannelName queueName,
+        RoutingKey topic)
+        : RedisMessageConsumer(redisMessagingGatewayConfiguration, queueName, topic)
     {
         private const string PoolTimeoutError =
             "Redis Timeout expired. The timeout period elapsed prior to obtaining a subscription from the pool. This may have occurred because all pooled connections were in use.";
-        
-        public RedisMessageConsumerTimeoutOnGetClient(
-            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
-            string queueName, 
-            string topic) 
-                : base(redisMessagingGatewayConfiguration, queueName, topic)
-        {
-        }
 
         protected override IRedisClient GetClient()
         {

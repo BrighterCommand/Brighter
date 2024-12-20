@@ -45,7 +45,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var channel = _channelFactory.CreateChannel(subscription);
             
             //We need to create the topic at least, to check the queues
-            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
+            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
         }
 
         [Fact]

@@ -10,8 +10,8 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
     [Trait("Category", "Redis")]
     public class RedisMessageConsumerOperationInterruptedTests : IDisposable
     {
-        private const string QueueName = "test";
-        private const string Topic = "test";
+        private readonly ChannelName _queueName = new("test");
+        private readonly RoutingKey _topic = new("test");
         private readonly RedisMessageConsumer _messageConsumer;
         private Exception _exception;
 
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         {
             var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
 
-            _messageConsumer = new RedisMessageConsumerTimeoutOnGetClient(configuration, QueueName, Topic);
+            _messageConsumer = new RedisMessageConsumerTimeoutOnGetClient(configuration, _queueName, _topic);
         }
 
         [Fact]

@@ -5,8 +5,8 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
     public class RedisFixture : IDisposable
     {
-        private const string QueueName = "test";
-        protected const string Topic = "test";
+        private ChannelName _queueName = new ChannelName("test");
+        private readonly RoutingKey _topic = new RoutingKey("test");
         public readonly RedisMessageProducer MessageProducer;
         public readonly RedisMessageConsumer MessageConsumer;
 
@@ -14,8 +14,8 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         {
             RedisMessagingGatewayConfiguration configuration = RedisMessagingGatewayConfiguration();
 
-            MessageProducer = new RedisMessageProducer(configuration, new RedisMessagePublication {Topic = new RoutingKey(Topic)});
-            MessageConsumer = new RedisMessageConsumer(configuration, QueueName, Topic);
+            MessageProducer = new RedisMessageProducer(configuration, new RedisMessagePublication {Topic = _topic});
+            MessageConsumer = new RedisMessageConsumer(configuration, _queueName, _topic);
         }
 
         public static RedisMessagingGatewayConfiguration RedisMessagingGatewayConfiguration()

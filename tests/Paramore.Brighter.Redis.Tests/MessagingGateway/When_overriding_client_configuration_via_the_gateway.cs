@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
                 VerifyMasterConnections = false
             };
 
-            using var gateway = new TestRedisGateway(configuration);
+            using var gateway = new TestRedisGateway(configuration, RoutingKey.Empty);
             //Redis Config is static, so we can just look at the values we should have initialized
             RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
             RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
@@ -55,8 +55,8 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
     /// </summary>
     public class TestRedisGateway : RedisMessageGateway, IDisposable
     {
-        public TestRedisGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
-            : base(redisMessagingGatewayConfiguration)
+        public TestRedisGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, RoutingKey topic)
+            : base(redisMessagingGatewayConfiguration, topic)
         {
             OverrideRedisClientDefaults();
         }
@@ -67,7 +67,6 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         public void Dispose()
         {
             DisposePool();
-            Pool = null;
             RedisConfig.Reset();
             GC.SuppressFinalize(this);
         }

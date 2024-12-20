@@ -43,9 +43,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageConsumer>();
         private const string QUEUES = "queues";
         
-        private readonly string _queueName;
+        private readonly ChannelName _queueName;
         
-        private readonly Dictionary<string, string> _inflight = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _inflight = new();
  
         /// <summary>
         /// Creates a consumer that reads from a List in Redis via a BLPOP (so will block).
@@ -55,8 +55,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="topic">The topic that the list subscribes to</param>
         public RedisMessageConsumer(
             RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
-            string queueName, 
-            string topic)
+            ChannelName queueName, 
+            RoutingKey topic)
             :base(redisMessagingGatewayConfiguration, topic)
         {
             _queueName = queueName;

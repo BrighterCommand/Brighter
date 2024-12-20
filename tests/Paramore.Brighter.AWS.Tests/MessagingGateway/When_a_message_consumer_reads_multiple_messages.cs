@@ -46,7 +46,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
-            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey, _bufferSize);
+            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), _bufferSize);
             _messageProducer = new SqsMessageProducer(awsConnection, 
                 new SnsPublication
                 {

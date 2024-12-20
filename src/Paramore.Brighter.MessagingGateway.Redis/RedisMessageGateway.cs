@@ -32,12 +32,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     {
         protected TimeSpan MessageTimeToLive;
         protected static Lazy<RedisManagerPool>? s_pool;
-        protected string Topic;
+        protected RoutingKey Topic;
         private readonly RedisMessagingGatewayConfiguration _gatewayConfiguration;
         
-        protected RedisMessageGateway(
-            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
-            string topic)
+        protected RedisMessageGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, RoutingKey topic)
         {
             _gatewayConfiguration = redisMessagingGatewayConfiguration;
             Topic = topic;
