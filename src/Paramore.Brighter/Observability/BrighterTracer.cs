@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using OpenTelemetry.Trace;
-
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -73,20 +72,20 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="exceptions"></param>
     public void AddExceptionToSpan(Activity? span, IEnumerable<Exception> exceptions)
     {
-        if (span == null ) return;
+        if (span == null) return;
 
         var exceptionList = exceptions.ToArray();
-        
+
         if (exceptionList.Length == 0) return;
-        
-        if (exceptionList .Length == 1)
+
+        if (exceptionList.Length == 1)
         {
             span.AddException(exceptionList[0]);
             span.SetStatus(ActivityStatusCode.Error, exceptionList[0].Message);
             return;
         }
 
-        var exception = new  AggregateException("Operation failed, see inner exceptions for details",  exceptionList); 
+        var exception = new AggregateException("Operation failed, see inner exceptions for details", exceptionList);
         span.AddException(exception);
         span.SetStatus(ActivityStatusCode.Error, exception.Message);
     }
@@ -101,10 +100,10 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
     /// <returns>A span for the current request named request.name operation.name</returns>
     public Activity? CreateSpan<TRequest>(
-        CommandProcessorSpanOperation operation, 
-        TRequest request, 
+        CommandProcessorSpanOperation operation,
+        TRequest request,
         Activity? parentActivity = null,
-        ActivityLink[]? links = null, 
+        ActivityLink[]? links = null,
         InstrumentationOptions options = InstrumentationOptions.All
     ) where TRequest : class, IRequest
     {
@@ -117,7 +116,10 @@ public class BrighterTracer : IAmABrighterTracer
         {
             { BrighterSemanticConventions.RequestId, request.Id },
             { BrighterSemanticConventions.RequestType, request.GetType().Name },
-            { BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request) },
+            {
+                BrighterSemanticConventions.RequestBody,
+                JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+            },
             { BrighterSemanticConventions.Operation, operation.ToSpanName() }
         };
 
@@ -128,7 +130,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             links: links,
             startTime: now);
-        
+
         Activity.Current = activity;
 
         return activity;
@@ -143,10 +145,10 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="options">The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go</param>
     /// <returns></returns>
     public Activity? CreateSpan(
-       MessagePumpSpanOperation operation,
-       Message message,
-       MessagingSystem messagingSystem,
-       InstrumentationOptions options = InstrumentationOptions.All
+        MessagePumpSpanOperation operation,
+        Message message,
+        MessagingSystem messagingSystem,
+        InstrumentationOptions options = InstrumentationOptions.All
     )
     {
         var spanName = $"{message.Header.Topic} {operation.ToSpanName()}";
@@ -163,29 +165,28 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) },
+            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
             { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
             { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
             { BrighterSemanticConventions.CeMessageId, message.Id },
             { BrighterSemanticConventions.CeSource, message.Header.Source },
-            { BrighterSemanticConventions.CeVersion, "1.0"},
+            { BrighterSemanticConventions.CeVersion, "1.0" },
             { BrighterSemanticConventions.CeSubject, message.Header.Subject },
-            { BrighterSemanticConventions.CeType, message.Header.Type},
+            { BrighterSemanticConventions.CeType, message.Header.Type },
             { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo },
             { BrighterSemanticConventions.HandledCount, message.Header.HandledCount }
-            
         };
-        
+
         var activity = ActivitySource.StartActivity(
             name: spanName,
             kind: kind,
             parentId: parentId,
             tags: tags,
             startTime: now);
-        
-        
+
+
         activity?.AddBaggage("correlationId", message.Header.CorrelationId);
-        
+
         Activity.Current = activity;
 
         return activity;
@@ -200,13 +201,13 @@ public class BrighterTracer : IAmABrighterTracer
     /// <returns>A span (or dotnet Activity) for the current request named request.name operation.name</returns>
     public Activity? CreateBatchSpan<TRequest>(
         Activity? parentActivity = null,
-        ActivityLink[]? links = null, 
+        ActivityLink[]? links = null,
         InstrumentationOptions options = InstrumentationOptions.All
     ) where TRequest : class, IRequest
     {
         var requestType = typeof(TRequest);
         var operation = CommandProcessorSpanOperation.Create;
-        
+
         var spanName = $"{requestType.Name} {operation.ToSpanName()}";
         var kind = ActivityKind.Internal;
         var parentId = parentActivity?.Id;
@@ -225,7 +226,7 @@ public class BrighterTracer : IAmABrighterTracer
             tags: tags,
             links: links,
             startTime: now);
-        
+
         Activity.Current = activity;
 
         return activity;
@@ -247,7 +248,7 @@ public class BrighterTracer : IAmABrighterTracer
     {
         if (operation != MessagePumpSpanOperation.Begin)
             throw new ArgumentOutOfRangeException(nameof(operation), "Operation must be Begin or End");
-        
+
         var spanName = $"{topic} {operation.ToSpanName()}";
         var kind = ActivityKind.Consumer;
         var now = _timeProvider.GetUtcNow();
@@ -258,13 +259,14 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MessagingDestination, topic },
             { BrighterSemanticConventions.Operation, operation.ToSpanName() }
         };
-        
-        Activity? activity = ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
-        
-        if(activity is not null)
+
+        Activity? activity =
+            ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
+
+        if (activity is not null)
             Activity.Current = activity;
 
-        return activity; 
+        return activity;
     }
 
     /// <summary>
@@ -295,17 +297,19 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MessagingDestination, topic },
             { BrighterSemanticConventions.Operation, operation.ToSpanName() }
         };
-        
-       Activity? activity;
+
+        Activity? activity;
         if (Activity.Current != null)
-            activity = ActivitySource.StartActivity(name: spanName, kind: kind, parentContext: Activity.Current.Context, tags: tags, links: null,  now);
+            activity = ActivitySource.StartActivity(name: spanName, kind: kind, parentContext: Activity.Current.Context,
+                tags: tags, links: null, now);
         else
-            activity = ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now, name: spanName);
-        
+            activity = ActivitySource.StartActivity(kind: kind, tags: tags, links: null, startTime: now,
+                name: spanName);
+
         activity?.AddException(messagePumpException);
         activity?.SetStatus(ActivityStatusCode.Error, messagePumpException.Message);
-        
-        if(activity is not null)
+
+        if (activity is not null)
             Activity.Current = activity;
 
         return activity;
@@ -328,22 +332,21 @@ public class BrighterTracer : IAmABrighterTracer
         var spanName = $"{BrighterSemanticConventions.ArchiveMessages} {operation.ToSpanName()}";
         var kind = ActivityKind.Producer;
         var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow();  
+        var now = _timeProvider.GetUtcNow();
         var tags = new ActivityTagsCollection()
-        
         {
             { BrighterSemanticConventions.Operation, operation.ToSpanName() },
             { BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds }
         };
-        
+
         var activity = ActivitySource.StartActivity(
             name: spanName,
             kind: kind,
             parentId: parentId,
             tags: tags,
             startTime: now);
-        
-         Activity.Current = activity;
+
+        Activity.Current = activity;
 
         return activity;
     }
@@ -365,27 +368,26 @@ public class BrighterTracer : IAmABrighterTracer
         var spanName = $"{BrighterSemanticConventions.ClearMessages} {operation.ToSpanName()}";
         var kind = ActivityKind.Producer;
         var parentId = parentActivity?.Id;
-        var now = _timeProvider.GetUtcNow(); 
-        
+        var now = _timeProvider.GetUtcNow();
+
         var tags = new ActivityTagsCollection
         {
             { BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName() }
         };
-        
+
         if (!string.IsNullOrEmpty(messageId)) tags.Add(BrighterSemanticConventions.MessageId, messageId);
-        
+
         var activity = ActivitySource.StartActivity(
             name: spanName,
             kind: kind,
             parentId: parentId,
             tags: tags,
             startTime: now);
-        
+
         Activity.Current = activity;
 
         return activity;
-        
-    } 
+    }
 
     /// <summary>
     /// Create a span for an outbox operation
@@ -396,9 +398,10 @@ public class BrighterTracer : IAmABrighterTracer
     /// /// <returns>A new span named either db.operation db.name db.sql.table or db.operation db.name if db.sql.table not available </returns>
     public Activity? CreateDbSpan(OutboxSpanInfo info, Activity? parentActivity, InstrumentationOptions options)
     {
-        var spanName = !string.IsNullOrEmpty(info.dbTable) 
-            ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}" : $"{info.dbOperation} {info.dbName}";
-        
+        var spanName = !string.IsNullOrEmpty(info.dbTable)
+            ? $"{info.dbOperation.ToSpanName()} {info.dbName} {info.dbTable}"
+            : $"{info.dbOperation} {info.dbName}";
+
         var kind = ActivityKind.Client;
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
@@ -411,17 +414,21 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName() }
         };
 
-        if (!string.IsNullOrEmpty(info.dbStatement)) tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
-        if (!string.IsNullOrEmpty(info.dbInstanceId)) tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
+        if (!string.IsNullOrEmpty(info.dbStatement))
+            tags.Add(BrighterSemanticConventions.DbStatement, info.dbStatement);
+        if (!string.IsNullOrEmpty(info.dbInstanceId))
+            tags.Add(BrighterSemanticConventions.DbInstanceId, info.dbInstanceId);
         if (!string.IsNullOrEmpty(info.dbUser)) tags.Add(BrighterSemanticConventions.DbUser, info.dbUser);
-        if (!string.IsNullOrEmpty(info.networkPeerAddress)) tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
-        if (!string.IsNullOrEmpty(info.serverAddress)) tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
+        if (!string.IsNullOrEmpty(info.networkPeerAddress))
+            tags.Add(BrighterSemanticConventions.NetworkPeerAddress, info.networkPeerAddress);
+        if (!string.IsNullOrEmpty(info.serverAddress))
+            tags.Add(BrighterSemanticConventions.ServerAddress, info.serverAddress);
         if (info.networkPeerPort != 0) tags.Add(BrighterSemanticConventions.NetworkPeerPort, info.networkPeerPort);
         if (info.serverPort != 0) tags.Add(BrighterSemanticConventions.ServerPort, info.serverPort);
-        
+
         if (info.dbAttributes != null)
-           foreach (var pair in info.dbAttributes)
-               tags.Add(pair.Key, pair.Value);
+            foreach (var pair in info.dbAttributes)
+                tags.Add(pair.Key, pair.Value);
 
         var activity = ActivitySource.StartActivity(
             name: spanName,
@@ -429,7 +436,7 @@ public class BrighterTracer : IAmABrighterTracer
             parentId: parentId,
             tags: tags,
             startTime: now);
-        
+
         Activity.Current = activity;
 
         return activity;
@@ -444,14 +451,14 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="instrumentationOptions"> The <see cref="InstrumentationOptions"/> for how deep should the instrumentation go?</param>
     /// <returns>A new span named channel publish</returns>
     public Activity? CreateProducerSpan(
-        Publication publication, 
-        Message? message, 
+        Publication publication,
+        Message? message,
         Activity? parentActivity,
         InstrumentationOptions instrumentationOptions = InstrumentationOptions.All
     )
     {
         var spanName = $"{publication.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}";
-        
+
         var kind = ActivityKind.Producer;
         var parentId = parentActivity?.Id;
         var now = _timeProvider.GetUtcNow();
@@ -460,7 +467,7 @@ public class BrighterTracer : IAmABrighterTracer
         {
             //OTel specification attributes
             { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
-            
+
             //cloud events attributes
             { BrighterSemanticConventions.CeSource, publication.Source },
             { BrighterSemanticConventions.CeVersion, "1.0" },
@@ -477,9 +484,9 @@ public class BrighterTracer : IAmABrighterTracer
             tags.Add(BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey);
             tags.Add(BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length);
             tags.Add(BrighterSemanticConventions.MessageBody, message.Body.Value);
-            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header));
-            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId); 
-            
+            tags.Add(BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options));
+            tags.Add(BrighterSemanticConventions.ConversationId, message.Header.CorrelationId);
+
             //cloud events attributes
             tags.Add(BrighterSemanticConventions.CeMessageId, message.Id);
         }
@@ -490,10 +497,10 @@ public class BrighterTracer : IAmABrighterTracer
             parentId: parentId,
             tags: tags,
             startTime: now);
-        
+
         Activity.Current = activity;
 
-        return activity; 
+        return activity;
     }
 
     /// <summary>
@@ -509,7 +516,7 @@ public class BrighterTracer : IAmABrighterTracer
     public static void WriteHandlerEvent(Activity? span, string handlerName, bool isAsync, bool isSink = false)
     {
         if (span == null) return;
-        
+
         var tags = new ActivityTagsCollection
         {
             { BrighterSemanticConventions.HandlerName, handlerName },
@@ -532,15 +539,15 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="isAsync">Is this an async pipeline?</param>
     /// <param name="isSink">Is this the mapper, true, or a transform, false?</param>
     public static void WriteMapperEvent(
-        Message message, 
-        Publication publication, 
-        Activity? span, 
+        Message message,
+        Publication publication,
+        Activity? span,
         string mapperName,
         bool isAsync,
         bool isSink = false)
     {
         if (span == null) return;
-        
+
         var tags = new ActivityTagsCollection
         {
             { BrighterSemanticConventions.MapperName, mapperName },
@@ -551,7 +558,7 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
+            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) }
         };
 
         span.AddEvent(new ActivityEvent(mapperName, DateTimeOffset.UtcNow, tags));
@@ -569,18 +576,18 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="isAsync">Is the handler writing async?</param>
     /// <param name="instrumentationOptions"> <see cref="InstrumentationOptions"/> for how verbose should our instrumentation be</param>
     public static void WriteOutboxEvent(
-        OutboxDbOperation operation, 
-        Message message, 
+        OutboxDbOperation operation,
+        Message message,
         Activity? span,
-        bool isSharedTransaction, 
-        bool isAsync, 
+        bool isSharedTransaction,
+        bool isAsync,
         InstrumentationOptions instrumentationOptions
-    ) 
+    )
     {
         if (span == null) return;
-        
+
         var outBoxType = isAsync ? "async" : "sync";
-        
+
         var tags = new ActivityTagsCollection
         {
             { BrighterSemanticConventions.OutboxSharedTransaction, isSharedTransaction },
@@ -591,13 +598,12 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
             { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) }
+            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) }
         };
 
         span.AddEvent(new ActivityEvent(operation.ToSpanName(), DateTimeOffset.UtcNow, tags));
- 
     }
-    
+
     /// <summary>
     /// Create an event representing the external service bus calling the outbox
     /// This is generic and not specific details from a particular outbox and is thus mostly message properties
@@ -610,17 +616,17 @@ public class BrighterTracer : IAmABrighterTracer
     /// <param name="isAsync">Is this an async operation</param>
     /// <param name="instrumentationOptions">What <see cref="InstrumentationOptions"/> have we set to control verbosity</param>
     public static void WriteOutboxEvent(
-        OutboxDbOperation operation, 
-        IEnumerable<Message> messages, 
-        Activity? span, 
-        bool isSharedTransaction, 
-        bool isAsync, 
+        OutboxDbOperation operation,
+        IEnumerable<Message> messages,
+        Activity? span,
+        bool isSharedTransaction,
+        bool isAsync,
         InstrumentationOptions instrumentationOptions)
     {
         if (span == null) return;
-        
+
         foreach (var message in messages)
-            WriteOutboxEvent(operation, message, span, isSharedTransaction, isAsync, instrumentationOptions); 
+            WriteOutboxEvent(operation, message, span, isSharedTransaction, isAsync, instrumentationOptions);
     }
 
     /// <summary>
@@ -634,30 +640,32 @@ public class BrighterTracer : IAmABrighterTracer
     public static void WriteProducerEvent(Activity? span, MessagingSystem messagingSystem, Message message)
     {
         if (span == null) return;
-        
+
         var tags = new ActivityTagsCollection
         {
-            { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
+            {
+                BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName()
+            },
             { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
             { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
             { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
             { BrighterSemanticConventions.MessageId, message.Id },
-            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header) },
+            { BrighterSemanticConventions.MessageHeaders, JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options) },
             { BrighterSemanticConventions.MessageType, message.Header.MessageType.ToString() },
             { BrighterSemanticConventions.MessageBodySize, message.Body.Bytes.Length },
             { BrighterSemanticConventions.MessageBody, message.Body.Value },
             { BrighterSemanticConventions.ConversationId, message.Header.CorrelationId },
-            
             { BrighterSemanticConventions.CeMessageId, message.Id },
             { BrighterSemanticConventions.CeSource, message.Header.Source },
-            { BrighterSemanticConventions.CeVersion, "1.0"},
+            { BrighterSemanticConventions.CeVersion, "1.0" },
             { BrighterSemanticConventions.CeSubject, message.Header.Subject },
             { BrighterSemanticConventions.CeType, message.Header.Type }
         };
 
-        span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}", DateTimeOffset.UtcNow, tags));
+        span.AddEvent(new ActivityEvent($"{message.Header.Topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}",
+            DateTimeOffset.UtcNow, tags));
     }
- 
+
     /// <summary>
     /// Ends a span by correctly setting its status and then disposing of it
     /// </summary>
@@ -676,7 +684,7 @@ public class BrighterTracer : IAmABrighterTracer
     public void EndSpans(ConcurrentDictionary<string, Activity> handlerSpans)
     {
         if (!handlerSpans.Any()) return;
-            
+
         foreach (var handlerSpan in handlerSpans)
         {
             EndSpan(handlerSpan.Value);
@@ -691,7 +699,7 @@ public class BrighterTracer : IAmABrighterTracer
     public void LinkSpans(ConcurrentDictionary<string, Activity> handlerSpans)
     {
         if (!handlerSpans.Any()) return;
-          
+
         var handlerNames = handlerSpans.Keys.ToList();
         foreach (var handlerName in handlerNames)
         {
@@ -706,6 +714,4 @@ public class BrighterTracer : IAmABrighterTracer
             }
         }
     }
-
-
 }

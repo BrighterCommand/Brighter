@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         private MqttApplicationMessage createMQTTMessage(Message message)
         {
-            string payload = JsonSerializer.Serialize(message);
+            string payload = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options);
             MqttApplicationMessageBuilder outMessage = new MqttApplicationMessageBuilder()
                  .WithTopic(_config.TopicPrefix!=null?
             $"{_config.TopicPrefix}/{message.Header.Topic}": message.Header.Topic)
