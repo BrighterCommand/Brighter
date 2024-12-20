@@ -70,7 +70,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             
             var rc = _sqlMessageQueue.TryReceive(_topic, timeOut.Value);
             var message = !rc.IsDataValid ? new Message() : rc.Message;
-            return [message];
+            return [message!];
         }
 
         /// <summary>
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             
             var rc = await _sqlMessageQueue.TryReceiveAsync(_topic, operationCancellationToken);
             var message = !rc.IsDataValid ? new Message() : rc.Message;
-            return [message];
+            return [message!];
         }
 
         /// <summary>

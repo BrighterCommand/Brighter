@@ -44,12 +44,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
 
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
             IAmARelationalDbConnectionProvider connectonProvider,
-            Publication publication = null
+            Publication? publication = null
         )
         {
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
@@ -58,7 +58,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            Publication publication = null) : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), publication)
+            Publication? publication = null) 
+            : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), publication)
         {
         }
 
