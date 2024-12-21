@@ -419,7 +419,6 @@ namespace Paramore.Brighter.ServiceActivator
             }
             else
             {
-               
                  var types = new[]
                  {
                      typeof(IAmACommandProcessorProvider),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), 

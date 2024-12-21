@@ -61,6 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 timeOut: TimeSpan.FromMilliseconds(1000), 
                 channelFactory: new InMemoryChannelFactory(bus, _timeProvider), 
                 channelName: new ChannelName(ChannelName), 
+                messagePumpType: MessagePumpType.Reactor,
                 routingKey: _routingKey
             );
             _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { _subscription }, messageMapperRegistry);

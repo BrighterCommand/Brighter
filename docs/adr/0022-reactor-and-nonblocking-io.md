@@ -54,6 +54,12 @@ We have chosen to support both the Reactor and Proactor models across all of our
 
 To make the two models more explicit, within the code, we have decided to rename the derived message pump classes to Proactor and Reactor, from Blocking and NonBlocking.
 
+In addition, within a Subscription, rather than the slightly confusing runAsync flag, we have decided to use the more explicit MessagePumpType flag. This makes it clear whether the Reactor or Proactor model is being used, and that non-blocking I/O or blocking I/O should be used.
+
+Within the Subscription for a specific transport, we set the default to the type that the transport natively supports, Proactor if it supports both.
+
+
+
 ### In Setup use Blocking I/O
 
 Within our setup code our API can safely perovide a common abstraction using blocking I/O. Where the underlying SDK only supports non-blocking I/O, we use non-blocking I/O and then use GetAwaiter().GetResult() to block on that. We prefer GetAwaiter().GetResult() to .Wait() as it will rework the stack trace to take all the asynchronous context into account.

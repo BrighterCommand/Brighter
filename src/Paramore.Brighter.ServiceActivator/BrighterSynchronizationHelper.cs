@@ -16,6 +16,7 @@
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -32,7 +33,7 @@ namespace Paramore.Brighter.ServiceActivator;
 internal class BrighterSynchronizationHelper : IDisposable
 {
     private readonly BrighterTaskQueue _taskQueue = new();
-    private readonly HashSet<Task> _activeTasks = new();
+    private readonly ConcurrentDictionary<Task, byte> _activeTasks = new();
     private readonly SynchronizationContext? _synchronizationContext;
     private readonly BrighterTaskScheduler _taskScheduler;
     private readonly TaskFactory _taskFactory;
@@ -43,31 +44,11 @@ internal class BrighterSynchronizationHelper : IDisposable
     /// </summary>
     public TimeSpan TimeOut { get; } = TimeSpan.FromSeconds(30);
     
-    /// <summary>
-    /// Get an id for this helper
-    /// </summary>
-    public int Id => _taskScheduler.Id;
     
-    /// <summary>
-    /// Gets the count of pending tasks.
-    /// </summary>
-    public int PendingCount { get { return _activeTasks.Count; } }
-    
-    /// <summary>
-    /// What is the current task scheduler - should always be the BrighterTaskScheduler
-    /// </summary>
-    public TaskScheduler Scheduler => _taskScheduler;
-    
-    /// <summary>
-    /// The synchronization context underneath the BrighterSynchronizationContext
-    /// </summary>
-    public SynchronizationContext? SynchronizationContext => _synchronizationContext;
-
-
     /// <summary>
     /// Initializes a new instance of the <see cref="BrighterSynchronizationHelper"/> class.
     /// </summary>
-    public BrighterSynchronizationHelper()
+    private BrighterSynchronizationHelper()
     {
         _taskScheduler = new BrighterTaskScheduler(this);
         _synchronizationContext = new BrighterSynchronizationContext(this);
@@ -114,10 +95,8 @@ internal class BrighterSynchronizationHelper : IDisposable
     {
         OperationStarted();
         task.ContinueWith(_ => OperationCompleted(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, _taskScheduler);
-        if (_taskQueue.TryAdd(task, propagateExceptions))  _activeTasks.Add(task);
+        if (_taskQueue.TryAdd(task, propagateExceptions))  _activeTasks.TryAdd(task, 0);
     }
-    
-    
 
     /// <summary>
     /// Creates a task from a context message.
@@ -126,7 +105,11 @@ internal class BrighterSynchronizationHelper : IDisposable
     /// <returns>The created task.</returns>
     public Task MakeTask(ContextMessage message)
     {
-        return _taskFactory.StartNew(() => message.Callback(message.State));
+        return _taskFactory.StartNew(
+            () => message.Callback(message.State),
+            _taskFactory.CancellationToken, 
+            _taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
+            _taskScheduler);
     }
 
     /// <summary>
@@ -275,6 +258,7 @@ internal class BrighterSynchronizationHelper : IDisposable
                 if (!propagateExceptions) continue;
 
                 task.GetAwaiter().GetResult();
+                _activeTasks.TryRemove(task, out _);
             }
         });
     }

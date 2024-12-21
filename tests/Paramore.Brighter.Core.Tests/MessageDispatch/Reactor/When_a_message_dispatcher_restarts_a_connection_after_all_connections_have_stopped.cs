@@ -55,11 +55,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             Subscription subscription = new Subscription<MyEvent>(
-                new SubscriptionName("test"), 
-                noOfPerformers: 1, 
-                timeOut: TimeSpan.FromMilliseconds(100), 
-                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
-                channelName: _channelName, 
+                new SubscriptionName("test"),
+                noOfPerformers: 1,
+                timeOut: TimeSpan.FromMilliseconds(100),
+                channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
+                channelName: _channelName,
+                messagePumpType: MessagePumpType.Reactor,
                 routingKey: _routingKey
             );
             
@@ -68,6 +69,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(100), 
                 channelFactory: new InMemoryChannelFactory(_bus, _timeProvider), 
                 channelName: _channelName, 
+                messagePumpType: MessagePumpType.Reactor,
                 routingKey: _routingKey
             );
             
