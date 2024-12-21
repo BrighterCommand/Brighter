@@ -100,7 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
         /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
@@ -125,7 +125,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            bool runAsync = false,
+            MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
             int lockTimeout = 10,
             int delaySeconds = 0,
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             TimeSpan? channelFailureDelay = null
         )
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
-                requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             LockTimeout = lockTimeout;
             DelaySeconds = delaySeconds;
@@ -176,7 +176,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
         /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
@@ -200,7 +200,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            bool runAsync = false,
+            MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
             int lockTimeout = 10,
             int delaySeconds = 0,
@@ -216,7 +216,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             TimeSpan? channelFailureDelay = null
         )
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, 
-                unacceptableMessageLimit, runAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod,findTopicBy, 
+                unacceptableMessageLimit, messagePumpType, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod,findTopicBy, 
                 iAmPolicy,redrivePolicy, snsAttributes, tags, makeChannels, rawMessageDelivery, emptyChannelDelay, channelFailureDelay)
         {
         }

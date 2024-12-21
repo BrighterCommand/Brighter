@@ -80,7 +80,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Consumer Create()
         {
-            if (_subscription.RunAsync)
+            if (_subscription.MessagePumpType == MessagePumpType.Proactor)
                 return CreateAsync();
             else
                 return CreateBlocking();

@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 channelFactory: new InMemoryChannelFactory(_bus, _timeProvider),
                 channelName: new ChannelName(ChannelName), 
                 routingKey: _routingKey,
-                runAsync: true
+                messagePumpType: MessagePumpType.Proactor
             );
 
             _dispatcher = new Dispatcher(

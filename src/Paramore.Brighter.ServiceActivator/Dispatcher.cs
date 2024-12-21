@@ -394,7 +394,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", consumerNumber, subscription.Name);
             var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
-            if (!subscription.RunAsync)
+            if (subscription.MessagePumpType == MessagePumpType.Reactor)
             {
                 var types = new[]
                 {

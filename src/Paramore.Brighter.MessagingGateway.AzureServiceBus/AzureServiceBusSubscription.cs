@@ -22,7 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isAsync"></param>
+        /// <param name="messagePumpType"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
@@ -39,14 +39,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            bool isAsync = false,
+            MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null)
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
-                requeueDelay, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, emptyChannelDelay, 
+                requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, 
                 channelFailureDelay)
         {
             Configuration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay the delivery of a requeue message. 0 is no delay. Defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isAsync"></param>
+        /// <param name="messagePumpType"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
@@ -87,14 +87,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            bool isAsync = false,
+             MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
-                timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, 
+                timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, 
                 subscriptionConfiguration, emptyChannelDelay, channelFailureDelay)
         {
         }

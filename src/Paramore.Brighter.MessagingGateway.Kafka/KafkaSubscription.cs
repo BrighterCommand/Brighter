@@ -123,7 +123,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="maxPollInterval">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance. Defaults to 30000ms</param>
         /// <param name="sweepUncommittedOffsetsInterval">How often do we commit offsets that have yet to be saved; defaults to 30000</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
         /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>       /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
@@ -148,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? maxPollInterval = null, 
             TimeSpan? sweepUncommittedOffsetsInterval = null,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            bool runAsync = false, 
+            MessagePumpType messagePumpType = MessagePumpType.Proactor, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
@@ -157,7 +157,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? channelFailureDelay = null,
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
-                requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
             GroupId = groupId;
@@ -197,7 +197,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="maxPollInterval">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance; defaults to 30000ms</param>
         /// <param name="sweepUncommittedOffsetsInterval">How often do we commit offsets that have yet to be saved; defaults to 30000ms</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
         /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
@@ -222,7 +222,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? maxPollInterval = null,
             TimeSpan? sweepUncommittedOffsetsInterval = null,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            bool runAsync = false, 
+            MessagePumpType messagePumpType = MessagePumpType.Reactor, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
@@ -232,7 +232,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.RoundRobin) 
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeOut, 
                 requeueCount, requeueDelay, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
-                sessionTimeout, maxPollInterval, sweepUncommittedOffsetsInterval, isolationLevel, runAsync, 
+                sessionTimeout, maxPollInterval, sweepUncommittedOffsetsInterval, isolationLevel, messagePumpType, 
                 numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay,
                 partitionAssignmentStrategy)
         {

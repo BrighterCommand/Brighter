@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">Delay the delivery of a requeue message. 0 is no delay. Defaults to zero.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
@@ -57,13 +57,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             int requeueCount = -1, 
             TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
-            bool runAsync = false, 
+            MessagePumpType messagePumpType = MessagePumpType.Proactor, 
             IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
-                requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
     }
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The period to delay adding a requeue</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
@@ -97,13 +97,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             int requeueCount = -1, 
             TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
-            bool runAsync = false, 
+            MessagePumpType messagePumpType = MessagePumpType.Proactor, 
             IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null) 
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
-                requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
     }
