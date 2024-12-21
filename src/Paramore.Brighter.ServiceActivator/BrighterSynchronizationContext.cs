@@ -18,6 +18,8 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
+using Polly;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -86,7 +88,13 @@ namespace Paramore.Brighter.ServiceActivator
         public override void Post(SendOrPostCallback callback, object? state)
         {
             if (callback == null) throw new ArgumentNullException(nameof(callback));
-            SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
+            if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
+            {
+                // Avoid reentrant calls causing deadlocks
+                Task.Run(() => callback(state));
+            }
+            else
+                SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
         }
 
         /// <summary>

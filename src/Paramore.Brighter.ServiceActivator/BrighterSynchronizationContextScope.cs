@@ -23,7 +23,7 @@ namespace Paramore.Brighter.ServiceActivator;
 /// <summary>
 /// A utility for managing context changes.
 /// </summary>
-internal readonly struct BrighterSynchronizationContextScope : IDisposable
+internal sealed class  BrighterSynchronizationContextScope :  SingleDisposable<object>
 {
     private readonly SynchronizationContext? _originalContext;
     private readonly bool _hasOriginalContext;
@@ -32,7 +32,8 @@ internal readonly struct BrighterSynchronizationContextScope : IDisposable
     /// Initializes a new instance of the <see cref="BrighterSynchronizationContextScope"/> struct.
     /// </summary>
     /// <param name="newContext">The new synchronization context to set.</param>
-    public BrighterSynchronizationContextScope(SynchronizationContext newContext)
+    private BrighterSynchronizationContextScope(SynchronizationContext newContext)
+        : base(new object())
     {
         // Save the original synchronization context
         _originalContext = SynchronizationContext.Current;
@@ -45,9 +46,24 @@ internal readonly struct BrighterSynchronizationContextScope : IDisposable
     /// <summary>
     /// Restores the original synchronization context.
     /// </summary>
-    public void Dispose()
+    protected override void Dispose(object context)
     {
         // Restore the original synchronization context
         SynchronizationContext.SetSynchronizationContext(_hasOriginalContext ? _originalContext : null);
+    }
+    
+    /// <summary>
+    /// Executes a method with the specified synchronization context, and then restores the original context.
+    /// </summary>
+    /// <param name="context">The original synchronization context</param>
+    /// <param name="action">The action to take within the context</param>
+    /// <exception cref="ArgumentNullException">If the action passed was null</exception>
+    public static void ApplyContext(SynchronizationContext? context, Action action)
+    {
+        if (context is null) throw new ArgumentNullException(nameof(context));
+        if (action is null) throw new ArgumentNullException(nameof(action));
+
+        using (new BrighterSynchronizationContextScope(context))
+            action();
     }
 }

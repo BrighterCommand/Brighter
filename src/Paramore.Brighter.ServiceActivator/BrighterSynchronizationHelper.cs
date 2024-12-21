@@ -16,10 +16,8 @@
 #endregion
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -33,8 +31,9 @@ namespace Paramore.Brighter.ServiceActivator;
 /// </summary>
 internal class BrighterSynchronizationHelper : IDisposable
 {
-    private readonly BlockingCollection<(Task task, bool propogateExceptions)> _taskQueue = new();
+    private readonly BrighterTaskQueue _taskQueue = new();
     private readonly HashSet<Task> _activeTasks = new();
+    private readonly SynchronizationContext? _synchronizationContext;
     private readonly BrighterTaskScheduler _taskScheduler;
     private readonly TaskFactory _taskFactory;
     private int _outstandingOperations;
@@ -45,9 +44,24 @@ internal class BrighterSynchronizationHelper : IDisposable
     public TimeSpan TimeOut { get; } = TimeSpan.FromSeconds(30);
     
     /// <summary>
+    /// Get an id for this helper
+    /// </summary>
+    public int Id => _taskScheduler.Id;
+    
+    /// <summary>
     /// Gets the count of pending tasks.
     /// </summary>
     public int PendingCount { get { return _activeTasks.Count; } }
+    
+    /// <summary>
+    /// What is the current task scheduler - should always be the BrighterTaskScheduler
+    /// </summary>
+    public TaskScheduler Scheduler => _taskScheduler;
+    
+    /// <summary>
+    /// The synchronization context underneath the BrighterSynchronizationContext
+    /// </summary>
+    public SynchronizationContext? SynchronizationContext => _synchronizationContext;
 
 
     /// <summary>
@@ -56,6 +70,7 @@ internal class BrighterSynchronizationHelper : IDisposable
     public BrighterSynchronizationHelper()
     {
         _taskScheduler = new BrighterTaskScheduler(this);
+        _synchronizationContext = new BrighterSynchronizationContext(this);
         _taskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.HideScheduler, TaskContinuationOptions.HideScheduler, _taskScheduler);
     }
     
@@ -65,7 +80,6 @@ internal class BrighterSynchronizationHelper : IDisposable
     public void Dispose()
     {
         _taskQueue.CompleteAdding();
-        while (_taskQueue.TryTake(out _)) { }
         _taskQueue.Dispose();
     }
  
@@ -100,18 +114,10 @@ internal class BrighterSynchronizationHelper : IDisposable
     {
         OperationStarted();
         task.ContinueWith(_ => OperationCompleted(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, _taskScheduler);
-        _taskQueue.TryAdd((task, propagateExceptions));
-        _activeTasks.Add(task);
+        if (_taskQueue.TryAdd(task, propagateExceptions))  _activeTasks.Add(task);
     }
-
-    /// <summary>
-    /// Gets the scheduled tasks.
-    /// </summary>
-    /// <returns>An enumerable of the scheduled tasks.</returns>
-    public IEnumerable<Task> GetScheduledTasks()
-    {
-        return _taskQueue.Select(t => t.task);
-    }
+    
+    
 
     /// <summary>
     /// Creates a task from a context message.
@@ -254,28 +260,28 @@ internal class BrighterSynchronizationHelper : IDisposable
 
     private void Execute()
     {
-        using var context = new BrighterSynchronizationContextScope();
-        foreach (var (task, propagateExceptions) in _taskQueue.GetConsumingEnumerable())
+        BrighterSynchronizationContextScope.ApplyContext(_synchronizationContext, () =>
         {
-            var stopwatch = Stopwatch.StartNew();
-            _taskScheduler.DoTryExecuteTask(task);
-            stopwatch.Stop();
-
-            if (stopwatch.Elapsed > TimeOut)
-                Debug.WriteLine($"Task execution took {stopwatch.ElapsedMilliseconds} ms, which exceeds the threshold.");
-
-            if (!propagateExceptions) continue;
-
-            try
+            foreach (var (task, propagateExceptions) in _taskQueue.GetConsumingEnumerable())
             {
+                var stopwatch = Stopwatch.StartNew();
+                _taskScheduler.DoTryExecuteTask(task);
+                stopwatch.Stop();
+
+                if (stopwatch.Elapsed > TimeOut)
+                    Debug.WriteLine(
+                        $"Task execution took {stopwatch.ElapsedMilliseconds} ms, which exceeds the threshold.");
+
+                if (!propagateExceptions) continue;
+
                 task.GetAwaiter().GetResult();
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
-                throw;
-            }
-        }
+        });
+    }
+
+    public IEnumerable<Task> GetScheduledTasks()
+    {
+        return _taskQueue.GetScheduledTasks();
     }
 }
 
