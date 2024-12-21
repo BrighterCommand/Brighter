@@ -1,5 +1,7 @@
+#region Sources
 //copy of Stephen Cleary's Nito Disposables SingleDisposable
 //see https://github.com/StephenCleary/Disposables/blob/main/src/Nito.Disposables/SingleDisposable.cs
+#endregion
 
 using System;
 using System.Threading.Tasks;

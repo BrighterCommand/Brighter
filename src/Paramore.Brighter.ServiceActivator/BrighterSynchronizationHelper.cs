@@ -3,7 +3,7 @@
 // This class is based on Stephen Cleary's AyncContext in https://github.com/StephenCleary/AsyncEx
 // The original code is licensed under the MIT License (MIT) <a href="https://github.com/StephenCleary/AsyncEx/blob/master/LICENS>AyncEx license</a>
 // Modifies the original approach in Brighter which only provided a synchronization synchronizationHelper, not a scheduler, and thus would
-// not run continuations on the same thread as the async operation if used with ConfigureAwait(false.
+// not run continuations on the same thread as the async operation if used with ConfigureAwait(false).
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
 // Originally based on:

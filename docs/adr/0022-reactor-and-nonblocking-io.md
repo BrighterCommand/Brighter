@@ -72,6 +72,12 @@ Our custom SynchronizationContext, BrighterSynchronizationContext, can ensure th
 
 in V9, we have only use the synchronization context for user code, the transformer and hander calls. From V10 we want to extend the support to calls to the transport, whist we are waiting for I/O.
 
+Our SynchronizationContext, as written, just queues continuations and runs them using a single thread. However, as it does not offer a Task Scheduler anyway who simply writes ConfigureAwait(false) pushes us onto a thread pool thread. To fix this we need to take control of the TaskScheduler, and ensure that we run on the message pump thread. 
+
+At this point we choose to use Stephen Cleary's AsyncEx project, to help us run the Proactor Run method on the message pump thread. This is a good fit for us, as we can use the AsyncContext.Run to ensure that we run on the message pump thread. However, AsyncEx is not strong named, making it difficult to use directly. In addition,m we want to modify it. So we will create our own internal versions - it is MIT licensed so we can do this - and then add any bug fixes we need for our context to that. As we marke these internal, we don't reship AsyncEx, and we can avoid the strong naming issue.
+
+This allows us to simplify the Proactor message pump, and to take advantage of non-blocking I/O where possible. In particular we can write an async EventLoop method, that means the Reactor can take advantage of non-blocking I/O in the transport SDKs, transformers and user defined handlers where they support it. Then in our Run method we just wrap that call in our derived class from AsyncContext.Run, to ensure that we run on the message pump thread.
+
 ### Extending Transport Support for Async
 
 Currently, Brighter only supports an IAmAMessageConsumer interface and does not support an IAmAMessageConsumerAsync interface. This means that within a Proactor, we cannot take advantage of the non-blocking I/O and we are forced to block on the non-blocking I/O. We will address this by adding that interface, so as to allow a Proactor to take advantage of non-blocking I/O.
