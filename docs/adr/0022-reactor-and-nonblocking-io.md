@@ -58,7 +58,15 @@ In addition, within a Subscription, rather than the slightly confusing runAsync 
 
 Within the Subscription for a specific transport, we set the default to the type that the transport natively supports, Proactor if it supports both.
 
-
+| Transport | Supports Reactor Natively | Supports Proactor Natively |
+| ------------- | ------------- |-------------| 
+| Azure Service Bus | Sync over Async  | Native |
+| AWS (SNS/SQS)| Sync over Async  | Native |
+| Kafka| Native  | Async over Sync (either thread pool thread or exploiting no wait calls) |
+| MQTT | Sync over Async/Event Based  | Event Based |
+| MSSQL | Native | Native |
+| Rabbit MQ (AMQP 0-9-1) | After V6, Sync over Async  | Native from V7|
+| Redis | Native | Native |
 
 ### In Setup use Blocking I/O
 

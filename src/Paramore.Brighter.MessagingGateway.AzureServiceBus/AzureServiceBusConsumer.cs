@@ -56,9 +56,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             Logger.LogInformation("Consumer disposed");
         }
 
-
- 
-
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
