@@ -1,7 +1,7 @@
 ﻿#region Sources
 
 // This class is based on Stephen Cleary's AyncContext in https://github.com/StephenCleary/AsyncEx
-// The original code is licensed under the MIT License (MIT) <a href="https://github.com/StephenCleary/AsyncEx/blob/master/LICENS>AyncEx license</a>
+// The original code is licensed under the MIT License (MIT) <a href="https://github.com/StephenCleary/AsyncEx/blob/master/LICENSE>AyncEx license</a>
 // Modifies the original approach in Brighter which only provided a synchronization synchronizationHelper, not a scheduler, and thus would
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false).
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
@@ -38,12 +38,7 @@ internal class BrighterSynchronizationHelper : IDisposable
     private readonly BrighterTaskScheduler _taskScheduler;
     private readonly TaskFactory _taskFactory;
     private int _outstandingOperations;
-
-    /// <summary>
-    /// Gets the timeout duration for task execution.
-    /// </summary>
-    public TimeSpan TimeOut { get; } = TimeSpan.FromSeconds(30);
-    
+    private readonly TimeSpan _timeOut  = TimeSpan.FromSeconds(30);
     
     /// <summary>
     /// Initializes a new instance of the <see cref="BrighterSynchronizationHelper"/> class.
@@ -251,7 +246,7 @@ internal class BrighterSynchronizationHelper : IDisposable
                 _taskScheduler.DoTryExecuteTask(task);
                 stopwatch.Stop();
 
-                if (stopwatch.Elapsed > TimeOut)
+                if (stopwatch.Elapsed > _timeOut)
                     Debug.WriteLine(
                         $"Task execution took {stopwatch.ElapsedMilliseconds} ms, which exceeds the threshold.");
 
