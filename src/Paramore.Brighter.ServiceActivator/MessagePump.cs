@@ -66,7 +66,7 @@ namespace Paramore.Brighter.ServiceActivator
         ///  The message pump is a classic event loop and is intended to be run on a single-thread 
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a correctly scoped command processor </param>
-        /// <param name="requestContextFactory">Provides a request context</param>
+        /// <param name="requestContextFactory">Provides a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="channel"></param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
@@ -117,16 +117,10 @@ namespace Paramore.Brighter.ServiceActivator
             return RequeueCount != -1;
         }
 
-        // Implemented in a derived class to dispatch to the relevant type of pipeline via the command processor
-        // i..e an async pipeline uses SendAsync/PublishAsync and a blocking pipeline uses Send/Publish
-        protected abstract void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext context);
-
         protected void IncrementUnacceptableMessageLimit()
         {
             UnacceptableMessageCount++;
         }
-
-        protected abstract TRequest TranslateMessage(Message message, RequestContext requestContext);
 
         protected void ValidateMessageType(MessageType messageType, TRequest request)
         {

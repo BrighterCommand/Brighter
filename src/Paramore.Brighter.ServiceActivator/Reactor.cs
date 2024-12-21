@@ -51,7 +51,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
-        /// <param name="requestContextFactory">A factory to create instances of request context, used to add context to a pipeline</param>
+        /// <param name="requestContextFactory">A factory to create instances of request synchronizationHelper, used to add synchronizationHelper to a pipeline</param>
         /// <param name="channel">The channel from which to read messages</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
@@ -74,54 +74,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// The channel to receive messages from
         /// </summary>
         public IAmAChannelSync Channel { get; set; }
-
-        protected override void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
-        {
-            s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
-            requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
-
-            var messageType = messageHeader.MessageType;
-
-            ValidateMessageType(messageType, request);
-
-            switch (messageType)
-            {
-                case MessageType.MT_COMMAND:
-                {
-                    CommandProcessorProvider.Get().Send(request, requestContext);
-                    break;
-                }
-                case MessageType.MT_DOCUMENT:
-                case MessageType.MT_EVENT:
-                {
-                    CommandProcessorProvider.Get().Publish(request, requestContext);
-                    break;
-                }
-            }
-        }
-
-        protected override TRequest TranslateMessage(Message message, RequestContext requestContext)
-        {
-            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
-            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
-
-            TRequest request;
-
-            try
-            {
-                request = _unwrapPipeline.Unwrap(message, requestContext);
-            }
-            catch (ConfigurationException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
-            }
-
-            return request;
-        }
 
         /// <summary>
         /// Runs the message pump, performing the following:
@@ -324,6 +276,31 @@ namespace Paramore.Brighter.ServiceActivator
 
             Channel.Acknowledge(message);
         }
+        
+        private void DispatchRequest(MessageHeader messageHeader, TRequest request, RequestContext requestContext)
+        {
+            s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            requestContext.Span?.AddEvent(new ActivityEvent("Dispatch Message"));
+
+            var messageType = messageHeader.MessageType;
+
+            ValidateMessageType(messageType, request);
+
+            switch (messageType)
+            {
+                case MessageType.MT_COMMAND:
+                {
+                    CommandProcessorProvider.Get().Send(request, requestContext);
+                    break;
+                }
+                case MessageType.MT_DOCUMENT:
+                case MessageType.MT_EVENT:
+                {
+                    CommandProcessorProvider.Get().Publish(request, requestContext);
+                    break;
+                }
+            }
+        }
 
         private RequestContext InitRequestContext(Activity? span, Message message)
         {
@@ -343,11 +320,6 @@ namespace Paramore.Brighter.ServiceActivator
             Channel.Reject(message);
         }
 
-        /// <summary>
-        /// Requeue Message
-        /// </summary>
-        /// <param name="message">Message to be Requeued</param>
-        /// <returns>Returns True if the message should be acked, false if the channel has handled it</returns>
         private bool RequeueMessage(Message message)
         {
             message.Header.UpdateHandledCount();
@@ -379,6 +351,29 @@ namespace Paramore.Brighter.ServiceActivator
                 Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
 
             return Channel.Requeue(message, RequeueDelay);
+        }
+        
+        private TRequest TranslateMessage(Message message, RequestContext requestContext)
+        {
+            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
+            requestContext.Span?.AddEvent(new ActivityEvent("Translate Message"));
+
+            TRequest request;
+
+            try
+            {
+                request = _unwrapPipeline.Unwrap(message, requestContext);
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
+
+            return request;
         }
 
         private bool UnacceptableMessageLimitReached()

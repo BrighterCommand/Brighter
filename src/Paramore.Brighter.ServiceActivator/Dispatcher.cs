@@ -103,7 +103,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
-        /// <param name="requestContextFactory">The factory used to make a request context</param>
+        /// <param name="requestContextFactory">The factory used to make a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
@@ -149,7 +149,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
-        /// <param name="requestContextFactory">The factory used to make a request context</param>
+        /// <param name="requestContextFactory">The factory used to make a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>        

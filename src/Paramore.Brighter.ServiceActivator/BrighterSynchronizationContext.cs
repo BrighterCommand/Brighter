@@ -1,13 +1,22 @@
+#region Sources
 
+// This class is based on Stephen Cleary's AyncContext in https://github.com/StephenCleary/AsyncEx
+// The original code is licensed under the MIT License (MIT) <a href="https://github.com/StephenCleary/AsyncEx/blob/master/LICENS>AyncEx license</a>
+// Modifies the original approach in Brighter which only provided a synchronization synchronizationHelper, not a scheduler, and thus would
+// not run continuations on the same thread as the async operation if used with ConfigureAwait(false.
+// This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
-//Based on:
+// Originally based on:
+
+//Also based on:
 // https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
-// https://www.codeproject.com/Articles/5274751/Understanding-the-SynchronizationContext-in-NET-wi
 // https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
+// https://github.com/microsoft/referencesource/blob/master/System.Web/AspNetSynchronizationContext.cs
+
+#endregion
+
 
 using System;
-using System.Collections.Concurrent;
-using System.Reflection;
 using System.Threading;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -18,103 +27,86 @@ namespace Paramore.Brighter.ServiceActivator
     /// <remarks>
     /// Adopts a single-threaded apartment model. We have one thread, all work - messages and callbacks are queued to a single work queue.
     /// When a callback is signaled, it is queued next and will be picked up when the current message completes or waits itself.
-    /// Strict ordering of messages will be lost as there is no guarantee what order I/O operations will complete - do not use if strict ordering is required.
-    /// Only uses one thread, so predictable performance, but may have many messages queued. Once queue length exceeds buffer size, we will stop reading new work.
+    /// Strict ordering of messages will be lost as there is no guarantee what order I/O operations will complete -
+    /// do not use if strict ordering is required.
+    /// Only uses one thread, so predictable performance, but may have many messages queued. Once queue length exceeds
+    /// buffer size, we will stop reading new work.
     /// </remarks>
-    public class BrighterSynchronizationContext : SynchronizationContext
+    internal class BrighterSynchronizationContext : SynchronizationContext
     {
-        private readonly BlockingCollection<Message> _queue = new();
-        private int _operationCount;
-        private readonly int _ownedThreadId = Environment.CurrentManagedThreadId;
+        /// <summary>
+        /// Gets the synchronization helper.
+        /// </summary>
+        public BrighterSynchronizationHelper SynchronizationHelper { get; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets or sets the timeout for send operations.
+        /// </summary>
+        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BrighterSynchronizationContext"/> class.
+        /// </summary>
+        /// <param name="synchronizationHelper">The synchronization helper.</param>
+        public BrighterSynchronizationContext(BrighterSynchronizationHelper synchronizationHelper)
+        {
+            SynchronizationHelper = synchronizationHelper;
+        }
+
+        /// <summary>
+        /// Creates a copy of the synchronization context.
+        /// </summary>
+        /// <returns>A new <see cref="SynchronizationContext"/> object.</returns>
+        public override SynchronizationContext CreateCopy()
+        {
+            return new BrighterSynchronizationContext(SynchronizationHelper);
+        }
+
+        /// <summary>
+        /// Notifies the context that an operation has completed.
+        /// </summary>
         public override void OperationCompleted()
         {
-            if (Interlocked.Decrement(ref _operationCount) == 0)
-                Complete();
+            SynchronizationHelper.OperationCompleted();
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Notifies the context that an operation has started.
+        /// </summary>
         public override void OperationStarted()
         {
-            Interlocked.Increment(ref _operationCount);
+            SynchronizationHelper.OperationStarted();
         }
 
-        /// <inheritdoc/>
-        public override void Post(SendOrPostCallback d, object? state)
+        /// <summary>
+        /// Dispatches an asynchronous message to the synchronization context.
+        /// </summary>
+        /// <param name="callback">The delegate to call.</param>
+        /// <param name="state">The object passed to the delegate.</param>
+        public override void Post(SendOrPostCallback callback, object? state)
         {
-            if (d == null) throw new ArgumentNullException(nameof(d));
-            _queue.Add(new Message(d, state));
+            if (callback == null) throw new ArgumentNullException(nameof(callback));
+            SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
         }
 
-        /// <inheritdoc/>
-        public override void Send(SendOrPostCallback d, object? state)
+        /// <summary>
+        /// Dispatches a synchronous message to the synchronization context.
+        /// </summary>
+        /// <param name="callback">The delegate to call.</param>
+        /// <param name="state">The object passed to the delegate.</param>
+        public override void Send(SendOrPostCallback callback, object? state)
         {
-            if (_ownedThreadId == Environment.CurrentManagedThreadId)
+            // current thread already owns the context, so just execute inline to prevent deadlocks
+            if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
             {
-                try
-                {
-                    d(state);
-                }
-                catch (Exception ex)
-                {
-                    throw new TargetInvocationException(ex);
-                }
+                callback(state);
             }
             else
             {
-                Exception? caughtException = null;
-                var evt = new ManualResetEventSlim();
-                try
-                {
-                    _queue.Add(new Message(s =>
-                        {
-                            try { d(state); }
-                            catch (Exception ex) { caughtException = ex; }
-                            finally { evt.Set(); }
-                        },
-                        state,
-                        evt));
-
-                    evt.Wait();
-
-                    if (caughtException != null)
-                    {
-                        throw new TargetInvocationException(caughtException);
-                    }
-                }
-                finally
-                {
-                    evt.Dispose();
-                }
+                var task = SynchronizationHelper.MakeTask(new ContextMessage(callback, state));
+                if (!task.Wait(Timeout)) // Timeout mechanism
+                    throw new TimeoutException("BrighterSynchronizationContext: Send operation timed out.");
             }
-        }
-
-        /// <summary>
-        /// Runs a loop to process all queued work items.
-        /// </summary>
-        public void RunOnCurrentThread()
-        {
-            foreach (var message in _queue.GetConsumingEnumerable())
-            {
-                message.Callback(message.State);
-                message.FinishedEvent?.Set();
-            }
-        }
-
-        /// <summary>
-        /// Notifies the context that no more work will arrive.
-        /// </summary>
-        private void Complete()
-        {
-            _queue.CompleteAdding();
-        }
-
-        private struct Message(SendOrPostCallback callback, object? state, ManualResetEventSlim? finishedEvent = null)
-        {
-            public readonly SendOrPostCallback Callback = callback;
-            public readonly object? State = state;
-            public readonly ManualResetEventSlim? FinishedEvent = finishedEvent;
         }
     }
 }
