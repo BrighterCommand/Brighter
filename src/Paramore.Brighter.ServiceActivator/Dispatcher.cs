@@ -131,6 +131,10 @@ namespace Paramore.Brighter.ServiceActivator
 
             if (messageMapperRegistry is null && messageMapperRegistryAsync is null)
                 throw new ConfigurationException("You must provide a message mapper registry or an async message mapper registry");
+                                       
+            //not all pipelines need a transformer factory
+            _messageTransformerFactory ??= new EmptyMessageTransformerFactory();
+            _messageTransformerFactoryAsync ??= new EmptyMessageTransformerFactoryAsync();
 
             State = DispatcherState.DS_NOTREADY;
 

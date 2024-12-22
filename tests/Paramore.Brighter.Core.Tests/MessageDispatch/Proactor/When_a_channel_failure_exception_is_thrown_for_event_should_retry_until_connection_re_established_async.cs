@@ -32,9 +32,9 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
-    public class MessagePumpRetryEventConnectionFailureTests
+    public class MessagePumpRetryEventConnectionFailureTestsAsync
     {
         private readonly RoutingKey _routingKey = new("MyTopic");
         private readonly InternalBus _bus = new();
@@ -42,11 +42,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         private readonly IAmAMessagePump _messagePump;
         private readonly SpyCommandProcessor _commandProcessor;
 
-        public MessagePumpRetryEventConnectionFailureTests()
+        public MessagePumpRetryEventConnectionFailureTestsAsync()
         {
             _commandProcessor = new SpyCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            var channel = new FailingChannel(
+            var channel = new FailingChannelAsync(
                 new ChannelName("myChannel"), _routingKey, 
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 
                 2)
@@ -55,11 +55,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             };
             
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel)
+            _messagePump = new Proactor<MyEvent>(provider, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(500), RequeueCount = -1
             };
@@ -90,8 +90,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
             //_should_publish_the_message_via_the_command_processor
             _commandProcessor.Commands.Count().Should().Be(2);
-            _commandProcessor.Commands[0].Should().Be(CommandType.Publish);
-            _commandProcessor.Commands[1].Should().Be(CommandType.Publish);
+            _commandProcessor.Commands[0].Should().Be(CommandType.PublishAsync);
+            _commandProcessor.Commands[1].Should().Be(CommandType.PublishAsync);
         }
 
     }

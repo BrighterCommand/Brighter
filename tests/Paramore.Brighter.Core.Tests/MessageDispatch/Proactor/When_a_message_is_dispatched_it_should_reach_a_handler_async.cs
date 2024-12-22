@@ -3,11 +3,11 @@ using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
+using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
   public class MessagePumpDispatchAsyncTests
     {

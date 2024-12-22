@@ -81,12 +81,12 @@ namespace Paramore.Brighter.ServiceActivator
         public Consumer Create()
         {
             if (_subscription.MessagePumpType == MessagePumpType.Proactor)
-                return CreateAsync();
+                return CreateProactor();
             else
-                return CreateBlocking();
+                return CreateReactor();
         }
 
-        private Consumer CreateBlocking()
+        private Consumer CreateReactor()
         {
             if (_messageMapperRegistry is null || _messageTransformerFactory is null)
                 throw new ArgumentException("Message Mapper Registry and Transform factory must be set");
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.ServiceActivator
             return new Consumer(_consumerName, _subscription, channel, messagePump);
         }
 
-        private Consumer CreateAsync()
+        private Consumer CreateProactor()
         {
             if (_messageMapperRegistryAsync is null || _messageTransformerFactoryAsync is null)
                 throw new ArgumentException("Message Mapper Registry and Transform factory must be set");

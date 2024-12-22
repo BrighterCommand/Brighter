@@ -8,7 +8,7 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
      
     [Collection("CommandProcessor")]

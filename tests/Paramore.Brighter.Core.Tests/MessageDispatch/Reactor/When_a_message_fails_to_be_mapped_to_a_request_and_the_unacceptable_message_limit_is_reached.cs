@@ -26,10 +26,10 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
-using Xunit;
 using Paramore.Brighter.ServiceActivator;
+using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
     public class MessagePumpUnacceptableMessageLimitTests
     {

@@ -32,10 +32,10 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
 {
     [Collection("CommandProcessor")]
-    public class DispatcherAddNewConnectionTests : IDisposable
+    public class DispatcherAddNewConnectionTestsAsync : IDisposable
     {
         private readonly Dispatcher _dispatcher;
         private readonly Subscription _newSubscription;
@@ -43,31 +43,34 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         private readonly RoutingKey _routingKey = new("MyEvent");
         private readonly RoutingKey _routingKeyTwo = new("OtherEvent");
 
-        public DispatcherAddNewConnectionTests()
+        public DispatcherAddNewConnectionTestsAsync()
         {
             _bus = new InternalBus();
             
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             Subscription subscription = new Subscription<MyEvent>(
                 new SubscriptionName("test"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
                 channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), channelName: new ChannelName("fakeChannel"), 
-                messagePumpType: MessagePumpType.Reactor, routingKey: _routingKey
+                messagePumpType: MessagePumpType.Proactor, routingKey: _routingKey
             );
             
             _newSubscription = new Subscription<MyEvent>(
                 new SubscriptionName("newTest"), noOfPerformers: 1, timeOut: TimeSpan.FromMilliseconds(1000), 
                 channelFactory: new InMemoryChannelFactory(_bus, TimeProvider.System), 
-                channelName: new ChannelName("fakeChannelTwo"), messagePumpType: MessagePumpType.Reactor, routingKey: _routingKeyTwo);
-            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistry);
+                channelName: new ChannelName("fakeChannelTwo"), messagePumpType: MessagePumpType.Proactor, routingKey: _routingKeyTwo);
+            _dispatcher = new Dispatcher(commandProcessor, new List<Subscription> { subscription }, messageMapperRegistryAsync: messageMapperRegistry);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKey});
+            var message = new MyEventMessageMapperAsync()
+                .MapToMessageAsync(@event, new Publication{Topic = _routingKey})
+                .GetAwaiter()
+                .GetResult();
             _bus.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
@@ -80,7 +83,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             _dispatcher.Open(_newSubscription);
 
             var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event, new Publication{Topic = _routingKeyTwo});
+            var message = await new MyEventMessageMapperAsync().MapToMessageAsync(@event, new Publication{Topic = _routingKeyTwo});
             _bus.Enqueue(message);
 
             await Task.Delay(1000);

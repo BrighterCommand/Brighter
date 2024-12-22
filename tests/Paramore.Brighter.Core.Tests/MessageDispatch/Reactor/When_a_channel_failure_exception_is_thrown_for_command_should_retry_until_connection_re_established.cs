@@ -24,15 +24,15 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
-using Xunit;
 using Paramore.Brighter.ServiceActivator;
-using System.Text.Json;
-using Microsoft.Extensions.Time.Testing;
+using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageDispatch
+namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 {
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            _messagePump = new Reactor<MyCommand>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+            _messagePump = new Reactor<MyCommand>(provider, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(500), RequeueCount = -1
             };
