@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
@@ -44,13 +45,14 @@ namespace Paramore.Brighter
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        Task SendAsync(Message message);
-        
+        Task SendAsync(Message message, CancellationToken cancellationToken = default);
+
         /// <summary>
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0</param>
-        Task SendWithDelayAsync(Message message, TimeSpan? delay);
+        /// <param name="cancellationToken">A cancellation token to end the operation</param>
+        Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default);
     }
 }

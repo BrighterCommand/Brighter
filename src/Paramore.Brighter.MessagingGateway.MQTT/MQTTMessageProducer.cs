@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -52,13 +53,14 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Sends the specified message asynchronously.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Allows cancellation of the send operation</param>
         /// <returns>Task.</returns>
-        public async Task SendAsync(Message message)
+        public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
 
-            await _mqttMessagePublisher.PublishMessageAsync(message);
+            await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
         }
         
         /// <summary>
@@ -71,16 +73,17 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             // delay is not natively supported
             Send(message);
         }
-        
+
         /// <summary>
         /// Sens the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
-        public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        /// <param name="cancellationToken">Allows cancellation of the Send operation</param>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
             // delay is not natively supported
-            await SendAsync(message);
+            await SendAsync(message, cancellationToken);
         }
 
     }

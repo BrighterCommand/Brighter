@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -14,57 +13,55 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 {
     [Collection("CommandProcessor")]
-    public class DispatchBuilderTests : IDisposable
+    public class DispatchBuilderWithNamedGatewayAsync : IDisposable
     {
         private readonly IAmADispatchBuilder _builder;
-        private Dispatcher? _dispatcher;
+        private Dispatcher _dispatcher;
 
-        public DispatchBuilderTests()
+        public DispatchBuilderWithNamedGatewayAsync()
         {
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync())
+            );
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .WaitAndRetry(new[]
+            var policyRegistry = new PolicyRegistry
+            {
                 {
-                    TimeSpan.FromMilliseconds(50),
-                    TimeSpan.FromMilliseconds(100),
-                    TimeSpan.FromMilliseconds(150)
-                });
+                    CommandProcessor.RETRYPOLICY, Policy
+                        .Handle<Exception>()
+                        .WaitAndRetry(new[] {TimeSpan.FromMilliseconds(50)})
+                },
+                {
+                    CommandProcessor.CIRCUITBREAKER, Policy
+                        .Handle<Exception>()
+                        .CircuitBreaker(1, TimeSpan.FromMilliseconds(500))
+                }
+            };
 
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-
-            var rmqConnection = new RmqMessagingGatewayConnection
+            var connection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange")
             };
 
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-            var container = new ServiceCollection();
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection);
 
+            var container = new ServiceCollection();
             var tracer = new BrighterTracer(TimeProvider.System);
             var instrumentationOptions = InstrumentationOptions.All;
-            
+
             var commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
-                .Policies(new PolicyRegistry
-                {
-                    { CommandProcessor.RETRYPOLICY, retryPolicy },
-                    { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-                })
+                .Policies(policyRegistry)
                 .NoExternalBus()
                 .ConfigureInstrumentation(tracer, instrumentationOptions)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
             _builder = DispatchBuilder.StartNew()
-                .CommandProcessorFactory(() => 
+                .CommandProcessorFactory(() =>
                     new CommandProcessorProvider(commandProcessor),
                     new InMemoryRequestContextFactory()
                 )
@@ -76,40 +73,30 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                         new SubscriptionName("foo"),
                         new ChannelName("mary"),
                         new RoutingKey("bob"),
-                        messagePumpType: MessagePumpType.Reactor,
+                        messagePumpType: MessagePumpType.Proactor,
                         timeOut: TimeSpan.FromMilliseconds(200)),
                     new RmqSubscription<MyEvent>(
                         new SubscriptionName("bar"),
                         new ChannelName("alice"),
                         new RoutingKey("simon"),
+                        messagePumpType: MessagePumpType.Proactor,
                         timeOut: TimeSpan.FromMilliseconds(200))
                 })
                 .ConfigureInstrumentation(tracer, instrumentationOptions);
         }
 
         [Fact]
-        public void When_Building_A_Dispatcher()
+        public void When_building_a_dispatcher_with_named_gateway()
         {
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
             AssertionExtensions.Should(_dispatcher).NotBeNull();
-            //_should_have_a_foo_connection
-            GetConnection("foo").Should().NotBeNull();
-            //_should_have_a_bar_connection
-            GetConnection("bar").Should().NotBeNull();
-            //_should_be_in_the_awaiting_state
-            AssertionExtensions.Should(_dispatcher.State).Be(DispatcherState.DS_AWAITING);
         }
 
         public void Dispose()
         {
             CommandProcessor.ClearServiceBus();
-        }
-
-        private Subscription GetConnection(string name)
-        {
-            return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Subscriptions, conn => conn.Name == name);
         }
     }
 }

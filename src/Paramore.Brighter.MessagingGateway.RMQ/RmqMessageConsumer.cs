@@ -143,12 +143,12 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
     /// <param name="message">The message.</param>
     public void Acknowledge(Message message) => AcknowledgeAsync(message).GetAwaiter().GetResult();
 
-    private async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
         var deliveryTag = message.DeliveryTag;
         try
         {
-            EnsureBroker();
+            await EnsureBrokerAsync(cancellationToken: cancellationToken);
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageConsumer: channel {_queueName.Value} is null");
             
@@ -166,30 +166,12 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
         }
     }
 
-    async Task IAmAMessageConsumerAsync.RejectAsync(Message message, CancellationToken cancellationToken)
-    {
-        await RejectAsync(message, cancellationToken);
-    }
-
-    async Task IAmAMessageConsumerAsync.PurgeAsync(CancellationToken cancellationToken)
-    {
-        await PurgeAsync(cancellationToken);
-    }
-
-
-
-    async Task<bool> IAmAMessageConsumerAsync.RequeueAsync(Message message, TimeSpan? delay,
-        CancellationToken cancellationToken)
-    {
-        return await RequeueAsync(message, delay, cancellationToken);
-    }
-
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
     public void Purge() => PurgeAsync().GetAwaiter().GetResult();
 
-    private async Task PurgeAsync(CancellationToken cancellationToken = default)
+    public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -292,18 +274,18 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
                                           exception is AlreadyClosedException ||
                                           exception is TimeoutException)
         {
-            HandleException(exception, true);
+            await HandleExceptionAsync(exception, true, cancellationToken);
         }
         catch (Exception exception) when (exception is EndOfStreamException ||
                                           exception is OperationInterruptedException ||
                                           exception is NotSupportedException ||
                                           exception is BrokenCircuitException)
         {
-            HandleException(exception);
+            await HandleExceptionAsync(exception, cancellationToken: cancellationToken);
         }
         catch (Exception exception)
         {
-            HandleException(exception);
+            await HandleExceptionAsync(exception, cancellationToken: cancellationToken);
         }
 
         return [_noopMessage]; // Default return in case of exception
@@ -318,7 +300,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
     public bool Requeue(Message message, TimeSpan? timeout = null) =>
         RequeueAsync(message, timeout).GetAwaiter().GetResult();
 
-    private async Task<bool> RequeueAsync(Message message, TimeSpan? timeout = null,
+    public async Task<bool> RequeueAsync(Message message, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
         timeout ??= TimeSpan.Zero;
@@ -369,12 +351,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
     /// <param name="message">The message.</param>
     public void Reject(Message message) => RejectAsync(message).GetAwaiter().GetResult();
 
-    async Task IAmAMessageConsumerAsync.AcknowledgeAsync(Message message, CancellationToken cancellationToken)
-    {
-        await AcknowledgeAsync(message, cancellationToken);
-    }
-
-    private async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -393,9 +370,6 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
             throw;
         }
     }
-
-
-    protected virtual void EnsureChannel() => EnsureChannelAsync().Wait();
 
     protected virtual async Task EnsureChannelAsync(CancellationToken cancellationToken = default)
     {
@@ -515,7 +489,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
         }
     }
 
-    private void HandleException(Exception exception, bool resetConnection = false)
+    private async Task HandleExceptionAsync(Exception exception, bool resetConnection = false, CancellationToken cancellationToken = default)
     {
         if (Connection.Exchange is null) throw new ConfigurationException($"RmqMessageConsumer: exchange for {_queueName.Value} is null", exception);
        if (Connection.AmpqUri is null) throw new ConfigurationException($"RmqMessageConsumer: ampqUri for {_queueName.Value} is null", exception);
@@ -528,7 +502,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
             Connection.AmpqUri.GetSanitizedUri()
         );
         
-        if (resetConnection) ResetConnectionToBroker();
+        if (resetConnection) await ResetConnectionToBrokerAsync(cancellationToken);
         throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", exception);
     }
 

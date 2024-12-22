@@ -110,23 +110,24 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// NOTE: RMQ's client has no async support, so this is not actually async and will block whilst it sends 
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="cancellationToken">Pass a cancellation token to kill the send operation</param>
     /// <returns></returns>
-    public async Task SendAsync(Message message) => await SendWithDelayAsync(message, null);
+    public async Task SendAsync(Message message, CancellationToken cancellationToken = default) => await SendWithDelayAsync(message, null, cancellationToken);
 
-    public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
+    public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
     {
         if (Connection.Exchange is null) throw new ConfigurationException("RmqMessageProducer: Exchange is not set");
         if (Connection.AmpqUri is null) throw new ConfigurationException("RmqMessageProducer: Broker URL is not set");
         
         delay ??= TimeSpan.Zero;
 
-        await s_lock.WaitAsync();
+        await s_lock.WaitAsync(cancellationToken);
         try
         {
             s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {ExchangeName}",
                 Connection.Exchange.Name);
             
-            EnsureBroker(makeExchange: _publication.MakeChannels);
+            await EnsureBrokerAsync(makeExchange: _publication.MakeChannels, cancellationToken: cancellationToken);
             
             if (Channel is null) throw new ChannelFailureException($"RmqMessageProducer: Channel is not set for {_publication.Topic}");
 
@@ -141,17 +142,17 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
                 Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delay.Value.TotalMilliseconds,
                 message.Header.Topic, message.Persist, message.Id, message.Body.Value);
 
-            _pendingConfirmations.TryAdd(await Channel.GetNextPublishSequenceNumberAsync(), message.Id);
+            _pendingConfirmations.TryAdd(await Channel.GetNextPublishSequenceNumberAsync(cancellationToken), message.Id);
 
             if (DelaySupported)
             {
-                await rmqMessagePublisher.PublishMessageAsync(message, delay.Value);
+                await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
             }
             else
             {
                 //TODO: Replace with a Timer, don't block
-                await Task.Delay(delay.Value);
-                await rmqMessagePublisher.PublishMessageAsync(message, TimeSpan.Zero);
+                await Task.Delay(delay.Value, cancellationToken);
+                await rmqMessagePublisher.PublishMessageAsync(message, TimeSpan.Zero, cancellationToken);
             }
 
             s_logger.LogInformation(
@@ -166,7 +167,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
                 "RmqMessageProducer: Error talking to the socket on {URL}, resetting subscription",
                 Connection.AmpqUri.GetSanitizedUri()
             );
-            ResetConnectionToBroker();
+            await ResetConnectionToBrokerAsync(cancellationToken);
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
         }
         finally

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
@@ -41,13 +42,22 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_resetting_a_connection_that_does_not_exist()
+        public async Task When_resetting_a_connection_that_does_not_exist()
         {
             var connectionFactory = new ConnectionFactory {HostName = "invalidhost"};
 
-            Action resetConnection = () => _connectionPool.ResetConnection(connectionFactory);
+            bool resetConnectionExceptionThrown = false;
+            try
+            {
+                await _connectionPool.ResetConnectionAsync(connectionFactory);
+            }
+            catch (Exception )
+            {
+                resetConnectionExceptionThrown = true;
+            }                                
+            
+            resetConnectionExceptionThrown.Should().BeFalse();
 
-            resetConnection.Should().NotThrow();
         }
     }
 }

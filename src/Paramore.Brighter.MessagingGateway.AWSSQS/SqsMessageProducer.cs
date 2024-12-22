@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -33,7 +34,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
-        private readonly AWSMessagingGatewayConnection _connection;
         private readonly SnsPublication _publication;
         private readonly AWSClientFactory _clientFactory;
         
@@ -54,7 +54,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public SqsMessageProducer(AWSMessagingGatewayConnection connection, SnsPublication publication)
             : base(connection)
         {
-            _connection = connection;
             _publication = publication;
             _clientFactory = new AWSClientFactory(connection);
 
@@ -63,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         }
         
-       public async Task<bool> ConfirmTopicExistsAsync(string? topic = null)
+       public async Task<bool> ConfirmTopicExistsAsync(string? topic = null, CancellationToken cancellationToken = default)
        {
            //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
            if (!string.IsNullOrEmpty(ChannelTopicArn)) return !string.IsNullOrEmpty(ChannelTopicArn);
@@ -80,21 +79,22 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
            await EnsureTopicAsync(
                routingKey,
                _publication.FindTopicBy,
-               _publication.SnsAttributes, _publication.MakeChannels);
+               _publication.SnsAttributes, _publication.MakeChannels, cancellationToken);
 
            return !string.IsNullOrEmpty(ChannelTopicArn);
        }
-       
+
        /// <summary>
        /// Sends the specified message.
        /// </summary>
        /// <param name="message">The message.</param>
-       public async Task SendAsync(Message message)
+       /// <param name="cancellationToken">Allows cancellation of the Send operation</param>
+       public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
        {
            s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}", 
                message.Header.Topic, message.Id, message.Body);
             
-           await ConfirmTopicExistsAsync(message.Header.Topic);
+           await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
            
            if (string.IsNullOrEmpty(ChannelTopicArn))
                throw new InvalidOperationException($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body} as the topic does not exist");
@@ -132,17 +132,18 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             //TODO: Delay should set a visibility timeout
             Send(message);
         }
-        
+
         /// <summary>
         /// Sends the specified message, with a delay
         /// </summary>
         /// <param name="message">The message</param>
         /// <param name="delay">The sending delay</param>
+        /// <param name="cancellationToken">Cancels the send operation</param>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
             //TODO: Delay should set the visibility timeout
-            await SendAsync(message);
+            await SendAsync(message, cancellationToken);
         }
 
 

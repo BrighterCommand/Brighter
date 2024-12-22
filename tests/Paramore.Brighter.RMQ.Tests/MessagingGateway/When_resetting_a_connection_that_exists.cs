@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
@@ -45,13 +46,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_resetting_a_connection_that_exists()
+        public async Task When_resetting_a_connection_that_exists()
         {
             var connectionFactory = new ConnectionFactory{HostName = "localhost"};
 
-            _connectionPool.ResetConnection(connectionFactory);
+            await _connectionPool.ResetConnectionAsync(connectionFactory);
 
-            _connectionPool.GetConnection(connectionFactory).Should().NotBeSameAs(_originalConnection);
+            (await _connectionPool.GetConnectionAsync(connectionFactory)).Should().NotBeSameAs(_originalConnection);
         }
     }
 }

@@ -70,8 +70,9 @@ namespace Paramore.Brighter
         /// Send a message to a broker; in this case an <see cref="InternalBus"/>
         /// </summary>
         /// <param name="message">The message to send</param>
+        /// <param name="cancellationToken">Cancel the Send operation</param>
         /// <returns></returns>
-        public Task SendAsync(Message message)
+        public Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
 
@@ -99,7 +100,7 @@ namespace Paramore.Brighter
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg);
                 bus.Enqueue(msg);
                 OnMessagePublished?.Invoke(true, msg.Id);
-                yield return new[] { msg.Id };
+                yield return [msg.Id];
             }
         }
 
@@ -139,13 +140,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message to send</param>
         /// <param name="delay">The delay of the send</param>
-        public Task SendWithDelayAsync(Message message, TimeSpan? delay)
+        /// <param name="cancellationToken">A cancellation token for send operation</param>
+        public Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
             delay ??= TimeSpan.FromMilliseconds(0);
 
             //we don't want to block, so we use a timer to invoke the requeue after a delay
             _requeueTimer = timeProvider.CreateTimer(
-                msg => SendAsync((Message)msg!),
+                msg => SendAsync((Message)msg!, cancellationToken),
                 message,
                 delay.Value,
                 TimeSpan.Zero

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
@@ -219,18 +220,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
         
-        public void SendWithDelay(Message message, TimeSpan? delay = null)
-        {
-            //TODO: No delay support implemented
-            Send(message);
-        }
-        
-        public async Task SendWithDelayAsync(Message message, TimeSpan? delay)
-        {
-            //TODO: No delay support implemented
-            await SendAsync(message);
-        }
-        
+ 
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -240,7 +231,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// producer queues work and uses a dedicated thread to dispatch
         /// </remarks>
         /// <param name="message">The message.</param>
-        public async Task SendAsync(Message message)
+        /// <param name="cancellationToken">Allows cancellation of the in-flight send operation</param>
+        public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
@@ -256,7 +248,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     message.Body.Value
                 );
 
-                await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers) );
+                await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
 
             }
             catch (ProduceException<string, string> pe)
@@ -288,6 +280,35 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
                
             }
+        }
+        
+        /// <summary>
+        /// Sends the message with the given delay
+        /// </summary>
+        /// <remarks>
+        /// No delay support implemented
+        /// </remarks>
+        /// <param name="message">The message to send</param>
+        /// <param name="delay">The delay to use</param>
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
+        {
+            //TODO: No delay support implemented
+            Send(message);
+        }
+
+        /// <summary>
+        /// Sends the message with the given delay
+        /// </summary>
+        /// <remarks>
+        /// No delay support implemented
+        /// </remarks>
+        /// <param name="message">The message to send</param>
+        /// <param name="delay">The delay to use</param>
+        /// <param name="cancellationToken">Cancels the send operation</param>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        {
+            //TODO: No delay support implemented
+            await SendAsync(message);
         }
 
         /// <summary>

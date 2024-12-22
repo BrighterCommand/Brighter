@@ -93,7 +93,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public async Task SendAsync(Message message)
+        /// <param name="cancellationToken">Cancel the in-flight send operation</param>
+        public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             await SendWithDelayAsync(message);
         }
@@ -165,7 +166,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Delay delivery of the message.</param>
-        public async Task SendWithDelayAsync(Message message, TimeSpan? delay = null)
+        /// <param name="cancellationToken">Cancel the in-flight send operation</param>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default)
         {
             Logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
             
@@ -184,12 +186,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 var azureServiceBusMessage = ConvertToServiceBusMessage(message);
                 if (delay == TimeSpan.Zero)
                 {
-                    await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage);
+                    await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage, cancellationToken);
                 }
                 else
                 {
                     var dateTimeOffset = new DateTimeOffset(DateTime.UtcNow.Add(delay.Value));
-                    await serviceBusSenderWrapper.ScheduleMessageAsync(azureServiceBusMessage, dateTimeOffset);
+                    await serviceBusSenderWrapper.ScheduleMessageAsync(azureServiceBusMessage, dateTimeOffset, cancellationToken);
                 }
 
                 Logger.LogDebug(

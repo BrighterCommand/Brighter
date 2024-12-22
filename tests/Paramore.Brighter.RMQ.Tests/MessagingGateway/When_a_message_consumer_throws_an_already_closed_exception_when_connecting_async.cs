@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.RMQ.Tests.TestDoubles;
@@ -8,15 +9,15 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway 
 {
     [Trait("Category", "RMQ")]
-    public class RmqMessageConsumerConnectionClosedTests : IDisposable
+    public class RmqMessageConsumerConnectionClosedTestsAsync : IDisposable
     {
-        private readonly IAmAMessageProducerSync _sender;
-        private readonly IAmAMessageConsumer _receiver;
-        private readonly IAmAMessageConsumer _badReceiver;
+        private readonly IAmAMessageProducerAsync _sender;
+        private readonly IAmAMessageConsumerAsync _receiver;
+        private readonly IAmAMessageConsumerAsync _badReceiver;
         private readonly Message _sentMessage;
         private Exception _firstException;
 
-        public RmqMessageConsumerConnectionClosedTests()
+        public RmqMessageConsumerConnectionClosedTestsAsync()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid().ToString(),  
                 new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
@@ -36,14 +37,15 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _receiver = new RmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, false);
             _badReceiver = new AlreadyClosedRmqMessageConsumer(rmqConnection, queueName, _sentMessage.Header.Topic, false, 1, false);
 
+            
         }
 
         [Fact]
-        public void When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
+        public async Task When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
         {
-            _sender.Send(_sentMessage);
+            await _sender.SendAsync(_sentMessage);
             
-            _firstException = Catch.Exception(() => _badReceiver.Receive(TimeSpan.FromMilliseconds(2000)));
+            _firstException = Catch.Exception(async () => await _badReceiver.ReceiveAsync(TimeSpan.FromMilliseconds(2000)));
 
             //_should_return_a_channel_failure_exception
             _firstException.Should().BeOfType<ChannelFailureException>();

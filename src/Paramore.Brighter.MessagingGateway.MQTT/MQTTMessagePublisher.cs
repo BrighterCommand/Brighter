@@ -81,11 +81,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Sends the specified message asynchronously.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Allows cancellation of the operation</param>
         /// <returns>Task.</returns>
-        public async Task PublishMessageAsync(Message message)
+        public async Task PublishMessageAsync(Message message, CancellationToken cancellationToken = default)
         {
             MqttApplicationMessage mqttMessage = CreateMqttMessage(message);
-            await _mqttClient.PublishAsync(mqttMessage, CancellationToken.None);
+            await _mqttClient.PublishAsync(mqttMessage, cancellationToken);
         }
 
         private MqttApplicationMessage CreateMqttMessage(Message message)

@@ -54,9 +54,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ;
 public class RmqMessageGateway : IDisposable, IAsyncDisposable
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGateway>();
-    private readonly Policy _circuitBreakerPolicy;
+    private readonly AsyncPolicy _circuitBreakerPolicy;
     private readonly ConnectionFactory _connectionFactory;
-    private readonly Policy _retryPolicy;
+    private readonly AsyncPolicy _retryPolicy;
     protected readonly RmqMessagingGatewayConnection Connection;
     protected IChannel? Channel;
 
@@ -71,8 +71,8 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
 
         var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
 
-        _retryPolicy = connectionPolicyFactory.RetryPolicy;
-        _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicy;
+        _retryPolicy = connectionPolicyFactory.RetryPolicyAsync;
+        _circuitBreakerPolicy = connectionPolicyFactory.CircuitBreakerPolicyAsync;
         
        if (Connection.AmpqUri is null) throw new ConfigurationException("RMQMessagingGateway: No AMPQ URI specified");
 
@@ -109,28 +109,38 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
     /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
     /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
     protected void EnsureBroker(ChannelName? queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
+        => EnsureBrokerAsync().GetAwaiter().GetResult();
+
+    /// <summary>
+    /// Connects the specified queue name.
+    /// </summary>
+    /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
+    /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
+    /// <param name="cancellationToken">Cancel the operation</param>
+    /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+    protected async Task EnsureBrokerAsync(
+        ChannelName? queueName = null, 
+        OnMissingChannel makeExchange = OnMissingChannel.Create,
+        CancellationToken cancellationToken = default
+        )
     {
         queueName ??= new ChannelName("Producer Channel");
 
-        ConnectWithCircuitBreaker(queueName, makeExchange);
+        await ConnectWithCircuitBreakerAsync(queueName, makeExchange, cancellationToken);
     }
 
-    private void ConnectWithCircuitBreaker(ChannelName queueName, OnMissingChannel makeExchange)
+    private async Task ConnectWithCircuitBreakerAsync(ChannelName queueName, OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {
-        _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName, makeExchange));
+        await _circuitBreakerPolicy.ExecuteAsync(() => ConnectWithRetryAsync(queueName, makeExchange, cancellationToken));
     }
-
-    private void ConnectWithRetry(ChannelName queueName, OnMissingChannel makeExchange)
+    
+    private async Task ConnectWithRetryAsync(ChannelName queueName, OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {
-        _retryPolicy.Execute(_ => ConnectToBroker(makeExchange),
+        await _retryPolicy.ExecuteAsync(_ => ConnectToBrokerAsync(makeExchange,cancellationToken),
             new Dictionary<string, object> { { "queueName", queueName.Value } });
     }
 
-    protected virtual void ConnectToBroker(OnMissingChannel makeExchange) =>
-        ConnectToBrokerAsync(makeExchange).GetAwaiter().GetResult();
-
-    protected virtual async Task ConnectToBrokerAsync(OnMissingChannel makeExchange,
-        CancellationToken cancellationToken = default)
+    protected virtual async Task ConnectToBrokerAsync(OnMissingChannel makeExchange, CancellationToken cancellationToken = default)
     {
         if (Channel == null || Channel.IsClosed)
         {
@@ -173,9 +183,9 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    protected void ResetConnectionToBroker()
+    protected async Task ResetConnectionToBrokerAsync(CancellationToken cancellationToken = default)
     {
-        new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
+        await new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnectionAsync(_connectionFactory, cancellationToken);
     }
 
     ~RmqMessageGateway()
@@ -203,7 +213,9 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
             Channel?.Dispose();
             Channel = null;
 
-            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
+            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnectionAsync(_connectionFactory)
+                .GetAwaiter()
+                .GetResult();
         }
     }
 }

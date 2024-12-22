@@ -58,10 +58,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var retryWaitInMilliseconds = connection.AmpqUri.RetryWaitInMilliseconds;
             var circuitBreakerTimeout = connection.AmpqUri.CircuitBreakTimeInMilliseconds;
 
-            RetryPolicy = Policy
+            RetryPolicyAsync = Policy
                 .Handle<BrokerUnreachableException>()
                 .Or<Exception>()
-                .WaitAndRetry(
+                .WaitAndRetryAsync(
                     retries,
                     retryAttempt => TimeSpan.FromMilliseconds(retryWaitInMilliseconds * Math.Pow(2, retryAttempt)),
                     (exception, timeSpan, context) =>
@@ -87,21 +87,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         }
                     });
 
-            CircuitBreakerPolicy = Policy
+            CircuitBreakerPolicyAsync = Policy
                 .Handle<BrokerUnreachableException>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
+                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
         }
 
         /// <summary>
         /// Gets the retry policy.
         /// </summary>
         /// <value>The retry policy.</value>
-        public Policy RetryPolicy { get; }
+        public AsyncPolicy RetryPolicyAsync { get; }
 
         /// <summary>
         /// Gets the circuit breaker policy.
         /// </summary>
         /// <value>The circuit breaker policy.</value>
-        public Policy CircuitBreakerPolicy { get; }
+        public AsyncPolicy CircuitBreakerPolicyAsync { get; }
     }
 }

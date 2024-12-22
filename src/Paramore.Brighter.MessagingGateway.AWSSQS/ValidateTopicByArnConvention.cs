@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
@@ -58,8 +59,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Validates the specified topic asynchronously.
         /// </summary>
         /// <param name="topic">The topic to validate.</param>
+        /// <param name="cancellationToken">Cancel the validation</param>
         /// <returns>A tuple indicating whether the topic is valid and its ARN.</returns>
-        public override async Task<(bool, string? TopicArn)> ValidateAsync(string topic)
+        public override async Task<(bool, string? TopicArn)> ValidateAsync(string topic, CancellationToken cancellationToken = default)
         {
             var topicArn = await GetArnFromTopic(topic);
             return await base.ValidateAsync(topicArn);

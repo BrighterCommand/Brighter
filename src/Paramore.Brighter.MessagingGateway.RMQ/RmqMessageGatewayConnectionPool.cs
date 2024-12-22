@@ -90,18 +90,35 @@ public class RmqMessageGatewayConnectionPool(string connectionName, ushort conne
         return pooledConnection.Connection;
     }
 
-    /// <summary>
-    /// Reset the connection to the RabbitMQ broker
-    /// </summary>
-    /// <param name="connectionFactory">The factory that creates broker connections</param>
-    public void ResetConnection(ConnectionFactory connectionFactory) => ResetConnectionAsync(connectionFactory).GetAwaiter().GetResult();
+      public async Task ResetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+      {
+          await s_lock.WaitAsync(cancellationToken);
+
+          try
+          {
+              await DelayReconnectingAsync();
+
+              try
+              {
+                  await CreateConnectionAsync(connectionFactory, cancellationToken);
+              }
+              catch (BrokerUnreachableException exception)
+              {
+                  s_logger.LogError(exception,
+                      "RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {URL}",
+                      connectionFactory.Endpoint);
+              }
+          }
+          finally
+          {
+              s_lock.Release();
+          }
+      }
     
     /// <summary>
     /// Remove the connection from the pool
     /// </summary>
     /// <param name="connectionFactory">The factory that creates broker connections</param>
-    public void RemoveConnection(ConnectionFactory connectionFactory) => RemoveConnectionAsync(connectionFactory).GetAwaiter().GetResult();
-
     public async Task RemoveConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
     {
         var connectionId = GetConnectionId(connectionFactory);
@@ -169,31 +186,6 @@ public class RmqMessageGatewayConnectionPool(string connectionName, ushort conne
     
     private static async Task DelayReconnectingAsync() => await Task.Delay(jitter.Next(5, 100));
     
-    private async Task ResetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
-    {
-        await s_lock.WaitAsync(cancellationToken);
-
-        try
-        {
-            await DelayReconnectingAsync();
-
-            try
-            {
-                await CreateConnectionAsync(connectionFactory, cancellationToken);
-            }
-            catch (BrokerUnreachableException exception)
-            {
-                s_logger.LogError(exception,
-                    "RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {URL}",
-                    connectionFactory.Endpoint);
-            }
-        }
-        finally
-        {
-            s_lock.Release();
-        }
-    }
-
     private async Task TryRemoveConnectionAsync(string connectionId)
     {
         if (s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection))

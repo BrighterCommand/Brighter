@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon.SimpleNotificationService.Model;
 using Microsoft.Extensions.Logging;
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
 
         protected async Task<string?> EnsureTopicAsync(RoutingKey topic, TopicFindBy topicFindBy,
-            SnsAttributes? attributes, OnMissingChannel makeTopic = OnMissingChannel.Create)
+            SnsAttributes? attributes, OnMissingChannel makeTopic = OnMissingChannel.Create, CancellationToken cancellationToken = default)
         {
             //on validate or assume, turn a routing key into a topicARN
             if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
@@ -80,7 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
         }
 
-        private async Task ValidateTopicAsync(RoutingKey topic, TopicFindBy findTopicBy)
+        private async Task ValidateTopicAsync(RoutingKey topic, TopicFindBy findTopicBy, CancellationToken cancellationToken = default)
         {
             IValidateTopic topicValidationStrategy = GetTopicValidationStrategy(findTopicBy);
             (bool exists, string? topicArn) = await topicValidationStrategy.ValidateAsync(topic);

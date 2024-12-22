@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -14,17 +15,17 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 {
     [Collection("CommandProcessor")]
-    public class DispatchBuilderTests : IDisposable
+    public class DispatchBuilderTestsAsync : IDisposable
     {
         private readonly IAmADispatchBuilder _builder;
         private Dispatcher? _dispatcher;
 
-        public DispatchBuilderTests()
+        public DispatchBuilderTestsAsync()
         {
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -50,7 +51,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
             var tracer = new BrighterTracer(TimeProvider.System);
             var instrumentationOptions = InstrumentationOptions.All;
-            
+
             var commandProcessor = CommandProcessorBuilder.StartNew()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
                 .Policies(new PolicyRegistry
@@ -64,11 +65,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                 .Build();
 
             _builder = DispatchBuilder.StartNew()
-                .CommandProcessorFactory(() => 
+                .CommandProcessorFactory(() =>
                     new CommandProcessorProvider(commandProcessor),
                     new InMemoryRequestContextFactory()
                 )
-                .MessageMappers(messageMapperRegistry, null, null, null)
+                .MessageMappers(null, messageMapperRegistry, null, new EmptyMessageTransformerFactoryAsync())
                 .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
                 .Subscriptions(new []
                 {
@@ -76,30 +77,35 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                         new SubscriptionName("foo"),
                         new ChannelName("mary"),
                         new RoutingKey("bob"),
-                        messagePumpType: MessagePumpType.Reactor,
+                        messagePumpType: MessagePumpType.Proactor,
                         timeOut: TimeSpan.FromMilliseconds(200)),
                     new RmqSubscription<MyEvent>(
                         new SubscriptionName("bar"),
                         new ChannelName("alice"),
                         new RoutingKey("simon"),
+                        messagePumpType: MessagePumpType.Proactor,
                         timeOut: TimeSpan.FromMilliseconds(200))
                 })
                 .ConfigureInstrumentation(tracer, instrumentationOptions);
         }
 
         [Fact]
-        public void When_Building_A_Dispatcher()
+        public async Task When_Building_A_Dispatcher_With_Proactor_And_Async()
         {
             _dispatcher = _builder.Build();
 
-            //_should_build_a_dispatcher
-            AssertionExtensions.Should(_dispatcher).NotBeNull();
-            //_should_have_a_foo_connection
+            _dispatcher.Should().NotBeNull();
             GetConnection("foo").Should().NotBeNull();
-            //_should_have_a_bar_connection
             GetConnection("bar").Should().NotBeNull();
-            //_should_be_in_the_awaiting_state
-            AssertionExtensions.Should(_dispatcher.State).Be(DispatcherState.DS_AWAITING);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+
+            await Task.Delay(1000);
+
+            _dispatcher.Receive();
+
+            await Task.Delay(1000);
+
+            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
         }
 
         public void Dispose()
@@ -109,7 +115,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
         private Subscription GetConnection(string name)
         {
-            return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Subscriptions, conn => conn.Name == name);
+            return _dispatcher.Subscriptions.SingleOrDefault(conn => conn.Name == name);
         }
     }
 }
