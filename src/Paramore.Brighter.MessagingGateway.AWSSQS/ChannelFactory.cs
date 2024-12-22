@@ -81,7 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 SqsSubscription sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels).Wait();
+                EnsureTopicAsync(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels, _subscription.SqsType, false).Wait();
                 EnsureQueue();
 
                 return new Channel(
@@ -164,7 +164,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     }
                 }
 
-                var request = new CreateQueueRequest(_subscription.ChannelName.Value)
+
+                var queueName = _subscription.ChannelName.Value;
+                if (_subscription.SqsType == SnsSqsType.Fifo)
+                {
+                    if (!queueName.EndsWith(".fifo"))
+                    {
+                        queueName += ".fifo";
+                    }
+                    
+                    attributes.Add(QueueAttributeName.FifoQueue, "true");
+                }
+                
+                var request = new CreateQueueRequest(queueName)
                 {
                     Attributes = attributes,
                     Tags = tags

@@ -34,5 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public static readonly string Timestamp = "timestamp";
         public static readonly string ReplyTo = "reply-to";
         public static string Bag = "bag"; 
+        public const string MessageGroupId = "MessageGroupId";
+        public const string DeduplicationId = "MessageDeduplicationId";
     }
 }

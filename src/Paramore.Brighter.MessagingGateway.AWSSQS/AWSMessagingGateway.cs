@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Amazon.Runtime.Internal.Transform;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Microsoft.Extensions.Logging;
@@ -46,43 +48,59 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _awsClientFactory = new AWSClientFactory(awsConnection);
         }
 
-        protected async Task<string> EnsureTopicAsync(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
+        protected async Task<string> EnsureTopicAsync(RoutingKey topic, SnsAttributes attributes,
+            TopicFindBy topicFindBy, OnMissingChannel makeTopic, SnsSqsType snsSqsType, bool deduplication)
         {
             //on validate or assume, turn a routing key into a topicARN
-            if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
-                await ValidateTopicAsync(topic, topicFindBy, makeTopic);
-            else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes);
+            if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate))
+                await ValidateTopicAsync(topic, topicFindBy, makeTopic, snsSqsType);
+            else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes, snsSqsType, deduplication);
             return ChannelTopicArn;
         }
 
-        private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
+        private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes, SnsSqsType snsSqsType, bool deduplication)
         {
             using var snsClient = _awsClientFactory.CreateSnsClient();
             var attributes = new Dictionary<string, string>();
             if (snsAttributes != null)
             {
-                if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy)) attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
+                if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy))
+                    attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
                 if (!string.IsNullOrEmpty(snsAttributes.Policy)) attributes.Add("Policy", snsAttributes.Policy);
             }
 
-            var createTopicRequest = new CreateTopicRequest(topicName)
+            string name = topicName;
+            if (snsSqsType == SnsSqsType.Fifo)
             {
-                Attributes = attributes,
-                Tags = new List<Tag> {new Tag {Key = "Source", Value = "Brighter"}}
-            };
+                name += ".fifo";
                 
+                attributes.Add("FifoTopic", "true");
+                if (deduplication)
+                {
+                    attributes.Add("ContentBasedDeduplication", "true");
+                }
+            }
+
+            var createTopicRequest = new CreateTopicRequest(name)
+            {
+                Attributes = attributes, Tags = new List<Tag> { new Tag { Key = "Source", Value = "Brighter" } }
+            };
+
+
             //create topic is idempotent, so safe to call even if topic already exists
             var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
-                
+
             if (!string.IsNullOrEmpty(createTopic.TopicArn))
                 ChannelTopicArn = createTopic.TopicArn;
             else
-                throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
+                throw new InvalidOperationException(
+                    $"Could not create Topic topic: {name} on {_awsConnection.Region}");
         }
 
-        private async Task ValidateTopicAsync(RoutingKey topic, TopicFindBy findTopicBy, OnMissingChannel onMissingChannel)
+        private async Task ValidateTopicAsync(RoutingKey topic, TopicFindBy findTopicBy,
+            OnMissingChannel onMissingChannel, SnsSqsType snsSqsType)
         {
-            IValidateTopic topicValidationStrategy = GetTopicValidationStrategy(findTopicBy);
+            IValidateTopic topicValidationStrategy = GetTopicValidationStrategy(findTopicBy, snsSqsType);
             (bool exists, string topicArn) = await topicValidationStrategy.ValidateAsync(topic);
             if (exists)
                 ChannelTopicArn = topicArn;
@@ -91,16 +109,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     $"Topic validation error: could not find topic {topic}. Did you want Brighter to create infrastructure?");
         }
 
-        private IValidateTopic GetTopicValidationStrategy(TopicFindBy findTopicBy)
+        private IValidateTopic GetTopicValidationStrategy(TopicFindBy findTopicBy, SnsSqsType type)
         {
             switch (findTopicBy)
             {
                 case TopicFindBy.Arn:
-                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
+                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region,
+                        _awsConnection.ClientConfigAction);
                 case TopicFindBy.Convention:
-                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
+                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region,
+                        _awsConnection.ClientConfigAction, type);
                 case TopicFindBy.Name:
-                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
+                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region,
+                        _awsConnection.ClientConfigAction, type);
                 default:
                     throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey");
             }
