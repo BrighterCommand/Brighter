@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,6 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -31,9 +33,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// TopicFindBy.Convention -> The routing key is a name, but use convention to make an Arn for this account
         /// TopicFindBy.Name -> Treat the routing key as a name & use ListTopics to find it (rate limited 30/s)
         /// </summary>
-
         public TopicFindBy FindTopicBy { get; set; } = TopicFindBy.Convention;
-        
+
         /// <summary>
         /// The attributes of the topic. If TopicARNs is set we will always assume that we do not
         /// need to create or validate the SNS Topic
@@ -45,5 +46,42 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// as we use the topic from the header to dispatch to  an Arn.
         /// </summary>
         public string TopicArn { get; set; }
+
+        /// <summary>
+        /// The AWS SQS type.
+        /// </summary>
+        public SnsSqsType SnsType { get; set; } = SnsSqsType.Standard;
+
+        /// <summary>
+        /// Amazon SNS FIFO topics and Amazon SQS FIFO queues support message deduplication, which provides
+        /// exactly-once message delivery and processing as long as the following conditions are met:
+        /// <list type="bullet">
+        ///     <item>
+        ///         <description>
+        ///             The subscribed Amazon SQS FIFO queue exists and has permissions that allow the
+        ///             AmazonSNS service principal to deliver messages to the queue.
+        ///         </description>
+        ///      </item>
+        ///     <item>
+        ///         <description>
+        ///             The Amazon SQS FIFO queue consumer processes the message and deletes it from the
+        ///             queue before the visibility timeout expires.
+        ///         </description>
+        ///      </item>
+        ///     <item>
+        ///         <description>
+        ///             The Amazon SNS subscription topic has no message filtering. When you configure
+        ///             message filtering, Amazon SNS FIFO topics support at-most-once delivery, as messages
+        ///             can be filtered out based on your subscription filter policies.
+        ///         </description>
+        ///      </item>
+        ///     <item>
+        ///         <description>
+        ///             There are no network disruptions that prevent acknowledgment of the message delivery
+        ///         </description>
+        ///      </item>
+        /// </list>
+        /// </summary>
+        public bool Deduplication { get; set; }
     }
 }

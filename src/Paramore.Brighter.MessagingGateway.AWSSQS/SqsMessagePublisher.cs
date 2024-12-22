@@ -34,17 +34,29 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private readonly string _topicArn;
         private readonly AmazonSimpleNotificationServiceClient _client;
+        private readonly SnsSqsType _snsSqsType;
+        private readonly bool _deduplication;
 
-        public SqsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client)
+        public SqsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, SnsSqsType snsSqsType, bool deduplication)
         {
             _topicArn = topicArn;
             _client = client;
+            _snsSqsType = snsSqsType;
+            _deduplication = deduplication;
         }
 
         public async Task<string> PublishAsync(Message message)
         {
             var messageString = message.Body.Value;
             var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);
+            if (_snsSqsType == SnsSqsType.Fifo)
+            {
+                publishRequest.MessageGroupId = message.Header.PartitionKey;
+                if (_deduplication && message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
+                {
+                    publishRequest.MessageDeduplicationId = (string)deduplicationId;
+                }
+            }
 
             var messageAttributes = new Dictionary<string, MessageAttributeValue>();
             messageAttributes.Add(HeaderNames.Id, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.MessageId), DataType = "String"});

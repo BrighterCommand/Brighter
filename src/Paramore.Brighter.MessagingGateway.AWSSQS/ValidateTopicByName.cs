@@ -32,11 +32,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     internal class ValidateTopicByName : IValidateTopic
     {
         private readonly AmazonSimpleNotificationServiceClient _snsClient;
+        private readonly SnsSqsType _type;
 
-        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
+        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null, SnsSqsType type = SnsSqsType.Standard)
         {
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _snsClient = clientFactory.CreateSnsClient();
+            _type = type;
         }
         
         public ValidateTopicByName(AmazonSimpleNotificationServiceClient snsClient)
@@ -49,6 +51,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         //you may run into issues
         public async Task<(bool, string TopicArn)> ValidateAsync(string topicName)
         {
+            if (_type == SnsSqsType.Fifo && !topicName.EndsWith(".fifo"))
+            {
+                topicName += ".fifo";
+            }
+            
             var topic = await _snsClient.FindTopicAsync(topicName);
             return (topic != null, topic?.TopicArn);
         }

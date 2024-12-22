@@ -72,7 +72,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                    topic != null ? new RoutingKey(topic) : _publication.Topic,
                    _publication.SnsAttributes,
                    _publication.FindTopicBy,
-                   _publication.MakeChannels);
+                   _publication.MakeChannels,
+                   _publication.SnsType,
+                   _publication.Deduplication);
            }
 
            return !string.IsNullOrEmpty(ChannelTopicArn);
@@ -90,7 +92,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
            await ConfirmTopicExistsAsync(message.Header.Topic);
 
            using var client = _clientFactory.CreateSnsClient();
-           var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
+           var publisher = new SqsMessagePublisher(ChannelTopicArn, client, _publication.SnsType, _publication.Deduplication);
            var messageId = await publisher.PublishAsync(message);
            if (messageId != null)
            {

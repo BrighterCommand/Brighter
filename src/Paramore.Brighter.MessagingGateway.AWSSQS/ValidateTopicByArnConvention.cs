@@ -34,12 +34,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class ValidateTopicByArnConvention : ValidateTopicByArn, IValidateTopic
     {
         private readonly RegionEndpoint _region;
-        private AmazonSecurityTokenServiceClient _stsClient;
+        private readonly AmazonSecurityTokenServiceClient _stsClient;
+        private readonly SnsSqsType _type;
 
-        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null) 
+        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null, SnsSqsType type = SnsSqsType.Standard) 
             : base(credentials, region, clientConfigAction)
         {
             _region = region;
+            _type = type;
 
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _stsClient = clientFactory.CreateStsClient();
@@ -58,7 +60,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 )
                 .GetAwaiter().GetResult();
 
-            if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account"); 
+            if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account");
+
+            if (_type == SnsSqsType.Fifo && !topicName.EndsWith(".fifo"))
+            {
+               topicName += ".fifo"; 
+            }
 
             return new Arn
             {

@@ -86,6 +86,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// A list of resource tags to use when creating the queue
         /// </summary>
         public Dictionary<string, string> Tags { get; }
+        
+        /// <summary>
+        /// The AWS SQS type.
+        /// </summary>
+        public SnsSqsType SqsType { get; } 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -114,6 +119,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="rawMessageDelivery">The indication of Raw Message Delivery setting is enabled or disabled</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="sqsType">The SQS Type</param>
         public SqsSubscription(Type dataType,
             SubscriptionName name = null,
             ChannelName channelName = null,
@@ -137,7 +143,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool rawMessageDelivery = true,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000
+            int channelFailureDelay = 1000,
+            SnsSqsType sqsType = SnsSqsType.Standard
         )
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, 
                 requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
@@ -151,6 +158,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             RedrivePolicy = redrivePolicy;
             SnsAttributes = snsAttributes;
             Tags = tags;
+            SqsType = sqsType;
         }
     }
 
@@ -189,6 +197,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="rawMessageDelivery">The indication of Raw Message Delivery setting is enabled or disabled</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="sqsType">The SQS Type</param>
         public SqsSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
@@ -211,11 +220,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             bool rawMessageDelivery = true,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000
+            int channelFailureDelay = 1000,
+            SnsSqsType sqsType = SnsSqsType.Standard
         )
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, 
                 unacceptableMessageLimit, runAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod,findTopicBy, 
-                iAmPolicy,redrivePolicy, snsAttributes, tags, makeChannels, rawMessageDelivery, emptyChannelDelay, channelFailureDelay)
+                iAmPolicy,redrivePolicy, snsAttributes, tags, makeChannels, rawMessageDelivery, emptyChannelDelay, channelFailureDelay, sqsType)
         {
         }
     }

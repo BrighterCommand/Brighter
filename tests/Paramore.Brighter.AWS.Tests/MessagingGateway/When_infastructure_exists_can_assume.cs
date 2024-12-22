@@ -13,46 +13,54 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class AWSAssumeInfrastructureTests  : IDisposable
-    {     private readonly Message _message;
+    public class AWSAssumeInfrastructureTests : IDisposable
+    {
+        private readonly Message _message;
+        private readonly MyCommand _myCommand;
         private readonly SqsMessageConsumer _consumer;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
-        private readonly MyCommand _myCommand;
+
+        private readonly Message _fifoMessage;
+        private readonly SqsMessageConsumer _fifoConsumer;
+        private readonly SqsMessageProducer _fifoMessageProducer;
+        private readonly ChannelFactory _fifoChannelFactory;
+
 
         public AWSAssumeInfrastructureTests()
         {
-            _myCommand = new MyCommand{Value = "Test"};
+            _myCommand = new MyCommand { Value = "Test" };
             string correlationId = Guid.NewGuid().ToString();
-            string replyTo = "http:\\queueUrl";
-            string contentType = "text\\plain";
+            const string replyTo = "http:\\queueUrl";
+            const string contentType = "text\\plain";
+
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
-            
+
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
                 makeChannels: OnMissingChannel.Create
             );
-            
+
             _message = new Message(
-                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId, 
+                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                     replyTo: new RoutingKey(replyTo), contentType: contentType),
-                new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
+                new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
             );
 
 
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            
+
             //We need to do this manually in a test - will create the channel from subscriber parameters
             //This doesn't look that different from our create tests - this is because we create using the channel factory in
             //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateChannel(subscription);
-            
+
             //Now change the subscription to validate, just check what we made
             subscription = new(
                 name: new SubscriptionName(channelName),
@@ -60,10 +68,52 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 routingKey: routingKey,
                 makeChannels: OnMissingChannel.Assume
             );
-            
-            _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Assume});
+
+            _messageProducer = new SqsMessageProducer(awsConnection,
+                new SnsPublication { MakeChannels = OnMissingChannel.Assume });
 
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
+
+            // Because fifo can modify the topic name we need to run the same test twice, one for standard queue and another to FIFO
+            var fifoChannelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            string fifoTopicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            var fifoRoutingKey = new RoutingKey(fifoTopicName);
+
+            SqsSubscription<MyCommand> fifoSubscription = new(
+                name: new SubscriptionName(fifoChannelName),
+                channelName: new ChannelName(fifoChannelName),
+                routingKey: fifoRoutingKey,
+                makeChannels: OnMissingChannel.Create,
+                sqsType: SnsSqsType.Fifo
+            );
+
+            string fifoMessageGroupId = Guid.NewGuid().ToString();
+            _fifoMessage = new Message(
+                new MessageHeader(_myCommand.Id, fifoRoutingKey, MessageType.MT_COMMAND, correlationId: correlationId,
+                    replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: fifoMessageGroupId),
+                new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
+            );
+
+            //We need to do this manually in a test - will create the channel from subscriber parameters
+            //This doesn't look that different from our create tests - this is because we create using the channel factory in
+            //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
+            _fifoChannelFactory = new ChannelFactory(awsConnection);
+            var fifoChannel = _fifoChannelFactory.CreateChannel(fifoSubscription);
+
+            //Now change the subscription to validate, just check what we made
+            fifoSubscription = new(
+                name: new SubscriptionName(fifoChannelName),
+                channelName: fifoChannel.Name,
+                routingKey: fifoRoutingKey,
+                makeChannels: OnMissingChannel.Assume,
+                sqsType: SnsSqsType.Fifo
+            );
+
+            _fifoMessageProducer = new SqsMessageProducer(awsConnection,
+                new SnsPublication { MakeChannels = OnMissingChannel.Assume, SnsType = SnsSqsType.Fifo });
+
+            _fifoConsumer =
+                new SqsMessageConsumer(awsConnection, fifoChannel.Name.ToValidSQSQueueName(), fifoRoutingKey);
         }
 
         [Fact]
@@ -71,9 +121,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         {
             //arrange
             _messageProducer.Send(_message);
-            
+
             var messages = _consumer.Receive(TimeSpan.FromMilliseconds(5000));
-            
+
             //Assert
             var message = messages.First();
             message.Id.Should().Be(_myCommand.Id);
@@ -81,15 +131,36 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //clear the queue
             _consumer.Acknowledge(message);
         }
- 
+
+        [Fact]
+        public void When_infastructure_exists_can_assume_for_fifo()
+        {
+            //arrange
+            _fifoMessageProducer.Send(_fifoMessage);
+
+            var messages = _fifoConsumer.Receive(TimeSpan.FromMilliseconds(5000));
+
+            //Assert
+            var message = messages.First();
+            message.Id.Should().Be(_myCommand.Id);
+
+            //clear the queue
+            _fifoConsumer.Acknowledge(message);
+        }
+
+
         public void Dispose()
         {
             _channelFactory.DeleteTopic();
             _channelFactory.DeleteQueue();
             _consumer.Dispose();
             _messageProducer.Dispose();
+            
+            
+            _fifoChannelFactory.DeleteTopic();
+            _fifoChannelFactory.DeleteQueue();
+            _fifoConsumer.Dispose();
+            _fifoMessageProducer.Dispose();
         }
-        
-    
-   }
+    }
 }

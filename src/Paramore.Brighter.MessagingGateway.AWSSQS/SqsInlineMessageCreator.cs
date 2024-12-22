@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,6 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
@@ -31,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
 
         private Dictionary<string, JsonElement> _messageAttributes = new Dictionary<string, JsonElement>();
 
@@ -64,7 +66,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 replyTo = ReadReplyTo();
                 subject = ReadMessageSubject(jsonDocument);
                 receiptHandle = ReadReceiptHandle(sqsMessage);
-                
+                var partitionKey = ReadPartitionKey();
+                var deduplicationId = ReadMessageDeduplicationId();
+
                 //TODO:CLOUD_EVENTS parse from headers
 
                 var messageHeader = new MessageHeader(
@@ -80,7 +84,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: subject.Result,
-                    delayed: TimeSpan.Zero);
+                    delayed: TimeSpan.Zero,
+                    partitionKey: partitionKey.Result
+                );
 
                 message = new Message(messageHeader, ReadMessageBody(jsonDocument));
 
@@ -91,6 +97,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     message.Header.Bag.Add(key, bag[key]);
                 }
 
+                if (deduplicationId.Success)
+                {
+                    message.Header.Bag.Add("DeduplicationId", deduplicationId);
+                }
+
                 if (receiptHandle.Success)
                     message.Header.Bag.Add("ReceiptHandle", sqsMessage.ReceiptHandle);
             }
@@ -99,8 +110,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
                 message = FailureMessage(topic, messageId);
             }
-            
-            
+
+
             return message;
         }
 
@@ -149,7 +160,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
                 catch (Exception)
                 {
-
                 }
             }
 
@@ -271,6 +281,30 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
 
             return new MessageBody(string.Empty);
+        }
+
+        private HeaderResult<string> ReadPartitionKey()
+        {
+            if (_messageAttributes.TryGetValue(HeaderNames.MessageGroupId, out var value))
+            {
+                //we have an arn, and we want the topic
+                var messageGroupId = value.GetValueInString();
+                return new HeaderResult<string>(messageGroupId, true);
+            }
+
+            return new HeaderResult<string>(string.Empty, true);
+        }
+
+        private HeaderResult<string> ReadMessageDeduplicationId()
+        {
+            if (_messageAttributes.TryGetValue(HeaderNames.DeduplicationId, out var value))
+            {
+                //we have an arn, and we want the topic
+                var deduplicationId = value.GetValueInString();
+                return new HeaderResult<string>(deduplicationId, true);
+            }
+
+            return new HeaderResult<string>(string.Empty, true);
         }
     }
 }
