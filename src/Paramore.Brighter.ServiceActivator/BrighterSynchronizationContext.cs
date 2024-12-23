@@ -103,13 +103,7 @@ namespace Paramore.Brighter.ServiceActivator
         public override void Post(SendOrPostCallback callback, object? state)
         {
             if (callback == null) throw new ArgumentNullException(nameof(callback));
-            if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
-            {
-                // Avoid reentrant calls causing deadlocks
-                Task.Run(() => callback(state));
-            }
-            else
-                SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
+            SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
         }
 
         /// <summary>
