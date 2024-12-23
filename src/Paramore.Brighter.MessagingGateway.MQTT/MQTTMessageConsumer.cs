@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// The <see cref="MQTTMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
     /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching.
     /// </summary>
-    public class MQTTMessageConsumer : IAmAMessageConsumer, IAmAMessageConsumerAsync
+    public class MQTTMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private readonly string _topic;
         private readonly Queue<Message> _messageQueue = new Queue<Message>();

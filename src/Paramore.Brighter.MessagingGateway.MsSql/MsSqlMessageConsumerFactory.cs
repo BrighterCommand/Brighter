@@ -14,8 +14,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Creates a consumer for the specified queue.
         /// </summary>
         /// <param name="subscription">The queue to connect to</param>
-        /// <returns>IAmAMessageConsumer</returns>
-         public IAmAMessageConsumer Create(Subscription subscription)
+        /// <returns>IAmAMessageConsumerSync</returns>
+         public IAmAMessageConsumerSync Create(Subscription subscription)
         {
             if (subscription.ChannelName is null) throw new ConfigurationException(nameof(subscription.ChannelName));
             

@@ -79,6 +79,20 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _publication = publication;
             _bulkSendBatchSize = bulkSendBatchSize;
         }
+        
+        /// <summary>
+        /// Dispose of the producer
+        /// </summary>
+        public void Dispose() { }
+        
+        /// <summary>
+        /// Dispose of the producer
+        /// </summary>
+        /// <returns></returns>
+        public ValueTask DisposeAsync()
+        {
+            return new ValueTask(Task.CompletedTask);
+        }
 
         /// <summary>
         /// Sends the specified message.
@@ -208,10 +222,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
         }
 
-        public void Dispose()
-        {
-        }
-
         private IServiceBusSenderWrapper GetSender(string topic)
         {
             EnsureChannelExists(topic);
@@ -261,5 +271,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         }
 
         protected abstract void EnsureChannelExists(string channelName);
+ 
     }
 }

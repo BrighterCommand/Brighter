@@ -10,7 +10,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     public class RMQBufferedConsumerTests : IDisposable
     {
         private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageConsumerSync _messageConsumer;
         private readonly ChannelName _channelName = new(Guid.NewGuid().ToString());
         private readonly RoutingKey _routingKey = new(Guid.NewGuid().ToString());
         private const int BatchSize = 3;

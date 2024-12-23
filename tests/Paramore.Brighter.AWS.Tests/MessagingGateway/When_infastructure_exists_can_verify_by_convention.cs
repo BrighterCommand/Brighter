@@ -16,7 +16,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
     [Trait("Fragile", "CI")]
     public class AWSValidateInfrastructureByConventionTests  : IDisposable
     {     private readonly Message _message;
-        private readonly IAmAMessageConsumer _consumer;
+        private readonly IAmAMessageConsumerSync _consumer;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;

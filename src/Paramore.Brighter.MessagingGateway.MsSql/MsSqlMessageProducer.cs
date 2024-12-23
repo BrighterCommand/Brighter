@@ -137,5 +137,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Disposes the message producer.
         /// </summary>
         public void Dispose() { }
+
+        public ValueTask DisposeAsync()
+        {
+            return new ValueTask(Task.CompletedTask);
+        }
     }
 }

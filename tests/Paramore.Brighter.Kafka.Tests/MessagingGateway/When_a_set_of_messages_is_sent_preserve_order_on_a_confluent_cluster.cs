@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         [Fact]
         public void When_a_message_is_sent_keep_order()
         {
-            IAmAMessageConsumer consumer = null;
+            IAmAMessageConsumerSync consumer = null;
             try
             {
                 //Send a sequence of messages to Kafka
@@ -127,7 +127,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             return messageId;
         }
 
-        private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumer consumer)
+        private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
         {
             var messages = new Message[0];
             int maxTries = 0;
@@ -152,7 +152,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             return messages;
         }
 
-        private IAmAMessageConsumer CreateConsumer()
+        private IAmAMessageConsumerSync CreateConsumer()
         {
             return new KafkaMessageConsumerFactory(
                     new KafkaMessagingGatewayConfiguration

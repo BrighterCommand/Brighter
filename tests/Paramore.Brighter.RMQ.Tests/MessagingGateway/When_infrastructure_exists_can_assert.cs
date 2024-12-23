@@ -8,7 +8,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     public class RmqAssumeExistingInfrastructureTests : IDisposable
     {
         private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageConsumerSync _messageConsumer;
         private readonly Message _message;
         
         public RmqAssumeExistingInfrastructureTests() 

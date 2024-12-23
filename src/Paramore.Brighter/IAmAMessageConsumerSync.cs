@@ -29,7 +29,7 @@ namespace Paramore.Brighter
     /// <summary>
     /// Interface IAmAReceiveMessageGateway
     /// </summary>
-    public interface IAmAMessageConsumer : IDisposable
+    public interface IAmAMessageConsumerSync : IDisposable
     {
         /// <summary>
         /// Acknowledges the specified message.

@@ -28,6 +28,10 @@ public class FakeMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducer
     
     public void Dispose()
     {
-        // TODO release managed resources here
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return new ValueTask(Task.CompletedTask);
     }
 }

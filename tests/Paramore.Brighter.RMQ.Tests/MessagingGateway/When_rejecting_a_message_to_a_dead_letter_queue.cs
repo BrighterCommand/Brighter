@@ -34,9 +34,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     public class RmqMessageProducerDLQTests : IDisposable
     {
         private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageConsumerSync _messageConsumer;
         private readonly Message _message;
-        private readonly IAmAMessageConsumer _deadLetterConsumer;
+        private readonly IAmAMessageConsumerSync _deadLetterConsumer;
 
         public RmqMessageProducerDLQTests()
         {

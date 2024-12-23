@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 throw new ArgumentException("The minimum allowed timeout is 400 milliseconds");
             }
 
-            IAmAMessageConsumer messageConsumer =
+            IAmAMessageConsumerSync messageConsumer =
                 _azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
 
             return new Channel(

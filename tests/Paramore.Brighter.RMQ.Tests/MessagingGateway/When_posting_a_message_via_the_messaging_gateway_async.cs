@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Trait("Category", "RMQ")]
-    public class RmqMessageProducerSendMessageTestsAsync : IDisposable
+    public class RmqMessageProducerSendMessageTestsAsync : IDisposable, IAsyncDisposable
     {
         private readonly IAmAMessageProducerAsync _messageProducer;
         private readonly IAmAMessageConsumerAsync _messageConsumer;
@@ -75,7 +75,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _messageProducer.Dispose();
+            ((IAmAMessageProducerSync)_messageProducer).Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _messageProducer.DisposeAsync();
         }
     }
 }

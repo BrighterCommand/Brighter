@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ;
 /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching, 
 /// result sending, and error handling.
 /// </summary>
-public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMessageConsumerAsync
+public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
     private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
 

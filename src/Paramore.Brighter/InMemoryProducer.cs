@@ -62,9 +62,24 @@ namespace Paramore.Brighter
         public event Action<bool, string>? OnMessagePublished;
 
         /// <summary>
-        /// Dispsose of the producer; a no-op for the in-memory producer
+        /// Dispose of the producer
+        /// Clears the associated timer 
         /// </summary>
-        public void Dispose() { }
+        public void Dispose()
+        {
+            if (_requeueTimer != null)_requeueTimer.Dispose();
+            GC.SuppressFinalize(this);
+        }
+        
+        /// <summary>
+        /// Dispose of the producer
+        /// Clears the associated timer 
+        /// </summary> 
+        public async ValueTask DisposeAsync()
+        {
+            if (_requeueTimer != null) await _requeueTimer.DisposeAsync();
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/>
@@ -168,5 +183,7 @@ namespace Paramore.Brighter
                 _requeueTimer?.Dispose();
             }
         }
+
+ 
     }
 }

@@ -8,7 +8,7 @@ using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class MsSqlMessageConsumer : IAmAMessageConsumer, IAmAMessageConsumerAsync
+    public class MsSqlMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private readonly string _topic;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumer>();

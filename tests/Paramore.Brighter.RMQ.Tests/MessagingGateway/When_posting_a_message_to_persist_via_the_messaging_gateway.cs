@@ -10,7 +10,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     public class RmqMessageProducerSendPersistentMessageTests : IDisposable
     {
         private IAmAMessageProducerSync _messageProducer;
-        private IAmAMessageConsumer _messageConsumer;
+        private IAmAMessageConsumerSync _messageConsumer;
         private Message _message;
 
         public RmqMessageProducerSendPersistentMessageTests()

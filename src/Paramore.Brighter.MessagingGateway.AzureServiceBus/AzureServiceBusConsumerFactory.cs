@@ -34,8 +34,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Creates a consumer for the specified queue.
         /// </summary>
         /// <param name="subscription">The queue to connect to</param>
-        /// <returns>IAmAMessageConsumer</returns>
-        public IAmAMessageConsumer Create(Subscription subscription)
+        /// <returns>IAmAMessageConsumerSync</returns>
+        public IAmAMessageConsumerSync Create(Subscription subscription)
         {
             var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
 
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Creates a consumer for the specified queue.
         /// </summary>
         /// <param name="subscription">The queue to connect to</param>
-        /// <returns>IAmAMessageConsumer</returns>
+        /// <returns>IAmAMessageConsumerSync</returns>
         public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
         {
             var consumer = Create(subscription) as IAmAMessageConsumerAsync;   

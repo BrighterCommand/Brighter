@@ -53,7 +53,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
         private bool _hasFatalProducerError;
-        private bool _disposedValue;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
@@ -118,6 +117,28 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             ReplicationFactor = publication.ReplicationFactor;
             TopicFindTimeout = TimeSpan.FromMilliseconds(publication.TopicFindTimeoutMs);
             _headerBuilder = publication.MessageHeaderBuilder;
+        }
+        
+        /// <summary>
+        /// Dispose of the producer 
+        /// </summary>
+        /// <param name="disposing">Are we disposing or being called by the GC</param>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+    
+        
+        /// <summary>
+        /// Dispose of the producer 
+        /// </summary>
+        /// <param name="disposing">Are we disposing or being called by the GC</param>
+        public ValueTask DisposeAsync()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+            return new ValueTask(Task.CompletedTask);
         }
 
         /// <summary>
@@ -311,37 +332,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             await SendAsync(message);
         }
 
-        /// <summary>
-        /// Dispose of the producer 
-        /// </summary>
-        /// <param name="disposing">Are we disposing or being called by the GC</param>
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
-            if (!_disposedValue)
+            if (disposing)
             {
-                if (disposing)
-                {
-                    if (_producer != null)
-                    {
-                        _producer.Flush(TimeSpan.FromMilliseconds(_producerConfig.MessageTimeoutMs.Value + 5000)); 
-                        _producer.Dispose();
-                        _producer = null;
-                    }
-                }
-
-                _disposedValue = true;
+                _producer?.Dispose();
             }
-        }
-
-        ~KafkaMessageProducer()
-        {
-           Dispose(false);
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
         
         private void PublishResults(PersistenceStatus status, Headers headers)

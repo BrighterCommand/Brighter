@@ -35,7 +35,7 @@ using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    public class RedisMessageConsumer : RedisMessageGateway, IAmAMessageConsumer, IAmAMessageConsumerAsync
+    public class RedisMessageConsumer : RedisMessageGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         
         /* see RedisMessageProducer to understand how we are using a dynamic recipient list model with Redis */

@@ -32,9 +32,18 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             _mqttMessagePublisher = mqttMessagePublisher;
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Disposes of the producer
+        /// </summary>
+        public void Dispose(){ }
+        
+        /// <summary>
+        /// Disposes of the producer
+        /// </summary>
+        /// <returns></returns>
+        public ValueTask DisposeAsync()
         {
-            _mqttMessagePublisher = null;
+            return new ValueTask(Task.CompletedTask);
         }
 
         /// <summary>
@@ -86,5 +95,6 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             await SendAsync(message, cancellationToken);
         }
 
+ 
     }
 }

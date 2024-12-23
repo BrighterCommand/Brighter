@@ -29,7 +29,8 @@ namespace Paramore.Brighter
         {
             foreach (var producer in messageProducers)
             {
-                producer.Value.Dispose();
+                if (producer.Value is IDisposable disposable)
+                    disposable.Dispose();
             }
             
             messageProducers.Clear();

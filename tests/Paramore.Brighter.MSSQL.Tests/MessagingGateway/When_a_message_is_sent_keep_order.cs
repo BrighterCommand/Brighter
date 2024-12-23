@@ -14,7 +14,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topicName = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry; 
-        private readonly IAmAMessageConsumer _consumer;
+        private readonly IAmAMessageConsumerSync _consumer;
 
         public OrderTest()
         {
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         [Fact]
         public void When_a_message_is_sent_keep_order()
         {
-            IAmAMessageConsumer consumer = _consumer;
+            IAmAMessageConsumerSync consumer = _consumer;
             try
             {
                 //Send a sequence of messages to Kafka
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             return messageId;
         }
-        private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumer consumer)
+        private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
         {
             var messages = new Message[0];
             int maxTries = 0;

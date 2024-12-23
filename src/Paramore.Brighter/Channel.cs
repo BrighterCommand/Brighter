@@ -37,7 +37,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class Channel : IAmAChannelSync
     {
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageConsumerSync _messageConsumer;
         private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
@@ -66,7 +66,7 @@ namespace Paramore.Brighter
         public Channel(
             ChannelName channelName, 
             RoutingKey routingKey, 
-            IAmAMessageConsumer messageConsumer,
+            IAmAMessageConsumerSync messageConsumer,
             int maxQueueLength = 1
             )
         {

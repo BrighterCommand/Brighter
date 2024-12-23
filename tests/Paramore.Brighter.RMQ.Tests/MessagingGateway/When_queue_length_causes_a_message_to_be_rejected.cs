@@ -34,7 +34,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     public class RmqMessageProducerQueueLengthTests : IDisposable
     {
         private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageConsumerSync _messageConsumer;
         private readonly Message _messageOne;
         private readonly Message _messageTwo;
         private readonly ChannelName _queueName = new(Guid.NewGuid().ToString());

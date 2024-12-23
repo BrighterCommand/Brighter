@@ -36,8 +36,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     public class RmqMessageConsumerOperationInterruptedTests : IDisposable
     {
         private readonly IAmAMessageProducerSync _sender;
-        private readonly IAmAMessageConsumer _receiver;
-        private readonly IAmAMessageConsumer _badReceiver;
+        private readonly IAmAMessageConsumerSync _receiver;
+        private readonly IAmAMessageConsumerSync _badReceiver;
         private readonly Message _sentMessage;
         private Exception _firstException;
 

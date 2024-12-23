@@ -41,8 +41,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Create a consumer for the specified subscrciption
         /// </summary>
         /// <param name="subscription">The subscription to create a consumer for</param>
-        /// <returns>IAmAMessageConsumer</returns>
-        public IAmAMessageConsumer Create(Subscription subscription)
+        /// <returns>IAmAMessageConsumerSync</returns>
+        public IAmAMessageConsumerSync Create(Subscription subscription)
         {
             RequireQueueName(subscription);
 

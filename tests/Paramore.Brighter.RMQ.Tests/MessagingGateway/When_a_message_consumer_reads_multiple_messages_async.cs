@@ -7,7 +7,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Trait("Category", "RMQ")]
-    public class RMQBufferedConsumerTestsAsync : IDisposable
+    public class RMQBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
     {
         private readonly IAmAMessageProducerAsync _messageProducer;
         private readonly IAmAMessageConsumerAsync _messageConsumer;
@@ -71,8 +71,17 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public void Dispose()
         {
             _messageConsumer.PurgeAsync().GetAwaiter().GetResult();
-            _messageConsumer.DisposeAsync();
-            _messageProducer.Dispose();
+            ((IAmAMessageProducerSync)_messageProducer).Dispose();
+            ((IAmAMessageProducerSync)_messageProducer).Dispose();
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _messageConsumer.PurgeAsync();
+            await _messageProducer.DisposeAsync();
+            await _messageConsumer.DisposeAsync();
+            GC.SuppressFinalize(this);
         }
     }
 }

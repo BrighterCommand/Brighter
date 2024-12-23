@@ -9,7 +9,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     /// <summary>
-    /// Implementation of <see cref="IAmAMessageConsumer"/> using Azure Service Bus for Transport.
+    /// Implementation of <see cref="IAmAMessageConsumerSync"/> using Azure Service Bus for Transport.
     /// </summary>
     public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
     {

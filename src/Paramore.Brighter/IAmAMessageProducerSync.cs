@@ -36,7 +36,7 @@ namespace Paramore.Brighter
     /// <item>RESTML</item>
     /// </list>
     /// </summary>
-    public interface IAmAMessageProducerSync : IAmAMessageProducer
+    public interface IAmAMessageProducerSync : IAmAMessageProducer, IDisposable
     {
         /// <summary>
         /// Sends the specified message.

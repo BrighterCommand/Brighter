@@ -95,7 +95,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private Message[] ConsumeMessages(string groupId, int batchLimit)
         {
             var consumedMessages = new List<Message>();
-            using (IAmAMessageConsumer consumer = CreateConsumer(groupId))
+            using (IAmAMessageConsumerSync consumer = CreateConsumer(groupId))
             {
                 for (int i = 0; i < batchLimit; i++)
                 {
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
             return consumedMessages.ToArray();
 
-            Message ConsumeMessage(IAmAMessageConsumer consumer)
+            Message ConsumeMessage(IAmAMessageConsumerSync consumer)
             {
                 Message[] messages = new []{new Message()};
                 int maxTries = 0;
@@ -135,7 +135,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             }
         }
 
-        private IAmAMessageConsumer CreateConsumer(string groupId)
+        private IAmAMessageConsumerSync CreateConsumer(string groupId)
         {
             return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration

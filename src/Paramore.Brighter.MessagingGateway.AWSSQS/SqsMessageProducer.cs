@@ -62,6 +62,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         }
         
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose() { }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+
+        public ValueTask DisposeAsync()
+        {
+            return new ValueTask(Task.CompletedTask);    
+        }
+        
        public async Task<bool> ConfirmTopicExistsAsync(string? topic = null, CancellationToken cancellationToken = default)
        {
            //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
@@ -144,15 +158,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             //TODO: Delay should set the visibility timeout
             await SendAsync(message, cancellationToken);
-        }
-
-
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public void Dispose()
-        {
-            
         }
     }
 }

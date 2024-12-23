@@ -33,9 +33,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    /// <inheritdoc cref="Paramore.Brighter.IAmAMessageConsumer" />
+    /// <inheritdoc cref="IAmAMessageConsumerSync" />
     /// <summary>
-    /// Class KafkaMessageConsumer is an implementation of <see cref="IAmAMessageConsumer"/>
+    /// Class KafkaMessageConsumer is an implementation of <see cref="IAmAMessageConsumerSync"/>
     /// and provides the facilities to consume messages from a Kafka broker for a topic
     /// in a consumer group.
     /// A Kafka Message Consumer can create topics, depending on the options chosen.
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// This dual strategy prevents low traffic topics having batches that are 'pending' for long periods, causing a risk that the consumer
     /// will end before committing its offsets.
     /// </summary>
-    public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumer, IAmAMessageConsumerAsync
+    public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private IConsumer<string, byte[]> _consumer;
         private readonly KafkaMessageCreator _creator;

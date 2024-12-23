@@ -36,7 +36,7 @@ namespace Paramore.Brighter;
 /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
 /// and requeues them if they have been locked for longer than the timeout.
 /// </summary>
-public class InMemoryMessageConsumer : IAmAMessageConsumer, IAmAMessageConsumerAsync
+public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
     private readonly ConcurrentDictionary<string, LockedMessage> _lockedMessages = new();
     private readonly RoutingKey _topic;

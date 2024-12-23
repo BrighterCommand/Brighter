@@ -63,14 +63,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _messageProducer.Dispose();
-            ((IAmAMessageConsumer)_messageConsumer).Dispose();
+            ((IAmAMessageProducerSync)_messageProducer).Dispose();
+            ((IAmAMessageConsumerSync)_messageConsumer).Dispose();
             GC.SuppressFinalize(this);
         }
 
         public async ValueTask DisposeAsync()
         {
-            _messageProducer.Dispose();
+            await _messageProducer.DisposeAsync();
             await _messageConsumer.DisposeAsync();
             GC.SuppressFinalize(this);
         }

@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Read messages from an SQS queue
     /// </summary>
-    public class SqsMessageConsumer : IAmAMessageConsumer, IAmAMessageConsumerAsync
+    public class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
