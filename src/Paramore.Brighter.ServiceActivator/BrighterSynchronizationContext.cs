@@ -63,6 +63,21 @@ namespace Paramore.Brighter.ServiceActivator
         {
             return new BrighterSynchronizationContext(SynchronizationHelper);
         }
+        
+        ///inheritdoc /> 
+        public override bool Equals(object? obj)
+        {
+            var other = obj as BrighterSynchronizationContext;
+            if (other == null)
+                return false;
+            return (SynchronizationHelper == other.SynchronizationHelper);
+        }
+        
+        ///inheritdoc /> 
+        public override int GetHashCode()
+        {
+            return SynchronizationHelper.GetHashCode();
+        }
 
         /// <summary>
         /// Notifies the context that an operation has completed.

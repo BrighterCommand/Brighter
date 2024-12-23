@@ -30,7 +30,7 @@ namespace Paramore.Brighter.ServiceActivator;
 /// continuations and not a thread pool scheduler. This is because we want to run the continuations on the same thread.
 /// We also create a task factory that uses the scheduler, so that we can easily create tasks that are queued to the scheduler.
 /// </summary>
-internal class BrighterSynchronizationHelper : IDisposable
+public class BrighterSynchronizationHelper : IDisposable
 {
     private readonly BrighterTaskQueue _taskQueue = new();
     private readonly ConcurrentDictionary<Task, byte> _activeTasks = new();
@@ -43,13 +43,33 @@ internal class BrighterSynchronizationHelper : IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="BrighterSynchronizationHelper"/> class.
     /// </summary>
-    private BrighterSynchronizationHelper()
+    public BrighterSynchronizationHelper()
     {
         _taskScheduler = new BrighterTaskScheduler(this);
         _synchronizationContext = new BrighterSynchronizationContext(this);
         _taskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.HideScheduler, TaskContinuationOptions.HideScheduler, _taskScheduler);
     }
+
+    /// <summary>
+    /// Access the task factory, intended for tests
+    /// </summary>
+    public TaskFactory Factory => _taskFactory;
     
+    /// <summary>
+    /// This is the same identifier as the context's <see cref="TaskScheduler"/>. Used for testing
+    /// </summary>
+    public int Id => _taskScheduler.Id;
+    
+    /// <summary>
+    /// Access the task scheduler, intended for tests
+    /// </summary>
+    public TaskScheduler TaskScheduler => _taskScheduler;
+    
+    /// <summary>
+    /// Access the synchoronization context, intended for tests
+    /// </summary>
+    public SynchronizationContext? SynchronizationContext => _synchronizationContext;
+
     /// <summary>
     /// Disposes the synchronization helper and clears the task queue.
     /// </summary>
@@ -236,7 +256,7 @@ internal class BrighterSynchronizationHelper : IDisposable
         return task.GetAwaiter().GetResult();
     }
 
-    private void Execute()
+    public void Execute()
     {
         BrighterSynchronizationContextScope.ApplyContext(_synchronizationContext, () =>
         {
@@ -267,7 +287,7 @@ internal class BrighterSynchronizationHelper : IDisposable
 /// <summary>
 /// Represents a context message containing a callback and state.
 /// </summary>
-internal struct ContextMessage
+public struct ContextMessage
 {
     public readonly SendOrPostCallback Callback;
     public readonly object? State;
