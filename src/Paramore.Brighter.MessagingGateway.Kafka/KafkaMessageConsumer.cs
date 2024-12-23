@@ -56,7 +56,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private DateTime _lastFlushAt = DateTime.UtcNow;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new(1, 1);
-        private bool _disposedValue;
         private bool _hasFatalError;
 
         /// <summary>
@@ -697,26 +696,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
-            Close();
-
-            if (!_disposedValue)
+            if (disposing)
             {
-                if (disposing)
-                {
-                    _consumer.Dispose();
-                    _consumer = null;
-                }
-
-                _disposedValue = true;
+                _consumer?.Dispose();
+                _flushToken?.Dispose();
             }
         }
 
 
         ~KafkaMessageConsumer()
         {
-           Dispose(false);
+            Dispose(false);
         }
 
         public void Dispose()
@@ -725,6 +717,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             GC.SuppressFinalize(this);
         }
 
-       
+        public ValueTask DisposeAsync()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+            return new ValueTask(Task.CompletedTask);
+        }
     }
 }

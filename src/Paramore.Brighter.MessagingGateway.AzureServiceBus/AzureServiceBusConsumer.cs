@@ -51,9 +51,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         public void Dispose()
         {
-            Logger.LogInformation("Disposing the consumer...");
             ServiceBusReceiver?.Close();
-            Logger.LogInformation("Consumer disposed");
+            GC.SuppressFinalize(this);
+        }
+        
+        public async ValueTask DisposeAsync()
+        {
+            if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -524,7 +529,5 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     messageId, ex.Reason);
             }
         }
-
-
     }
 }

@@ -36,6 +36,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         void Close();
 
         /// <summary>
+        /// Closes the connection asynchronously.
+        /// </summary>
+        /// <returns></returns>
+        Task CloseAsync();
+
+        /// <summary>
         /// Is the connection currently closed.
         /// </summary>
         bool IsClosedOrClosing { get; }

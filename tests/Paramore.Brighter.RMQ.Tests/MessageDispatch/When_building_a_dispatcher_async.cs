@@ -90,7 +90,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
         }
 
         [Fact]
-        public async Task When_Building_A_Dispatcher_With_Proactor_And_Async()
+        public async Task When_Building_A_Dispatcher_With_Async()
         {
             _dispatcher = _builder.Build();
 
@@ -106,6 +106,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             await Task.Delay(1000);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
+
+            await _dispatcher.End();
         }
 
         public void Dispose()

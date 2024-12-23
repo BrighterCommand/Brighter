@@ -57,6 +57,42 @@ namespace Paramore.Brighter.ServiceActivator
         protected readonly IAmABrighterTracer? Tracer;
         protected readonly InstrumentationOptions InstrumentationOptions;
         protected int UnacceptableMessageCount;
+        
+        /// <summary>
+        /// The delay to wait when the channel has failed
+        /// </summary>
+        public TimeSpan ChannelFailureDelay { get; set; }
+
+        /// <summary>
+        /// The delay to wait when the channel is empty
+        /// </summary>
+        public TimeSpan EmptyChannelDelay { get; set; }
+        
+        /// <summary>
+        /// The <see cref="MessagePumpType"/> of this message pump; indicates Reactor or Proactor
+        /// </summary>
+        public abstract MessagePumpType MessagePumpType { get; }
+  
+        /// <summary>
+        /// How many times to requeue a message before discarding it
+        /// </summary>
+        public int RequeueCount { get; set; }
+
+        /// <summary>
+        /// How long to wait before requeuing a message
+        /// </summary>
+        public TimeSpan RequeueDelay { get; set; }
+        
+        /// <summary>
+        /// How long to wait for a message before timing out
+        /// </summary>
+        public TimeSpan TimeOut { get; set; }
+
+
+        /// <summary>
+        /// The number of unacceptable messages to receive before stopping the message pump
+        /// </summary>
+        public int UnacceptableMessageLimit { get; set; }
 
         /// <summary>
         /// Constructs a message pump. The message pump is the heart of a consumer. It runs a loop that performs the following:
@@ -81,37 +117,7 @@ namespace Paramore.Brighter.ServiceActivator
             Tracer = tracer;
             InstrumentationOptions = instrumentationOptions;
         }
-
-        /// <summary>
-        /// How long to wait for a message before timing out
-        /// </summary>
-        public TimeSpan TimeOut { get; set; }
-
-        /// <summary>
-        /// How many times to requeue a message before discarding it
-        /// </summary>
-        public int RequeueCount { get; set; }
-
-        /// <summary>
-        /// How long to wait before requeuing a message
-        /// </summary>
-        public TimeSpan RequeueDelay { get; set; }
-
-        /// <summary>
-        /// The number of unacceptable messages to receive before stopping the message pump
-        /// </summary>
-        public int UnacceptableMessageLimit { get; set; }
-
-        /// <summary>
-        /// The delay to wait when the channel is empty
-        /// </summary>
-        public TimeSpan EmptyChannelDelay { get; set; }
         
-        /// <summary>
-        /// The delay to wait when the channel has failed
-        /// </summary>
-        public TimeSpan ChannelFailureDelay { get; set; }
-
         protected bool DiscardRequeuedMessagesEnabled()
         {
             return RequeueCount != -1;

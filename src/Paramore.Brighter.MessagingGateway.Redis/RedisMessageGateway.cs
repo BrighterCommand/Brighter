@@ -48,13 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             });
         }
 
-        protected void DisposePool()
-        {
-            if (s_pool is { IsValueCreated: true })
-                s_pool.Value.Dispose();
-        }
-
-        /// <summary>
+        // <summary>
         /// Creates a plain/text JSON representation of the message
         /// </summary>
         /// <param name="message">The Brighter message to convert</param>
@@ -66,6 +60,22 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             string redisMessage = redisMessageFactory.Create(message);
             return redisMessage;
         }
+        
+        
+        /// <summary>
+        /// Dispose of the pool of connections to Redis
+        /// </summary>
+        protected virtual void DisposePool()
+        {
+            if (s_pool is { IsValueCreated: true })
+                s_pool.Value.Dispose();
+        }
+        
+        protected virtual async ValueTask DisposePoolAsync()
+        {
+            if (s_pool is { IsValueCreated: true })
+                await ((IAsyncDisposable)s_pool.Value).DisposeAsync();
+        } 
 
         /// <summary>
         /// Service Stack Redis provides global (static) configuration settings for how Redis behaves.

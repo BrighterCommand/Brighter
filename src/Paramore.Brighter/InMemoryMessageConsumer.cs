@@ -218,9 +218,18 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer, IAmAMessageConsumerA
         return tcs.Task;
     }
 
+    /// <inheritdoc cref="IDisposable"/>
     public void Dispose()
     {
-        _lockTimer.Dispose();
+        DisposeCore();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <inheritdoc cref="IAsyncDisposable"/> 
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsyncCore().ConfigureAwait(false);
+        GC.SuppressFinalize(this); 
     }
     
     private void CheckLockedMessages()
@@ -233,6 +242,18 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer, IAmAMessageConsumerA
                 RequeueNoDelay(lockedMessage.Value.Message);
             }
         }
+    }
+
+    protected virtual void DisposeCore()
+    {
+        _lockTimer.Dispose();
+        _requeueTimer?.Dispose();
+    }
+    
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        await _lockTimer.DisposeAsync().ConfigureAwait(false);
+        if (_requeueTimer != null) await _requeueTimer.DisposeAsync().ConfigureAwait(false);
     }
     
     private bool RequeueNoDelay(Message message)
@@ -251,4 +272,6 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer, IAmAMessageConsumerA
     }
 
     private record LockedMessage(Message Message, DateTimeOffset LockedAt);
+
+
 }

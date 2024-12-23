@@ -37,8 +37,18 @@ namespace Paramore.Brighter.ServiceActivator
     public interface IAmAMessagePump
     {
         /// <summary>
-        /// Runs the message loop
+        /// The <see cref="MessagePumpType"/> of this message pump; indicates Reactor or Proactor
         /// </summary>
+        MessagePumpType MessagePumpType { get; }
+
+        /// <summary>
+        /// Runs the message pump, performing the following:
+        /// - Gets a message from a queue/stream
+        /// - Translates the message to the local type system
+        /// - Dispatches the message to waiting handlers
+        /// - Handles any exceptions that occur during the dispatch and tries to keep the pump alive  
+        /// </summary>
+        /// <exception cref="Exception"></exception>
         void Run();
-   }
+    }
 }

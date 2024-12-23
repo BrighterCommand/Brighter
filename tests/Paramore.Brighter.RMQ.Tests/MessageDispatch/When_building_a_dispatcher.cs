@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -82,24 +83,33 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                         new SubscriptionName("bar"),
                         new ChannelName("alice"),
                         new RoutingKey("simon"),
+                        messagePumpType: MessagePumpType.Reactor,
                         timeOut: TimeSpan.FromMilliseconds(200))
                 })
                 .ConfigureInstrumentation(tracer, instrumentationOptions);
         }
 
         [Fact]
-        public void When_Building_A_Dispatcher()
+        public async Task When_Building_A_Dispatcher()
         {
             _dispatcher = _builder.Build();
 
-            //_should_build_a_dispatcher
-            AssertionExtensions.Should(_dispatcher).NotBeNull();
-            //_should_have_a_foo_connection
+            _dispatcher.Should().NotBeNull();
             GetConnection("foo").Should().NotBeNull();
-            //_should_have_a_bar_connection
             GetConnection("bar").Should().NotBeNull();
-            //_should_be_in_the_awaiting_state
-            AssertionExtensions.Should(_dispatcher.State).Be(DispatcherState.DS_AWAITING);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+            
+            await Task.Delay(1000);
+
+            _dispatcher.Receive();
+
+            await Task.Delay(1000);
+
+            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
+
+            await _dispatcher.End();
+            
+            _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
         }
 
         public void Dispose()

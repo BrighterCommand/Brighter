@@ -65,8 +65,21 @@ public class BrighterSynchronizationContextsTests
             });
             resumed.Should().BeTrue();
         }
+        
+        [Fact]
+        public void Run_AsyncTask_BlockingCode_Still_Ends()
+        {
+            bool resumed = false;
+            BrighterSynchronizationHelper.Run(() =>
+            {
+                Task.Delay(50).GetAwaiter().GetResult();
+                resumed = true;
+                return Task.CompletedTask;
+            });
+            resumed.Should().BeTrue();
+        }
 
-        //[Fact]
+        [Fact]
         public void Run_AsyncTaskWithResult_BlocksUntilCompletion()
         {
             bool resumed = false;

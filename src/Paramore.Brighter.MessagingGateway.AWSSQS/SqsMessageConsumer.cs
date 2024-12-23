@@ -315,6 +315,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-        public void Dispose() { }
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            GC.SuppressFinalize(this);
+            return new ValueTask(Task.CompletedTask);
+        }
     }
 }

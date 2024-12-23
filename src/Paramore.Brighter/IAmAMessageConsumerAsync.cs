@@ -31,13 +31,13 @@ namespace Paramore.Brighter
     /// <summary>
     /// Interface IAmAReceiveMessageGatewayAsync
     /// </summary>
-    public interface IAmAMessageConsumerAsync : IDisposable
+    public interface IAmAMessageConsumerAsync : IAsyncDisposable
     {
         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="cancellationToken">Cancel the acknowledge</param>
+        /// <param name="cancellationToken">Cancel the acknowledgment</param>
         Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>

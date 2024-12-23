@@ -74,6 +74,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// The channel to receive messages from
         /// </summary>
         public IAmAChannelSync Channel { get; set; }
+        
+        /// <summary>
+        /// The <see cref="MessagePumpType"/> of this message pump; indicates Reactor or Proactor
+        /// </summary>
+        public override MessagePumpType MessagePumpType => MessagePumpType.Reactor;
 
         /// <summary>
         /// Runs the message pump, performing the following:

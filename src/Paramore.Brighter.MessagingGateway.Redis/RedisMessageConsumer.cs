@@ -113,7 +113,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             DisposePool();
             GC.SuppressFinalize(this);
         }
+        
 
+        /// <inheritdoc cref="IAsyncDisposable"/> 
+        public async ValueTask DisposeAsync()
+        {
+            await DisposePoolAsync().ConfigureAwait(false);
+            GC.SuppressFinalize(this); 
+        }
         /// <summary>
         /// Clear the queue
         /// </summary>
@@ -406,5 +413,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return (latestId, msg);
         }
+
+
     }
 }

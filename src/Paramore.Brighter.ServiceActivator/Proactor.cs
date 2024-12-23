@@ -72,7 +72,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         public IAmAChannelAsync Channel { get; set; }
         
-               /// <summary>
+        /// <summary>
+        /// The <see cref="MessagePumpType"/> of this message pump; indicates Reactor or Proactor
+        /// </summary>
+        public override MessagePumpType MessagePumpType => MessagePumpType.Proactor;
+        
+        /// <summary>
         /// Runs the message pump, performing the following:
         /// - Gets a message from a queue/stream
         /// - Translates the message to the local type system
@@ -84,8 +89,8 @@ namespace Paramore.Brighter.ServiceActivator
         {
             BrighterSynchronizationHelper.Run(async () =>
             {
-                bool badExit = await EventLoop();
-                Debug.Assert(badExit == false, "Bad Exit from Event Loop");
+                await EventLoop();
+                return Task.CompletedTask;
             });
         }
 
@@ -127,11 +132,10 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
-        private async Task<bool> EventLoop()
+        private async Task EventLoop()
         {
             var pumpSpan = Tracer?.CreateMessagePumpSpan(MessagePumpSpanOperation.Begin, Channel.RoutingKey, MessagingSystem.InternalBus, InstrumentationOptions);
 
-            bool badExit = false;
             do
             {
                 if (UnacceptableMessageLimitReached())
@@ -260,7 +264,6 @@ namespace Paramore.Brighter.ServiceActivator
                         await RejectMessage(message);
                         span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} with {Channel.RoutingKey} on thread # {Environment.CurrentManagedThreadId}");
                         Channel.Dispose();
-                        badExit = true;
                         break;
                     }
 
@@ -272,7 +275,6 @@ namespace Paramore.Brighter.ServiceActivator
                     await RejectMessage(message);
                     span?.SetStatus(ActivityStatusCode.Error, $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Environment.CurrentManagedThreadId}");
                     Channel.Dispose();
-                    badExit = true;
                     break;
                 }
                 catch (DeferMessageAction)
@@ -313,8 +315,6 @@ namespace Paramore.Brighter.ServiceActivator
                 "MessagePump0: Finished running message loop, no longer receiving messages from {ChannelName} with {RoutingKey} on thread # {ManagementThreadId}",
                 Channel.Name, Channel.RoutingKey, Thread.CurrentThread.ManagedThreadId);
             Tracer?.EndSpan(pumpSpan);
-
-            return badExit;
         }
 
         private async Task<TRequest> TranslateAsync(Message message, RequestContext requestContext, CancellationToken cancellationToken = default)
@@ -410,5 +410,6 @@ namespace Paramore.Brighter.ServiceActivator
                 
             return true;
         }
+
     }
 }

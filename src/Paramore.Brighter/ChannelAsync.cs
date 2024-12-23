@@ -191,7 +191,7 @@ namespace Paramore.Brighter
         {
             if (disposing)
             {
-                _messageConsumer.Dispose();
+                _messageConsumer.DisposeAsync();
             }
         }
 

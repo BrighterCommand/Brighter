@@ -161,13 +161,22 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             await _sqlMessageQueue.SendAsync(message, topic, null, cancellationToken: cancellationToken); 
             return true;
         }
-        
+
         /// <summary>
         /// Dispose of the consumer
         /// </summary>
         /// <remarks>
         /// Nothing to do here
         /// </remarks>
-        public void Dispose() {}
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            GC.SuppressFinalize(this);
+            return new ValueTask(Task.CompletedTask);
+        }
     }
 }

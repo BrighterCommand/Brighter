@@ -52,5 +52,11 @@ public class FakeServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     public void Close()
         => IsClosedOrClosing = true;
 
+    public Task CloseAsync()
+    {
+        Close();
+        return Task.CompletedTask;
+    }
+
     public bool IsClosedOrClosing { get; private set; } = false;
 }
