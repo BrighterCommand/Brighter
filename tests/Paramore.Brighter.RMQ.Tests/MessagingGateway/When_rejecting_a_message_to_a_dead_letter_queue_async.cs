@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
@@ -31,14 +32,14 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Trait("Category", "RMQ")]
-    public class RmqMessageProducerDLQTests : IDisposable
+    public class RmqMessageProducerDLQTestsAsync : IDisposable
     {
-        private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageProducerAsync _messageProducer;
+        private readonly IAmAMessageConsumerAsync _messageConsumer;
         private readonly Message _message;
         private readonly IAmAMessageConsumer _deadLetterConsumer;
 
-        public RmqMessageProducerDLQTests()
+        public RmqMessageProducerDLQTestsAsync()
         {
             var routingKey = new RoutingKey(Guid.NewGuid().ToString());
             
@@ -81,17 +82,17 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_rejecting_a_message_to_a_dead_letter_queue()
+        public async Task When_rejecting_a_message_to_a_dead_letter_queue()
         {
             //create the infrastructure
-            _messageConsumer.Receive(TimeSpan.FromMilliseconds(0)); 
+            await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(0)); 
+            
+            await _messageProducer.SendAsync(_message);
 
-            _messageProducer.Send(_message);
-
-            var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
+            var message = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First(); 
             
             //This will push onto the DLQ
-            _messageConsumer.Reject(message);
+            await _messageConsumer.RejectAsync(message);
 
             var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             

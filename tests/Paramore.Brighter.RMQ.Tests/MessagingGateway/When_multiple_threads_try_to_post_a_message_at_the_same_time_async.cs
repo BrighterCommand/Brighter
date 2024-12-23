@@ -8,12 +8,12 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Trait("Category", "RMQ")]
-    public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable
+    public class RmqMessageProducerSupportsMultipleThreadsTestsAsync : IDisposable
     {
-        private readonly IAmAMessageProducerSync _messageProducer;
+        private readonly IAmAMessageProducerAsync _messageProducer;
         private readonly Message _message;
 
-        public RmqMessageProducerSupportsMultipleThreadsTests()
+        public RmqMessageProducerSupportsMultipleThreadsTestsAsync()
         {
             _message = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("nonexistenttopic"), 
@@ -30,14 +30,15 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_multiple_threads_try_to_post_a_message_at_the_same_time()
+        public async Task When_multiple_threads_try_to_post_a_message_at_the_same_time()
         {
             bool exceptionHappened = false;
             try
             {
-                Parallel.ForEach(Enumerable.Range(0, 10), _ =>
+                var options = new ParallelOptions { MaxDegreeOfParallelism = 4 };
+                await Parallel.ForEachAsync(Enumerable.Range(0, 10), options, async (_, ct) =>
                 {
-                    _messageProducer.Send(_message);
+                     await _messageProducer.SendAsync(_message, ct);
                 });
             }
             catch (Exception)

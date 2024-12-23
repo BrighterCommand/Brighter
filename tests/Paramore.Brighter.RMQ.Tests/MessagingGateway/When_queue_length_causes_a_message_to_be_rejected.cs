@@ -71,15 +71,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 maxQueueLength: 1,
                 makeChannels:OnMissingChannel.Create
                 );
-
-            //create the infrastructure
-            _messageConsumer.Receive(TimeSpan.Zero); 
-             
         }
 
         [Fact]
         public void When_rejecting_a_message_due_to_queue_length()
         {
+            //create the infrastructure
+            _messageConsumer.Receive(TimeSpan.Zero); 
+            
             _messageProducer.Send(_messageOne);
             _messageProducer.Send(_messageTwo);
 

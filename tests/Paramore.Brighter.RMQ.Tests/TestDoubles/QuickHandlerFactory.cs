@@ -2,17 +2,11 @@
 
 namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
-    internal class QuickHandlerFactory : IAmAHandlerFactorySync
+    internal class QuickHandlerFactory(Func<IHandleRequests> handlerAction) : IAmAHandlerFactorySync
     {
-        private readonly Func<IHandleRequests> _handlerAction;
-
-        public QuickHandlerFactory(Func<IHandleRequests> handlerAction)
-        {
-            _handlerAction = handlerAction;
-        }
         public IHandleRequests Create(Type handlerType)
         {
-            return _handlerAction();
+            return handlerAction();
         }
 
         public void Release(IHandleRequests handler) { }

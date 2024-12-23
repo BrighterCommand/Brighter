@@ -86,7 +86,7 @@ public class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(channel)
             now = DateTime.UtcNow;
         }
 
-        return bufferIndex == 0 ? (0, null) : (bufferIndex, buffer);
+        return bufferIndex == 0 ? (0, Array.Empty<BasicDeliverEventArgs>()) : (bufferIndex, buffer);
     }
 
     public override Task HandleBasicDeliverAsync(string consumerTag,

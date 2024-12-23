@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
@@ -31,73 +32,70 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Trait("Category", "RMQ")]
-    public class RmqMessageProducerDLQTests : IDisposable
+    public class RmqMessageProducerQueueLengthTestsAsync : IDisposable
     {
-        private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly Message _message;
-        private readonly IAmAMessageConsumer _deadLetterConsumer;
+        private readonly IAmAMessageProducerAsync _messageProducer;
+        private readonly IAmAMessageConsumerAsync _messageConsumer;
+        private readonly Message _messageOne;
+        private readonly Message _messageTwo;
+        private readonly ChannelName _queueName = new(Guid.NewGuid().ToString());
 
-        public RmqMessageProducerDLQTests()
+        public RmqMessageProducerQueueLengthTestsAsync()
         {
             var routingKey = new RoutingKey(Guid.NewGuid().ToString());
             
-            _message = new Message(
+            _messageOne = new Message(
                 new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
                     MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
+           
+           _messageTwo = new Message(
+               new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
+                   MessageType.MT_COMMAND), 
+               new MessageBody("test content"));
 
-            var queueName = new ChannelName(Guid.NewGuid().ToString());
-            var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
-            var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
-            
              var rmqConnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
-                DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
             };
             
             _messageProducer = new RmqMessageProducer(rmqConnection);
 
             _messageConsumer = new RmqMessageConsumer(
                 connection: rmqConnection, 
-                queueName: queueName, 
+                queueName: _queueName, 
                 routingKey: routingKey, 
                 isDurable: false, 
                 highAvailability: false,
-                deadLetterQueueName: deadLetterQueueName,
-                deadLetterRoutingKey: deadLetterRoutingKey,
+                batchSize: 5,
+                maxQueueLength: 1,
                 makeChannels:OnMissingChannel.Create
                 );
-
-            _deadLetterConsumer = new RmqMessageConsumer(
-                connection: rmqConnection,
-                queueName: deadLetterQueueName,
-                routingKey: deadLetterRoutingKey,
-                isDurable:false,
-                makeChannels:OnMissingChannel.Assume
-                );
+             
         }
 
         [Fact]
-        public void When_rejecting_a_message_to_a_dead_letter_queue()
+        public async Task When_rejecting_a_message_due_to_queue_length()
         {
             //create the infrastructure
-            _messageConsumer.Receive(TimeSpan.FromMilliseconds(0)); 
-
-            _messageProducer.Send(_message);
-
-            var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
+            await _messageConsumer.ReceiveAsync(TimeSpan.Zero); 
             
-            //This will push onto the DLQ
-            _messageConsumer.Reject(message);
+            await _messageProducer.SendAsync(_messageOne);
+            await _messageProducer.SendAsync(_messageTwo);
 
-            var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
+            //check messages are flowing - absence needs to be expiry
+            var messages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+            var message = messages.First();
+            await _messageConsumer.AcknowledgeAsync(message);
             
-            //assert this is our message
-            dlqMessage.Id.Should().Be(_message.Id);
-            message.Body.Value.Should().Be(dlqMessage.Body.Value);
+            //should be the first message
+            
+            //try to grab the next message
+            var nextMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+            message = nextMessages.First();
+            message.Header.MessageType.Should().Be(MessageType.MT_NONE);
+
         }
 
         public void Dispose()

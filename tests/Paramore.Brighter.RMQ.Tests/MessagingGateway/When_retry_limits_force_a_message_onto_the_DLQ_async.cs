@@ -13,17 +13,17 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Trait("Category", "RMQ")]
     [Trait("Fragile", "CI")]
-    public class RMQMessageConsumerRetryDLQTests : IDisposable
+    public class RMQMessageConsumerRetryDLQTestsAsync : IDisposable
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;
-        private readonly IAmAChannelSync _channel;
+        private readonly IAmAChannelAsync _channel;
         private readonly RmqMessageProducer _sender;
         private readonly RmqMessageConsumer _deadLetterConsumer;
         private readonly RmqSubscription<MyCommand> _subscription;
 
 
-        public RMQMessageConsumerRetryDLQTests()
+        public RMQMessageConsumerRetryDLQTestsAsync()
         {
             string correlationId = Guid.NewGuid().ToString();
             string contentType = "text\\plain";
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 requeueDelay: TimeSpan.FromMilliseconds(50),
                 deadLetterChannelName: deadLetterQueueName,
                 deadLetterRoutingKey: deadLetterRoutingKey,
-                messagePumpType: MessagePumpType.Reactor,
+                messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create
             );
 
@@ -72,19 +72,19 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //set up our receiver
             ChannelFactory channelFactory = new(new RmqMessageConsumerFactory(rmqConnection));
-            _channel = channelFactory.CreateChannel(_subscription);
+            _channel = channelFactory.CreateChannelAsync(_subscription);
 
             //how do we handle a command
-            IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
+            IHandleRequestsAsync<MyDeferredCommand> handler = new MyDeferredCommandHandlerAsync();
 
             //hook up routing for the command processor
             var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<MyDeferredCommand, MyDeferredCommandHandler>();
+            subscriberRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandHandlerAsync>();
 
             //once we read, how do we dispatch to a handler. N.B. we don't use this for reading here
             IAmACommandProcessor commandProcessor = new CommandProcessor(
                 subscriberRegistry: subscriberRegistry,
-                handlerFactory: new QuickHandlerFactory(() => handler),
+                handlerFactory: new QuickHandlerFactoryAsync(() => handler),
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
@@ -92,14 +92,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
-                null
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyDeferredCommandMessageMapperAsync())
             );
             
-            messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
+            messageMapperRegistry.RegisterAsync<MyDeferredCommand, MyDeferredCommandMessageMapperAsync>();
             
-            _messagePump = new Reactor<MyDeferredCommand>(provider, messageMapperRegistry, 
-                new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
+            _messagePump = new Proactor<MyDeferredCommand>(provider, messageMapperRegistry, 
+                new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
             };
@@ -124,10 +124,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             await Task.Delay(500);
 
             //put something on an SNS topic, which will be delivered to our SQS queue
-            _sender.Send(_message);
+            await _sender.SendAsync(_message);
 
             //Let the message be handled and deferred until it reaches the DLQ
-            await Task.Delay(20000);
+            await Task.Delay(2000);
 
             //send a quit message to the pump to terminate it 
             var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
@@ -136,16 +136,16 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             //wait for the pump to stop once it gets a quit message
             await Task.WhenAll(task);
 
-            await Task.Delay(5000);
+            await Task.Delay(3000);
 
             //inspect the dlq
-            var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
+            var dlqMessage = (await _deadLetterConsumer.ReceiveAsync(new TimeSpan(10000))).First();
 
             //assert this is our message
             dlqMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             dlqMessage.Body.Value.Should().Be(_message.Body.Value);
 
-            _deadLetterConsumer.Acknowledge(dlqMessage);
+            await _deadLetterConsumer.AcknowledgeAsync(dlqMessage);
 
         }
 

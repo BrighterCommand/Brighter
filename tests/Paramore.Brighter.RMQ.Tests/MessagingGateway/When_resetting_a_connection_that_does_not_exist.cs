@@ -32,14 +32,9 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Trait("Category", "RMQ")]
-    public class RMQMessageGatewayConnectionPoolResetConnectionDoesNotExist
+    public class RmqMessageGatewayConnectionPoolResetConnectionDoesNotExist
     {
-        private readonly RmqMessageGatewayConnectionPool _connectionPool;
-
-        public RMQMessageGatewayConnectionPoolResetConnectionDoesNotExist()
-        {
-            _connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7);
-        }
+        private readonly RmqMessageGatewayConnectionPool _connectionPool = new("MyConnectionName", 7);
 
         [Fact]
         public async Task When_resetting_a_connection_that_does_not_exist()

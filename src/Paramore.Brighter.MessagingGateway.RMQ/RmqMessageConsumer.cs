@@ -375,7 +375,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer, IAmAMe
     {
         if (Channel == null || Channel.IsClosed)
         {
-            EnsureBroker(_queueName);
+            await EnsureBrokerAsync(_queueName, cancellationToken: cancellationToken);
 
             if (_makeChannels == OnMissingChannel.Create)
             {
