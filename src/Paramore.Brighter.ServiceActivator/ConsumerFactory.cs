@@ -94,7 +94,7 @@ namespace Paramore.Brighter.ServiceActivator
             if (_subscription.ChannelFactory is null)
                 throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
             
-            var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
+            var channel = _subscription.ChannelFactory.CreateSyncChannel(_subscription);
             var messagePump = new Reactor<TRequest>(_commandProcessorProvider, _messageMapperRegistry, 
                 _messageTransformerFactory, _requestContextFactory, channel, _tracer, _instrumentationOptions)
             {
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.ServiceActivator
             if (_subscription.ChannelFactory is null)
                 throw new ArgumentException("Subscription must have a Channel Factory in order to create a consumer.");
             
-            var channel = _subscription.ChannelFactory.CreateChannelAsync(_subscription);
+            var channel = _subscription.ChannelFactory.CreateAsyncChannel(_subscription);
             var messagePump = new Proactor<TRequest>(_commandProcessorProvider, _messageMapperRegistryAsync, 
                 _messageTransformerFactoryAsync, _requestContextFactory, channel, _tracer, _instrumentationOptions)
             {

@@ -69,7 +69,6 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             var result = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First(); 
 
-            //_should_send_a_message_via_rmq_with_the_matching_body
             result.Body.Value.Should().Be(_message.Body.Value);
        }
 

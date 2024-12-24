@@ -33,6 +33,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ;
@@ -103,7 +104,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// <param name="message">The message.</param>
     /// <param name="delay">Delay to delivery of the message.</param>
     /// <returns>Task.</returns>
-    public void SendWithDelay(Message message, TimeSpan? delay = null) => SendWithDelayAsync(message, delay).GetAwaiter().GetResult();
+    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(() => SendWithDelayAsync(message, delay));
 
     /// <summary>
     /// Sends the specified message

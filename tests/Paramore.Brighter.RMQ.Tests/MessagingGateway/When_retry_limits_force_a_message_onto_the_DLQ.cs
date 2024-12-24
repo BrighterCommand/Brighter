@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -46,8 +47,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 name: new SubscriptionName("DLQ Test Subscription"),
                 channelName: channelName,
                 routingKey: routingKey,
-                //after 2 retries, fail and move to the DLQ
-                requeueCount: 2,
+                //after 0 retries fail and move to the DLQ
+                requeueCount: 0,
                 //delay before re-queuing
                 requeueDelay: TimeSpan.FromMilliseconds(50),
                 deadLetterChannelName: deadLetterQueueName,
@@ -72,7 +73,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //set up our receiver
             ChannelFactory channelFactory = new(new RmqMessageConsumerFactory(rmqConnection));
-            _channel = channelFactory.CreateChannel(_subscription);
+            _channel = channelFactory.CreateSyncChannel(_subscription);
 
             //how do we handle a command
             IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
@@ -101,7 +102,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messagePump = new Reactor<MyDeferredCommand>(provider, messageMapperRegistry, 
                 new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
             {
-                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 0
             };
 
             _deadLetterConsumer = new RmqMessageConsumer(
@@ -114,29 +115,30 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         }
 
         [Fact]
-        public async Task When_retry_limits_force_a_message_onto_the_dlq()
+        [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
+        public void When_retry_limits_force_a_message_onto_the_dlq()
         {
             //NOTE: This test is **slow** because it needs to ensure infrastructure and then wait whilst we requeue a message a number of times,
             //then propagate to the DLQ
             
             //start a message pump, let it create infrastructure 
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            await Task.Delay(500);
+            Task.Delay(500).Wait();
 
             //put something on an SNS topic, which will be delivered to our SQS queue
             _sender.Send(_message);
 
             //Let the message be handled and deferred until it reaches the DLQ
-            await Task.Delay(20000);
+            Task.Delay(5000).Wait();
 
             //send a quit message to the pump to terminate it 
             var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message
-            await Task.WhenAll(task);
+            Task.WhenAll(task).Wait();
 
-            await Task.Delay(5000);
+            Task.Delay(500).Wait();
 
             //inspect the dlq
             var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();

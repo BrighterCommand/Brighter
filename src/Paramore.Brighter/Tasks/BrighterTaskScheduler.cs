@@ -18,7 +18,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.ServiceActivator;
+namespace Paramore.Brighter.Tasks;
 
 /// <summary>
 /// This class provides a task scheduler that causes all tasks to be executed synchronously on the current thread.
@@ -52,7 +52,7 @@ internal class BrighterTaskScheduler : TaskScheduler
     /// <param name="task">The task to be queued.</param>
     protected override void QueueTask(Task task)
     {
-        _synchronizationHelper.Enqueue(task, false);
+        _synchronizationHelper.Enqueue((Task)task, false);
     }
 
     /// <summary>

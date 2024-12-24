@@ -22,8 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Threading.Tasks;
-
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -42,13 +40,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="subscription">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAChannelSync CreateChannel(Subscription subscription);
+        IAmAChannelSync CreateSyncChannel(Subscription subscription);
         
         /// <summary>
         /// Creates the input channel.
         /// </summary>
         /// <param name="subscription">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAChannelAsync CreateChannelAsync(Subscription subscription);
+        IAmAChannelAsync CreateAsyncChannel(Subscription subscription);
     }
 }

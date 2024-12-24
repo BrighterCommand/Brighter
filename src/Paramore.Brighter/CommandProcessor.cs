@@ -1040,7 +1040,7 @@ namespace Paramore.Brighter
             subscription.ChannelName = new ChannelName(channelName.ToString());
             subscription.RoutingKey = new RoutingKey(routingKey);
 
-            using var responseChannel = _responseChannelFactory.CreateChannel(subscription);
+            using var responseChannel = _responseChannelFactory.CreateSyncChannel(subscription);
             s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
             request.ReplyAddress.Topic = subscription.RoutingKey;
             request.ReplyAddress.CorrelationId = channelName.ToString();

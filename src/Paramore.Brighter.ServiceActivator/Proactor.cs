@@ -29,6 +29,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Actions;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -87,11 +88,9 @@ namespace Paramore.Brighter.ServiceActivator
         /// <exception cref="Exception"></exception>
         public void Run()
         {
-            BrighterSynchronizationHelper.Run(async () =>
-            {
-                await EventLoop();
-                return Task.CompletedTask;
-            });
+            //NOTE: Don't make this a method body, as opposed to an expression, unless you want it to
+            //break deep in AsyncTaskMethodBuilder for some hard to explain reasons
+            BrighterSynchronizationHelper.Run(async () => await EventLoop());
         }
 
         private async Task Acknowledge(Message message)

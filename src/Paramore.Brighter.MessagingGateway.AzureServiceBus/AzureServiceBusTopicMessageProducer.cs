@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -58,14 +59,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _administrationClientWrapper = administrationClientWrapper;
         }
 
-        protected override void EnsureChannelExists(string channelName)
+        protected override async Task EnsureChannelExistsAsync(string channelName)
         {
             if (TopicCreated || Publication.MakeChannels.Equals(OnMissingChannel.Assume))
                 return;
 
             try
             {
-                if (_administrationClientWrapper.TopicExists(channelName))
+                if (await _administrationClientWrapper.TopicExistsAsync(channelName))
                 {
                     TopicCreated = true;
                     return;
@@ -76,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     throw new ChannelFailureException($"Topic {channelName} does not exist and missing channel mode set to Validate.");
                 }
                 
-                _administrationClientWrapper.CreateTopic(channelName);
+                await _administrationClientWrapper.CreateTopicAsync(channelName);
                 TopicCreated = true;
             }
             catch (Exception e)

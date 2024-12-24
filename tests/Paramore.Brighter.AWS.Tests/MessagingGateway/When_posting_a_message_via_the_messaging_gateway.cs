@@ -12,7 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
-    public class SqsMessageProducerSendTests : IDisposable
+    public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
     {
         private readonly Message _message;
         private readonly IAmAChannelSync _channel;
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
             _channelFactory = new ChannelFactory(awsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            _channel = _channelFactory.CreateSyncChannel(subscription);
             
             _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
         }
@@ -105,9 +105,19 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _channelFactory?.DeleteTopic();
-            _channelFactory?.DeleteQueue();
-            _messageProducer?.Dispose();
+            //Clean up resources that we have created
+            _channelFactory.DeleteTopicAsync().Wait();
+            _channelFactory.DeleteQueueAsync().Wait();
+            _messageProducer.Dispose();
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync();
+            await _channelFactory.DeleteQueueAsync();
+            await _messageProducer.DisposeAsync();
+            GC.SuppressFinalize(this);
         }
         
         private static DateTime RoundToSeconds(DateTime dateTime)

@@ -64,12 +64,18 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         [Fact]
         public void When_a_message_consumer_throws_an_not_supported_exception_when_connecting()
         {
-            _firstException = Catch.Exception(() => _badReceiver.Receive(TimeSpan.FromMilliseconds(2000)));
-
-            //_should_return_a_channel_failure_exception
-            _firstException.Should().BeOfType<ChannelFailureException>();
-            //_should_return_an_explaining_inner_exception
-            _firstException.InnerException.Should().BeOfType<NotSupportedException>();
+            bool exceptionHappened = false;
+            try
+            {
+                _receiver.Receive(TimeSpan.FromMilliseconds(2000));
+            }
+            catch (ChannelFailureException cfe)
+            {
+                exceptionHappened = true;
+                cfe.InnerException.Should().BeOfType<NotSupportedException>();
+            }
+            
+            exceptionHappened.Should().BeTrue();
         }
 
         [Fact]

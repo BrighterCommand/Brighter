@@ -12,7 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
-    public class CustomisingAwsClientConfigTests : IDisposable
+    public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
     {
         private readonly Message _message;
         private readonly IAmAChannelSync _channel;
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             });
             
             _channelFactory = new ChannelFactory(subscribeAwsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            _channel = _channelFactory.CreateSyncChannel(subscription);
 
             var publishAwsConnection = new AWSMessagingGatewayConnection(credentials, region, config =>
             {
@@ -81,9 +81,17 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _channelFactory?.DeleteTopic();
-            _channelFactory?.DeleteQueue();
-            _messageProducer?.Dispose();
+            //Clean up resources that we have created
+            _channelFactory.DeleteTopicAsync().Wait();
+            _channelFactory.DeleteQueueAsync().Wait();
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync();
+            await _channelFactory.DeleteQueueAsync();
+            GC.SuppressFinalize(this);
         }
     }
 }

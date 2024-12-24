@@ -6,7 +6,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.ServiceActivator;
+namespace Paramore.Brighter.Tasks;
 
 internal abstract class SingleDisposable<T> : IDisposable
 {

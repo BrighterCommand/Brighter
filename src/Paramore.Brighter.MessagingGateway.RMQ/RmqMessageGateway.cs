@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 using Polly;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -101,15 +102,6 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
         Dispose(true);
         GC.SuppressFinalize(this);
     }
-
-    /// <summary>
-    /// Connects the specified queue name.
-    /// </summary>
-    /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
-    /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
-    /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-    protected void EnsureBroker(ChannelName? queueName = null, OnMissingChannel makeExchange = OnMissingChannel.Create)
-        => EnsureBrokerAsync().GetAwaiter().GetResult();
 
     /// <summary>
     /// Connects the specified queue name.
@@ -193,7 +185,7 @@ public class RmqMessageGateway : IDisposable, IAsyncDisposable
         Dispose(false);
     }
 
-    public async ValueTask DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         if (Channel != null)
         {

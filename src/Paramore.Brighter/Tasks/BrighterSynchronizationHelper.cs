@@ -22,7 +22,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.ServiceActivator;
+namespace Paramore.Brighter.Tasks;
 
 /// <summary>
 /// The Brighter SynchronizationHelper holds the tasks that we need to execute as continuations of an async operation
@@ -239,7 +239,7 @@ public class BrighterSynchronizationHelper : IDisposable
 
         using var synchronizationHelper = new BrighterSynchronizationHelper();
 
-        var task = synchronizationHelper._taskFactory.StartNew(
+        var task = synchronizationHelper._taskFactory.StartNew<Task<TResult>>(
                 func,
                 synchronizationHelper._taskFactory.CancellationToken,
                 synchronizationHelper._taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach,

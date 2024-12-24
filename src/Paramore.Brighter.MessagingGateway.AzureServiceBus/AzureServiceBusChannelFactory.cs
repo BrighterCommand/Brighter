@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="subscription">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannelSync CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateSyncChannel(Subscription subscription)
         {
             if (!(subscription is AzureServiceBusSubscription azureServiceBusSubscription))
             {
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="subscription">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
         {
             if (!(subscription is AzureServiceBusSubscription azureServiceBusSubscription))
             {

@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns></returns>
-        public IAmAChannelSync CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateSyncChannel(Subscription subscription)
         {
             KafkaSubscription rmqSubscription = subscription as KafkaSubscription;  
             if (rmqSubscription == null)
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 subscription.BufferSize);
         }
 
-        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
         {
             KafkaSubscription rmqSubscription = subscription as KafkaSubscription;  
             if (rmqSubscription == null)

@@ -24,7 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns></returns>
-        public IAmAChannelSync CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateSyncChannel(Subscription subscription)
         {
             MsSqlSubscription? rmqSubscription = subscription as MsSqlSubscription;  
             if (rmqSubscription == null)
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 subscription.BufferSize);
         }
 
-        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
         {
             throw new NotImplementedException();
         }

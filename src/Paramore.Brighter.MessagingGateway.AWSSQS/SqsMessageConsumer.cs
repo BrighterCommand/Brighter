@@ -30,6 +30,7 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -76,10 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
-        {
-            AcknowledgeAsync(message).GetAwaiter().GetResult();
-        }
+        public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(() => AcknowledgeAsync(message));
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -114,10 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
-        {
-            RejectAsync(message).GetAwaiter().GetResult();
-        }
+        public void Reject(Message message) => BrighterSynchronizationHelper.Run(() => RejectAsync(message));
 
         /// <summary>
         /// Rejects the specified message.
@@ -163,10 +158,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Purges the specified queue name.
         /// Sync over Async
         /// </summary>
-        public void Purge()
-        {
-            PurgeAsync().GetAwaiter().GetResult(); 
-        }
+        public void Purge() => BrighterSynchronizationHelper.Run(() => PurgeAsync());
         
         /// <summary>
         /// Purges the specified queue name.
@@ -195,10 +187,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over async 
         /// </summary>
         /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
-        public Message[] Receive(TimeSpan? timeOut = null)
-        {
-            return ReceiveAsync(timeOut).GetAwaiter().GetResult();
-        }
+        public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(() => ReceiveAsync(timeOut));
 
         /// <summary>
         /// Receives the specified queue name.
@@ -266,10 +255,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }      
 
 
-        public bool Requeue(Message message, TimeSpan? delay = null)
-        {
-            return RequeueAsync(message, delay).GetAwaiter().GetResult(); 
-        }
+        public bool Requeue(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(() => RequeueAsync(message, delay));
 
         /// <summary>
         /// Re-queues the specified message.

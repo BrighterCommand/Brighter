@@ -5,6 +5,7 @@ using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -36,15 +37,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _serviceBusReceiverProvider = serviceBusReceiverProvider;
         }
 
-        protected override void GetMessageReceiverProvider()
+        protected override async Task GetMessageReceiverProviderAsync()
         {
             s_logger.LogInformation(
                 "Getting message receiver provider for queue {Queue}...",
                 Topic);
             try
             {
-                ServiceBusReceiver = _serviceBusReceiverProvider.Get(Topic,
-                        SubscriptionConfiguration.RequireSession);
+                ServiceBusReceiver = await _serviceBusReceiverProvider.GetAsync(Topic, SubscriptionConfiguration.RequireSession);
             }
             catch (Exception e)
             {
@@ -55,13 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
-        public override void Purge()
-        {
-            Logger.LogInformation("Purging messages from Queue {Queue}", Topic);
-
-            AdministrationClientWrapper.DeleteQueueAsync(Topic).GetAwaiter().GetResult();
-            EnsureChannel();
-        }
+        public override void Purge() => BrighterSynchronizationHelper.Run(async () => await PurgeAsync());
         
         /// <summary>
         /// Purges the specified queue name.
@@ -71,17 +65,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             Logger.LogInformation("Purging messages from Queue {Queue}", Topic);
 
             await AdministrationClientWrapper.DeleteQueueAsync(Topic);
-            EnsureChannel();
+            await EnsureChannelAsync();
         }
 
-        protected override void EnsureChannel()
+        protected override async Task EnsureChannelAsync()
         {
             if (_queueCreated || Subscription.MakeChannels.Equals(OnMissingChannel.Assume))
                 return;
 
             try
             {
-                if (AdministrationClientWrapper.QueueExists(Topic))
+                if (await AdministrationClientWrapper.QueueExistsAsync(Topic))
                 {
                     _queueCreated = true;
                     return;
@@ -89,11 +83,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                 if (Subscription.MakeChannels.Equals(OnMissingChannel.Validate))
                 {
-                    throw new ChannelFailureException(
-                        $"Queue {Topic} does not exist and missing channel mode set to Validate.");
+                    throw new ChannelFailureException($"Queue {Topic} does not exist and missing channel mode set to Validate.");
                 }
 
-                AdministrationClientWrapper.CreateQueue(Topic, SubscriptionConfiguration.QueueIdleBeforeDelete);
+                await AdministrationClientWrapper.CreateQueueAsync(Topic, SubscriptionConfiguration.QueueIdleBeforeDelete);
                 _queueCreated = true;
             }
             catch (ServiceBusException ex)

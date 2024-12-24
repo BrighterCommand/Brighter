@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="batchSize">The number of messages to receive.</param>
         /// <param name="serverWaitTime">The maximum time to wait for the messages.</param>
         /// <returns>A task that represents the asynchronous receive operation. The task result contains the received messages.</returns>
-        public async Task<IEnumerable<IBrokeredMessageWrapper>> Receive(int batchSize, TimeSpan serverWaitTime)
+        public async Task<IEnumerable<IBrokeredMessageWrapper>> ReceiveAsync(int batchSize, TimeSpan serverWaitTime)
         {
             var messages = await _messageReceiver.ReceiveMessagesAsync(batchSize, serverWaitTime).ConfigureAwait(false);
 
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="lockToken">The lock token of the message to complete.</param>
         /// <returns>A task that represents the asynchronous complete operation.</returns>
-        public Task Complete(string lockToken)
+        public Task CompleteAsync(string lockToken)
         {
             return _messageReceiver.CompleteMessageAsync(CreateMessageShiv(lockToken));
         }
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="lockToken">The lock token of the message to deadletter.</param>
         /// <returns>A task that represents the asynchronous deadletter operation.</returns>
-        public Task DeadLetter(string lockToken)
+        public Task DeadLetterAsync(string lockToken)
         {
             return _messageReceiver.DeadLetterMessageAsync(CreateMessageShiv(lockToken));
         }

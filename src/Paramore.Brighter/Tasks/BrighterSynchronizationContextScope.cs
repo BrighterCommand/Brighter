@@ -18,7 +18,7 @@
 using System;
 using System.Threading;
 
-namespace Paramore.Brighter.ServiceActivator;
+namespace Paramore.Brighter.Tasks;
 
 /// <summary>
 /// A utility for managing context changes.
@@ -57,7 +57,7 @@ internal sealed class  BrighterSynchronizationContextScope :  SingleDisposable<o
     /// </summary>
     /// <param name="context">The original synchronization context</param>
     /// <param name="action">The action to take within the context</param>
-    /// <exception cref="ArgumentNullException">If the action passed was null</exception>
+    /// <exception cref="System.ArgumentNullException">If the action passed was null</exception>
     public static void ApplyContext(SynchronizationContext? context, Action action)
     {
         if (context is null) throw new ArgumentNullException(nameof(context));

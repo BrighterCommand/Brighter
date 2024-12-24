@@ -27,12 +27,14 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Amazon.Runtime.Internal;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Tasks;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
@@ -48,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private SqsSubscription? _subscription;
         private string? _queueUrl;
         private string? _dlqARN;
-        private readonly RetryPolicy _retryPolicy;
+        private readonly AsyncRetryPolicy _retryPolicy;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
@@ -60,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
             _retryPolicy = Policy
                 .Handle<InvalidOperationException>()
-                .WaitAndRetry(new[]
+                .WaitAndRetryAsync(new[]
                 {
                     TimeSpan.FromSeconds(1),
                     TimeSpan.FromSeconds(5),
@@ -75,17 +77,80 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
         /// <returns>An instance of <see cref="IAmAChannelSync"/>.</returns>
         /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-        public IAmAChannelSync CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateSyncChannel(Subscription subscription) => BrighterSynchronizationHelper.Run(async () => await CreateSyncChannelAsync(subscription));
+        
+        /// <summary>
+        /// Creates the input channel.
+        /// Sync over Async is used here; should be alright in context of channel creation.
+        /// </summary>
+        /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
+        /// <returns>An instance of <see cref="IAmAChannelSync"/>.</returns>
+        /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
+        public IAmAChannelAsync CreateAsyncChannel(Subscription subscription) => BrighterSynchronizationHelper.Run(async () => await CreateAsyncChannelAsync(subscription));
+        
+        /// <summary>
+        /// Deletes the queue.
+        /// </summary>
+        public async Task DeleteQueueAsync()
         {
-            var channel = _retryPolicy.Execute(() =>
+            if (_subscription?.ChannelName is null)
+                return;
+
+            using var sqsClient = new AmazonSQSClient(AwsConnection.Credentials, AwsConnection.Region);
+            (bool exists, string? queueUrl) queueExists = await QueueExistsAsync(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
+
+            if (queueExists.exists && queueExists.queueUrl != null)
+            {
+                try
+                {
+                    sqsClient.DeleteQueueAsync(queueExists.queueUrl)
+                        .GetAwaiter()
+                        .GetResult();
+                }
+                catch (Exception)
+                {
+                    s_logger.LogError("Could not delete queue {ChannelName}", queueExists.queueUrl);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Deletes the topic.
+        /// </summary>
+        public async Task DeleteTopicAsync()
+        {
+            if (_subscription == null)
+                return;
+            
+            if (ChannelTopicArn == null)
+                return;
+
+            using var snsClient = new AmazonSimpleNotificationServiceClient(AwsConnection.Credentials, AwsConnection.Region);
+            (bool exists, string? _) = await new ValidateTopicByArn(snsClient).ValidateAsync(ChannelTopicArn);
+            if (exists)
+            {
+                try
+                {
+                    await UnsubscribeFromTopicAsync(snsClient);
+                    await snsClient.DeleteTopicAsync(ChannelTopicArn);
+                }
+                catch (Exception)
+                {
+                    s_logger.LogError("Could not delete topic {TopicResourceName}", ChannelTopicArn);
+                }
+            }
+        }
+        
+        private async Task<IAmAChannelSync> CreateSyncChannelAsync(Subscription subscription)
+        {
+            var channel = await _retryPolicy.ExecuteAsync(async () =>
             {
                 SqsSubscription? sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopicAsync(_subscription.RoutingKey, _subscription.FindTopicBy, _subscription.SnsAttributes, _subscription.MakeChannels)
-                    .GetAwaiter()
-                    .GetResult();
-                EnsureQueue();
+                await EnsureTopicAsync(_subscription.RoutingKey, _subscription.FindTopicBy, _subscription.SnsAttributes,
+                    _subscription.MakeChannels);
+                await EnsureQueueAsync();
 
                 return new Channel(
                     subscription.ChannelName.ToValidSQSQueueName(),
@@ -97,18 +162,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             return channel;
         }
-
-        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        
+        public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription)
         {
-            var channel = _retryPolicy.Execute(() =>
+            var channel = await _retryPolicy.ExecuteAsync(async () =>
             {
                 SqsSubscription? sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopicAsync(_subscription.RoutingKey, _subscription.FindTopicBy, _subscription.SnsAttributes, _subscription.MakeChannels)
-                    .GetAwaiter()
-                    .GetResult();
-                EnsureQueue();
+                await EnsureTopicAsync(_subscription.RoutingKey, _subscription.FindTopicBy, _subscription.SnsAttributes, _subscription.MakeChannels);
+                await EnsureQueueAsync();
 
                 return new ChannelAsync(
                     subscription.ChannelName.ToValidSQSQueueName(),
@@ -121,11 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return channel;
         }
 
-        /// <summary>
-        /// Ensures the queue exists.
-        /// </summary>
-        /// <exception cref="QueueDoesNotExistException">Thrown when the queue does not exist and validation is required.</exception>
-        private void EnsureQueue()
+        private async Task EnsureQueueAsync()
         {
             if (_subscription is null)
                 throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
@@ -133,48 +192,41 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (_subscription.MakeChannels == OnMissingChannel.Assume)
                 return;
 
-            using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+            using var sqsClient = new AmazonSQSClient(AwsConnection.Credentials, AwsConnection.Region);
             var queueName = _subscription.ChannelName.ToValidSQSQueueName();
             var topicName = _subscription.RoutingKey.ToValidSNSTopicName();
 
-            (bool exists, _) = QueueExists(sqsClient, queueName);
+            (bool exists, _) = await QueueExistsAsync(sqsClient, queueName);
             if (!exists)
             {
                 if (_subscription.MakeChannels == OnMissingChannel.Create)
                 {
                     if (_subscription.RedrivePolicy != null)
                     {
-                        CreateDLQ(sqsClient);
+                        await CreateDLQAsync(sqsClient);
                     }
 
-                    CreateQueue(sqsClient);
+                    await CreateQueueAsync(sqsClient);
                 }
                 else if (_subscription.MakeChannels == OnMissingChannel.Validate)
                 {
-                    var message = $"Queue does not exist: {queueName} for {topicName} on {_awsConnection.Region}";
-                    s_logger.LogDebug("Queue does not exist: {ChannelName} for {Topic} on {Region}", queueName, topicName, _awsConnection.Region);
+                    var message = $"Queue does not exist: {queueName} for {topicName} on {AwsConnection.Region}";
+                    s_logger.LogDebug("Queue does not exist: {ChannelName} for {Topic} on {Region}", queueName, topicName, AwsConnection.Region);
                     throw new QueueDoesNotExistException(message);
                 }
             }
             else
             {
-                s_logger.LogDebug("Queue exists: {ChannelName} subscribed to {Topic} on {Region}", queueName, topicName, _awsConnection.Region);
+                s_logger.LogDebug("Queue exists: {ChannelName} subscribed to {Topic} on {Region}", queueName, topicName, AwsConnection.Region);
             }
         }
 
-        /// <summary>
-        /// Creates the queue.
-        /// Sync over async is used here; should be alright in context of channel creation.
-        /// </summary>
-        /// <param name="sqsClient">The SQS client.</param>
-        /// <exception cref="InvalidOperationException">Thrown when the queue cannot be created.</exception>
-        /// <exception cref="ChannelFailureException">Thrown when the queue cannot be created due to a recent deletion.</exception>
-        private void CreateQueue(AmazonSQSClient sqsClient)
+        private async Task CreateQueueAsync(AmazonSQSClient sqsClient)
         {
             if (_subscription is null)
                 throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
             
-            s_logger.LogDebug("Queue does not exist, creating queue: {ChannelName} subscribed to {Topic} on {Region}", _subscription.ChannelName.Value, _subscription.RoutingKey.Value, _awsConnection.Region);
+            s_logger.LogDebug("Queue does not exist, creating queue: {ChannelName} subscribed to {Topic} on {Region}", _subscription.ChannelName.Value, _subscription.RoutingKey.Value, AwsConnection.Region);
             _queueUrl = null;
             try
             {
@@ -205,18 +257,18 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     Attributes = attributes,
                     Tags = tags
                 };
-                var response = sqsClient.CreateQueueAsync(request).GetAwaiter().GetResult();
+                var response = await sqsClient.CreateQueueAsync(request);
                 _queueUrl = response.QueueUrl;
 
                 if (!string.IsNullOrEmpty(_queueUrl))
                 {
                     s_logger.LogDebug("Queue created: {URL}", _queueUrl);
-                    using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
-                    CheckSubscription(_subscription.MakeChannels, sqsClient, snsClient);
+                    using var snsClient = new AmazonSimpleNotificationServiceClient(AwsConnection.Credentials, AwsConnection.Region);
+                    await CheckSubscriptionAsync(_subscription.MakeChannels, sqsClient, snsClient);
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Could not create queue: {_subscription.ChannelName.Value} subscribed to {ChannelTopicArn} on {_awsConnection.Region}");
+                    throw new InvalidOperationException($"Could not create queue: {_subscription.ChannelName.Value} subscribed to {ChannelTopicArn} on {AwsConnection.Region}");
                 }
             }
             catch (QueueDeletedRecentlyException ex)
@@ -228,26 +280,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (AmazonSQSException ex)
             {
-                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
-                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, _awsConnection.Region.DisplayName, ex.Message);
+                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
+                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
                 throw new InvalidOperationException(error, ex);
             }
             catch (HttpErrorResponseException ex)
             {
-                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
-                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, _awsConnection.Region.DisplayName, ex.Message);
+                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
+                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
                 throw new InvalidOperationException(error, ex);
             }
         }
 
-        /// <summary>
-        /// Creates the dead letter queue.
-        ///  Sync over async is used here; arlright in context of channel creation.
-        /// </summary>
-        /// <param name="sqsClient">The SQS client.</param>
-        /// <exception cref="InvalidOperationException">Thrown when the dead letter queue cannot be created.</exception>
-        /// <exception cref="ChannelFailureException">Thrown when the dead letter queue cannot be created due to a recent deletion.</exception>
-        private void CreateDLQ(AmazonSQSClient sqsClient)
+        private async Task CreateDLQAsync(AmazonSQSClient sqsClient)
         {
             if (_subscription is null)
                 throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
@@ -258,7 +303,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 var request = new CreateQueueRequest(_subscription.RedrivePolicy.DeadlLetterQueueName.Value);
-                var createDeadLetterQueueResponse = sqsClient.CreateQueueAsync(request).GetAwaiter().GetResult();
+                var createDeadLetterQueueResponse = await sqsClient.CreateQueueAsync(request);
                 var queueUrl = createDeadLetterQueueResponse.QueueUrl;
 
                 if (!string.IsNullOrEmpty(queueUrl))
@@ -266,9 +311,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     var attributesRequest = new GetQueueAttributesRequest
                     {
                         QueueUrl = queueUrl,
-                        AttributeNames = new List<string> { "QueueArn" }
+                        AttributeNames = ["QueueArn"]
                     };
-                    var attributesResponse = sqsClient.GetQueueAttributesAsync(attributesRequest).GetAwaiter().GetResult();
+                    var attributesResponse = await sqsClient.GetQueueAttributesAsync(attributesRequest);
 
                     if (attributesResponse.HttpStatusCode != HttpStatusCode.OK)
                         throw new InvalidOperationException($"Could not find ARN of DLQ, status: {attributesResponse.HttpStatusCode}");
@@ -287,31 +332,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (AmazonSQSException ex)
             {
-                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
-                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, _awsConnection.Region.DisplayName, ex.Message);
+                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
+                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
                 throw new InvalidOperationException(error, ex);
             }
             catch (HttpErrorResponseException ex)
             {
-                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
-                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, _awsConnection.Region.DisplayName, ex.Message);
+                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
+                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
                 throw new InvalidOperationException(error, ex);
             }
         }
 
-        /// <summary>
-        /// Checks if the subscription exists and creates it if necessary.
-        /// </summary>
-        /// <param name="makeSubscriptions">The subscription creation policy.</param>
-        /// <param name="sqsClient">The SQS client.</param>
-        /// <param name="snsClient">The SNS client.</param>
-        /// <exception cref="BrokerUnreachableException">Thrown when the subscription cannot be found or created.</exception>
-        private void CheckSubscription(OnMissingChannel makeSubscriptions, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
+        private async Task CheckSubscriptionAsync(OnMissingChannel makeSubscriptions, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
         {
             if (makeSubscriptions == OnMissingChannel.Assume)
                 return;
 
-            if (!SubscriptionExists(sqsClient, snsClient))
+            if (!await SubscriptionExistsAsync(sqsClient, snsClient))
             {
                 if (makeSubscriptions == OnMissingChannel.Validate)
                 {
@@ -319,25 +357,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
                 else if (makeSubscriptions == OnMissingChannel.Create)
                 {
-                    SubscribeToTopic(sqsClient, snsClient);
+                    await SubscribeToTopicAsync(sqsClient, snsClient);
                 }
             }
         }
 
-        /// <summary>
-        /// Subscribes the queue to the topic.
-        /// </summary>
-        /// <param name="sqsClient">The SQS client.</param>
-        /// <param name="snsClient">The SNS client.</param>
-        /// <exception cref="InvalidOperationException">Thrown when the subscription cannot be created.</exception>
-        private void SubscribeToTopic(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
+        private async Task SubscribeToTopicAsync(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
         {
-            var arn = snsClient.SubscribeQueueAsync(ChannelTopicArn, sqsClient, _queueUrl).Result;
+            var arn = await snsClient.SubscribeQueueAsync(ChannelTopicArn, sqsClient, _queueUrl);
             if (!string.IsNullOrEmpty(arn))
             {
-                var response = snsClient.SetSubscriptionAttributesAsync(
+                var response = await snsClient.SetSubscriptionAttributesAsync(
                         new SetSubscriptionAttributesRequest(arn, "RawMessageDelivery", _subscription?.RawMessageDelivery.ToString())
-                    ).Result;
+                    );
                 if (response.HttpStatusCode != HttpStatusCode.OK)
                 {
                     throw new InvalidOperationException("Unable to set subscription attribute for raw message delivery");
@@ -345,17 +377,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             else
             {
-                throw new InvalidOperationException($"Could not subscribe to topic: {ChannelTopicArn} from queue: {_queueUrl} in region {_awsConnection.Region}");
+                throw new InvalidOperationException($"Could not subscribe to topic: {ChannelTopicArn} from queue: {_queueUrl} in region {AwsConnection.Region}");
             }
         }
 
-        /// <summary>
-        /// Checks if the queue exists.
-        /// </summary>
-        /// <param name="client">The SQS client.</param>
-        /// <param name="channelName">The name of the channel.</param>
-        /// <returns>A tuple indicating whether the queue exists and its URL.</returns>
-        private (bool exists, string? queueUrl) QueueExists(AmazonSQSClient client, string? channelName)
+        private async Task<(bool exists, string? queueUrl)> QueueExistsAsync(AmazonSQSClient client, string? channelName)
         {
             if (string.IsNullOrEmpty(channelName))
                 return (false, null);
@@ -364,7 +390,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             string? queueUrl = null;
             try
             {
-                var response = client.GetQueueUrlAsync(channelName).Result;
+                var response = await client.GetQueueUrlAsync(channelName);
                 if (!string.IsNullOrWhiteSpace(response.QueueUrl))
                 {
                     queueUrl = response.QueueUrl;
@@ -387,18 +413,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return (exists, queueUrl);
         }
 
-        /// <summary>
-        /// Checks if the subscription exists.
-        /// Sync over async is used here; should be alright in context of channel creation.
-        /// Note this call can be expensive, as it requires a list of all subscriptions for the topic.
-        /// </summary>
-        /// <param name="sqsClient">The SQS client.</param>
-        /// <param name="snsClient">The SNS client.</param>
-        /// <returns><see langword="true"/> if the subscription exists, otherwise <see langword="false"/>.</returns>
-        /// <exception cref="BrokerUnreachableException">Thrown when the queue ARN cannot be found.</exception>
-        private bool SubscriptionExists(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
+        private async Task<bool> SubscriptionExistsAsync(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
         {
-            string? queueArn = GetQueueArnForChannel(sqsClient);
+            string? queueArn = await GetQueueArnForChannelAsync(sqsClient);
 
             if (queueArn == null)
                 throw new BrokerUnreachableException($"Could not find queue ARN for queue {_queueUrl}");
@@ -407,76 +424,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             ListSubscriptionsByTopicResponse response;
             do
             {
-                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = ChannelTopicArn }).GetAwaiter().GetResult();
+                response = await snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = ChannelTopicArn });
                 exists = response.Subscriptions.Any(sub => (sub.Protocol.ToLower() == "sqs") && (sub.Endpoint == queueArn));
             } while (!exists && response.NextToken != null);
 
             return exists;
-        }
-
-        /// <summary>
-        /// Deletes the queue.
-        /// Sync over async is used here; should be alright in context of channel deletion.
-        /// </summary>
-        public void DeleteQueue()
-        {
-            if (_subscription?.ChannelName is null)
-                return;
-
-            using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
-            (bool exists, string? queueUrl) queueExists = QueueExists(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
-
-            if (queueExists.exists && queueExists.queueUrl != null)
-            {
-                try
-                {
-                    sqsClient.DeleteQueueAsync(queueExists.queueUrl)
-                        .GetAwaiter()
-                        .GetResult();
-                }
-                catch (Exception)
-                {
-                    s_logger.LogError("Could not delete queue {ChannelName}", queueExists.queueUrl);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Deletes the topic.
-        /// Sync over async is used here; should be alright in context of channel deletion.
-        /// </summary>
-        public void DeleteTopic()
-        {
-            if (_subscription == null)
-                return;
-            
-            if (ChannelTopicArn == null)
-                return;
-
-            using var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region);
-            (bool exists, string? _) = new ValidateTopicByArn(snsClient).ValidateAsync(ChannelTopicArn).GetAwaiter().GetResult();
-            if (exists)
-            {
-                try
-                {
-                    UnsubscribeFromTopic(snsClient);
-                    DeleteTopic(snsClient);
-                }
-                catch (Exception)
-                {
-                    s_logger.LogError("Could not delete topic {TopicResourceName}", ChannelTopicArn);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Deletes the topic.
-        /// Sync over async is used here; should be alright in context of channel deletion.
-        /// </summary>
-        /// <param name="snsClient">The SNS client.</param>
-        private void DeleteTopic(AmazonSimpleNotificationServiceClient snsClient)
-        {
-            snsClient.DeleteTopicAsync(ChannelTopicArn).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -485,11 +437,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="sqsClient">The SQS client.</param>
         /// <returns>The ARN of the queue.</returns>
-        private string? GetQueueArnForChannel(AmazonSQSClient sqsClient)
+        private async Task<string?> GetQueueArnForChannelAsync(AmazonSQSClient sqsClient)
         {
-            var result = sqsClient.GetQueueAttributesAsync(
+            var result = await sqsClient.GetQueueAttributesAsync(
                 new GetQueueAttributesRequest { QueueUrl = _queueUrl, AttributeNames = new List<string> { "QueueArn" } }
-            ).GetAwaiter().GetResult();
+            );
 
             if (result.HttpStatusCode == HttpStatusCode.OK)
             {
@@ -504,15 +456,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over async is used here; should be alright in context of topic unsubscribe.
         /// </summary>
         /// <param name="snsClient">The SNS client.</param>
-        private void UnsubscribeFromTopic(AmazonSimpleNotificationServiceClient snsClient)
+        private async Task UnsubscribeFromTopicAsync(AmazonSimpleNotificationServiceClient snsClient)
         {
             ListSubscriptionsByTopicResponse response;
             do
             {
-                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = ChannelTopicArn }).GetAwaiter().GetResult();
+                response = await snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = ChannelTopicArn });
                 foreach (var sub in response.Subscriptions)
                 {
-                    var unsubscribe = snsClient.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = sub.SubscriptionArn }).GetAwaiter().GetResult();
+                    var unsubscribe = await snsClient.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = sub.SubscriptionArn });
                     if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
                     {
                         s_logger.LogError("Error unsubscribing from {TopicResourceName} for sub {ChannelResourceName}", ChannelTopicArn, sub.SubscriptionArn);

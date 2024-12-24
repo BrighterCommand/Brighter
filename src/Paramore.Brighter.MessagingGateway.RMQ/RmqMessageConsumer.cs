@@ -32,6 +32,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client.Exceptions;
 
@@ -141,7 +142,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// Acknowledges the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Acknowledge(Message message) => AcknowledgeAsync(message).GetAwaiter().GetResult();
+    public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(() =>AcknowledgeAsync(message));
 
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -169,7 +170,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public void Purge() => PurgeAsync().GetAwaiter().GetResult();
+    public void Purge() => BrighterSynchronizationHelper.Run(() => PurgeAsync());
 
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
@@ -214,10 +215,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// <param name="timeOut">The timeout in milliseconds. We retry on timeout 5 ms intervals, with a min of 5ms
     /// until the timeout value is reached. </param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null)
-    {
-        return ReceiveAsync(timeOut).GetAwaiter().GetResult(); 
-    }
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(async () => await ReceiveAsync(timeOut)); 
 
     /// <summary>
     /// Receives the specified queue name.
@@ -297,8 +295,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// <param name="message"></param>
     /// <param name="timeout">Time to delay delivery of the message.</param>
     /// <returns>True if message deleted, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? timeout = null) =>
-        RequeueAsync(message, timeout).GetAwaiter().GetResult();
+    public bool Requeue(Message message, TimeSpan? timeout = null) => BrighterSynchronizationHelper.Run(() => RequeueAsync(message, timeout));
 
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
@@ -349,13 +346,13 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message) => RejectAsync(message).GetAwaiter().GetResult();
+    public void Reject(Message message) => BrighterSynchronizationHelper.Run(async () => await RejectAsync(message));
 
     public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
         try
         {
-            EnsureBroker(_queueName);
+            await EnsureBrokerAsync(_queueName, cancellationToken: cancellationToken);
             
             if (Channel is null) throw new InvalidOperationException($"RmqMessageConsumer: channel {_queueName.Value} is null");
             
@@ -576,6 +573,13 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     public override void Dispose()
     {
         CancelConsumerAsync(CancellationToken.None).GetAwaiter().GetResult();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+    
+    public override async ValueTask DisposeAsync()
+    {
+        await CancelConsumerAsync(CancellationToken.None);
         Dispose(true);
         GC.SuppressFinalize(this);
     }

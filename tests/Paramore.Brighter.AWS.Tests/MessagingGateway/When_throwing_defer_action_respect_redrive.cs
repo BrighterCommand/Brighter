@@ -80,7 +80,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             //We need to do this manually in a test - will create the channel from subscriber parameters
             ChannelFactory channelFactory = new(_awsConnection);
-            _channel = channelFactory.CreateChannel(_subscription);
+            _channel = channelFactory.CreateSyncChannel(_subscription);
 
             //how do we handle a command
             IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();

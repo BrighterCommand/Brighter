@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
@@ -72,7 +73,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         }
 
         [Fact]
-        public void When_a_subscription_does_not_exist_and_messages_are_in_the_queue_then_the_subscription_is_created_and_messages_are_returned()
+        public async Task When_a_subscription_does_not_exist_and_messages_are_in_the_queue_then_the_subscription_is_created_and_messages_are_returned()
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
@@ -88,7 +89,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             Message[] result = _azureServiceBusConsumer.Receive(TimeSpan.FromMilliseconds(400));
             
-            _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription");
+            await _nameSpaceManagerWrapper.SubscriptionExistsAsync("topic", "subscription");
             //A.CallTo(() => _nameSpaceManagerWrapper.f => f.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened();
             Assert.Equal("somebody", result[0].Body.Value);
         }
@@ -325,12 +326,12 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        public void Once_the_subscription_is_created_or_exits_it_does_not_check_if_it_exists_every_time(bool subscriptionExists)
+        public async Task Once_the_subscription_is_created_or_exits_it_does_not_check_if_it_exists_every_time(bool subscriptionExists)
         {
             _nameSpaceManagerWrapper.ResetState();
             _nameSpaceManagerWrapper.Topics.Add("topic", new ());
             _messageReceiver.MessageQueue.Clear();
-            if (subscriptionExists) _nameSpaceManagerWrapper.CreateSubscription("topic", "subscription", new());
+            if (subscriptionExists) await _nameSpaceManagerWrapper.CreateSubscriptionAsync("topic", "subscription", new());
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new BrokeredMessage()
             {

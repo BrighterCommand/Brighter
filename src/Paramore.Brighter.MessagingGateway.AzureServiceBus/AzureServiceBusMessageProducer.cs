@@ -35,6 +35,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 using Polly.Retry;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -110,7 +111,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="cancellationToken">Cancel the in-flight send operation</param>
         public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
-            await SendWithDelayAsync(message);
+            await SendWithDelayAsync(message, cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -139,7 +140,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     .Take(_bulkSendBatchSize)
                     .ToArray()));
 
-            var serviceBusSenderWrapper = GetSender(topic);
+            var serviceBusSenderWrapper = await GetSenderAsync(topic);
 
             Logger.LogInformation("Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}", topic, batches.Count(), _bulkSendBatchSize);
             try
@@ -167,14 +168,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delay">Delay to delivery of the message.</param>
-        public void SendWithDelay(Message message, TimeSpan? delay = null)
-        {
-            delay ??= TimeSpan.Zero;
-            SendWithDelayAsync(message, delay)
-                .GetAwaiter()
-                .GetResult();
-        }
-
+        public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(async () => await SendWithDelayAsync(message, delay));
+       
         /// <summary>
         /// Send the specified message with specified delay
         /// </summary>
@@ -189,7 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             if (message.Header.Topic is null) throw new ArgumentException("Topic not be null");
 
-            var serviceBusSenderWrapper = GetSender(message.Header.Topic);
+            var serviceBusSenderWrapper = await GetSenderAsync(message.Header.Topic);
 
             try
             {
@@ -222,9 +217,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
         }
 
-        private IServiceBusSenderWrapper GetSender(string topic)
+        private async Task<IServiceBusSenderWrapper> GetSenderAsync(string topic)
         {
-            EnsureChannelExists(topic);
+            await EnsureChannelExistsAsync(topic);
 
             try
             {
@@ -270,7 +265,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             return azureServiceBusMessage;
         }
 
-        protected abstract void EnsureChannelExists(string channelName);
+        protected abstract Task EnsureChannelExistsAsync(string channelName);
  
     }
 }

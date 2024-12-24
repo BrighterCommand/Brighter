@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -65,48 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
-        {
-            try
-            {
-                EnsureChannel();
-                var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
-
-                if (string.IsNullOrEmpty(lockToken))
-                    throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                Logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
-                    lockToken);
-                
-                if(ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
-
-                ServiceBusReceiver?.Complete(lockToken)
-                    .GetAwaiter()
-                    .GetResult();
-                
-                if (SubscriptionConfiguration.RequireSession)
-                    ServiceBusReceiver?.Close();
-            }
-            catch (AggregateException ex)
-            {
-                if (ex.InnerException is ServiceBusException asbException)
-                    HandleAsbException(asbException, message.Id);
-                else
-                {
-                    Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
-                    throw;
-                }
-            }
-            catch (ServiceBusException ex)
-            {
-                HandleAsbException(ex, message.Id);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
-                throw;
-            }
-        }
+        public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(async() => await AcknowledgeAsync(message));
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -117,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             try
             {
-                EnsureChannel();
+                await EnsureChannelAsync();
                 var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
 
                 if (string.IsNullOrEmpty(lockToken))
@@ -126,12 +86,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     lockToken);
                 
                 if(ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
+                    await GetMessageReceiverProviderAsync();
 
-                await ServiceBusReceiver!.Complete(lockToken);
+                await ServiceBusReceiver!.CompleteAsync(lockToken);
                 
                 if (SubscriptionConfiguration.RequireSession)
-                    ServiceBusReceiver?.Close();
+                    if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
             }
             catch (AggregateException ex)
             {
@@ -173,64 +133,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
         /// <returns>Message.</returns>
-        public Message[] Receive(TimeSpan? timeOut = null)
-        {
-            Logger.LogDebug(
-                "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}",
-                Topic, SubscriptionName, timeOut, _batchSize);
-
-            IEnumerable<IBrokeredMessageWrapper> messages;
-            EnsureChannel();
-
-            var messagesToReturn = new List<Message>();
-
-            try
-            {
-                if (SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
-                {
-                    GetMessageReceiverProvider();
-                    if (ServiceBusReceiver == null)
-                    {
-                        Logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}", Topic);
-                        return messagesToReturn.ToArray();   
-                    }
-                }
-
-                timeOut ??= TimeSpan.FromMilliseconds(300);
-                
-                messages = ServiceBusReceiver.Receive(_batchSize, timeOut.Value)
-                    .GetAwaiter().GetResult();
-            }
-            catch (Exception e)
-            {
-                if (ServiceBusReceiver is {IsClosedOrClosing: true} && !SubscriptionConfiguration.RequireSession)
-                {
-                    Logger.LogDebug("Message Receiver is closing...");
-                    var message = new Message(
-                        new MessageHeader(string.Empty, new RoutingKey(Topic), MessageType.MT_QUIT), 
-                        new MessageBody(string.Empty));
-                    messagesToReturn.Add(message);
-                    return messagesToReturn.ToArray();
-                }
-
-                Logger.LogError(e, "Failing to receive messages");
-
-                //The connection to Azure Service bus may have failed so we re-establish the connection.
-                if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
-
-                throw new ChannelFailureException("Failing to receive messages.", e);
-            }
-
-            foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
-            {
-                Message message = MapToBrighterMessage(azureServiceBusMessage);
-                messagesToReturn.Add(message);
-            }
-
-            return messagesToReturn.ToArray();
-        }
-
+        public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(() => ReceiveAsync(timeOut));
+        
         /// <summary>
         /// Receives the specified queue name.
         /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
@@ -247,7 +151,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 Topic, SubscriptionName, timeOut, _batchSize);
 
             IEnumerable<IBrokeredMessageWrapper> messages;
-            EnsureChannel();
+            await EnsureChannelAsync();
 
             var messagesToReturn = new List<Message>();
 
@@ -255,7 +159,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 if (SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
                 {
-                    GetMessageReceiverProvider();
+                    await GetMessageReceiverProviderAsync();
                     if (ServiceBusReceiver == null)
                     {
                         Logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}", Topic);
@@ -265,7 +169,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                 timeOut ??= TimeSpan.FromMilliseconds(300);
 
-                messages = await ServiceBusReceiver.Receive(_batchSize, timeOut.Value);
+                messages = await ServiceBusReceiver.ReceiveAsync(_batchSize, timeOut.Value);
             }
             catch (Exception e)
             {
@@ -283,7 +187,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
+                    await GetMessageReceiverProviderAsync();
 
                 throw new ChannelFailureException("Failing to receive messages.", e);
             }
@@ -302,32 +206,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message)
-        {
-            try
-            {
-                EnsureChannel();
-                var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
-
-                if (string.IsNullOrEmpty(lockToken))
-                    throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
-
-                if(ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
-                
-                ServiceBusReceiver?.DeadLetter(lockToken)
-                    .GetAwaiter()
-                    .GetResult();
-                if (SubscriptionConfiguration.RequireSession)
-                    ServiceBusReceiver?.Close();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
-                throw;
-            }
-        }
+        public void Reject(Message message) => BrighterSynchronizationHelper.Run(() => RejectAsync(message));
 
         /// <summary>
         /// Rejects the specified message.
@@ -338,7 +217,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             try
             {
-                EnsureChannel();
+                await EnsureChannelAsync();
                 var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
 
                 if (string.IsNullOrEmpty(lockToken))
@@ -346,11 +225,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
                 if(ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
+                    await GetMessageReceiverProviderAsync();
 
-                await ServiceBusReceiver!.DeadLetter(lockToken);
+                await ServiceBusReceiver!.DeadLetterAsync(lockToken);
                 if (SubscriptionConfiguration.RequireSession)
-                    ServiceBusReceiver?.Close();
+                    if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
             }
             catch (Exception ex)
             {
@@ -365,32 +244,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="message"></param>
         /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
         /// <returns>True if the message should be acked, false otherwise</returns>
-        public bool Requeue(Message message, TimeSpan? delay = null)
-        {
-            var topic = message.Header.Topic;
-            delay ??= TimeSpan.Zero;
-
-            Logger.LogInformation("Requeuing message with topic {Topic} and id {Id}", topic, message.Id);
-
-            var messageProducerSync = _messageProducer as IAmAMessageProducerSync;
-            
-            if (messageProducerSync is null)
-            {
-                throw new ChannelFailureException("Message Producer is not of type IAmAMessageProducerSync");    
-            }
-            
-            if (delay.Value > TimeSpan.Zero)
-            {
-                messageProducerSync.SendWithDelay(message, delay.Value);
-            }
-            else
-            {
-                messageProducerSync.Send(message);
-            }
-            Acknowledge(message);
-
-            return true;
-        }
+        public bool Requeue(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(() => RequeueAsync(message, delay));
 
         /// <summary>
         /// Requeues the specified message.
@@ -415,11 +269,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             
             if (delay.Value > TimeSpan.Zero)
             {
-                await messageProducerAsync.SendWithDelayAsync(message, delay.Value);
+                await messageProducerAsync.SendWithDelayAsync(message, delay.Value, cancellationToken);
             }
             else
             {
-                await messageProducerAsync.SendAsync(message);
+                await messageProducerAsync.SendAsync(message, cancellationToken);
             }
             
             await AcknowledgeAsync(message, cancellationToken);
@@ -427,7 +281,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             return true;
         }
 
-        protected abstract void GetMessageReceiverProvider();
+        protected abstract Task GetMessageReceiverProviderAsync();
 
         private Message MapToBrighterMessage(IBrokeredMessageWrapper azureServiceBusMessage)
         {
@@ -516,7 +370,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             return count;
         }
 
-        protected abstract void EnsureChannel();
+        protected abstract Task EnsureChannelAsync();
 
         private void HandleAsbException(ServiceBusException ex, string messageId)
         {

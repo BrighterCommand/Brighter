@@ -29,6 +29,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
@@ -52,8 +53,7 @@ public class RmqMessageGatewayConnectionPool(string connectionName, ushort conne
     /// </summary>
     /// <param name="connectionFactory"></param>
     /// <returns></returns>
-    public IConnection GetConnection(ConnectionFactory connectionFactory) =>
-        GetConnectionAsync(connectionFactory).GetAwaiter().GetResult();
+    public IConnection GetConnection(ConnectionFactory connectionFactory) => BrighterSynchronizationHelper.Run(() => GetConnectionAsync(connectionFactory));
 
     /// <summary>
     /// Return matching RabbitMQ subscription if exist (match by amqp scheme)

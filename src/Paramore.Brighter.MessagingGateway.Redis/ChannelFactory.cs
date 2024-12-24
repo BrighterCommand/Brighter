@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns>An <see cref="IAmAChannel"/> that provides access to a stream or queue</returns>
-        public IAmAChannelSync CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateSyncChannel(Subscription subscription)
         {
             RedisSubscription? rmqSubscription = subscription as RedisSubscription;  
             if (rmqSubscription == null)
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns>An <see cref="IAmAChannelAsync"/> that provides access to a stream or queue</returns>
-         public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+         public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
         {
             RedisSubscription? rmqSubscription = subscription as RedisSubscription;  
             if (rmqSubscription == null)

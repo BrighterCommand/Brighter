@@ -28,27 +28,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.DynamoDb
 {
-    public class DynamoDbUnitOfWork : IAmADynamoDbTransactionProvider, IDisposable
+    public class DynamoDbUnitOfWork(IAmazonDynamoDB dynamoDb) : IAmADynamoDbTransactionProvider, IDisposable
     {
         private TransactWriteItemsRequest _tx;
         
         /// <summary>
         /// The AWS client for dynamoDb
         /// </summary>
-        public IAmazonDynamoDB DynamoDb { get; }
-        
+        public IAmazonDynamoDB DynamoDb { get; } = dynamoDb;
+
         /// <summary>
         /// The response for the last transaction commit
         /// </summary>
         public TransactWriteItemsResponse LastResponse { get; set; }
-
-        public DynamoDbUnitOfWork(IAmazonDynamoDB dynamoDb)
-        {
-            DynamoDb = dynamoDb;
-        }
 
         public void Close()
         {
@@ -59,14 +55,7 @@ namespace Paramore.Brighter.DynamoDb
         /// Commit a transaction, performing all associated write actions
         /// Will block thread and use second thread for callback
         /// </summary>
-        public void Commit()
-        {
-            if (!HasOpenTransaction)
-                throw new InvalidOperationException("No transaction to commit");
-            
-            LastResponse = DynamoDb.TransactWriteItemsAsync(_tx).GetAwaiter().GetResult();
-
-        }
+        public void Commit() => BrighterSynchronizationHelper.Run(() => DynamoDb.TransactWriteItemsAsync(_tx));
         
         /// <summary>
         /// Commit a transaction, performing all associated write actions

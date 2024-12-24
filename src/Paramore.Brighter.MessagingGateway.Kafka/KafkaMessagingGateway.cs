@@ -30,6 +30,7 @@ using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -66,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     throw new ChannelFailureException($"Topic: {Topic.Value} does not exist");
 
                 if (!exists && MakeChannels == OnMissingChannel.Create)
-                    MakeTopic().GetAwaiter().GetResult();
+                    BrighterSynchronizationHelper.Run(async () => await MakeTopic());
             }
         }
 

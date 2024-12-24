@@ -20,7 +20,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.ServiceActivator;
+namespace Paramore.Brighter.Tasks;
 
 /// <summary>
 /// Represents a task queue that allows tasks to be added and consumed in a thread-safe manner.

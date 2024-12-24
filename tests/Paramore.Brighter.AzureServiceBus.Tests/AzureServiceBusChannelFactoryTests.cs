@@ -15,7 +15,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var subscription = new AzureServiceBusSubscription(typeof(object), new SubscriptionName("name"), new ChannelName("name"), new RoutingKey("name"),
                 1, 1, timeOut: TimeSpan.FromMilliseconds(399));
             
-            ArgumentException exception = Assert.Throws<ArgumentException>(() => factory.CreateChannel(subscription));
+            ArgumentException exception = Assert.Throws<ArgumentException>(() => factory.CreateSyncChannel(subscription));
 
             Assert.Equal("The minimum allowed timeout is 400 milliseconds", exception.Message);
         }

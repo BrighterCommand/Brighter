@@ -4,7 +4,7 @@ namespace Paramore.Brighter;
 
 public class InMemoryChannelFactory(InternalBus internalBus, TimeProvider timeProvider, TimeSpan? ackTimeout = null) : IAmAChannelFactory
 {
-    public IAmAChannelSync CreateChannel(Subscription subscription)
+    public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
         return new Channel(
             subscription.ChannelName, 
@@ -14,7 +14,7 @@ public class InMemoryChannelFactory(InternalBus internalBus, TimeProvider timePr
             );
     }
 
-    public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
     {
         return new ChannelAsync(
             subscription.ChannelName, 

@@ -32,31 +32,29 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    public class AWSMessagingGateway
+    public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
     {
         protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AWSMessagingGateway>();
-        protected AWSMessagingGatewayConnection _awsConnection;
+        
+        private readonly AWSClientFactory _awsClientFactory = new(awsConnection);
+        protected readonly AWSMessagingGatewayConnection AwsConnection = awsConnection;
         protected string? ChannelTopicArn;
 
-        private AWSClientFactory _awsClientFactory;
-
-        public AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
-        {
-            _awsConnection = awsConnection;
-            _awsClientFactory = new AWSClientFactory(awsConnection);
-        }
-
-        protected async Task<string?> EnsureTopicAsync(RoutingKey topic, TopicFindBy topicFindBy,
-            SnsAttributes? attributes, OnMissingChannel makeTopic = OnMissingChannel.Create, CancellationToken cancellationToken = default)
+        protected async Task<string?> EnsureTopicAsync(
+            RoutingKey topic, 
+            TopicFindBy topicFindBy, 
+            SnsAttributes? attributes, 
+            OnMissingChannel makeTopic = OnMissingChannel.Create, 
+            CancellationToken cancellationToken = default)
         {
             //on validate or assume, turn a routing key into a topicARN
             if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
-                await ValidateTopicAsync(topic, topicFindBy);
-            else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes);
+                await ValidateTopicAsync(topic, topicFindBy, cancellationToken);
+            else if (makeTopic == OnMissingChannel.Create) await CreateTopicAsync(topic, attributes);
             return ChannelTopicArn;
         }
 
-        private void CreateTopic(RoutingKey topicName, SnsAttributes? snsAttributes)
+        private async Task CreateTopicAsync(RoutingKey topicName, SnsAttributes? snsAttributes)
         {
             using var snsClient = _awsClientFactory.CreateSnsClient();
             var attributes = new Dictionary<string, string?>();
@@ -73,12 +71,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             };
                 
             //create topic is idempotent, so safe to call even if topic already exists
-            var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
+            var createTopic = await snsClient.CreateTopicAsync(createTopicRequest);
                 
             if (!string.IsNullOrEmpty(createTopic.TopicArn))
                 ChannelTopicArn = createTopic.TopicArn;
             else
-                throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
+                throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {AwsConnection.Region}");
         }
 
         private async Task ValidateTopicAsync(RoutingKey topic, TopicFindBy findTopicBy, CancellationToken cancellationToken = default)
@@ -97,11 +95,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             switch (findTopicBy)
             {
                 case TopicFindBy.Arn:
-                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
+                    return new ValidateTopicByArn(AwsConnection.Credentials, AwsConnection.Region, AwsConnection.ClientConfigAction);
                 case TopicFindBy.Convention:
-                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
+                    return new ValidateTopicByArnConvention(AwsConnection.Credentials, AwsConnection.Region, AwsConnection.ClientConfigAction);
                 case TopicFindBy.Name:
-                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region, _awsConnection.ClientConfigAction);
+                    return new ValidateTopicByName(AwsConnection.Credentials, AwsConnection.Region, AwsConnection.ClientConfigAction);
                 default:
                     throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey");
             }

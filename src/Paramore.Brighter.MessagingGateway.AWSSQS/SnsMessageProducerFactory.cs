@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -44,8 +46,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
 
         /// <inheritdoc />
+        /// <remarks>
         ///  Sync over async used here, alright in the context of producer creation
-        public Dictionary<RoutingKey,IAmAMessageProducer> Create()
+        /// </remarks>
+        public Dictionary<RoutingKey,IAmAMessageProducer> Create() => BrighterSynchronizationHelper.Run(async () => await CreateAsync());
+        
+        public async Task<Dictionary<RoutingKey,IAmAMessageProducer>> CreateAsync()
         {
             var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
             foreach (var p in _publications)
@@ -54,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     throw new ConfigurationException($"Missing topic on Publication"); 
                 
                 var producer = new SqsMessageProducer(_connection, p);
-                if (producer.ConfirmTopicExistsAsync().GetAwaiter().GetResult())
+                if (await producer.ConfirmTopicExistsAsync())
                     producers[p.Topic] = producer;
                 else
                     throw new ConfigurationException($"Missing SNS topic: {p.Topic}");

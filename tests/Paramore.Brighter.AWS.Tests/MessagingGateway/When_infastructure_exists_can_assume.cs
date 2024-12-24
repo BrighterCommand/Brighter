@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
@@ -13,7 +14,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class AWSAssumeInfrastructureTests  : IDisposable
+    public class AWSAssumeInfrastructureTests  : IDisposable, IAsyncDisposable
     {     private readonly Message _message;
         private readonly SqsMessageConsumer _consumer;
         private readonly SqsMessageProducer _messageProducer;
@@ -51,7 +52,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //This doesn't look that different from our create tests - this is because we create using the channel factory in
             //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
             _channelFactory = new ChannelFactory(awsConnection);
-            var channel = _channelFactory.CreateChannel(subscription);
+            var channel = _channelFactory.CreateSyncChannel(subscription);
             
             //Now change the subscription to validate, just check what we made
             subscription = new(
@@ -84,12 +85,17 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
  
         public void Dispose()
         {
-            _channelFactory.DeleteTopic();
-            _channelFactory.DeleteQueue();
-            _consumer.Dispose();
-            _messageProducer.Dispose();
+            //Clean up resources that we have created
+            _channelFactory.DeleteTopicAsync().Wait();
+            _channelFactory.DeleteQueueAsync().Wait();
+            GC.SuppressFinalize(this);
         }
-        
-    
+
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync();
+            await _channelFactory.DeleteQueueAsync();
+            GC.SuppressFinalize(this);
+        }
    }
 }

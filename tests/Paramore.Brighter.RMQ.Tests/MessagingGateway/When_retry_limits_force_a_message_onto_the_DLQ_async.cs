@@ -72,7 +72,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //set up our receiver
             ChannelFactory channelFactory = new(new RmqMessageConsumerFactory(rmqConnection));
-            _channel = channelFactory.CreateChannelAsync(_subscription);
+            _channel = channelFactory.CreateAsyncChannel(_subscription);
 
             //how do we handle a command
             IHandleRequestsAsync<MyDeferredCommand> handler = new MyDeferredCommandHandlerAsync();

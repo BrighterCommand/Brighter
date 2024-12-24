@@ -26,6 +26,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -130,10 +131,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Send(Message message)
-        {
-            SendAsync(message).GetAwaiter().GetResult();
-        }
+        public void Send(Message message) => BrighterSynchronizationHelper.Run(() => SendAsync(message));
 
         /// <summary>
         /// Sends the specified message, with a delay.

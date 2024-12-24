@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="subscription">An RmqSubscription with parameters to create the queue with</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannelSync CreateChannel(Subscription subscription)
+        public IAmAChannelSync CreateSyncChannel(Subscription subscription)
         {
             RmqSubscription? rmqSubscription = subscription as RmqSubscription;  
             if (rmqSubscription == null)
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 );
         }
 
-        public IAmAChannelAsync CreateChannelAsync(Subscription subscription)
+        public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
         {
             RmqSubscription? rmqSubscription = subscription as RmqSubscription;  
             if (rmqSubscription == null)

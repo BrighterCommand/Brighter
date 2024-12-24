@@ -49,7 +49,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            _channel = _channelFactory.CreateSyncChannel(subscription);
             
             _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
         }
@@ -77,9 +77,16 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            //Clean up resources that we have created
-            _channelFactory.DeleteTopic();
-            _channelFactory.DeleteQueue();
+            _channelFactory.DeleteTopicAsync().Wait(); 
+            _channelFactory.DeleteQueueAsync().Wait();
+            GC.SuppressFinalize(this);
+        }
+        
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync(); 
+            await _channelFactory.DeleteQueueAsync();
+            GC.SuppressFinalize(this);
         }
     }
 }

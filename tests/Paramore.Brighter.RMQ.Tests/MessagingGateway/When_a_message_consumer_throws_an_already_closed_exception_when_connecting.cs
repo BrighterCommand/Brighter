@@ -43,13 +43,18 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             _sender.Send(_sentMessage);
             
-            _firstException = Catch.Exception(() => _badReceiver.Receive(TimeSpan.FromMilliseconds(2000)));
-
-            //_should_return_a_channel_failure_exception
-            _firstException.Should().BeOfType<ChannelFailureException>();
-            
-            //_should_return_an_explaining_inner_exception
-            _firstException.InnerException.Should().BeOfType<AlreadyClosedException>();
+            bool exceptionHappened = false;
+           try
+            {
+                _badReceiver.Receive(TimeSpan.FromMilliseconds(2000));
+            }
+            catch (ChannelFailureException cfe)
+            {
+                exceptionHappened = true;
+                cfe.InnerException.Should().BeOfType<AlreadyClosedException>();
+            }
+           
+            exceptionHappened.Should().BeTrue();
         }
 
         public void Dispose()

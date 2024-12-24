@@ -18,13 +18,11 @@
 
 using System;
 using System.Threading;
-using System.Threading.Tasks;
-using Polly;
 
-namespace Paramore.Brighter.ServiceActivator
+namespace Paramore.Brighter.Tasks
 {
     /// <summary>
-    /// Provides a SynchronizationContext that processes work on a single thread.
+    /// Provides a Tasks that processes work on a single thread.
     /// </summary>
     /// <remarks>
     /// Adopts a single-threaded apartment model. We have one thread, all work - messages and callbacks are queued to a single work queue.
@@ -58,7 +56,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Creates a copy of the synchronization context.
         /// </summary>
-        /// <returns>A new <see cref="SynchronizationContext"/> object.</returns>
+        /// <returns>A new <see cref="System.Threading.SynchronizationContext"/> object.</returns>
         public override SynchronizationContext CreateCopy()
         {
             return new BrighterSynchronizationContext(SynchronizationHelper);
