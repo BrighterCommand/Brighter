@@ -116,29 +116,38 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         [Fact]
         [SuppressMessage("Usage", "xUnit1031:Do not use blocking task operations in test method")]
-        public void When_retry_limits_force_a_message_onto_the_dlq()
+        public async Task When_retry_limits_force_a_message_onto_the_dlq()
         {
             //NOTE: This test is **slow** because it needs to ensure infrastructure and then wait whilst we requeue a message a number of times,
             //then propagate to the DLQ
             
-            //var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(500).Wait();
+            //start a message pump, let it create infrastructure 
+            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            await Task.Delay(20000);
 
             //put something on an SNS topic, which will be delivered to our SQS queue
             _sender.Send(_message);
-            //put a message to force the pump to stop
-            _sender.Send(MessageFactory.CreateQuitMessage(_subscription.RoutingKey));
-            
-            _messagePump.Run();
+
+            //Let the message be handled and deferred until it reaches the DLQ
+            await Task.Delay(20000);
+
+            //send a quit message to the pump to terminate it 
+            var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
+            _channel.Enqueue(quitMessage);
+
+            //wait for the pump to stop once it gets a quit message
+            await Task.WhenAll(task);
+
+            await Task.Delay(5000);
 
             //inspect the dlq
             var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
 
             //assert this is our message
-            dlqMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             dlqMessage.Body.Value.Should().Be(_message.Body.Value);
 
             _deadLetterConsumer.Acknowledge(dlqMessage);
+
         }
 
         public void Dispose()

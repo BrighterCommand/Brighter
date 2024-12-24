@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks;
@@ -58,10 +59,18 @@ internal class BrighterTaskQueue : IDisposable
     {
         try
         {
+            Debug.IndentLevel = 1;
+            Debug.WriteLine($"BrighterTaskQueue; Adding task: {item.Id} to queue");
+            Debug.IndentLevel = 0;
+            
             return _queue.TryAdd(Tuple.Create(item, propagateExceptions));
         }
         catch (InvalidOperationException)
         {
+            Debug.IndentLevel = 1;
+            Debug.WriteLine($"BrighterTaskQueue; TaskQueue is already marked as complete for adding. Failed to add task: {item.Id}");
+            Debug.IndentLevel = 0;
+            
             return false;
         }
     }
@@ -71,6 +80,10 @@ internal class BrighterTaskQueue : IDisposable
     /// </summary>
     public void CompleteAdding()
     {
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterTaskQueue; Complete adding to queue");
+        Debug.IndentLevel = 0;
+        
         _queue.CompleteAdding();
     }
 

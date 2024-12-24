@@ -16,7 +16,9 @@
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks;
 
@@ -26,15 +28,28 @@ namespace Paramore.Brighter.Tasks;
 internal sealed class  BrighterSynchronizationContextScope :  SingleDisposable<object>
 {
     private readonly SynchronizationContext? _originalContext;
+    private BrighterSynchronizationContext? _newContext;
     private readonly bool _hasOriginalContext;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BrighterSynchronizationContextScope"/> struct.
     /// </summary>
     /// <param name="newContext">The new synchronization context to set.</param>
-    private BrighterSynchronizationContextScope(SynchronizationContext newContext)
+    /// <param name="parentTask"></param>
+    private BrighterSynchronizationContextScope(BrighterSynchronizationContext newContext, Task parentTask)
         : base(new object())
     {
+        Debug.WriteLine(string.Empty);
+        Debug.WriteLine("{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{");
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"Entering BrighterSynchronizationContext on thread {Thread.CurrentThread.ManagedThreadId}");
+        Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {parentTask.Id}");
+        Debug.IndentLevel = 0;
+
+        
+        _newContext = newContext;
+        _newContext.ParentTaskId = parentTask.Id;
+            
         // Save the original synchronization context
         _originalContext = SynchronizationContext.Current;
         _hasOriginalContext = _originalContext != null;
@@ -48,22 +63,33 @@ internal sealed class  BrighterSynchronizationContextScope :  SingleDisposable<o
     /// </summary>
     protected override void Dispose(object context)
     {
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"Exiting BrighterSynchronizationContextScope for task {_newContext?.ParentTaskId}");
+        Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {_newContext?.ParentTaskId}");
+        Debug.IndentLevel = 0;
+        Debug.WriteLine("}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}");
+        
+        if (_newContext is not null) _newContext.ParentTaskId = 0;
+        _newContext = null;
+        
         // Restore the original synchronization context
         SynchronizationContext.SetSynchronizationContext(_hasOriginalContext ? _originalContext : null);
+        
     }
-    
+
     /// <summary>
     /// Executes a method with the specified synchronization context, and then restores the original context.
     /// </summary>
     /// <param name="context">The original synchronization context</param>
+    /// <param name="parentTask"></param>
     /// <param name="action">The action to take within the context</param>
     /// <exception cref="System.ArgumentNullException">If the action passed was null</exception>
-    public static void ApplyContext(SynchronizationContext? context, Action action)
+    public static void ApplyContext(BrighterSynchronizationContext? context, Task parentTask, Action action)
     {
         if (context is null) throw new ArgumentNullException(nameof(context));
         if (action is null) throw new ArgumentNullException(nameof(action));
 
-        using (new BrighterSynchronizationContextScope(context))
+        using (new BrighterSynchronizationContextScope(context, parentTask))
             action();
     }
 }

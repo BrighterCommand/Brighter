@@ -122,7 +122,6 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
         
         delay ??= TimeSpan.Zero;
 
-        await s_lock.WaitAsync(cancellationToken);
         try
         {
             s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {ExchangeName}",
@@ -152,7 +151,6 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
             else
             {
                 //TODO: Replace with a Timer, don't block
-                await Task.Delay(delay.Value, cancellationToken);
                 await rmqMessagePublisher.PublishMessageAsync(message, TimeSpan.Zero, cancellationToken);
             }
 
@@ -170,10 +168,6 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
             );
             await ResetConnectionToBrokerAsync(cancellationToken);
             throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
-        }
-        finally
-        {
-            s_lock.Release();
         }
     }
 

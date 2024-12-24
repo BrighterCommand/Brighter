@@ -156,13 +156,13 @@ public class BrighterSynchronizationContextsTests
             BrighterSynchronizationHelper observedContext = null;
             var context = new BrighterSynchronizationHelper();
             
-            context.Factory.StartNew(
+            var task = context.Factory.StartNew(
                 () =>   { observedContext = BrighterSynchronizationHelper.Current; },
                 context.Factory.CancellationToken, 
                 context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
                 context.TaskScheduler);
 
-            context.Execute();
+            context.Execute(task);
 
             observedContext.Should().Be(context);
         }
@@ -173,13 +173,13 @@ public class BrighterSynchronizationContextsTests
             System.Threading.SynchronizationContext observedContext = null;
             var context = new BrighterSynchronizationHelper();
             
-            context.Factory.StartNew(
+            var task = context.Factory.StartNew(
                 () =>   { observedContext = System.Threading.SynchronizationContext.Current; },
                 context.Factory.CancellationToken, 
                 context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
                 context.TaskScheduler);
 
-            context.Execute();
+            context.Execute(task);
 
             observedContext.Should().Be(context.SynchronizationContext);
         }
@@ -190,13 +190,13 @@ public class BrighterSynchronizationContextsTests
             TaskScheduler observedScheduler = null;
             var context = new BrighterSynchronizationHelper();
             
-            context.Factory.StartNew(
+            var task = context.Factory.StartNew(
                 () =>   { observedScheduler = TaskScheduler.Current; },
                 context.Factory.CancellationToken, 
                 context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
                 context.TaskScheduler);
             
-            context.Execute();
+            context.Execute(task);
 
             observedScheduler.Should().Be(TaskScheduler.Default);
         }
@@ -299,21 +299,21 @@ public class BrighterSynchronizationContextsTests
             int value = 0;
             var context = new BrighterSynchronizationHelper();
             
-            context.Factory.StartNew(
+            var task = context.Factory.StartNew(
                 () => { value = 1; },
                 context.Factory.CancellationToken, 
                 context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
                 context.TaskScheduler);
             
-            context.Execute();
+            context.Execute(task);
 
-            var task = context.Factory.StartNew(
+            var taskTwo = context.Factory.StartNew(
                 () => { value = 2; },
                 context.Factory.CancellationToken, 
                 context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
                 context.TaskScheduler);
 
-            task.ContinueWith(_ => { throw new Exception("Should not run"); }, TaskScheduler.Default);
+            taskTwo.ContinueWith(_ => { throw new Exception("Should not run"); }, TaskScheduler.Default);
             value.Should().Be(1);
         }
 

@@ -16,6 +16,7 @@
 #endregion
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks;
@@ -52,6 +53,10 @@ internal class BrighterTaskScheduler : TaskScheduler
     /// <param name="task">The task to be queued.</param>
     protected override void QueueTask(Task task)
     {
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterTaskScheduler: QueueTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.IndentLevel = 0;
+        
         _synchronizationHelper.Enqueue((Task)task, false);
     }
 
@@ -63,7 +68,12 @@ internal class BrighterTaskScheduler : TaskScheduler
     /// <returns>True if the task was executed; otherwise, false.</returns>
     protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
     {
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterTaskScheduler: TryExecuteTaskInline on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.IndentLevel = 0;
+        
         return (BrighterSynchronizationHelper.Current == _synchronizationHelper) && TryExecuteTask(task);
+        
     }
 
     /// <summary>
@@ -80,6 +90,10 @@ internal class BrighterTaskScheduler : TaskScheduler
     /// <param name="task">The task to be executed.</param>
     public void DoTryExecuteTask(Task task)
     {
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterTaskScheduler: DoTryExecuteTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.IndentLevel = 0;
+        
         TryExecuteTask(task);
     }
 }

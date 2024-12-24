@@ -17,6 +17,7 @@
 
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Paramore.Brighter.Tasks
@@ -43,6 +44,14 @@ namespace Paramore.Brighter.Tasks
         /// Gets or sets the timeout for send operations.
         /// </summary>
         public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+        
+        /// <summary>
+        /// The Id of the parent task in Run, if any. 
+        /// </summary>
+        /// <remarks>
+        ///  Used for debugging, tells us which task created any SynchronizationContext
+        /// </remarks>
+        public int ParentTaskId { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BrighterSynchronizationContext"/> class.
@@ -82,6 +91,13 @@ namespace Paramore.Brighter.Tasks
         /// </summary>
         public override void OperationCompleted()
         {
+            Debug.WriteLine(string.Empty);
+            Debug.IndentLevel = 1;
+            Debug.WriteLine($"BrighterSynchronizationContext: OperationCompleted on thread {Thread.CurrentThread.ManagedThreadId}");
+            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+            Debug.IndentLevel = 0;
+
+            
             SynchronizationHelper.OperationCompleted();
         }
 
@@ -90,6 +106,12 @@ namespace Paramore.Brighter.Tasks
         /// </summary>
         public override void OperationStarted()
         {
+            Debug.WriteLine(string.Empty);
+            Debug.IndentLevel = 1;
+            Debug.WriteLine($"BrighterSynchronizationContext: OperationStarted on thread {Thread.CurrentThread.ManagedThreadId}");
+            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+            Debug.IndentLevel = 0;
+
             SynchronizationHelper.OperationStarted();
         }
 
@@ -100,8 +122,24 @@ namespace Paramore.Brighter.Tasks
         /// <param name="state">The object passed to the delegate.</param>
         public override void Post(SendOrPostCallback callback, object? state)
         {
+            Debug.WriteLine(string.Empty);
+            Debug.IndentLevel = 1;
+            Debug.WriteLine($"BrighterSynchronizationContext: Post {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
+            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+            Debug.IndentLevel = 0;
+            
             if (callback == null) throw new ArgumentNullException(nameof(callback));
-            SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
+            bool queued = SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
+            
+            if (queued) return;
+            
+            //NOTE: if we got here, something went wrong, we should have been able to queue the message
+            //mostly this seems to be a problem with the task we are running completing, but work is still being queued to the 
+            //synchronization context.
+            SynchronizationHelper.ExecuteImmediately(
+                SynchronizationHelper.MakeTask(new ContextMessage(callback, state))
+                );
+             
         }
 
         /// <summary>
@@ -111,6 +149,12 @@ namespace Paramore.Brighter.Tasks
         /// <param name="state">The object passed to the delegate.</param>
         public override void Send(SendOrPostCallback callback, object? state)
         {
+            Debug.WriteLine(string.Empty);
+            Debug.IndentLevel = 1;
+            Debug.WriteLine($"BrighterSynchronizationContext: Send {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
+            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+            Debug.IndentLevel = 0;
+            
             // current thread already owns the context, so just execute inline to prevent deadlocks
             if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
             {
