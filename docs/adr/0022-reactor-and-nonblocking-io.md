@@ -46,6 +46,10 @@ For us then, non-blocking I/O in either user code, a handler or tranfomer, or tr
 
 Brighter has a custom SynchronizationContext, BrighterSynchronizationContext, that forces continuations to run on the message pump thread. This prevents non-blocking I/O waiting on the thread pool, with potential deadlocks. This synchronization context is used within the Performer for both the non-blocking I/O of the message pump. Because our performer's only thread processes a single message at a time, there is no danger of this synchronization context deadlocking.
 
+However, if someone uses .ConfigureAwait(false) on their call, which is advice for library code, then the continuation will run on a thread pool thread. Now, this won't tend to exhaust the pool, as we only process a single message at a time, and any given task is unlikely to require enough additional threads to exhaust the pool. But it does mean that we have not control over the order in which continuations run. This is a problem for any stream scenario where it is important to process work in sequence.  
+
+The obvious route around this is to write our own TaskScheduler, and to ensure that we run on the message pump thread. This is a lot of work, and we would need to ensure that we do not deadlock.
+
 ## Decision
 
 ### Reactor and Proactor
@@ -68,39 +72,47 @@ Within the Subscription for a specific transport, we set the default to the type
 | Rabbit MQ (AMQP 0-9-1) | After V6, Sync over Async  | Native from V7|
 | Redis | Native | Native |
 
-### In Setup use Blocking I/O
+### In Setup accept Blocking I/O
 
-Within our setup code our API can safely perovide a common abstraction using blocking I/O. Where the underlying SDK only supports non-blocking I/O, we use non-blocking I/O and then use GetAwaiter().GetResult() to block on that. We prefer GetAwaiter().GetResult() to .Wait() as it will rework the stack trace to take all the asynchronous context into account.
+Within our setup code our API can safely perovide a common abstraction using blocking I/O. Where the underlying SDK only supports non-blocking I/O, we should author an asynchronous version of the method and then use our SynchronizationContext to ensure that the continuation runs on the message pump thread. This class BrighterSynchronizationContext helper will be modelled on [AsyncEx's AsyncContext](https://github.com/StephenCleary/AsyncEx/blob/master/doc/AsyncContext.md) with its Run method, which ensures that the continuation runs on the message pump thread.
                                     
 ### Use Blocking I/O  in Reactor
 
-If the underlying SDK does not support blocking I/O, then the Reactor model is forced to use non-blocking I/O. As with our setup code, where the underlying SDK only supports non-blocking I/O, we use non-blocking I/O and then use GetAwaiter().GetResult() to block on that. Again, we prefer GetAwaiter().GetResult() to .Wait() as it will rework the stack trace to take all the asynchronous context into account.
+For the Performer, within the Proactor message pump, we want to use blocking I/O if the transport supports it. This should be the most performant way to use the transport, although it comes at the cost of not yielding to other Performers whilst waiting for I/O to complete. This has less impact when running in a container in production environments.
+
+If the underlying SDK does not support blocking I/O, then the Reactor model is forced to use non-blocking I/O. In Reactor code paths we should avoid blocking constructs such as ```Wait()```, ```.Result```, ```.GetAwaiter().GetResult()``` and so on, for wrapping anywhere we need to be sync-over-async, because there is no sync path. So how do we do sync-over-async? By using ```BrighterSynchronizationHelper.Run``` we can run an async method, without bubbling up await (see below). This helps us to avoid deadlocks from thread pool exhaustion, caused by no threads being available for the continuation - instead we just queue the continuations onto our single-threaded Performer. Whilst the latter isn't strictly necessary, as we only process a single message at a time, it does help us to avoid deadlocks, and to ensure that we process work in the order it was received.
 
 ### Use Non-Blocking I/O in Proactor
 
-For the Performer, within the message pump, we want to use non-blocking I/O if the transport supports it. Although we will only use a limited number of threads here, whilst waiting for I/O with the broker, we want to yield, to increase our throughput. 
+For the Performer, within the Proactor message pump, we want to use non-blocking I/O if the transport supports it. This will allow us to yield to other Performers whilst waiting for I/O to complete. This allows us to share resources better.
 
-Although this uses an extra thread, the impact for an application starting up on the thread pool is minimal. We will not starve the thread pool and deadlock during start-up.
+In the Proactor code paths production code we should avoid blocking constructs such as ```Wait()```, ```.Result```, ```.GetAwaiter().GetResult()``` and so on. These will prevent us from yielding to other threads. Our Performers don't run on Thread Pool threads, so the issue here is not thread pool exhaustion and resulting deadlocks. However, the fact that we will not be able to yield to another Performer (or other work on the same machine). This is an inefficient usage of resources; if someone has chosen to use the Proactor model to share resources better. In a sense, it's violating the promise that our Proactor makes. So we should avoid these calls in production code that would be exercised by the Proactor.
+
+If the underlying SDK does not support non-blocking I/O then we will need to use ```Thread.Run(() => //...async method)```. Although this uses an extra thread, the impact is minimal as we only process a single message at a time. It is unlikely we will hit starvation of the thread pool.
+
+### Improve the Single-Threaded Synchronization Context with a Task Scheduler
 
 Our custom SynchronizationContext, BrighterSynchronizationContext, can ensure that continuations run on the message pump thread, and not on the thread pool. 
 
-in V9, we have only use the synchronization context for user code, the transformer and hander calls. From V10 we want to extend the support to calls to the transport, whist we are waiting for I/O.
+in V9, we have only use the synchronization context for user code: the transformer and handler calls. From V10 we want to extend the support to calls to the transport, whist we are waiting for I/O.
 
-Our SynchronizationContext, as written, just queues continuations and runs them using a single thread. However, as it does not offer a Task Scheduler anyway who simply writes ConfigureAwait(false) pushes us onto a thread pool thread. To fix this we need to take control of the TaskScheduler, and ensure that we run on the message pump thread. 
+Our SynchronizationContext, as written, just queues continuations to a BlockingCollection and runs all the continuations, once the task has completed, using the same, single, thread. However, as it does not offer a Task Scheduler, so anyone who simply writes ConfigureAwait(false) pushes their continuation onto a thread pool thread. This defeats our goal, strict ordering. To fix this we need to take control of the TaskScheduler, and ensure that we run on the message pump thread.
 
-At this point we choose to use Stephen Cleary's AsyncEx project, to help us run the Proactor Run method on the message pump thread. This is a good fit for us, as we can use the AsyncContext.Run to ensure that we run on the message pump thread. However, AsyncEx is not strong named, making it difficult to use directly. In addition,m we want to modify it. So we will create our own internal versions - it is MIT licensed so we can do this - and then add any bug fixes we need for our context to that. As we marke these internal, we don't reship AsyncEx, and we can avoid the strong naming issue.
+At this point we have chosen to adopt Stephen Cleary's [AsyncEx's AsyncContext](https://github.com/StephenCleary/AsyncEx/blob/master/doc/AsyncContext.md) project over further developing our own. However, AsyncEx is not strong named, making it difficult to use directly. In addition, we want to modify it. So we will create our own internal fork of AsyncEx - it is MIT licensed so we can do this - and then add any bug fixes we need for our context to that. This class BrighterSynchronizationContext helper will be modelled on [AsyncEx's AsyncContext](https://github.com/StephenCleary/AsyncEx/blob/master/doc/AsyncContext.md) with its Run method, which ensures that the continuation runs on the message pump thread. 
 
-This allows us to simplify the Proactor message pump, and to take advantage of non-blocking I/O where possible. In particular we can write an async EventLoop method, that means the Reactor can take advantage of non-blocking I/O in the transport SDKs, transformers and user defined handlers where they support it. Then in our Run method we just wrap that call in our derived class from AsyncContext.Run, to ensure that we run on the message pump thread.
+This allows us to simplify running the Proactor message pump, and to take advantage of non-blocking I/O where possible. In particular, we can write an async EventLoop method, that means the Proactor can take advantage of non-blocking I/O in the transport SDKs, transformers and user defined handlers where they support it. Then in our Proactors's Run method we just wrap the call to EventLoop in ```BrighterSunchronizationContext.Run```, to terminate the async path, bubble up exceptions etc. This allows a single path for both ```Performer.Run``` and ```Consumer.Open``` regardless of whether they are working with a Proactor or Reactor.
+
+This allows to simplify working with sync-over-async for the Reactor. We can just author an async method and then use ```BrigherSynchronizationContext.Run``` to run it. This will ensure that the continuation runs on the message pump thread, and that we do not deadlock.
 
 ### Extending Transport Support for Async
 
-Currently, Brighter only supports an IAmAMessageConsumer interface and does not support an IAmAMessageConsumerAsync interface. This means that within a Proactor, we cannot take advantage of the non-blocking I/O and we are forced to block on the non-blocking I/O. We will address this by adding that interface, so as to allow a Proactor to take advantage of non-blocking I/O.
-
-With V10 we will add IAmAMessageConsumerAsync. We will need to make changes to the Proactor to use async code within the pump, and to use the non-blocking I/O where possible. To do this we need to add an async version of the IAmAChannel interface, IAmAChannelAsync. This also means that we need to implement a ChannelAsync which derives from that.
+We will need to make changes to the Proactor to use async code within the pump, and to use the non-blocking I/O where possible. Currently, Brighter only supports an IAmAMessageConsumer interface and does not support an IAmAMessageConsumerAsync interface. This means that within a Proactor, we cannot take advantage of the non-blocking I/O; we are forced to block on the non-blocking I/O. We will address this by adding an IAmAMessageConsumerAsync interface, which will allow a Proactor to take advantage of non-blocking I/O. To do this we need to add an async version of the IAmAChannel interface, IAmAChannelAsync. This also means that we need to implement a ChannelAsync which derives from that.
 
 As a result we will have a different Channel for the Proactor and Reactor models. As a result we need to extend the ChannelFactory to create both Channel and ChannelAsync, reflecting the needs of the chosen pipeline. However, there is underlying commonality that we can factor into a base class. This helps the Performer. It only needs to be able to Stop the Channel. By extracting that into a common interface we can avoid having to duplicate the Peformer code.
 
-To avoid duplicated code we will use the same code IAmAMessageConsumer implementations can use the [Flag Argument Hack](https://learn.microsoft.com/en-us/archive/msdn-magazine/2015/july/async-programming-brownfield-async-development) to share code where useful. 
+### Tests for Proactor and Reactor, Async Transport Paths
+
+As we will have additional interfaces, we will need to duplicate some tests, to exercise those interfaces. In addition, we will need to ensure that the coverage of Proactor and Reactor is complete, and that we have tests for the async paths in the Proactor.
 
 ## Consequences
 
