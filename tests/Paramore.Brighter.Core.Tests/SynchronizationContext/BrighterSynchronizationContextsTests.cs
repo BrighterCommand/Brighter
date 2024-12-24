@@ -36,6 +36,19 @@ public class BrighterSynchronizationContextsTests
             
             resumed.Should().BeTrue();
         }
+        
+        [Fact]
+        public void Run_AsyncVoid_BlocksUntilCompletion_RunsContinuation()
+        {
+            bool resumed = false;
+            BrighterSynchronizationHelper.Run((Action)(async () =>
+            {
+                await Task.Delay(50);
+                resumed = true;
+            })); 
+            
+            resumed.Should().BeTrue();
+        }
 
         [Fact]
         public void Run_FuncThatCallsAsyncVoid_BlocksUntilCompletion()
@@ -108,6 +121,27 @@ public class BrighterSynchronizationContextsTests
             resumed.Should().BeTrue();
             result.Should().Be(17);
             
+        }
+        
+        [Fact]
+        public void Run_AsyncTaskWithResult_ContainsMultipleAsyncTasks_Still_Ends()
+        {
+            bool resumed = false;
+            var result = BrighterSynchronizationHelper.Run(async () =>
+            {
+                await MultiTask(); 
+                resumed = true;
+                return 17;
+            });
+            resumed.Should().BeTrue();
+            result.Should().Be(17);
+            
+        }
+
+        static async Task MultiTask()
+        {
+            await Task.Yield();
+            await Task.Yield(); 
         }
 
         [Fact]

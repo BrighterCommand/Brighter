@@ -121,24 +121,15 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             //NOTE: This test is **slow** because it needs to ensure infrastructure and then wait whilst we requeue a message a number of times,
             //then propagate to the DLQ
             
-            //start a message pump, let it create infrastructure 
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            //var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(500).Wait();
 
             //put something on an SNS topic, which will be delivered to our SQS queue
             _sender.Send(_message);
-
-            //Let the message be handled and deferred until it reaches the DLQ
-            Task.Delay(5000).Wait();
-
-            //send a quit message to the pump to terminate it 
-            var quitMessage = MessageFactory.CreateQuitMessage(_subscription.RoutingKey);
-            _channel.Enqueue(quitMessage);
-
-            //wait for the pump to stop once it gets a quit message
-            Task.WhenAll(task).Wait();
-
-            Task.Delay(500).Wait();
+            //put a message to force the pump to stop
+            _sender.Send(MessageFactory.CreateQuitMessage(_subscription.RoutingKey));
+            
+            _messagePump.Run();
 
             //inspect the dlq
             var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
@@ -148,12 +139,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             dlqMessage.Body.Value.Should().Be(_message.Body.Value);
 
             _deadLetterConsumer.Acknowledge(dlqMessage);
-
         }
 
         public void Dispose()
         {
             _channel.Dispose();
+            _deadLetterConsumer.Dispose();
         }
 
     }

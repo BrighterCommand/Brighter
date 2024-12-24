@@ -116,5 +116,10 @@ As we will have additional interfaces, we will need to duplicate some tests, to 
 
 ## Consequences
 
+### Reactor and Proactor
+
 Brighter offers you explicit control, through the number of Performers you run, over how many threads are required, instead of implicit scaling through the pool. This has significant advantages for messaging consumers, as it allows you to maintain ordering, such as when consuming a stream instead of a queue.
 
+### Synchronization Context
+
+The BrighterSynchronizationContext will lead to some complicated debugging issues where we interact with the async/await pattern. This code is not easy, and errors may manifest in new ways when they propogate through the context.

@@ -19,6 +19,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -51,9 +52,18 @@ public class BrighterSynchronizationHelper : IDisposable
     }
 
     /// <summary>
+    /// What tasks are currently active?
+    /// Used for debugging
+    /// </summary>
+    public IEnumerable<Task> ActiveTasks => _activeTasks.Keys;
+    
+    /// <summary>
     /// Access the task factory, intended for tests
     /// </summary>
     public TaskFactory Factory => _taskFactory;
+    
+    // How many operations are currently outstanding? 
+    public int OutstandingOperations { get; set; }
     
     /// <summary>
     /// This is the same identifier as the context's <see cref="TaskScheduler"/>. Used for testing
@@ -165,8 +175,13 @@ public class BrighterSynchronizationHelper : IDisposable
             );
 
         synchronizationHelper.Execute();
+        Debug.WriteLine(synchronizationHelper.ActiveTasks.Count());
+        Debug.WriteLine(task.Status);
+        Debug.Assert(synchronizationHelper.OutstandingOperations == 0, "Outstanding operations should be zero");
         task.GetAwaiter().GetResult();
+       
     }
+
 
     /// <summary>
     /// Runs a method that returns a result and returns after all continuations have run.
@@ -190,6 +205,9 @@ public class BrighterSynchronizationHelper : IDisposable
             );
 
         synchronizationHelper.Execute();
+        Debug.WriteLine(synchronizationHelper.ActiveTasks.Count());
+        Debug.WriteLine(task.Status);
+        Debug.Assert(synchronizationHelper.OutstandingOperations == 0, "Outstanding operations should be zero");
         return task.GetAwaiter().GetResult();
     }
 
@@ -221,6 +239,9 @@ public class BrighterSynchronizationHelper : IDisposable
             }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, synchronizationHelper._taskScheduler);
 
         synchronizationHelper.Execute();
+        Debug.WriteLine(synchronizationHelper.ActiveTasks.Count());
+        Debug.WriteLine(task.Status);
+        Debug.Assert(synchronizationHelper.OutstandingOperations == 0, "Outstanding operations should be zero");
         task.GetAwaiter().GetResult();
     }
 
@@ -253,6 +274,9 @@ public class BrighterSynchronizationHelper : IDisposable
                 }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, synchronizationHelper._taskScheduler);
 
         synchronizationHelper.Execute();
+        Debug.WriteLine(synchronizationHelper.ActiveTasks.Count());
+        Debug.WriteLine(task.Status);
+        Debug.Assert(synchronizationHelper.OutstandingOperations == 0, "Outstanding operations should be zero");
         return task.GetAwaiter().GetResult();
     }
 
