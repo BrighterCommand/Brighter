@@ -10,64 +10,63 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
-    [Trait("Category", "AWS")] 
-    public class AWSAssumeQueuesTests  : IDisposable, IAsyncDisposable
+    [Trait("Category", "AWS")]
+    public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
     {
         private readonly ChannelFactory _channelFactory;
-        private readonly SqsMessageConsumer _consumer;
+        private readonly IAmAMessageConsumerAsync _consumer;
 
-        public AWSAssumeQueuesTests()
+        public AWSAssumeQueuesTestsAsync()
         {
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
-            
+
             var subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
-                messagePumpType: MessagePumpType.Reactor,
-                makeChannels: OnMissingChannel.Assume
+                makeChannels: OnMissingChannel.Assume,
+                messagePumpType: MessagePumpType.Proactor
             );
-            
+
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            
+
             //create the topic, we want the queue to be the issue
             //We need to create the topic at least, to check the queues
-            var producer = new SqsMessageProducer(awsConnection, 
+            var producer = new SqsMessageProducer(awsConnection,
                 new SnsPublication
                 {
-                    MakeChannels = OnMissingChannel.Create 
+                    MakeChannels = OnMissingChannel.Create
                 });
-            
-           producer.ConfirmTopicExistsAsync(topicName).Wait(); 
-            
+
+            producer.ConfirmTopicExistsAsync(topicName).Wait();
+
             _channelFactory = new ChannelFactory(awsConnection);
-            var channel = _channelFactory.CreateSyncChannel(subscription);
-            
+            var channel = _channelFactory.CreateAsyncChannel(subscription);
+
             //We need to create the topic at least, to check the queues
-            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
+            _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);
         }
 
         [Fact]
-        public void When_queues_missing_assume_throws()
+        public async Task When_queues_missing_assume_throws_async()
         {
             //we will try to get the queue url, and fail because it does not exist
-            Assert.Throws<QueueDoesNotExistException>(() => _consumer.Receive(TimeSpan.FromMilliseconds(1000)));
-        }
- 
-        public void Dispose()
-        {
-           _channelFactory.DeleteTopicAsync().Wait(); 
-           GC.SuppressFinalize(this);
+            await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
         }
         
-        public async ValueTask DisposeAsync()
+        public void Dispose()
         {
-            await _channelFactory.DeleteTopicAsync(); 
+            _channelFactory.DeleteTopicAsync().Wait(); 
             GC.SuppressFinalize(this);
         }
-    
-   }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync();
+            GC.SuppressFinalize(this);
+        }
+    }
 }

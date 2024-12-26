@@ -35,6 +35,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
+                messagePumpType: MessagePumpType.Reactor,
                 makeChannels: OnMissingChannel.Create
             );
             
@@ -63,6 +64,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 channelName: channel.Name,
                 routingKey: routingKeyArn,
                 findTopicBy: TopicFindBy.Arn,
+                messagePumpType: MessagePumpType.Reactor,
                 makeChannels: OnMissingChannel.Validate
             );
             

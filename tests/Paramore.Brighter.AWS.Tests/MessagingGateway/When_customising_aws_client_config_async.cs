@@ -12,17 +12,17 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
-    public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
+    public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposable
     {
         private readonly Message _message;
-        private readonly IAmAChannelSync _channel;
+        private readonly IAmAChannelAsync _channel;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
 
         private readonly InterceptingDelegatingHandler _publishHttpHandler = new();
         private readonly InterceptingDelegatingHandler _subscribeHttpHandler = new();
 
-        public CustomisingAwsClientConfigTests()
+        public CustomisingAwsClientConfigTestsAsync()
         {
             MyCommand myCommand = new() {Value = "Test"};
             string correlationId = Guid.NewGuid().ToString();
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
-                messagePumpType: MessagePumpType.Reactor,
+                messagePumpType: MessagePumpType.Proactor,
                 routingKey: routingKey
             );
             
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             });
             
             _channelFactory = new ChannelFactory(subscribeAwsConnection);
-            _channel = _channelFactory.CreateSyncChannel(subscription);
+            _channel = _channelFactory.CreateAsyncChannel(subscription);
 
             var publishAwsConnection = new AWSMessagingGatewayConnection(credentials, region, config =>
             {
@@ -66,14 +66,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public async Task When_customising_aws_client_config()
         {
             //arrange
-            _messageProducer.Send(_message);
+            await _messageProducer.SendAsync(_message);
             
             await Task.Delay(1000);
             
-            var message =_channel.Receive(TimeSpan.FromMilliseconds(5000));
+            var message =await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
             
             //clear the queue
-            _channel.Acknowledge(message);
+            await _channel.AcknowledgeAsync(message);
 
             //publish_and_subscribe_should_use_custom_http_client_factory
             _publishHttpHandler.RequestCount.Should().BeGreaterThan(0);

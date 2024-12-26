@@ -14,14 +14,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class AWSAssumeInfrastructureTests  : IDisposable, IAsyncDisposable
+    public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
     {     private readonly Message _message;
         private readonly SqsMessageConsumer _consumer;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
-        public AWSAssumeInfrastructureTests()
+        public AWSAssumeInfrastructureTestsAsync()
         {
             _myCommand = new MyCommand{Value = "Test"};
             string correlationId = Guid.NewGuid().ToString();
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
-                messagePumpType: MessagePumpType.Reactor,
+                messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create
             );
             
@@ -45,7 +45,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
 
-
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
@@ -53,14 +52,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //This doesn't look that different from our create tests - this is because we create using the channel factory in
             //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
             _channelFactory = new ChannelFactory(awsConnection);
-            var channel = _channelFactory.CreateSyncChannel(subscription);
+            var channel = _channelFactory.CreateAsyncChannel(subscription);
             
             //Now change the subscription to validate, just check what we made
             subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: channel.Name,
                 routingKey: routingKey,
-                messagePumpType: MessagePumpType.Reactor,
+                messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Assume
             );
             
@@ -70,19 +69,19 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_infastructure_exists_can_assume()
+        public async Task When_infastructure_exists_can_assume()
         {
             //arrange
-            _messageProducer.Send(_message);
+           await  _messageProducer.SendAsync(_message);
             
-            var messages = _consumer.Receive(TimeSpan.FromMilliseconds(5000));
+            var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
             
             //Assert
             var message = messages.First();
             message.Id.Should().Be(_myCommand.Id);
 
             //clear the queue
-            _consumer.Acknowledge(message);
+            await _consumer.AcknowledgeAsync(message);
         }
  
         public void Dispose()

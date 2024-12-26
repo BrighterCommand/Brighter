@@ -57,7 +57,8 @@ internal class BrighterTaskScheduler : TaskScheduler
         Debug.WriteLine($"BrighterTaskScheduler: QueueTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
         
-        _synchronizationHelper.Enqueue((Task)task, false);
+       var queued = _synchronizationHelper.Enqueue((Task)task, false);
+       Debug.Assert(queued);
     }
 
     /// <summary>
