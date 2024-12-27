@@ -16,6 +16,7 @@ public struct ContextMessage
     /// </summary>
     /// <param name="callback">The callback to execute.</param>
     /// <param name="state">The state to pass to the callback.</param>
+    /// <param name="ctxt">The execution context, mainly intended for debugging purposes</param>
     public ContextMessage(SendOrPostCallback callback, object? state, ExecutionContext? ctxt)
     {
         Callback = callback;

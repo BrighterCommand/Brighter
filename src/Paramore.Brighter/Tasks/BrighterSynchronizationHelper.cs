@@ -39,6 +39,7 @@ public class BrighterSynchronizationHelper : IDisposable
     private readonly BrighterSynchronizationContext? _synchronizationContext;
     private readonly BrighterTaskScheduler _taskScheduler;
     private readonly TaskFactory _taskFactory;
+    private readonly TaskFactory _defaultTaskFactory;
     
     private int _outstandingOperations;
     
@@ -50,6 +51,8 @@ public class BrighterSynchronizationHelper : IDisposable
         _taskScheduler = new BrighterTaskScheduler(this);
         _synchronizationContext = new BrighterSynchronizationContext(this);
         _taskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.HideScheduler, TaskContinuationOptions.HideScheduler, _taskScheduler);
+        
+        _defaultTaskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.None, TaskContinuationOptions.None, TaskScheduler.Default);
     }
 
     /// <summary>
@@ -59,6 +62,11 @@ public class BrighterSynchronizationHelper : IDisposable
     /// </remarks>
     /// </summary>
     public IEnumerable<Task> ActiveTasks => _activeTasks.Keys;
+    
+    /// <summary>
+    /// A default task factory, used to return to the default task factory
+    /// </summary>
+    internal TaskFactory DefaultTaskFactory => _defaultTaskFactory;
     
     /// <summary>
     /// Access the task factory

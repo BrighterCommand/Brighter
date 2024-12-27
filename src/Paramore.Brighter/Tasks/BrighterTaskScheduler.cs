@@ -15,6 +15,7 @@
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -58,7 +59,12 @@ internal class BrighterTaskScheduler : TaskScheduler
         Debug.IndentLevel = 0;
         
        var queued = _synchronizationHelper.Enqueue((Task)task, false);
-       Debug.WriteLine($"BrighterTaskScheduler: QueueTask Failed to queue task {task.ToString()} on {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+       if (!queued)
+   {
+           Debug.IndentLevel = 1;
+           Debug.WriteLine($"BrighterTaskScheduler: QueueTask Failed to queue task {task.ToString()} on {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+           Debug.IndentLevel = 0;
+       }
     }
 
     /// <summary>
