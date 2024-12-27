@@ -41,7 +41,6 @@ public class BrighterSynchronizationHelper : IDisposable
     private readonly TaskFactory _taskFactory;
     
     private int _outstandingOperations;
-    private readonly TimeSpan _timeOut  = TimeSpan.FromSeconds(30);
     
     /// <summary>
     /// Initializes a new instance of the <see cref="BrighterSynchronizationHelper"/> class.
@@ -339,7 +338,7 @@ public class BrighterSynchronizationHelper : IDisposable
 
         using var synchronizationHelper = new BrighterSynchronizationHelper();
 
-        var task = synchronizationHelper._taskFactory.StartNew<Task<TResult>>(
+        var task = synchronizationHelper._taskFactory.StartNew(
                 func,
                 synchronizationHelper._taskFactory.CancellationToken,
                 synchronizationHelper._taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach,
@@ -415,27 +414,5 @@ public class BrighterSynchronizationHelper : IDisposable
     public IEnumerable<Task> GetScheduledTasks()
     {
         return _taskQueue.GetScheduledTasks();
-    }
-
-
-}
-
-/// <summary>
-/// Represents a context message containing a callback and state.
-/// </summary>
-public struct ContextMessage
-{
-    public readonly SendOrPostCallback Callback;
-    public readonly object? State;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContextMessage"/> struct.
-    /// </summary>
-    /// <param name="callback">The callback to execute.</param>
-    /// <param name="state">The state to pass to the callback.</param>
-    public ContextMessage(SendOrPostCallback callback, object? state)
-    {
-        Callback = callback;
-        State = state;
     }
 }

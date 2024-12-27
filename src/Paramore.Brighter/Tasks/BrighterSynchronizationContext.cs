@@ -129,17 +129,17 @@ namespace Paramore.Brighter.Tasks
             Debug.IndentLevel = 0;
             
             if (callback == null) throw new ArgumentNullException(nameof(callback));
-            bool queued = SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
+            var ctxt = ExecutionContext.Capture();
+            bool queued = SynchronizationHelper.Enqueue(new ContextMessage(callback, state, ctxt), true);
             
             if (queued) return;
             
             //NOTE: if we got here, something went wrong, we should have been able to queue the message
             //mostly this seems to be a problem with the task we are running completing, but work is still being queued to the 
-            //synchronization context.
-            SynchronizationHelper.ExecuteImmediately(
-                SynchronizationHelper.MakeTask(new ContextMessage(callback, state))
-                );
-             
+            //synchronization context. 
+            // If the execution context can help, we might be able to redirect; if not just run immediately on this thread
+            
+            SynchronizationHelper.ExecuteImmediately(SynchronizationHelper.MakeTask(new ContextMessage(callback, state, ctxt)));
         }
 
         /// <summary>
@@ -162,7 +162,8 @@ namespace Paramore.Brighter.Tasks
             }
             else
             {
-                var task = SynchronizationHelper.MakeTask(new ContextMessage(callback, state));
+                var ctxt =ExecutionContext.Capture();
+                var task = SynchronizationHelper.MakeTask(new ContextMessage(callback, state, ctxt));
                 if (!task.Wait(Timeout)) // Timeout mechanism
                     throw new TimeoutException("BrighterSynchronizationContext: Send operation timed out.");
             }

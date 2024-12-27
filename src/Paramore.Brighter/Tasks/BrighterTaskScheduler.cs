@@ -58,7 +58,7 @@ internal class BrighterTaskScheduler : TaskScheduler
         Debug.IndentLevel = 0;
         
        var queued = _synchronizationHelper.Enqueue((Task)task, false);
-       Debug.Assert(queued);
+       Debug.WriteLine($"BrighterTaskScheduler: QueueTask Failed to queue task {task.ToString()} on {System.Threading.Thread.CurrentThread.ManagedThreadId}");
     }
 
     /// <summary>

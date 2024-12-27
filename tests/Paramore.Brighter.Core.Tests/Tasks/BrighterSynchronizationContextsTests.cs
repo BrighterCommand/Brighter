@@ -5,6 +5,7 @@
 #endregion
 
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -293,7 +294,7 @@ public class BrighterSynchronizationContextsTests
             propogatesException.Should().BeTrue();
         }
 
-        [Fact]
+       [Fact]
         public void Task_AfterExecute_NeverRuns()
         {
             int value = 0;
@@ -315,6 +316,40 @@ public class BrighterSynchronizationContextsTests
 
             taskTwo.ContinueWith(_ => { throw new Exception("Should not run"); }, TaskScheduler.Default);
             value.Should().Be(1);
+        }
+        
+        [Fact]
+        public async Task Task_AfterExecute_Runs_On_ThreadPool()
+        {
+            int value = 0;
+            var context = new BrighterSynchronizationHelper();
+            
+            var task = context.Factory.StartNew(
+                () => { value = 1; },
+                context.Factory.CancellationToken, 
+                context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
+                context.TaskScheduler);
+            
+            context.Execute(task);
+
+            var taskTwo = context.Factory.StartNew(
+                () => { value = 2; },
+                context.Factory.CancellationToken, 
+                context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
+                TaskScheduler.Default);
+
+            bool threadPoolExceptionRan = false;
+            try
+            {
+                await taskTwo.ContinueWith(_ => throw new Exception("Should run on thread pool"), TaskScheduler.Default);
+            }
+            catch (Exception e)
+            {
+                e.Message.Should().Be("Should run on thread pool");
+                threadPoolExceptionRan = true;
+                
+            }
+            threadPoolExceptionRan.Should().BeTrue();
         }
 
         [Fact]
