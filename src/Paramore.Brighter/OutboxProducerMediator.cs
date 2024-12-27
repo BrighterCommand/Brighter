@@ -400,24 +400,32 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="requestContext">The request context for the pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        /// <param name="runOnBackgroundThread">Run the task on a background thread</param>
         public void ClearOutstandingFromOutbox(int amountToClear,
             TimeSpan minimumAge,
             bool useBulk,
             RequestContext requestContext,
-            Dictionary<string, object>? args = null)
+            Dictionary<string, object>? args = null,
+            bool runOnBackgroundThread = true)
         {
             if (HasAsyncOutbox())
             {
-                Task.Run(() =>
-                        BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
-                    CancellationToken.None
-                );
+                if (runOnBackgroundThread)
+                    Task.Run(() =>
+                            BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
+                        CancellationToken.None
+                    );
+                else
+                    BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args).Wait();
             }
             else if (HasOutbox())
             {
-                Task.Run(() =>
-                    BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args)
-                );
+                if (runOnBackgroundThread)
+                    Task.Run(() =>
+                        BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args)
+                    );
+                else
+                    BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args);
             }
             else
             {

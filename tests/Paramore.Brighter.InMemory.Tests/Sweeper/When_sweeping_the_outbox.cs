@@ -160,7 +160,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             //Act
             timeProvider.Advance(timeSinceSent); // -- let the messages expire
 
-            sweeper.SweepAsyncOutbox();
+            sweeper.Sweep();
 
             await Task.Delay(1000); //Give the sweep time to run
 
@@ -323,7 +323,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             }
 
             //Act
-            sweeper.SweepAsyncOutbox();
+            sweeper.Sweep();
 
             await Task.Delay(1000); //Give the sweep time to run
 

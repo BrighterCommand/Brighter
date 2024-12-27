@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Extensions.Hosting
         {
             s_logger.LogInformation("Outbox Sweeper Service is starting.");
 
-            _timer = new Timer((e) => Sweep(e), null, TimeSpan.Zero,
+            _timer = new Timer(Sweep, null, TimeSpan.Zero,
                 TimeSpan.FromSeconds(_options.TimerInterval));
 
             return Task.CompletedTask;
@@ -121,10 +121,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                         _options.BatchSize,
                         _options.UseBulk,
                         _options.Args);
-
-                    if (_options.UseBulk)
-                        outBoxSweeper.SweepAsyncOutbox();
-                    else
+                    
                         outBoxSweeper.Sweep();
                 }
                 finally

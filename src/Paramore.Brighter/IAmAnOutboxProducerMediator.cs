@@ -57,11 +57,13 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        /// <param name="runOnBackgroundThread">Run the task on a background thread</param>
         void ClearOutstandingFromOutbox(int amountToClear,
             TimeSpan minimumAge,
             bool useBulk,
             RequestContext requestContext,
-            Dictionary<string, object>? args = null);
+            Dictionary<string, object>? args = null,
+            bool runOnBackgroundThread = true);
 
         /// <summary>
         /// Given a request, run the transformation pipeline to create a message

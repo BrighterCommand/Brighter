@@ -976,12 +976,14 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use the bulk send on the producer.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="runOnBackgroundThread">Run the clear operations on a Background Thread</param>
         public void ClearOutstandingFromOutbox(
             int amountToClear = 100,
             TimeSpan? minimumAge = null,
             bool useBulk = false,
             RequestContext? requestContext = null,
-            Dictionary<string, object>? args = null
+            Dictionary<string, object>? args = null,
+            bool runOnBackgroundThread = true
         )
         {
             var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
@@ -990,7 +992,7 @@ namespace Paramore.Brighter
             try
             {
                 var minAge = minimumAge ?? TimeSpan.FromMilliseconds(5000);
-                s_mediator!.ClearOutstandingFromOutbox(amountToClear, minAge, useBulk, context, args);
+                s_mediator!.ClearOutstandingFromOutbox(amountToClear, minAge, useBulk, context, args, runOnBackgroundThread);
             }
             catch (Exception e)
             {

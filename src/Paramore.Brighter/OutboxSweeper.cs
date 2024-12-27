@@ -75,21 +75,7 @@ namespace Paramore.Brighter
             var context = _requestContextFactory.Create();
             context.Span = span;
             
-            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _timeSinceSent, _useBulk, context, _args);
-        }
-
-        /// <summary>
-        /// Dispatches the oldest un-dispatched messages from the asynchronous outbox in a background thread.
-        /// </summary>
-        public void SweepAsyncOutbox()
-        {
-#pragma warning disable CS0618 // Type or member is obsolete
-            var span = ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
-#pragma warning restore CS0618 // Type or member is obsolete
-            var context = _requestContextFactory.Create();
-            context.Span = span;
-            
-            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _timeSinceSent, _useBulk, context, _args);
+            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _timeSinceSent, _useBulk, context, _args, false);
         }
     }
 }
