@@ -48,7 +48,7 @@ namespace Paramore.Brighter
     /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
     /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns 
     /// </summary>
-    public class CommandProcessor : IAmACommandProcessor
+    public partial class CommandProcessor : IAmACommandProcessor
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
@@ -102,8 +102,9 @@ namespace Paramore.Brighter
         /// MethodCache: Used to reduce the cost of reflection for bulk calls
         /// </summary>
         private static IAmAnOutboxProducerMediator? s_outboxProducerMediator;
+
         private static readonly object s_padlock = new();
-        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new(); 
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class
@@ -174,14 +175,15 @@ namespace Paramore.Brighter
             IAmAChannelFactory? responseChannelFactory = null,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry,
+                inboxConfiguration)
         {
             _responseChannelFactory = responseChannelFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _replySubscriptions = replySubscriptions;
 
-            InitExtServiceBus(bus); 
+            InitExtServiceBus(bus);
         }
 
         /// <summary>
@@ -214,7 +216,7 @@ namespace Paramore.Brighter
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
 
-            InitExtServiceBus(bus); 
+            InitExtServiceBus(bus);
         }
 
         /// <summary>
@@ -230,7 +232,8 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
-            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, command, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, command, requestContext?.Span,
+                options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             if (_subscriberRegistry is null)
@@ -239,8 +242,7 @@ namespace Paramore.Brighter
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
             try
             {
-                s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
-                    command.Id);
+              LogBuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id);
                 var handlerChain = builder.Build(context);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -268,9 +270,9 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task SendAsync<T>(
-            T command, 
-            RequestContext? requestContext = null, 
-            bool continueOnCapturedContext = true, 
+            T command,
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
         )
             where T : class, IRequest
@@ -278,17 +280,17 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, command, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, command, requestContext?.Span,
+                options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
-            
+
             if (_subscriberRegistry is null)
                 throw new ArgumentException("A subscriberRegistry must be configured.");
 
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             try
             {
-                s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
-                    command.GetType(), command.Id);
+                LogBuildingSendAsyncPipelineForCommand(s_logger, command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -306,6 +308,9 @@ namespace Paramore.Brighter
                 _tracer?.EndSpan(span);
             }
         }
+        
+         [LoggerMessage(LogLevel.Information, "Building send async pipeline for command: {CommandType} {Id}")]
+         private static partial void LogBuildingSendAsyncPipelineForCommand(ILogger logger, Type commandType, string id);
 
         /// <summary>
         /// Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn
@@ -321,8 +326,9 @@ namespace Paramore.Brighter
         {
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
-            
-            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span, options: _instrumentationOptions);
+
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span,
+                options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
@@ -330,16 +336,16 @@ namespace Paramore.Brighter
             {
                 if (_subscriberRegistry is null)
                     throw new ArgumentException("A subscriberRegistry must be configured.");
+
+                using var builder =
+                    new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
                 
-                using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
-                s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
+                LogBuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(context);
 
                 var handlerCount = handlerChain.Count();
 
-                s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
-                   @event.GetType(), @event.Id);
+                LogFoundPipelineForEvent(s_logger, handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new ConcurrentBag<Exception>();
                 Parallel.ForEach(handlerChain, (handleRequests) =>
@@ -347,7 +353,8 @@ namespace Paramore.Brighter
                     try
                     {
                         var handlerName = handleRequests.Name.ToString();
-                        handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
+                        handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event,
+                            span, options: _instrumentationOptions)!;
                         context.Span = handlerSpans[handlerName];
                         handleRequests.Handle(@event);
                         context.Span = span;
@@ -357,7 +364,7 @@ namespace Paramore.Brighter
                         exceptions.Add(e);
                     }
                 });
-                
+
                 _tracer?.LinkSpans(handlerSpans);
 
                 if (exceptions.Any())
@@ -398,25 +405,23 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
-            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Create, @event, requestContext?.Span,
+                options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             if (_subscriberRegistry is null)
                 throw new ArgumentException("A subscriberRegistry must be configured.");
-            
+
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
-             try
+            try
             {
-                s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
+                LogBuildingSendAsyncPipelineForEvent(s_logger, @event.GetType(), @event.Id);
 
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
                 var handlerCount = handlerChain.Count();
 
-                s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
-                    @event.GetType(), @event.Id
-                );
+                LogFoundPipelineForEvent(s_logger, handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new ConcurrentBag<Exception>();
 
@@ -425,12 +430,13 @@ namespace Paramore.Brighter
                     var tasks = new List<Task>();
                     foreach (var handleRequests in handlerChain)
                     {
-                        handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
-                        context.Span =handlerSpans[handleRequests.Name.ToString()];
+                        handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(
+                            CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
+                        context.Span = handlerSpans[handleRequests.Name.ToString()];
                         tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
                         context.Span = span;
                     }
-                    
+
                     await Task.WhenAll(tasks).ConfigureAwait(continueOnCapturedContext);
                 }
                 catch (Exception e)
@@ -456,6 +462,13 @@ namespace Paramore.Brighter
                 _tracer?.EndSpan(span);
             }
         }
+        
+         [LoggerMessage(LogLevel.Information, "Building send async pipeline for event: {EventType} {Id}")]
+         private static partial void LogBuildingSendAsyncPipelineForEvent(ILogger logger, Type eventType, string id);
+
+        [LoggerMessage(LogLevel.Information, "Found {HandlerCount} pipelines for event: {EventType} {Id}")]
+        private static partial void LogFoundPipelineForEvent(ILogger logger, int handlerCount, Type eventType,
+            string id);
 
         /// <summary>
         /// Posts the specified request. The message is placed on a task queue and into a outbox for reposting in the event of failure.
@@ -473,12 +486,17 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of request</typeparam>
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<TRequest>(
-            TRequest request, 
-            RequestContext? requestContext = null, 
+            TRequest request,
+            RequestContext? requestContext = null,
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            ClearOutbox(new []{DepositPost(request, (IAmABoxTransactionProvider<CommittableTransaction>?)null, requestContext, args)}, requestContext, args);
+            ClearOutbox(
+                new[]
+                {
+                    DepositPost(request, (IAmABoxTransactionProvider<CommittableTransaction>?)null, requestContext,
+                        args)
+                }, requestContext, args);
         }
 
         /// <summary>
@@ -505,11 +523,13 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
-            )
+        )
             where TRequest : class, IRequest
         {
-            var messageId = await DepositPostAsync(request, (IAmABoxTransactionProvider<CommittableTransaction>?)null, requestContext, args, continueOnCapturedContext, cancellationToken);
-            await ClearOutboxAsync(new[] { messageId }, requestContext, args, continueOnCapturedContext, cancellationToken);
+            var messageId = await DepositPostAsync(request, (IAmABoxTransactionProvider<CommittableTransaction>?)null,
+                requestContext, args, continueOnCapturedContext, cancellationToken);
+            await ClearOutboxAsync(new[] { messageId }, requestContext, args, continueOnCapturedContext,
+                cancellationToken);
         }
 
         /// <summary>
@@ -524,10 +544,11 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string DepositPost<TRequest>(TRequest request, RequestContext? requestContext = null, Dictionary<string, object>? args = null) 
+        public string DepositPost<TRequest>(TRequest request, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null)
             where TRequest : class, IRequest
         {
-            return DepositPost<TRequest, CommittableTransaction>(request, null, requestContext, args); 
+            return DepositPost<TRequest, CommittableTransaction>(request, null, requestContext, args);
         }
 
         /// <summary>
@@ -552,18 +573,19 @@ namespace Paramore.Brighter
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
-            string? batchId = null) 
+            string? batchId = null)
             where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
-            
-             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
-             var context = InitRequestContext(span, requestContext);
+            LogSaveRequest(s_logger, request.GetType(), request.Id);
+
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span,
+                options: _instrumentationOptions);
+            var context = InitRequestContext(span, requestContext);
 
             try
             {
                 Message message = s_outboxProducerMediator!.CreateMessageFromRequest(request, context);
-                
+
                 var bus = ((IAmAnOutboxProducerMediator<Message, TTransaction>)s_outboxProducerMediator);
 
                 if (!bus.HasOutbox())
@@ -596,10 +618,11 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext? requestContext = null, Dictionary<string, object>? args = null) 
+        public string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null)
             where TRequest : class, IRequest
         {
-            return DepositPost<TRequest, CommittableTransaction >(requests, null, requestContext, args); 
+            return DepositPost<TRequest, CommittableTransaction>(requests, null, requestContext, args);
         }
 
         /// <summary>
@@ -623,17 +646,17 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save bulk requests request: {RequestType}", typeof(TRequest));
-            
+            LogSaveBulkRequest(s_logger, typeof(TRequest));
+
             var span = _tracer?.CreateBatchSpan<TRequest>(requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
-            
+
             try
             {
                 var successfullySentMessage = new List<string>();
-                
+
                 var mediator = (IAmAnOutboxProducerMediator<Message, TTransaction>)s_outboxProducerMediator!;
-                
+
                 var batchId = mediator.StartBatchAddToOutbox();
 
                 foreach (var request in requests)
@@ -643,9 +666,9 @@ namespace Paramore.Brighter
                     successfullySentMessage.Add(messageId);
                     context.Span = createSpan;
                 }
-                
+
                 mediator.EndBatchAddToOutbox(batchId, transactionProvider, context);
-                
+
                 return successfullySentMessage.ToArray();
             }
             catch (Exception e)
@@ -657,13 +680,14 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpan(span);
             }
-            
+
             // Call the deposit post method for a single request
             // We need to bind DepositPost to the type of the request; an IEnumerable<IRequest> loses type information
             // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
             // generic methods, like DepositPost, assume they have the derived type. This binds DepositPost to the right
             // type before we call it.
-            string CallDepositPost(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction>? amABoxTransactionProvider, 
+            string CallDepositPost(TRequest actualRequest,
+                IAmABoxTransactionProvider<TTransaction>? amABoxTransactionProvider,
                 RequestContext? requestContext1, Dictionary<string, object>? dictionary, string batchId)
             {
                 MethodInfo deposit;
@@ -684,13 +708,20 @@ namespace Paramore.Brighter
                         .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 5);
 
                     deposit = depositMethod?.MakeGenericMethod(actualRequestType, typeof(TTransaction))!;
-                    
+
                     s_boundDepositCalls[actualRequestType.Name] = deposit;
                 }
 
-                return (deposit?.Invoke(this, new object?[] { actualRequest, amABoxTransactionProvider, requestContext1, dictionary, batchId }) as string)!;
+                return (deposit?.Invoke(this,
+                    new object?[]
+                    {
+                        actualRequest, amABoxTransactionProvider, requestContext1, dictionary, batchId
+                    }) as string)!;
             }
         }
+
+        [LoggerMessage(LogLevel.Information, "Save bulk requests request: {RequestType}")]
+        private static partial void LogSaveBulkRequest(ILogger logger, Type requestType);
 
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
@@ -751,17 +782,19 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default,
             string? batchId = null) where TRequest : class, IRequest
         {
-            s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
-            
-             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
-             var context = InitRequestContext(span, requestContext);
+            LogSaveRequest(s_logger, request.GetType(), request.Id);
+
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span,
+                options: _instrumentationOptions);
+            var context = InitRequestContext(span, requestContext);
 
             try
             {
-                Message message = await s_outboxProducerMediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
-                
+                Message message =
+                    await s_outboxProducerMediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
+
                 var bus = ((IAmAnOutboxProducerMediator<Message, TTransaction>)s_outboxProducerMediator);
-                
+
                 if (!bus.HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
 
@@ -780,6 +813,9 @@ namespace Paramore.Brighter
                 _tracer?.EndSpan(span);
             }
         }
+
+        [LoggerMessage(LogLevel.Information, "Save request: {RequestType} {Id}")]
+        private static partial void LogSaveRequest(ILogger logger, Type requestType, string id);
 
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
@@ -835,7 +871,6 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            
             var span = _tracer?.CreateBatchSpan<TRequest>(requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
@@ -844,7 +879,7 @@ namespace Paramore.Brighter
                 var successfullySentMessage = new List<string>();
 
                 var bus = (IAmAnOutboxProducerMediator<Message, TTransaction>)s_outboxProducerMediator!;
-                
+
                 var batchId = bus.StartBatchAddToOutbox();
 
                 foreach (var request in requests)
@@ -853,9 +888,10 @@ namespace Paramore.Brighter
                     var messageId =
                         await CallDepositPostAsync(request, transactionProvider, context, args, batchId);
 
-                    successfullySentMessage.Add(messageId); 
+                    successfullySentMessage.Add(messageId);
                     context.Span = createSpan;
                 }
+
                 await bus.EndBatchAddToOutboxAsync(batchId, transactionProvider, context, cancellationToken);
 
                 return successfullySentMessage.ToArray();
@@ -869,13 +905,13 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpan(span);
             }
-            
+
             // Call the deposit post method for a single request
             // We need to bind DepositPostAsync to the type of the request; an IEnumerable<IRequest> loses type information
             // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
             // generic methods, like DepositPost, assume they have the derived type. This binds DepositPostAsync to the right
             // type before we call it.
-            Task<string> CallDepositPostAsync(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction>? tp, 
+            Task<string> CallDepositPostAsync(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction>? tp,
                 RequestContext rc, Dictionary<string, object>? bag, string? batchId = null)
             {
                 MethodInfo deposit;
@@ -900,8 +936,12 @@ namespace Paramore.Brighter
                 }
 
                 return (Task<string>)deposit?
-                    .Invoke(this, new object?[] { actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId }
-                )!;
+                    .Invoke(this,
+                        new object?[]
+                        {
+                            actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId
+                        }
+                    )!;
             }
         }
 
@@ -912,11 +952,13 @@ namespace Paramore.Brighter
         /// <param name="ids">The message ids to flush</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearOutbox(string[] ids, RequestContext? requestContext = null, Dictionary<string, object>? args = null)
+        public void ClearOutbox(string[] ids, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null)
         {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span,
+                options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
-            
+
             try
             {
                 s_outboxProducerMediator!.ClearOutbox(ids, context, args);
@@ -948,12 +990,14 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default)
         {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span,
+                options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
-            
+
             try
             {
-                await s_outboxProducerMediator!.ClearOutboxAsync(posts, context, continueOnCapturedContext, args, cancellationToken);
+                await s_outboxProducerMediator!.ClearOutboxAsync(posts, context, continueOnCapturedContext, args,
+                    cancellationToken);
             }
             catch (Exception e)
             {
@@ -984,7 +1028,8 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         )
         {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span,
+                options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
@@ -1019,7 +1064,7 @@ namespace Paramore.Brighter
             where T : class, ICall where TResponse : class, IResponse
         {
             timeOut ??= TimeSpan.FromMilliseconds(500);
-            
+
             if (timeOut <= TimeSpan.Zero)
             {
                 throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
@@ -1029,7 +1074,7 @@ namespace Paramore.Brighter
 
             if (subscription is null)
                 throw new InvalidOperationException($"No Subscription registered fpr replies of type {typeof(T)}");
-            
+
             if (_responseChannelFactory is null)
                 throw new InvalidOperationException("No ResponseChannelFactory registered");
 
@@ -1041,7 +1086,7 @@ namespace Paramore.Brighter
             subscription.RoutingKey = new RoutingKey(routingKey);
 
             using var responseChannel = _responseChannelFactory.CreateChannel(subscription);
-            s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
+            LogCreateReplyQueue(s_logger, channelName);
             request.ReplyAddress.Topic = subscription.RoutingKey;
             request.ReplyAddress.CorrelationId = channelName.ToString();
 
@@ -1050,7 +1095,8 @@ namespace Paramore.Brighter
             //the channel to create the subscription, but this does not do much on a new queue
             Retry(() => responseChannel.Purge());
 
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
+            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span,
+                options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
             try
@@ -1058,18 +1104,19 @@ namespace Paramore.Brighter
                 var outMessage = s_outboxProducerMediator!.CreateMessageFromRequest(request, context);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
-                s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
+                LogSendingRequest(s_logger, channelName);
                 s_outboxProducerMediator.CallViaExternalBus<T, TResponse>(outMessage, requestContext);
 
                 Message? responseMessage = null;
 
-            //now we block on the receiver to try and get the message, until timeout.
-            s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
-            Retry(() => responseMessage = responseChannel.Receive(timeOut));
-            
+                //now we block on the receiver to try and get the message, until timeout.
+                LogAwaitingResponse(s_logger, channelName);
+                Retry(() => responseMessage = responseChannel.Receive(timeOut));
+
                 if (responseMessage is not null && responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
-                    s_logger.LogDebug("Reply received from {ChannelName}", channelName);
+                    LogReplyReceived(s_logger, channelName);
+
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
                     s_outboxProducerMediator.CreateRequestFromMessage(responseMessage, context, out TResponse response);
                     Send(response);
@@ -1077,10 +1124,10 @@ namespace Paramore.Brighter
                     return response;
                 }
 
-                s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
+                LogDeletingQueueForRoutingKey(s_logger, channelName);
 
                 return null;
-            } 
+            }
             catch (Exception e)
             {
                 _tracer?.AddExceptionToSpan(span, [e]);
@@ -1092,7 +1139,22 @@ namespace Paramore.Brighter
             }
         }
 
-            /// <summary>
+        [LoggerMessage(LogLevel.Information, "Create reply queue for topic {ChannelName}")]
+        private static partial void LogCreateReplyQueue(ILogger logger, Guid channelName);
+
+        [LoggerMessage(LogLevel.Debug, "Sending request  with routingkey {ChannelName}")]
+        private static partial void LogSendingRequest(ILogger logger, Guid channelName);
+
+        [LoggerMessage(LogLevel.Debug, "Awaiting response on {ChannelName}")]
+        private static partial void LogAwaitingResponse(ILogger logger, Guid channelName);
+
+        [LoggerMessage(LogLevel.Debug, "Reply received from {ChannelName}")]
+        private static partial void LogReplyReceived(ILogger logger, Guid channelName);
+
+        [LoggerMessage(LogLevel.Information, "Deleting queue for routingkey: {ChannelName}")]
+        private static partial void LogDeletingQueueForRoutingKey(ILogger logger, Guid channelName);
+
+        /// <summary>
         /// The external service bus is a singleton as it has app lifetime to manage an Outbox.
         /// This method clears the external service bus, so that the next attempt to use it will create a fresh one
         /// It is mainly intended for testing, to allow the external service bus to be reset between tests
@@ -1107,13 +1169,13 @@ namespace Paramore.Brighter
                     s_outboxProducerMediator = null;
                 }
             }
+
             s_boundDepositCalls.Clear();
         }
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
-            s_logger.LogInformation("Found {HandlerCount} pipelines for command: {Type} {Id}", handlerCount, typeof(T),
-                command.Id);
+            LogFoundPipeline(s_logger, handlerCount, typeof(T), command.Id);
 
             if (handlerCount > 1)
                 throw new ArgumentException(
@@ -1122,7 +1184,10 @@ namespace Paramore.Brighter
                 throw new ArgumentException(
                     $"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
-        
+
+        [LoggerMessage(LogLevel.Information, "Found {HandlerCount} pipelines for command: {Type} {Id}")]
+        private static partial void LogFoundPipeline(ILogger logger, int handlerCount, Type type, string id);
+
         private bool HandlerFactoryIsNotEitherIAmAHandlerFactorySyncOrAsync(IAmAHandlerFactory handlerFactory)
         {
             // If we do not have a subscriber registry and we do not have a handler factory 
@@ -1139,7 +1204,7 @@ namespace Paramore.Brighter
                     return true;
             }
         }
- 
+
         // Create an instance of the OutboxProducerMediator if one not already set for this app. Note that we do not support reinitialization here, so once you have
         // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         // if needed as a "get out of gaol" card.
@@ -1153,7 +1218,7 @@ namespace Paramore.Brighter
                 }
             }
         }
-        
+
         private RequestContext InitRequestContext(Activity? span, RequestContext? requestContext)
         {
             var context = requestContext ?? _requestContextFactory.Create();
@@ -1162,8 +1227,8 @@ namespace Paramore.Brighter
             context.FeatureSwitches = _featureSwitchRegistry;
             return context;
         }
-        
- 
+
+
         private void Retry(Action action)
         {
             var policy = _policyRegistry.Get<Policy>(CommandProcessor.RETRYPOLICY);
@@ -1172,9 +1237,12 @@ namespace Paramore.Brighter
             {
                 if (result.FinalException != null)
                 {
-                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message");
+                    LogExceptionWhilstTryingToPublish(s_logger, result.FinalException);
                 }
             }
         }
+
+        [LoggerMessage(Level = LogLevel.Error, Message = "Exception whilst trying to publish message")]
+        private static partial void LogExceptionWhilstTryingToPublish(ILogger logger, Exception exception);
     }
 }
