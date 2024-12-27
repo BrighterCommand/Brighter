@@ -406,17 +406,25 @@ public class BrighterSynchronizationHelper : IDisposable
     /// <summary>
     /// Executes a task immediately on the current thread.
     /// </summary>
-    /// <param name="task">The task to execute.</param>
+    /// <param name="callback">The task to execute.</param>
     /// <param name="state">The state object to pass to the task.</param>
-    public void ExecuteImmediately(ContextCallback task, object? state)
+    public void ExecuteImmediately(ContextCallback callback, object? state)
     {
         Debug.WriteLine(string.Empty);
         Debug.WriteLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Executing task immediately on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
+        Debug.WriteLine($"BrighterSynchronizationHelper: Task {callback.Method.Name}");
         Debug.IndentLevel = 0;
 
-       task.Invoke(state);
+        try
+        {
+           callback.Invoke(state);
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine($"BrighterSynchronizationHelper: Execution errored on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id} with exception {e.Message}");
+        }
 
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Execution completed on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
