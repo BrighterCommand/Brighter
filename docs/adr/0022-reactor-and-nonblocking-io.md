@@ -100,7 +100,7 @@ This allows us to simplify running the Proactor message pump, and to take advant
 
 This allows to simplify working with sync-over-async for the Reactor. We can just author an async method and then use ```BrigherSynchronizationContext.Run``` to run it. This will ensure that the continuation runs on the message pump thread, and that we do not deadlock.
 
- However, the implication of Stephen Toub's article [here](https://devblogs.microsoft.com/dotnet/how-async-await-really-works/#in-the-beginning%E2%80%A6)  that there is no route around ConfigureAwait(false), so it looks we will have to document the risks of using ConfigureAwait(false) in our code (out of order handling). See Consequences, for more on this. 
+ However, the implication of Stephen Toub's article [here](https://devblogs.microsoft.com/dotnet/configureawait-faq/)  that there is no route around ConfigureAwait(false), so it looks we will have to document the risks of using ConfigureAwait(false) in our code (out of order handling). See Consequences, for more on this. 
 
 ### Extending Transport Support for Async
 
