@@ -94,17 +94,13 @@ Our custom SynchronizationContext, BrighterSynchronizationContext, can ensure th
 
 in V9, we have only use the synchronization context for user code: the transformer and handler calls. From V10 we want to extend the support to calls to the transport, whist we are waiting for I/O.
 
-Our SynchronizationContext, as written, just queues continuations to a BlockingCollection and runs all the continuations, once the task has completed, using the same, single, thread. However, as it does not offer a Task Scheduler, so anyone who simply writes ConfigureAwait(false) pushes their continuation onto a thread pool thread. This defeats our goal, strict ordering. 
-
-To fix this we need to take control of the TaskScheduler, and ensure that we run on the message pump thread. (Note, I am not actually sure that this is true, and we will need to test it. The implication of Stephen Toub's article [here](https://devblogs.microsoft.com/dotnet/how-async-await-really-works/#in-the-beginning%E2%80%A6) may be that there is no route around ConfigureAwait(false) which would need to be left as "caveat emptor".)
-
 At this point we have chosen to adopt Stephen Cleary's [AsyncEx's AsyncContext](https://github.com/StephenCleary/AsyncEx/blob/master/doc/AsyncContext.md) project over further developing our own. However, AsyncEx is not strong named, making it difficult to use directly. In addition, we want to modify it. So we will create our own internal fork of AsyncEx - it is MIT licensed so we can do this - and then add any bug fixes we need for our context to that. This class BrighterSynchronizationContext helper will be modelled on [AsyncEx's AsyncContext](https://github.com/StephenCleary/AsyncEx/blob/master/doc/AsyncContext.md) with its Run method, which ensures that the continuation runs on the message pump thread. 
 
 This allows us to simplify running the Proactor message pump, and to take advantage of non-blocking I/O where possible. In particular, we can write an async EventLoop method, that means the Proactor can take advantage of non-blocking I/O in the transport SDKs, transformers and user defined handlers where they support it. Then in our Proactors's Run method we just wrap the call to EventLoop in ```BrighterSunchronizationContext.Run```, to terminate the async path, bubble up exceptions etc. This allows a single path for both ```Performer.Run``` and ```Consumer.Open``` regardless of whether they are working with a Proactor or Reactor.
 
 This allows to simplify working with sync-over-async for the Reactor. We can just author an async method and then use ```BrigherSynchronizationContext.Run``` to run it. This will ensure that the continuation runs on the message pump thread, and that we do not deadlock.
 
-(Of course it is possible that our old context is better, if the TaskScheduler is not required. We will need to test this.)
+ However, the implication of Stephen Toub's article [here](https://devblogs.microsoft.com/dotnet/how-async-await-really-works/#in-the-beginning%E2%80%A6)  that there is no route around ConfigureAwait(false), so it looks we will have to document the risks of using ConfigureAwait(false) in our code (out of order handling). See Consequences, for more on this. 
 
 ### Extending Transport Support for Async
 
@@ -124,4 +120,6 @@ Brighter offers you explicit control, through the number of Performers you run, 
 
 ### Synchronization Context
 
-The BrighterSynchronizationContext will lead to some complicated debugging issues where we interact with the async/await pattern. This code is not easy, and errors may manifest in new ways when they propogate through the context.
+The BrighterSynchronizationContext will lead to some complicated debugging issues where we interact with the async/await pattern. This code is not easy, and errors may manifest in new ways when they propogate through the context. We could decide that as we cannot control ConfigureAwait, we should just choose to queue on the threadpool and use the default synchronizationcontext and task scheduler. 
+
+Another alternative would be to use the [Visual Studio Synchronization Context](https://learn.microsoft.com/en-us/dotnet/api/microsoft.visualstudio.threading.singlethreadedsynchronizationcontext?view=visualstudiosdk-2022) instead of modelling from Stephen Cleary's AsyncEx.  
