@@ -35,6 +35,8 @@ namespace Paramore.Brighter.Tasks
     /// </remarks>
     internal class BrighterSynchronizationContext : SynchronizationContext
     {
+        private readonly ExecutionContext? _executionContext;
+
         /// <summary>
         /// Gets the synchronization helper.
         /// </summary>
@@ -60,6 +62,7 @@ namespace Paramore.Brighter.Tasks
         public BrighterSynchronizationContext(BrighterSynchronizationHelper synchronizationHelper)
         {
             SynchronizationHelper = synchronizationHelper;
+            _executionContext = ExecutionContext.Capture();
         }
 
         /// <summary>
@@ -139,7 +142,28 @@ namespace Paramore.Brighter.Tasks
             //synchronization context. 
             // If the execution context can help, we might be able to redirect; if not just run immediately on this thread
             
-            SynchronizationHelper.ExecuteImmediately(SynchronizationHelper.MakeTask(new ContextMessage(callback, state, ctxt)));
+            var contextCallback = new ContextCallback(callback);
+            if (ctxt != null && ctxt  != _executionContext)
+            {
+                Debug.WriteLine(string.Empty);
+                Debug.IndentLevel = 1;
+                Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
+                Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+                Debug.IndentLevel = 0;
+                SynchronizationHelper.ExecuteOnContext(ctxt, contextCallback, state);
+            }
+            else
+            {
+                Debug.WriteLine(string.Empty);
+                Debug.IndentLevel = 1;
+                Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
+                Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+                Debug.IndentLevel = 0;
+                //just execute inline
+                SynchronizationHelper.ExecuteImmediately(contextCallback, state); 
+            }
+            Debug.WriteLine(string.Empty);
+            
         }
 
         /// <summary>
@@ -162,7 +186,7 @@ namespace Paramore.Brighter.Tasks
             }
             else
             {
-                var ctxt =ExecutionContext.Capture();
+                var ctxt = ExecutionContext.Capture();
                 var task = SynchronizationHelper.MakeTask(new ContextMessage(callback, state, ctxt));
                 if (!task.Wait(Timeout)) // Timeout mechanism
                     throw new TimeoutException("BrighterSynchronizationContext: Send operation timed out.");

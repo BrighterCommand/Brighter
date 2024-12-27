@@ -35,14 +35,14 @@ public class BrighterSynchronizationHelper : IDisposable
 {
     private readonly BrighterTaskQueue _taskQueue = new();
     private readonly ConcurrentDictionary<Task, byte> _activeTasks = new();
-    
+
     private readonly BrighterSynchronizationContext? _synchronizationContext;
     private readonly BrighterTaskScheduler _taskScheduler;
     private readonly TaskFactory _taskFactory;
     private readonly TaskFactory _defaultTaskFactory;
-    
+
     private int _outstandingOperations;
-    
+
     /// <summary>
     /// Initializes a new instance of the <see cref="BrighterSynchronizationHelper"/> class.
     /// </summary>
@@ -51,7 +51,7 @@ public class BrighterSynchronizationHelper : IDisposable
         _taskScheduler = new BrighterTaskScheduler(this);
         _synchronizationContext = new BrighterSynchronizationContext(this);
         _taskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.HideScheduler, TaskContinuationOptions.HideScheduler, _taskScheduler);
-        
+
         _defaultTaskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.None, TaskContinuationOptions.None, TaskScheduler.Default);
     }
 
@@ -62,12 +62,12 @@ public class BrighterSynchronizationHelper : IDisposable
     /// </remarks>
     /// </summary>
     public IEnumerable<Task> ActiveTasks => _activeTasks.Keys;
-    
+
     /// <summary>
     /// A default task factory, used to return to the default task factory
     /// </summary>
     internal TaskFactory DefaultTaskFactory => _defaultTaskFactory;
-    
+
     /// <summary>
     /// Access the task factory
     /// </summary>
@@ -75,14 +75,14 @@ public class BrighterSynchronizationHelper : IDisposable
     ///  Intended for tests
     /// </remarks>
     public TaskFactory Factory => _taskFactory;
-    
+
     /// <summary>
     /// This is the same identifier as the context's <see cref="TaskScheduler"/>. Used for testing
     /// </summary>
     public int Id => _taskScheduler.Id;
-    
+
     /// <summary>
-    /// How many operations are currently outstanding? 
+    /// How many operations are currently outstanding?
     /// </summary>
     /// <remarks>
     ///  Intended for debugging
@@ -96,7 +96,7 @@ public class BrighterSynchronizationHelper : IDisposable
     ///  Intended for tests
     /// </remarks>
     public TaskScheduler TaskScheduler => _taskScheduler;
-    
+
     /// <summary>
     /// Access the synchoronization context, intended for tests
     /// </summary>
@@ -110,7 +110,7 @@ public class BrighterSynchronizationHelper : IDisposable
         _taskQueue.CompleteAdding();
         _taskQueue.Dispose();
     }
- 
+
     /// <summary>
     /// Gets the current synchronization helper.
     /// </summary>
@@ -133,7 +133,7 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Enqueueing message {message.Callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
         Debug.IndentLevel = 0;
-        
+
         return Enqueue(MakeTask(message), propagateExceptions);
     }
 
@@ -147,7 +147,7 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Enqueueing task {task.Id} on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
         Debug.IndentLevel = 0;
-        
+
         OperationStarted();
         task.ContinueWith(_ => OperationCompleted(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, _taskScheduler);
         if (_taskQueue.TryAdd(task, propagateExceptions))
@@ -168,11 +168,11 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper:Making task for message {message.Callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
         Debug.IndentLevel = 0;
-        
+
         return _taskFactory.StartNew(
             () => message.Callback(message.State),
-            _taskFactory.CancellationToken, 
-            _taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach, 
+            _taskFactory.CancellationToken,
+            _taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach,
             _taskScheduler);
     }
 
@@ -183,10 +183,10 @@ public class BrighterSynchronizationHelper : IDisposable
     {
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Operation completed on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
-       
+
         var newCount = Interlocked.Decrement(ref _outstandingOperations);
         Debug.WriteLine($"BrighterSynchronizationHelper: Outstanding operations: {newCount}");
-        Debug.IndentLevel = 0;       
+        Debug.IndentLevel = 0;
 
         if (newCount == 0)
             _taskQueue.CompleteAdding();
@@ -199,7 +199,7 @@ public class BrighterSynchronizationHelper : IDisposable
     {
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Operation started on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
-        
+
         var newCount = Interlocked.Increment(ref _outstandingOperations);
         Debug.WriteLine($"BrighterSynchronizationHelper: Outstanding operations: {newCount}");
         Debug.IndentLevel = 0;
@@ -217,7 +217,7 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Running action {action.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
-        
+
         if (action == null)
             throw new ArgumentNullException(nameof(action));
 
@@ -232,7 +232,7 @@ public class BrighterSynchronizationHelper : IDisposable
 
         synchronizationHelper.Execute(task);
         task.GetAwaiter().GetResult();
-        
+
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Action {action.Method.Name} completed on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.WriteLine(synchronizationHelper.ActiveTasks.Count());
@@ -255,7 +255,7 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Running function {func.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
-        
+
         if (func == null)
             throw new ArgumentNullException(nameof(func));
 
@@ -269,16 +269,16 @@ public class BrighterSynchronizationHelper : IDisposable
             );
 
         synchronizationHelper.Execute(task);
-        
+
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Function {func.Method.Name} completed on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.WriteLine($"BrighterSynchronizationHelper: Active task count: {synchronizationHelper.ActiveTasks.Count()}");
         Debug.WriteLine($"BrighterSynchronizationHelper: Task Status: {task.Status}");
         Debug.IndentLevel = 0;
         Debug.WriteLine("....................................................................................................................");
-        
+
         return task.GetAwaiter().GetResult();
-        
+
     }
 
     /// <summary>
@@ -293,7 +293,7 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Running function {func.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
-        
+
         if (func == null)
             throw new ArgumentNullException(nameof(func));
 
@@ -316,7 +316,7 @@ public class BrighterSynchronizationHelper : IDisposable
 
         synchronizationHelper.Execute(task);
         task.GetAwaiter().GetResult();
-        
+
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Function {func.Method.Name} completed on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.WriteLine($"BrighterSynchronizationHelper: Active task count: {synchronizationHelper.ActiveTasks.Count()}");
@@ -340,7 +340,7 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Running function {func.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
-        
+
         if (func == null)
             throw new ArgumentNullException(nameof(func));
 
@@ -360,17 +360,21 @@ public class BrighterSynchronizationHelper : IDisposable
                 }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, synchronizationHelper._taskScheduler);
 
         synchronizationHelper.Execute(task);
-        
+
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Function {func.Method.Name} completed on thread {Thread.CurrentThread.ManagedThreadId}");
         Debug.WriteLine($"BrighterSynchronizationHelper: Active task count: {synchronizationHelper.ActiveTasks.Count()}");
         Debug.WriteLine($"BrighterSynchronizationHelper: Task Status: {task.Status}");
         Debug.IndentLevel = 0;
         Debug.WriteLine("....................................................................................................................");
-        
+
         return task.GetAwaiter().GetResult();
     }
 
+    /// <summary>
+    /// Executes the specified parent task and all tasks in the queue.
+    /// </summary>
+    /// <param name="parentTask">The parent task to execute.</param>
     public void Execute(Task parentTask)
     {
         Debug.WriteLine(string.Empty);
@@ -378,10 +382,10 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Executing tasks on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
         Debug.IndentLevel = 0;
-        
+
         BrighterSynchronizationContextScope.ApplyContext(_synchronizationContext, parentTask, () =>
         {
-            
+
             foreach (var (task, propagateExceptions) in _taskQueue.GetConsumingEnumerable())
             {
                 _taskScheduler.DoTryExecuteTask(task);
@@ -392,14 +396,19 @@ public class BrighterSynchronizationHelper : IDisposable
                 _activeTasks.TryRemove(task, out _);
             }
         });
-        
+
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Execution completed on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
         Debug.IndentLevel = 0;
         Debug.WriteLine("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     }
-    
-    public void ExecuteImmediately(Task task, bool propagateExceptions = true)
+
+    /// <summary>
+    /// Executes a task immediately on the current thread.
+    /// </summary>
+    /// <param name="task">The task to execute.</param>
+    /// <param name="state">The state object to pass to the task.</param>
+    public void ExecuteImmediately(ContextCallback task, object? state)
     {
         Debug.WriteLine(string.Empty);
         Debug.WriteLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
@@ -407,11 +416,8 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.WriteLine($"BrighterSynchronizationHelper: Executing task immediately on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
         Debug.IndentLevel = 0;
 
-        _taskScheduler.DoTryExecuteTask(task);
+       task.Invoke(state);
 
-        if (!propagateExceptions) 
-            task.GetAwaiter().GetResult();
-        
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Execution completed on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
         Debug.IndentLevel = 0;
@@ -419,6 +425,33 @@ public class BrighterSynchronizationHelper : IDisposable
 
     }
 
+    /// <summary>
+    /// Executes a task on the specified execution context.
+    /// </summary>
+    /// <param name="ctxt">The execution context.</param>
+    /// <param name="contextCallback">The context callback to execute.</param>
+    /// <param name="state">The state object to pass to the callback.</param>
+    public void ExecuteOnContext(ExecutionContext ctxt, ContextCallback contextCallback, object? state)
+    {
+        Debug.WriteLine(string.Empty);
+        Debug.WriteLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterSynchronizationHelper: Executing task immediately on original execution context for BrighterSynchronizationHelper {Id}");
+        Debug.IndentLevel = 0;
+        
+        ExecutionContext.Run(ctxt, contextCallback, state);
+        
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterSynchronizationHelper: Execution completed on original execution context for BrighterSynchronizationHelper {Id}");
+        Debug.IndentLevel = 0;
+        Debug.WriteLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+ 
+    }
+
+    /// <summary>
+    /// Gets an enumerable of the tasks currently scheduled.
+    /// </summary>
+    /// <returns>An enumerable of the scheduled tasks.</returns>
     public IEnumerable<Task> GetScheduledTasks()
     {
         return _taskQueue.GetScheduledTasks();
