@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     /// <summary>
@@ -77,6 +80,22 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 _messageConsumerFactory.CreateAsync(subscription),
                 subscription.BufferSize
                 );
+        }
+
+        public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
+        {
+            RedisSubscription? rmqSubscription = subscription as RedisSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
+            
+            IAmAChannelAsync channel =  new ChannelAsync(
+                subscription.ChannelName, 
+                subscription.RoutingKey, 
+                _messageConsumerFactory.CreateAsync(subscription),
+                subscription.BufferSize
+            );
+            
+            return Task.FromResult(channel);
         }
     }
 }
