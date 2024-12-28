@@ -26,6 +26,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
@@ -75,5 +76,10 @@ public class AzureServiceBusMessageProducerFactory : IAmAMessageProducerFactory
         }
 
         return producers;
-    }        
+    }
+
+    public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+    {
+        return Task.FromResult(Create());
+    }
 }

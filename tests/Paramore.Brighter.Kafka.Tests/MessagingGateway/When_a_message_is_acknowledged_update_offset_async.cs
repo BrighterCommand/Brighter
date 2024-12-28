@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
     [Trait("Category", "Kafka")]
     [Trait("Fragile", "CI")]
     [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-    public class KafkaMessageConsumerUpdateOffset : IDisposable
+    public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString();
@@ -21,13 +21,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-        public KafkaMessageConsumerUpdateOffset(ITestOutputHelper output)
+        public KafkaMessageConsumerUpdateOffsetAsync(ITestOutputHelper output)
         {
             _output = output;
             _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Producer Send Test", 
+                    Name = "Kafka Producer Send Test",
                     BootStrapServers = new[] {"localhost:9092"}
                 },
                 new[] {new KafkaPublication
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 1,
-                    //These timeouts support running on a container using the same host as the tests, 
+                    //These timeouts support running on a container using the same host as the tests,
                     //your production values ought to be lower
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
@@ -47,18 +47,18 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public async Task When_a_message_is_acknowldgede_update_offset()
         {
             var groupId = Guid.NewGuid().ToString();
-            
+
             //send x messages to Kafka
             var sentMessages = new string[10];
             for (int i = 0; i < 10; i++)
             {
                 var msgId = Guid.NewGuid().ToString();
-                SendMessage(msgId);
+                await SendMessageAsync(msgId);
                 sentMessages[i] = msgId;
             }
 
             //This will create, then delete the consumer
-            Message[] messages = ConsumeMessages(groupId: groupId, batchLimit: 5);
+            Message[] messages = await ConsumeMessagesAsync(groupId: groupId, batchLimit: 5);
 
             //check we read the first 5 messages
             messages.Length.Should().Be(5);
@@ -71,20 +71,20 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             await Task.Delay(TimeSpan.FromSeconds(5));
 
             //This will create a new consumer
-            Message[] newMessages = ConsumeMessages(groupId, batchLimit: 5);
+            Message[] newMessages = await ConsumeMessagesAsync(groupId, batchLimit: 5);
             //check we read the first 5 messages
-            messages.Length.Should().Be(5);
+            newMessages.Length.Should().Be(5);
             for (int i = 0; i < 5; i++)
             {
                 newMessages[i].Id.Should().Be(sentMessages[i+5]);
             }
         }
 
-        private void SendMessage(string messageId)
+        private async Task SendMessageAsync(string messageId)
         {
             var routingKey = new RoutingKey(_topic);
-            
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(
+
+            await ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey)).SendAsync(
                 new Message(
                     new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
                     new MessageBody($"test content [{_queueName}]")
@@ -92,20 +92,20 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             );
         }
 
-        private Message[] ConsumeMessages(string groupId, int batchLimit)
+        private async Task<Message[]> ConsumeMessagesAsync(string groupId, int batchLimit)
         {
             var consumedMessages = new List<Message>();
-            using (IAmAMessageConsumerSync consumer = CreateConsumer(groupId))
+            await using (IAmAMessageConsumerAsync consumer = CreateConsumer(groupId))
             {
                 for (int i = 0; i < batchLimit; i++)
                 {
-                    consumedMessages.Add(ConsumeMessage(consumer));
+                    consumedMessages.Add(await ConsumeMessageAsync(consumer));
                 }
             }
 
             return consumedMessages.ToArray();
 
-            Message ConsumeMessage(IAmAMessageConsumerSync consumer)
+            async Task<Message> ConsumeMessageAsync(IAmAMessageConsumerAsync consumer)
             {
                 Message[] messages = new []{new Message()};
                 int maxTries = 0;
@@ -114,12 +114,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     try
                     {
                         maxTries++;
-                        Task.Delay(500).Wait(); //Let topic propagate in the broker
-                        messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
+                        await Task.Delay(500); //Let topic propagate in the broker
+                        messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                         if (messages[0].Header.MessageType != MessageType.MT_NONE)
                         {
-                            consumer.Acknowledge(messages[0]);
+                            await consumer.AcknowledgeAsync(messages[0]);
                             return messages[0];
                         }
 
@@ -135,15 +135,15 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             }
         }
 
-        private IAmAMessageConsumerSync CreateConsumer(string groupId)
+        private IAmAMessageConsumerAsync CreateConsumer(string groupId)
         {
             return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Consumer Test", 
+                    Name = "Kafka Consumer Test",
                     BootStrapServers = new[] {"localhost:9092"}
                 })
-                .Create(new KafkaSubscription<MyCommand>
+                .CreateAsync(new KafkaSubscription<MyCommand>
                 (
                     name: new SubscriptionName("Paramore.Brighter.Tests"),
                     channelName: new ChannelName(_queueName),
@@ -153,14 +153,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     commitBatchSize:5,
                     numOfPartitions: 1,
                     replicationFactor: 1,
-                    messagePumpType: MessagePumpType.Reactor,
                     makeChannels: OnMissingChannel.Create
                 ));
         }
 
         public void Dispose()
         {
-            _producerRegistry?.Dispose();
+            _producerRegistry.Dispose();
         }
     }
 }

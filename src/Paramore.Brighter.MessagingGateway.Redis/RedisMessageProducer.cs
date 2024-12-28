@@ -26,6 +26,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
@@ -54,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     public class RedisMessageProducer(
         RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
         RedisMessagePublication publication)
-        : RedisMessageGateway(redisMessagingGatewayConfiguration, publication.Topic!), IAmAMessageProducerSync
+        : RedisMessageGateway(redisMessagingGatewayConfiguration, publication.Topic!), IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageProducer>();
@@ -74,8 +76,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             DisposePool();
             GC.SuppressFinalize(this);
         }
+        
+        public async ValueTask DisposeAsync()
+        {
+            await DisposePoolAsync();
+            GC.SuppressFinalize(this);
+        }
 
-       /// <summary>
+        /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -112,14 +120,63 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">A token to cancel the send operation</param>
+        /// <returns>Task.</returns>
+        public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            if (s_pool is null)
+                throw new ChannelFailureException("RedisMessageProducer: Connection pool has not been initialized");
+
+            await using var client = await s_pool.Value.GetClientAsync(token: cancellationToken);
+            Topic = message.Header.Topic;
+
+            s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
+  
+            var redisMessage = CreateRedisMessage(message);
+
+            s_logger.LogDebug(
+                "RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
+                message.Header.Topic, message.Id.ToString(), message.Body.Value
+            );
+            //increment a counter to get the next message id
+            var nextMsgId = await IncrementMessageCounterAsync(client, cancellationToken);
+            //store the message, against that id
+            await StoreMessageAsync(client, redisMessage, nextMsgId);
+            //If there are subscriber queues, push the message to the subscriber queues
+            var pushedTo = await PushToQueuesAsync(client, nextMsgId, cancellationToken);
+            s_logger.LogDebug(
+                "RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
+                message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo)
+            );
+        }
+        
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <remarks>
+        /// No delay support on Redis
+        /// </remarks>
+        /// <param name="message">The message.</param>
         /// <param name="delay">The sending delay</param>
         /// <returns>Task.</returns>
          public void SendWithDelay(Message message, TimeSpan? delay = null)
         {                                                        
-            //No delay support implemented
             Send(message);
         }
- 
+        
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        ///  <remarks>
+        /// No delay support on Redis
+        /// </remarks>
+        /// <param name="message">The message.</param>
+        /// <param name="delay">The sending delay</param>
+        /// <returns>Task.</returns>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        {
+            await SendAsync(message, cancellationToken);
+        }
 
         private IEnumerable<string> PushToQueues(IRedisClient client, long nextMsgId)
         {
@@ -132,6 +189,18 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return queues;
         }
+        
+        private async Task<IEnumerable<string>> PushToQueuesAsync(IRedisClientAsync client, long nextMsgId, CancellationToken cancellationToken = default)
+        {
+            var key = Topic + "." + QUEUES;
+            var queues = (await client.GetAllItemsFromSetAsync(key, cancellationToken)).ToList();
+            foreach (var queue in queues)
+            {
+                //First add to the queue itself
+                await client.AddItemToListAsync(queue, nextMsgId.ToString(), cancellationToken);
+            }
+            return queues;
+        }
 
         private long IncrementMessageCounter(IRedisClient client)
         {
@@ -140,6 +209,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var key = Topic + "." + NEXT_ID;
             return client.IncrementValue(key);
         }
-
-   }
+        
+        private async Task<long> IncrementMessageCounterAsync(IRedisClientAsync client, CancellationToken cancellationToken = default)
+        {
+            //This holds the next id for this topic; we use that to store message contents and signal to queue
+            //that there is a message to read.
+            var key = Topic + "." + NEXT_ID;
+            return await client.IncrementValueAsync(key, cancellationToken);
+        }
+    }
 }

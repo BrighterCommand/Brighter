@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -59,6 +60,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             }
 
             return producers;
+        }
+
+        /// <inheritdoc />
+        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        {
+           return Task.FromResult(Create()); 
         }
     }
 }

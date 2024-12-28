@@ -49,7 +49,23 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <remarks>
         ///  Sync over async used here, alright in the context of producer creation
         /// </remarks>
-        public Dictionary<RoutingKey,IAmAMessageProducer> Create() => BrighterSynchronizationHelper.Run(async () => await CreateAsync());
+        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+        {
+            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+            foreach (var p in _publications)
+            {
+                if (p.Topic is null)
+                    throw new ConfigurationException($"Missing topic on Publication"); 
+                
+                var producer = new SqsMessageProducer(_connection, p);
+                if (producer.ConfirmTopicExists())
+                    producers[p.Topic] = producer;
+                else
+                    throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
+            }
+
+            return producers; 
+        }
         
         public async Task<Dictionary<RoutingKey,IAmAMessageProducer>> CreateAsync()
         {

@@ -71,11 +71,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-
         public ValueTask DisposeAsync()
         {
             return new ValueTask(Task.CompletedTask);    
         }
+        
+        public bool ConfirmTopicExists(string? topic = null) => BrighterSynchronizationHelper.Run(async () => await ConfirmTopicExistsAsync(topic));
         
        public async Task<bool> ConfirmTopicExistsAsync(string? topic = null, CancellationToken cancellationToken = default)
        {

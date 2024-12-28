@@ -271,10 +271,9 @@ namespace Paramore.Brighter
             where T : class, ICall where TResponse : class, IResponse
         {
             //We assume that this only occurs over a blocking producer
-            var producer = _producerRegistry.LookupBy(outMessage.Header.Topic);
-            if (producer is IAmAMessageProducerSync producerSync)
+            var producer = _producerRegistry.LookupSyncBy(outMessage.Header.Topic);
                 Retry(
-                    () => producerSync.Send(outMessage),
+                    () => producer.Send(outMessage),
                     requestContext
                 );
         }

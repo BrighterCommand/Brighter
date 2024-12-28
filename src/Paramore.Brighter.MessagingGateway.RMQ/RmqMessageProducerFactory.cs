@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -48,6 +49,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
 
             return producers;
+        }
+
+        /// <inheritdoc /> 
+        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        {
+            return Task.FromResult(Create());
         }
     }
 }

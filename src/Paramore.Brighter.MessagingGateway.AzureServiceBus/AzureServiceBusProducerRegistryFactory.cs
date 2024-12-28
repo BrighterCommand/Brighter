@@ -25,6 +25,8 @@ THE SOFTWARE. */
 
 
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
@@ -74,5 +76,14 @@ public class AzureServiceBusProducerRegistryFactory : IAmAProducerRegistryFactor
         var producerFactory = new AzureServiceBusMessageProducerFactory(_clientProvider, _asbPublications, _bulkSendBatchSize);
 
         return new ProducerRegistry(producerFactory.Create());
+    }
+
+    /// <summary>
+    /// Creates message producers.
+    /// </summary>
+    /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
+    public Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
+    {
+        return Task.FromResult(Create());
     }
 }
