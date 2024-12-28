@@ -96,7 +96,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _channelFactory.DeleteTopicAsync().Wait();
             _channelFactory.DeleteQueueAsync().Wait();
             _messageProducer.Dispose();
-            GC.SuppressFinalize(this);
         }
 
         public async ValueTask DisposeAsync()
@@ -104,7 +103,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             await _channelFactory.DeleteTopicAsync();
             await _channelFactory.DeleteQueueAsync();
             await _messageProducer.DisposeAsync();
-            GC.SuppressFinalize(this);
         }
 
         private static DateTime RoundToSeconds(DateTime dateTime)

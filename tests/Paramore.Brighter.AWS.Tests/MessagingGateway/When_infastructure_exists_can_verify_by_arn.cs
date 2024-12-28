@@ -106,7 +106,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _channelFactory.DeleteQueueAsync().Wait();
             _consumer.Dispose();
             _messageProducer.Dispose();
-            GC.SuppressFinalize(this);
         }
 
         public async ValueTask DisposeAsync()
@@ -115,7 +114,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             await _channelFactory.DeleteQueueAsync();
             await ((IAmAMessageConsumerAsync)_consumer).DisposeAsync();
             await _messageProducer.DisposeAsync();
-            GC.SuppressFinalize(this);
         }
         
         private string FindTopicArn(AWSCredentials credentials, RegionEndpoint region, string topicName)

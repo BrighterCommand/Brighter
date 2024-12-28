@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -14,16 +16,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 [Trait("Category", "Kafka")]
 [Trait("Category", "Confluent")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class KafkaConfluentProducerSendTests : IDisposable
+public class KafkaConfluentProducerAssumeTestsAsync : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString(); 
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
-    private readonly IAmAMessageConsumerSync _consumer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaConfluentProducerSendTests(ITestOutputHelper output)
+    public KafkaConfluentProducerAssumeTestsAsync()
     {
         string SupplyCertificateLocation()
         {
@@ -37,12 +37,10 @@ public class KafkaConfluentProducerSendTests : IDisposable
         // You need to set those values as environment variables, which we then read, in order
         // to run these tests
 
-        const string groupId = "Kafka Message Producer Send Test";
         string bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER"); 
         string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
         string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
             
-        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
@@ -68,31 +66,11 @@ public class KafkaConfluentProducerSendTests : IDisposable
                     MakeChannels = OnMissingChannel.Create //This will not make the topic
                 }
             ]).Create(); 
-            
-        _consumer = new KafkaMessageConsumerFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "Kafka Producer Send Test",
-                    BootStrapServers = new[] {bootStrapServer},
-                    SecurityProtocol = SecurityProtocol.SaslSsl,
-                    SaslMechanisms = SaslMechanism.Plain,
-                    SaslUsername = userName,
-                    SaslPassword = password,
-                    SslCaLocation = SupplyCertificateLocation()
-                })
-            .Create(new KafkaSubscription<MyCommand>(
-                    channelName: new ChannelName(_queueName), 
-                    routingKey: new RoutingKey(_topic),
-                    groupId: groupId,
-                    messagePumpType: MessagePumpType.Reactor,
-                    makeChannels: OnMissingChannel.Create
-                )
-            );
   
     }
 
     [Fact]
-    public async Task When_posting_a_message_to_a_confluent_cluster()
+    public async Task When_a_consumer_declares_topics_on_a_confluent_cluster()
     {
         var routingKey = new RoutingKey(_topic);
             
@@ -101,41 +79,29 @@ public class KafkaConfluentProducerSendTests : IDisposable
             {
                 PartitionKey = _partitionKey
             },
-            new MessageBody($"test content [{_queueName}]"));
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
+            new MessageBody($"test content [{_queueName}]")
+        );
 
-        Message[] messages = new Message[0];
-        int maxTries = 0;
-        do
+        bool messagePublished = false;
+            
+            
+        var producer = _producerRegistry.LookupBy(routingKey);
+        var producerConfirm = producer as ISupportPublishConfirmation;
+        producerConfirm.OnMessagePublished += delegate(bool success, string id)
         {
-            try
-            {
-                maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
-                messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
-                _consumer.Acknowledge(messages[0]);
-                    
-                if (messages[0].Header.MessageType != MessageType.MT_NONE)
-                    break;
-                        
-            }
-            catch (ChannelFailureException cfx)
-            {
-                //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
-                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-            }
+            if (success) messagePublished = true;
+        };
+            
+        await ((IAmAMessageProducerAsync)producer).SendAsync(message);
 
-        } while (maxTries <= 3);
+        //Give this a chance to succeed - will fail
+        await Task.Delay(5000);
 
-        messages.Length.Should().Be(1);
-        messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        messages[0].Header.PartitionKey.Should().Be(_partitionKey);
-        messages[0].Body.Value.Should().Be(message.Body.Value);
+        messagePublished.Should().BeFalse();
     }
 
     public void Dispose()
     {
         _producerRegistry?.Dispose();
-        _consumer?.Dispose();
     }
 }

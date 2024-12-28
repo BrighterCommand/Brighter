@@ -68,7 +68,6 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         {
             DisposePool();
             RedisConfig.Reset();
-            GC.SuppressFinalize(this);
         }
     }
 }

@@ -89,14 +89,12 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //Clean up resources that we have created
             _channelFactory.DeleteTopicAsync().Wait();
             _channelFactory.DeleteQueueAsync().Wait();
-            GC.SuppressFinalize(this);
         }
 
         public async ValueTask DisposeAsync()
         {
             await _channelFactory.DeleteTopicAsync();
             await _channelFactory.DeleteQueueAsync();
-            GC.SuppressFinalize(this);
         }
    }
 }

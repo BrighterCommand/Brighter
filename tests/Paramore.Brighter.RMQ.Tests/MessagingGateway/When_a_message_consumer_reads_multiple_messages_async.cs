@@ -73,7 +73,6 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageConsumer.PurgeAsync().GetAwaiter().GetResult();
             ((IAmAMessageProducerSync)_messageProducer).Dispose();
             ((IAmAMessageProducerSync)_messageProducer).Dispose();
-            GC.SuppressFinalize(this);
         }
 
         public async ValueTask DisposeAsync()
@@ -81,7 +80,6 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             await _messageConsumer.PurgeAsync();
             await _messageProducer.DisposeAsync();
             await _messageConsumer.DisposeAsync();
-            GC.SuppressFinalize(this);
         }
     }
 }

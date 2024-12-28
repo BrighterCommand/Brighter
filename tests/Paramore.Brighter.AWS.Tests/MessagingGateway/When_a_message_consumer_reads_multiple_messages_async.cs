@@ -123,7 +123,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             await _channelFactory.DeleteTopicAsync();
             await _channelFactory.DeleteQueueAsync();
             await _messageProducer.DisposeAsync();
-            GC.SuppressFinalize(this);
         }
 
         public void Dispose()
@@ -131,7 +130,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _channelFactory.DeleteTopicAsync().GetAwaiter().GetResult();
             _channelFactory.DeleteQueueAsync().GetAwaiter().GetResult();
             _messageProducer.DisposeAsync().GetAwaiter().GetResult();
-            GC.SuppressFinalize(this);
         }
     }
 }

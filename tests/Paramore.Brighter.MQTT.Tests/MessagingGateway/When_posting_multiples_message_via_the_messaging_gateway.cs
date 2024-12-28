@@ -97,14 +97,12 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
         {
             ((IAmAMessageProducerSync)_messageProducer).Dispose();
             _messageConsumer.Dispose();
-            GC.SuppressFinalize(this);
         }
 
         public async ValueTask DisposeAsync()
         {
             await _messageProducer.DisposeAsync();
             await ((IAmAMessageConsumerAsync)_messageConsumer).DisposeAsync();
-            GC.SuppressFinalize(this);
         }
     }
 }

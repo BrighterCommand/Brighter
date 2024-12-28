@@ -119,14 +119,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             ((IAmAMessageConsumerSync)_messageConsumer).Dispose();
             ((IAmAMessageProducerSync)_messageProducer).Dispose();
-            GC.SuppressFinalize(this);
         }
 
         public async ValueTask DisposeAsync()
         {
             await _messageProducer.DisposeAsync();
             await _messageConsumer.DisposeAsync();
-            GC.SuppressFinalize(this);
         }
     }
 }

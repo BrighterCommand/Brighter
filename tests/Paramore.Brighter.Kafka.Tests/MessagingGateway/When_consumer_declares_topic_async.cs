@@ -10,23 +10,23 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class KafkaConsumerDeclareTests : IDisposable
+public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly ITestOutputHelper _output;
-    private readonly string _queueName = Guid.NewGuid().ToString(); 
+    private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
-    private readonly IAmAMessageConsumerSync _consumer;
+    private readonly IAmAMessageConsumerAsync _consumer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaConsumerDeclareTests (ITestOutputHelper output)
+    public KafkaConsumerDeclareTestsAsync(ITestOutputHelper output)
     {
         const string groupId = "Kafka Message Producer Send Test";
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "Kafka Producer Send Test", 
+                Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
             new[] {new KafkaPublication
@@ -34,37 +34,36 @@ public class KafkaConsumerDeclareTests : IDisposable
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
                 ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests, 
+                //These timeouts support running on a container using the same host as the tests,
                 //your production values ought to be lower
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
                 MakeChannels = OnMissingChannel.Create
-            }}).Create();
- 
+            }}).CreateAsync().Result;
+
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
                 })
-            .Create(new KafkaSubscription<MyCommand>(
-                    channelName: new ChannelName(_queueName), 
-                    routingKey: new RoutingKey(_topic),
-                    groupId: groupId,
-                    numOfPartitions: 1,
-                    replicationFactor: 1,
-                    messagePumpType: MessagePumpType.Reactor,
-                    makeChannels: OnMissingChannel.Create
-                )
-            );
-             
+            .CreateAsync(new KafkaSubscription<MyCommand>(
+                channelName: new ChannelName(_queueName),
+                routingKey: new RoutingKey(_topic),
+                groupId: groupId,
+                numOfPartitions: 1,
+                replicationFactor: 1,
+                messagePumpType: MessagePumpType.Proactor,
+                makeChannels: OnMissingChannel.Create
+            ));
+
     }
 
     [Fact]
     public async Task When_a_consumer_declares_topics()
     {
         var routingKey = new RoutingKey(_topic);
-            
+
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
             {
@@ -72,11 +71,11 @@ public class KafkaConsumerDeclareTests : IDisposable
             },
             new MessageBody($"test content [{_queueName}]")
         );
-            
-        //This should fail, if consumer can't create the topic as set to Assume
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
 
-        Message[] messages = new Message[0];
+        //This should fail, if consumer can't create the topic as set to Assume
+        await ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey)).SendAsync(message);
+
+        Message[] messages = [];
         int maxTries = 0;
         do
         {
@@ -84,12 +83,12 @@ public class KafkaConsumerDeclareTests : IDisposable
             {
                 maxTries++;
                 await Task.Delay(500); //Let topic propagate in the broker
-                messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
-                _consumer.Acknowledge(messages[0]);
-                    
+                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+                await _consumer.AcknowledgeAsync(messages[0]);
+
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     break;
-                        
+
             }
             catch (ChannelFailureException cfx)
             {
@@ -108,6 +107,13 @@ public class KafkaConsumerDeclareTests : IDisposable
     public void Dispose()
     {
         _producerRegistry?.Dispose();
-        _consumer?.Dispose();
+        ((IAmAMessageConsumerSync)_consumer).Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+            _producerRegistry.Dispose();
+            await _consumer.DisposeAsync();
+            
     }
 }
