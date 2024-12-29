@@ -4,11 +4,11 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.404.6" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.404.11" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.410.7" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.14" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.65" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.410.12" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.19" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.70" />
     <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.65" />
     <PackageVersion Include="Azure.Identity" Version="1.13.1" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
@@ -32,7 +32,7 @@
     <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="6.2.0" />
     <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="6.2.0" />
     <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="6.2.0" />
-    <PackageVersion Include="MessagePack" Version="3.1.0" />
+    <PackageVersion Include="MessagePack" Version="3.1.1" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="9.0.0" />
@@ -55,8 +55,8 @@
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
     <PackageVersion Include="NJsonSchema.NewtonsoftJson" Version="11.1.0" />
-    <PackageVersion Include="NUnit" Version="4.3.0" />
-    <PackageVersion Include="NUnit.Analyzers" Version="4.4.0">
+    <PackageVersion Include="NUnit" Version="4.3.2" />
+    <PackageVersion Include="NUnit.Analyzers" Version="4.5.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
