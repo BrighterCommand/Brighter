@@ -24,68 +24,68 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
-namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
+namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
+
+/// <summary>
+/// A Sync and Async Message Producer for Azure Service Bus.
+/// </summary>
+public class AzureServiceBusTopicMessageProducer : AzureServiceBusMessageProducer
 {
+    protected override ILogger Logger => s_logger;
+        
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusTopicMessageProducer>();
+        
+    private readonly IAdministrationClientWrapper _administrationClientWrapper;
+
     /// <summary>
-    /// A Sync and Async Message Producer for Azure Service Bus.
+    /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
     /// </summary>
-    public class AzureServiceBusTopicMessageProducer : AzureServiceBusMessageProducer
+    /// <param name="administrationClientWrapper">The administrative client.</param>
+    /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
+    /// <param name="publication">Configuration of a producer</param>
+    /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
+    public AzureServiceBusTopicMessageProducer(
+        IAdministrationClientWrapper administrationClientWrapper,
+        IServiceBusSenderProvider serviceBusSenderProvider,
+        AzureServiceBusPublication publication,
+        int bulkSendBatchSize = 10
+    ) : base(serviceBusSenderProvider, publication, bulkSendBatchSize)
     {
-        protected override ILogger Logger => s_logger;
-        
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusTopicMessageProducer>();
-        
-        private readonly IAdministrationClientWrapper _administrationClientWrapper;
+        _administrationClientWrapper = administrationClientWrapper;
+    }
 
-        /// <summary>
-        /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
-        /// </summary>
-        /// <param name="administrationClientWrapper">The administrative client.</param>
-        /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
-        /// <param name="publication">Configuration of a producer</param>
-        /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
-        public AzureServiceBusTopicMessageProducer(
-            IAdministrationClientWrapper administrationClientWrapper,
-            IServiceBusSenderProvider serviceBusSenderProvider,
-            AzureServiceBusPublication publication,
-            int bulkSendBatchSize = 10
-        ) : base(serviceBusSenderProvider, publication, bulkSendBatchSize)
+    protected override async Task EnsureChannelExistsAsync(string channelName)
+    {
+        if (TopicCreated || Publication.MakeChannels.Equals(OnMissingChannel.Assume))
+            return;
+
+        try
         {
-            _administrationClientWrapper = administrationClientWrapper;
-        }
-
-        protected override void EnsureChannelExists(string channelName)
-        {
-            if (TopicCreated || Publication.MakeChannels.Equals(OnMissingChannel.Assume))
-                return;
-
-            try
+            if (await _administrationClientWrapper.TopicExistsAsync(channelName))
             {
-                if (_administrationClientWrapper.TopicExists(channelName))
-                {
-                    TopicCreated = true;
-                    return;
-                }
-
-                if (Publication.MakeChannels.Equals(OnMissingChannel.Validate))
-                {
-                    throw new ChannelFailureException($"Topic {channelName} does not exist and missing channel mode set to Validate.");
-                }
-                
-                _administrationClientWrapper.CreateTopic(channelName);
                 TopicCreated = true;
+                return;
             }
-            catch (Exception e)
+
+            if (Publication.MakeChannels.Equals(OnMissingChannel.Validate))
             {
-                //The connection to Azure Service bus may have failed so we re-establish the connection.
-                _administrationClientWrapper.Reset();
-                s_logger.LogError(e, "Failing to check or create topic");
-                throw;
+                throw new ChannelFailureException($"Topic {channelName} does not exist and missing channel mode set to Validate.");
             }
+                
+            await _administrationClientWrapper.CreateTopicAsync(channelName);
+            TopicCreated = true;
+        }
+        catch (Exception e)
+        {
+            //The connection to Azure Service bus may have failed so we re-establish the connection.
+            _administrationClientWrapper.Reset();
+            s_logger.LogError(e, "Failing to check or create topic");
+            throw;
         }
     }
 }

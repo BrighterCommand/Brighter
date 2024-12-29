@@ -28,65 +28,66 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
+    private readonly RmqMessageProducer _messageProducer;
+    private readonly Message _message;
+    private bool _messageWasPublished = false;
+    private bool _messageWasNotPublished = true;
+
+    public RmqMessageProducerConfirmationsSendMessageTests ()
     {
-        private readonly RmqMessageProducer _messageProducer;
-        private readonly Message _message;
-        private bool _messageWasPublished = false;
-        private bool _messageWasNotPublished = true;
+        _message = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+                MessageType.MT_COMMAND), 
+            new MessageBody("test content"));
 
-        public RmqMessageProducerConfirmationsSendMessageTests ()
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                    MessageType.MT_COMMAND), 
-                new MessageBody("test content"));
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange")
+        };
 
-            var rmqConnection = new RmqMessagingGatewayConnection
+        _messageProducer = new RmqMessageProducer(rmqConnection);
+        _messageProducer.OnMessagePublished += (success, guid) =>
+        {
+            if (success)
             {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange")
-            };
-
-            _messageProducer = new RmqMessageProducer(rmqConnection);
-            _messageProducer.OnMessagePublished += (success, guid) =>
+                guid.Should().Be(_message.Id);
+                _messageWasPublished = true;
+                _messageWasNotPublished = false;
+            }
+            else
             {
-                if (success)
-                {
-                    guid.Should().Be(_message.Id);
-                    _messageWasPublished = true;
-                    _messageWasNotPublished = false;
-                }
-                else
-                {
-                    _messageWasNotPublished = true;
-                }
-            };
+                _messageWasNotPublished = true;
+            }
+        };
 
-            //we need a queue to avoid a discard
-            new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_message.Header.Topic))
-                .Create(TimeSpan.FromMilliseconds(3000));
-        }
+        //we need a queue to avoid a discard
+        new QueueFactory(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), new RoutingKeys(_message.Header.Topic))
+            .CreateAsync()
+            .GetAwaiter()
+            .GetResult();
+    }
 
-        [Fact]
-        public async Task When_confirming_posting_a_message_via_the_messaging_gateway()
-        {
-            _messageProducer.Send(_message);
+    [Fact]
+    public async Task When_confirming_posting_a_message_via_the_messaging_gateway()
+    {
+        _messageProducer.Send(_message);
 
-            await Task.Delay(500);
+        await Task.Delay(500);
 
-            //if this is true, then possible test failed because of timeout or RMQ issues
-            _messageWasNotPublished.Should().BeFalse();
-            //did we see the message - intent to test logic here
-            _messageWasPublished.Should().BeTrue();
-        }
+        //if this is true, then possible test failed because of timeout or RMQ issues
+        _messageWasNotPublished.Should().BeFalse();
+        //did we see the message - intent to test logic here
+        _messageWasPublished.Should().BeTrue();
+    }
 
-        public void Dispose()
-        {
-            _messageProducer.Dispose();
-        }
+    public void Dispose()
+    {
+        _messageProducer.Dispose();
     }
 }

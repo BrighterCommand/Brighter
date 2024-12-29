@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 
@@ -48,11 +49,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _producer.Produce(message.Header.Topic, kafkaMessage, deliveryReport);
         }
 
-        public async Task PublishMessageAsync(Message message, Action<DeliveryResult<string, byte[]>> deliveryReport)
+        public async Task PublishMessageAsync(Message message, Action<DeliveryResult<string, byte[]>> deliveryReport, CancellationToken cancellationToken = default)
         {
             var kafkaMessage = BuildMessage(message);
             
-            var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage);
+            var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage, cancellationToken);
             deliveryReport(deliveryResult);
         }
 

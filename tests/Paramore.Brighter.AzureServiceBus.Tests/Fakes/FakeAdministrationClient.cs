@@ -23,32 +23,34 @@ public class FakeAdministrationClient : IAdministrationClientWrapper
     public Exception ExistsException { get; set; } = null;
     public int CreateCount { get; private set; } = 0;
 
-    public bool TopicExists(string topicName)
+    public Task<bool> TopicExistsAsync(string topicName)
     {
         ExistCount++;
         if (ExistsException != null)
             throw ExistsException;
-        return Topics.Keys.Any(t => t.Equals(topicName, StringComparison.InvariantCultureIgnoreCase));
+        return Task.FromResult(Topics.Keys.Any(t => t.Equals(topicName, StringComparison.InvariantCultureIgnoreCase)));
     }
 
-    public bool QueueExists(string queueName)
+    public Task<bool> QueueExistsAsync(string queueName)
     {
         ExistCount++;
         if (ExistsException != null)
             throw ExistsException;
-        return Queues.Any(q => q.Equals(queueName, StringComparison.InvariantCultureIgnoreCase));
+        return Task.FromResult(Queues.Any(q => q.Equals(queueName, StringComparison.InvariantCultureIgnoreCase)));
     }
 
-    public void CreateQueue(string queueName, TimeSpan? autoDeleteOnIdle = null)
+    public Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null)
     {
         CreateCount++;
         Queues.Add(queueName);   
+        return Task.CompletedTask;
     }
 
-    public void CreateTopic(string topicName, TimeSpan? autoDeleteOnIdle = null)
+    public Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null)
     {
         CreateCount++;
         Topics.Add(topicName, []);
+        return Task.CompletedTask;
     }
 
     public Task DeleteQueueAsync(string queueName)
@@ -63,17 +65,18 @@ public class FakeAdministrationClient : IAdministrationClientWrapper
         return Task.CompletedTask;
     }
 
-    public bool SubscriptionExists(string topicName, string subscriptionName)
+    public Task<bool> SubscriptionExistsAsync(string topicName, string subscriptionName)
     {
         ExistCount++;
-        return Topics.ContainsKey(topicName) && Topics[topicName].Contains(subscriptionName);
+        return Task.FromResult(Topics.ContainsKey(topicName) && Topics[topicName].Contains(subscriptionName));
     }
 
-    public void CreateSubscription(string topicName, string subscriptionName,
+    public Task CreateSubscriptionAsync(string topicName, string subscriptionName,
         AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
     {
         if (CreateSubscriptionException != null) throw CreateSubscriptionException;
         Topics[topicName].Add(subscriptionName);
+        return Task.CompletedTask;
     }
 
     public void Reset()

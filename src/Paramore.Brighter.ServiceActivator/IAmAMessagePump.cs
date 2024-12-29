@@ -32,25 +32,23 @@ namespace Paramore.Brighter.ServiceActivator
     /// The message pump reads <see cref="Message"/>s from a channel, translates them into a <see cref="Request"/>s and asks <see cref="CommandProcessor"/> to
     /// dispatch them to an <see cref="IHandleRequests"/>. It is classical message loop, and so should run until it receives an <see cref="MessageType.MT_QUIT"/>
     /// message. Clients of the message pump need to add a <see cref="Message"/> with of type <see cref="MessageType.MT_QUIT"/> to the <see cref="Channel"/> to abort
-    /// a loop once started. The <see cref="IAmAChannel"/> interface provides a <see cref="IAmAChannel.Stop"/> method for this.
+    /// a loop once started. The <see cref="IAmAChannelSync"/> interface provides a <see cref="IAmAChannelSync.Stop"/> method for this.
     /// </summary>
     public interface IAmAMessagePump
     {
         /// <summary>
-        /// Runs the message loop
+        /// The <see cref="MessagePumpType"/> of this message pump; indicates Reactor or Proactor
         /// </summary>
+        MessagePumpType MessagePumpType { get; }
+
+        /// <summary>
+        /// Runs the message pump, performing the following:
+        /// - Gets a message from a queue/stream
+        /// - Translates the message to the local type system
+        /// - Dispatches the message to waiting handlers
+        /// - Handles any exceptions that occur during the dispatch and tries to keep the pump alive  
+        /// </summary>
+        /// <exception cref="Exception"></exception>
         void Run();
-
-        /// <summary>
-        /// Gets or sets the timeout that the pump waits for a message on the queue before it yields control for an interval, prior to resuming.
-        /// </summary>
-        /// <value>The timeout in milliseconds.</value>
-        TimeSpan TimeOut { get; set; }
-
-        /// <summary>
-        /// Gets or sets the channel to read messages from.
-        /// </summary>
-        /// <value>The channel.</value>
-        IAmAChannel Channel { get; set; }
-   }
+    }
 }

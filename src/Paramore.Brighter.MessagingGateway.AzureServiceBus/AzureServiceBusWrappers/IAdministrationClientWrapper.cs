@@ -15,28 +15,28 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <returns>True if the Topic exists.</returns>
-        bool TopicExists(string topicName);
+        Task<bool> TopicExistsAsync(string topicName);
         
         /// <summary>
         /// Check if a Queue exists
         /// </summary>
         /// <param name="queueName">The name of the Queue.</param>
         /// <returns>True if the Queue exists.</returns>
-        bool QueueExists(string queueName);
+        Task<bool> QueueExistsAsync(string queueName);
 
         /// <summary>
         /// Create a Queue
         /// </summary>
         /// <param name="queueName">The name of the Queue</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
-        void CreateQueue(string queueName, TimeSpan? autoDeleteOnIdle = null);
+        Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null);
 
         /// <summary>
         /// Create a Topic
         /// </summary>
         /// <param name="topicName">The name of the Topic</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
-        void CreateTopic(string topicName, TimeSpan? autoDeleteOnIdle = null);
+        Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null);
 
         /// <summary>
         /// Delete a Queue
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription</param>
         /// <returns>True if the subscription exists on the specified Topic.</returns>
-        bool SubscriptionExists(string topicName, string subscriptionName);
+        Task<bool> SubscriptionExistsAsync(string topicName, string subscriptionName);
 
         /// <summary>
         /// Create a Subscription.
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
-        void CreateSubscription(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration);
+        Task CreateSubscriptionAsync(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration);
 
         /// <summary>
         /// Reset the Connection.
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         void Reset();
 
         /// <summary>
-        /// Get a Subscription.
+        /// GetAsync a Subscription.
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>

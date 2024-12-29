@@ -32,12 +32,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// The name of  the queue to send rejects messages to
         /// </summary>
-        public ChannelName DeadLetterChannelName { get; }
+        public ChannelName? DeadLetterChannelName { get; }
 
         /// <summary>
         /// The routing key for dead letter messages
         /// </summary>
-        public RoutingKey DeadLetterRoutingKey { get; }
+        public RoutingKey? DeadLetterRoutingKey { get; }
         
         /// <summary>
         /// Is the channel mirrored across node in the cluster
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="requeueDelay">The delay to the delivery of a requeue message; defaults to 0</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isDurable">The durability of the queue definition in the broker.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
         /// <param name="deadLetterChannelName">The dead letter channel </param>
@@ -90,9 +90,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="maxQueueLength">The maximum number of messages in a queue before we reject messages; defaults to no limit</param>
         public RmqSubscription(
             Type dataType, 
-            SubscriptionName name = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null, 
+            SubscriptionName? name = null, 
+            ChannelName? channelName = null, 
+            RoutingKey? routingKey = null, 
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             TimeSpan? timeOut = null, 
@@ -100,17 +100,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
             bool isDurable = false, 
-            bool runAsync = false, 
-            IAmAChannelFactory channelFactory = null, 
+            MessagePumpType messagePumpType = MessagePumpType.Proactor, 
+            IAmAChannelFactory? channelFactory = null, 
             bool highAvailability = false, 
-            ChannelName deadLetterChannelName = null, 
-            RoutingKey deadLetterRoutingKey = null, 
+            ChannelName? deadLetterChannelName = null, 
+            RoutingKey? deadLetterRoutingKey = null, 
             TimeSpan? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000,
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null,
             int? maxQueueLength = null) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
             DeadLetterChannelName = deadLetterChannelName;
@@ -136,7 +136,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="requeueDelay">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isDurable">The durability of the queue definition in the broker.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
         /// <param name="deadLetterChannelName">The dead letter channel </param>
@@ -145,9 +145,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
-        public RmqSubscription(SubscriptionName name = null,
-            ChannelName channelName = null,
-            RoutingKey routingKey = null,
+        public RmqSubscription(
+            SubscriptionName? name = null,
+            ChannelName? channelName = null,
+            RoutingKey? routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
             TimeSpan? timeOut = null,
@@ -155,17 +156,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
             bool isDurable = false,
-            bool runAsync = false,
-            IAmAChannelFactory channelFactory = null,
+            MessagePumpType messagePumpType = MessagePumpType.Proactor,
+            IAmAChannelFactory? channelFactory = null,
             bool highAvailability = false,
-            ChannelName deadLetterChannelName = null, 
-            RoutingKey deadLetterRoutingKey = null, 
+            ChannelName? deadLetterChannelName = null, 
+            RoutingKey? deadLetterRoutingKey = null, 
             TimeSpan? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000)
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay,
-                unacceptableMessageLimit, isDurable, runAsync, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels, emptyChannelDelay, channelFailureDelay)
+                unacceptableMessageLimit, isDurable, messagePumpType, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels, emptyChannelDelay, channelFailureDelay)
         { }
 
     }

@@ -30,6 +30,7 @@ using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -48,6 +49,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         protected short ReplicationFactor;
         protected TimeSpan TopicFindTimeout;
 
+        /// <summary>
+        /// Ensure that the topic exists,  behaviour based on the MakeChannels flag of the publication
+        /// Sync over async, but alright as we in topic creation
+        /// </summary>
+        /// <exception cref="ChannelFailureException"></exception>
         protected void EnsureTopic()
         {
             if (MakeChannels == OnMissingChannel.Assume)
@@ -61,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     throw new ChannelFailureException($"Topic: {Topic.Value} does not exist");
 
                 if (!exists && MakeChannels == OnMissingChannel.Create)
-                    MakeTopic().GetAwaiter().GetResult();
+                    BrighterSynchronizationHelper.Run(async () => await MakeTopic());
             }
         }
 

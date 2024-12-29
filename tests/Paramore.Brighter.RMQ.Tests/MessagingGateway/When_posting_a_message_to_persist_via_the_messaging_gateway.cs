@@ -4,55 +4,55 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageProducerSendPersistentMessageTests : IDisposable
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageProducerSendPersistentMessageTests : IDisposable
+    private IAmAMessageProducerSync _messageProducer;
+    private IAmAMessageConsumerSync _messageConsumer;
+    private Message _message;
+
+    public RmqMessageProducerSendPersistentMessageTests()
     {
-        private IAmAMessageProducerSync _messageProducer;
-        private IAmAMessageConsumer _messageConsumer;
-        private Message _message;
+        _message = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+                MessageType.MT_COMMAND),
+            new MessageBody("test content"));
 
-        public RmqMessageProducerSendPersistentMessageTests()
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                    MessageType.MT_COMMAND),
-                new MessageBody("test content"));
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange"),
+            PersistMessages = true
+        };
 
-            var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
-                PersistMessages = true
-            };
-
-            _messageProducer = new RmqMessageProducer(rmqConnection);
-            var queueName = new ChannelName(Guid.NewGuid().ToString());
+        _messageProducer = new RmqMessageProducer(rmqConnection);
+        var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false);
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, _message.Header.Topic, false);
 
-            new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))
-                .Create(TimeSpan.FromMilliseconds(3000));
-        }
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys( _message.Header.Topic))
+            .CreateAsync()
+            .GetAwaiter()
+            .GetResult();
+    }
 
-        [Fact]
-        public void When_posting_a_message_to_persist_via_the_messaging_gateway()
-        {
-            // arrange
-            _messageProducer.Send(_message);
+    [Fact]
+    public void When_posting_a_message_to_persist_via_the_messaging_gateway()
+    {
+        // arrange
+        _messageProducer.Send(_message);
 
-            // act
-            var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).First();
+        // act
+        var result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).First();
 
-            // assert
-            result.Persist.Should().Be(true);
-        }
+        // assert
+        result.Persist.Should().Be(true);
+    }
 
-        public void Dispose()
-        {
-            _messageProducer.Dispose();
-        }
+    public void Dispose()
+    {
+        _messageProducer.Dispose();
     }
 }
-

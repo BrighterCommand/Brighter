@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
@@ -52,7 +53,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
         private bool _hasFatalProducerError;
-        private bool _disposedValue;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
@@ -118,6 +118,28 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TopicFindTimeout = TimeSpan.FromMilliseconds(publication.TopicFindTimeoutMs);
             _headerBuilder = publication.MessageHeaderBuilder;
         }
+        
+        /// <summary>
+        /// Dispose of the producer 
+        /// </summary>
+        /// <param name="disposing">Are we disposing or being called by the GC</param>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+    
+        
+        /// <summary>
+        /// Dispose of the producer 
+        /// </summary>
+        /// <param name="disposing">Are we disposing or being called by the GC</param>
+        public ValueTask DisposeAsync()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+            return new ValueTask(Task.CompletedTask);
+        }
 
         /// <summary>
         /// There are a **lot** of properties that we can set to configure Kafka. We expose only those of high importance
@@ -152,8 +174,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             EnsureTopic();
         }
- 
-
+        
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <exception cref="ArgumentNullException">The message was missing</exception>
+        /// <exception cref="ChannelFailureException">The Kafka client  has entered an unrecoverable state</exception>
         public void Send(Message message)
         {
             if (message == null)
@@ -214,14 +241,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
         
-        public void SendWithDelay(Message message, TimeSpan? delay = null)
-        {
-            //TODO: No delay support implemented
-            Send(message);
-        }
-        
-        
-        public async Task SendAsync(Message message)
+ 
+
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <remarks>
+        ///  Usage of the Kafka async producer is much slower than the sync producer. This is because the async producer
+        /// produces a single message and waits for the result before producing the next message. By contrast the synchronous
+        /// producer queues work and uses a dedicated thread to dispatch
+        /// </remarks>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Allows cancellation of the in-flight send operation</param>
+        public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
@@ -237,7 +269,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     message.Body.Value
                 );
 
-                await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers) );
+                await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
 
             }
             catch (ProduceException<string, string> pe)
@@ -270,34 +302,42 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                
             }
         }
-
-        protected virtual void Dispose(bool disposing)
+        
+        /// <summary>
+        /// Sends the message with the given delay
+        /// </summary>
+        /// <remarks>
+        /// No delay support implemented
+        /// </remarks>
+        /// <param name="message">The message to send</param>
+        /// <param name="delay">The delay to use</param>
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            if (!_disposedValue)
+            //TODO: No delay support implemented
+            Send(message);
+        }
+
+        /// <summary>
+        /// Sends the message with the given delay
+        /// </summary>
+        /// <remarks>
+        /// No delay support implemented
+        /// </remarks>
+        /// <param name="message">The message to send</param>
+        /// <param name="delay">The delay to use</param>
+        /// <param name="cancellationToken">Cancels the send operation</param>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        {
+            //TODO: No delay support implemented
+            await SendAsync(message);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (disposing)
             {
-                if (disposing)
-                {
-                    if (_producer != null)
-                    {
-                        _producer.Flush(TimeSpan.FromMilliseconds(_producerConfig.MessageTimeoutMs.Value + 5000)); 
-                        _producer.Dispose();
-                        _producer = null;
-                    }
-                }
-
-                _disposedValue = true;
+                _producer?.Dispose();
             }
-        }
-
-        ~KafkaMessageProducer()
-        {
-           Dispose(false);
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
         }
         
         private void PublishResults(PersistenceStatus status, Headers headers)

@@ -32,15 +32,15 @@ namespace Paramore.Brighter.Redis.Tests
     [DebuggerStepThrough]
     public static class Catch
     {
-        public static Exception Exception(Action action)
+        public static Exception? Exception(Action action)
         {
-            Exception exception = null;
+            Exception? exception = null;
 
             try
             {
                 action();
             }
-            catch (Exception e)
+            catch (Exception? e)
             {
                 exception = e;
             }

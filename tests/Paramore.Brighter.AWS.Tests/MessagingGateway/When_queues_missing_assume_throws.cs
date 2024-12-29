@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SQS.Model;
@@ -10,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")] 
-    public class AWSAssumeQueuesTests  : IDisposable
+    public class AWSAssumeQueuesTests  : IDisposable, IAsyncDisposable
     {
         private readonly ChannelFactory _channelFactory;
         private readonly SqsMessageConsumer _consumer;
@@ -25,6 +26,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
+                messagePumpType: MessagePumpType.Reactor,
                 makeChannels: OnMissingChannel.Assume
             );
             
@@ -42,10 +44,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
            producer.ConfirmTopicExistsAsync(topicName).Wait(); 
             
             _channelFactory = new ChannelFactory(awsConnection);
-            var channel = _channelFactory.CreateChannel(subscription);
+            var channel = _channelFactory.CreateSyncChannel(subscription);
             
             //We need to create the topic at least, to check the queues
-            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
+            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
         }
 
         [Fact]
@@ -57,9 +59,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
  
         public void Dispose()
         {
-           _channelFactory.DeleteTopic(); 
+           _channelFactory.DeleteTopicAsync().Wait(); 
         }
         
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync(); 
+        }
     
    }
 }

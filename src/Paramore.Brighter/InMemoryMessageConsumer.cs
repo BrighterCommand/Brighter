@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter;
 
@@ -35,7 +36,7 @@ namespace Paramore.Brighter;
 /// within the timeout. This is controlled by a background thread that checks the messages in the locked list
 /// and requeues them if they have been locked for longer than the timeout.
 /// </summary>
-public class InMemoryMessageConsumer : IAmAMessageConsumer
+public class InMemoryMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
     private readonly ConcurrentDictionary<string, LockedMessage> _lockedMessages = new();
     private readonly RoutingKey _topic;
@@ -73,13 +74,24 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
 
     }
 
-   /// <summary>
+    /// <summary>
     /// Acknowledges the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
     public void Acknowledge(Message message)
     {
         _lockedMessages.TryRemove(message.Id, out _);
+    }
+
+    /// <summary>
+    /// Acknowledges the specified message.
+    /// We use Task.Run here to emulate async
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancel the acknowledgement</param>
+    public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        await Task.Run(() => Acknowledge(message), cancellationToken);
     }
 
     /// <summary>
@@ -92,6 +104,17 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     }
 
     /// <summary>
+    /// Rejects the specified message.
+    /// We use Task.Run here to emulate async
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancel the rejection</param>
+    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
+    {
+        await Task.Run(() => Reject(message), cancellationToken);
+    }
+
+    /// <summary>
     /// Purges the specified queue name.
     /// </summary>
     public void Purge()
@@ -100,6 +123,16 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
         do {
             message = _bus.Dequeue(_topic);
         } while (message.Header.MessageType != MessageType.MT_NONE);
+    }
+    
+    /// <summary>
+    /// Purges the specified queue name.
+    /// We use Task.Run here to emulate async
+    /// </summary>
+    /// <param name="cancellationToken">Cancel the purge</param>
+    public async Task PurgeAsync(CancellationToken cancellationToken = default)
+    {
+        await Task.Run(() => Purge(), cancellationToken);
     }
 
     /// <summary>
@@ -126,9 +159,23 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     }
 
     /// <summary>
+    /// Receives the specified queue name.
+    /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
+    /// Used by a <see cref="Paramore.Brighter.Channel"/> to provide access to a third-party message queue.
+    /// We use Task.Run here to emulate async 
+    /// </summary>
+    /// <param name="timeOut">The <see cref="TimeSpan"/> timeout</param>
+    /// <param name="cancellationToken">Cancel in the receive operation</param>
+    /// <returns>An array of Messages from middleware</returns>
+    public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
+    {
+        return await Task.Run(() => Receive(timeOut), cancellationToken);
+    }
+
+    /// <summary>
     /// Requeues the specified message.
     /// </summary>
-    /// <param name="message"></param>
+    /// <param name="message">The message to requeue</param>
     /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
     public bool Requeue(Message message, TimeSpan? timeOut = null)
@@ -148,10 +195,41 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
 
         return true;
     }
+    
+    /// <summary>
+    /// Requeues the specified message.
+    /// We use Task.Run here to emulate async 
+    /// </summary>
+    /// <param name="message">The message to requeue</param>
+    /// <param name="timeOut">Time span to delay delivery of the message. Defaults to 0ms</param>
+    /// <returns>True if the message should be acked, false otherwise</returns>
+    public Task<bool> RequeueAsync(Message message, TimeSpan? timeOut = null, CancellationToken cancellationToken = default)
+    {   
+        var tcs = new TaskCompletionSource<bool>();
+        
+        if (cancellationToken.IsCancellationRequested)
+        {
+            tcs.SetCanceled();
+            return tcs.Task;
+        }
+        
+        Requeue(message, timeOut); 
+        tcs.SetResult(true);
+        return tcs.Task;
+    }
 
+    /// <inheritdoc cref="IDisposable"/>
     public void Dispose()
     {
-        _lockTimer.Dispose();
+        DisposeCore();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <inheritdoc cref="IAsyncDisposable"/> 
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsyncCore().ConfigureAwait(false);
+        GC.SuppressFinalize(this); 
     }
     
     private void CheckLockedMessages()
@@ -164,6 +242,18 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
                 RequeueNoDelay(lockedMessage.Value.Message);
             }
         }
+    }
+
+    protected virtual void DisposeCore()
+    {
+        _lockTimer.Dispose();
+        _requeueTimer?.Dispose();
+    }
+    
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        await _lockTimer.DisposeAsync().ConfigureAwait(false);
+        if (_requeueTimer != null) await _requeueTimer.DisposeAsync().ConfigureAwait(false);
     }
     
     private bool RequeueNoDelay(Message message)
@@ -182,4 +272,6 @@ public class InMemoryMessageConsumer : IAmAMessageConsumer
     }
 
     private record LockedMessage(Message Message, DateTimeOffset LockedAt);
+
+
 }

@@ -1,31 +1,50 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.DynamoDb
 {
-    public class DynamoDbUnitOfWork : IAmADynamoDbTransactionProvider, IDisposable
+    public class DynamoDbUnitOfWork(IAmazonDynamoDB dynamoDb) : IAmADynamoDbTransactionProvider, IDisposable
     {
         private TransactWriteItemsRequest _tx;
         
         /// <summary>
         /// The AWS client for dynamoDb
         /// </summary>
-        public IAmazonDynamoDB DynamoDb { get; }
-        
+        public IAmazonDynamoDB DynamoDb { get; } = dynamoDb;
+
         /// <summary>
         /// The response for the last transaction commit
         /// </summary>
         public TransactWriteItemsResponse LastResponse { get; set; }
-
-        public DynamoDbUnitOfWork(IAmazonDynamoDB dynamoDb)
-        {
-            DynamoDb = dynamoDb;
-        }
 
         public void Close()
         {
@@ -34,15 +53,9 @@ namespace Paramore.Brighter.DynamoDb
 
         /// <summary>
         /// Commit a transaction, performing all associated write actions
+        /// Will block thread and use second thread for callback
         /// </summary>
-        public void Commit()
-        {
-            if (!HasOpenTransaction)
-                throw new InvalidOperationException("No transaction to commit");
-            
-            LastResponse = DynamoDb.TransactWriteItemsAsync(_tx).GetAwaiter().GetResult();
-
-        }
+        public void Commit() => BrighterSynchronizationHelper.Run(() => DynamoDb.TransactWriteItemsAsync(_tx));
         
         /// <summary>
         /// Commit a transaction, performing all associated write actions
