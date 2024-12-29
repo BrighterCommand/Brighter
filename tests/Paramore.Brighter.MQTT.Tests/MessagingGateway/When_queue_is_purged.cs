@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
     {
         private const string MqttHost = "localhost";
         private const string ClientId = "BrighterIntegrationTests-Purge";
-        private readonly IAmAMessageProducerAsync _messageProducer;
+        private readonly IAmAMessageProducerSync _messageProducer;
         private readonly IAmAMessageConsumerSync _messageConsumer;
         private readonly string _topicPrefix = "BrighterIntegrationTests/PurgeTests";
         private readonly Message _noopMessage = new();
@@ -72,13 +72,12 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
         {
             for (int i = 0; i < 5; i++)
             {
-                Message _message = new(
+                Message message = new(
                     new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND),
                     new MessageBody($"test message")
                 );
 
-                Task task = _messageProducer.SendAsync(_message);
-                task.Wait();
+                _messageProducer.Send(message);
             }
 
             Thread.Sleep(100);
@@ -95,14 +94,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
 
         public void Dispose()
         {
-            ((IAmAMessageProducerSync)_messageProducer).Dispose();
+            _messageProducer.Dispose();
             _messageConsumer.Dispose();
         }
 
         public async ValueTask DisposeAsync()
         {
-            await _messageProducer.DisposeAsync();
-            await ((IAmAMessageProducerAsync)_messageConsumer).DisposeAsync();
+            await ((IAmAMessageProducerAsync)_messageProducer).DisposeAsync();
+            await ((IAmAMessageConsumerAsync)_messageConsumer).DisposeAsync();
         }
     }
 }
