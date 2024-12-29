@@ -29,86 +29,85 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
+    private readonly IAmAMessageProducerAsync _messageProducer;
+    private readonly IAmAMessageConsumerAsync _messageConsumer;
+    private readonly Message _message;
+    private readonly IAmAMessageConsumerSync _deadLetterConsumer;
+
+    public RmqMessageProducerDLQTestsAsync()
     {
-        private readonly IAmAMessageProducerAsync _messageProducer;
-        private readonly IAmAMessageConsumerAsync _messageConsumer;
-        private readonly Message _message;
-        private readonly IAmAMessageConsumerSync _deadLetterConsumer;
+        var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            
+        _message = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
+                MessageType.MT_COMMAND), 
+            new MessageBody("test content"));
 
-        public RmqMessageProducerDLQTestsAsync()
+        var queueName = new ChannelName(Guid.NewGuid().ToString());
+        var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
+        var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
+            
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange"),
+            DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
+        };
             
-            _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                    MessageType.MT_COMMAND), 
-                new MessageBody("test content"));
+        _messageProducer = new RmqMessageProducer(rmqConnection);
 
-            var queueName = new ChannelName(Guid.NewGuid().ToString());
-            var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
-            var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
+        _messageConsumer = new RmqMessageConsumer(
+            connection: rmqConnection, 
+            queueName: queueName, 
+            routingKey: routingKey, 
+            isDurable: false, 
+            highAvailability: false,
+            deadLetterQueueName: deadLetterQueueName,
+            deadLetterRoutingKey: deadLetterRoutingKey,
+            makeChannels:OnMissingChannel.Create
+        );
+
+        _deadLetterConsumer = new RmqMessageConsumer(
+            connection: rmqConnection,
+            queueName: deadLetterQueueName,
+            routingKey: deadLetterRoutingKey,
+            isDurable:false,
+            makeChannels:OnMissingChannel.Assume
+        );
+    }
+
+    [Fact]
+    public async Task When_rejecting_a_message_to_a_dead_letter_queue()
+    {
+        //create the infrastructure
+        await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(0)); 
             
-             var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
-                DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
-            };
+        await _messageProducer.SendAsync(_message);
+
+        var message = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First(); 
             
-            _messageProducer = new RmqMessageProducer(rmqConnection);
+        //This will push onto the DLQ
+        await _messageConsumer.RejectAsync(message);
 
-            _messageConsumer = new RmqMessageConsumer(
-                connection: rmqConnection, 
-                queueName: queueName, 
-                routingKey: routingKey, 
-                isDurable: false, 
-                highAvailability: false,
-                deadLetterQueueName: deadLetterQueueName,
-                deadLetterRoutingKey: deadLetterRoutingKey,
-                makeChannels:OnMissingChannel.Create
-                );
-
-            _deadLetterConsumer = new RmqMessageConsumer(
-                connection: rmqConnection,
-                queueName: deadLetterQueueName,
-                routingKey: deadLetterRoutingKey,
-                isDurable:false,
-                makeChannels:OnMissingChannel.Assume
-                );
-        }
-
-        [Fact]
-        public async Task When_rejecting_a_message_to_a_dead_letter_queue()
-        {
-            //create the infrastructure
-            await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(0)); 
+        var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             
-            await _messageProducer.SendAsync(_message);
+        //assert this is our message
+        dlqMessage.Id.Should().Be(_message.Id);
+        message.Body.Value.Should().Be(dlqMessage.Body.Value);
+    }
 
-            var message = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First(); 
-            
-            //This will push onto the DLQ
-            await _messageConsumer.RejectAsync(message);
+    public void Dispose()
+    {
+        ((IAmAMessageProducerSync)_messageProducer).Dispose();
+    }
 
-            var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
-            
-            //assert this is our message
-            dlqMessage.Id.Should().Be(_message.Id);
-            message.Body.Value.Should().Be(dlqMessage.Body.Value);
-        }
-
-        public void Dispose()
-        {
-            ((IAmAMessageProducerSync)_messageProducer).Dispose();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await _messageProducer.DisposeAsync();
-        }
+    public async ValueTask DisposeAsync()
+    {
+        await _messageProducer.DisposeAsync();
     }
 }

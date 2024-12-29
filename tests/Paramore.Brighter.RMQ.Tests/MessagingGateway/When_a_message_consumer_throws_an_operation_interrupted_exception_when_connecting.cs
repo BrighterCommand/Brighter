@@ -30,64 +30,63 @@ using RabbitMQ.Client.Exceptions;
 using Xunit;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageConsumerOperationInterruptedTests : IDisposable
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageConsumerOperationInterruptedTests : IDisposable
+    private readonly IAmAMessageProducerSync _sender;
+    private readonly IAmAMessageConsumerSync _receiver;
+    private readonly IAmAMessageConsumerSync _badReceiver;
+    private readonly Message _sentMessage;
+    private Exception _firstException;
+
+    public RmqMessageConsumerOperationInterruptedTests()
     {
-        private readonly IAmAMessageProducerSync _sender;
-        private readonly IAmAMessageConsumerSync _receiver;
-        private readonly IAmAMessageConsumerSync _badReceiver;
-        private readonly Message _sentMessage;
-        private Exception _firstException;
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), 
+            new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
-        public RmqMessageConsumerOperationInterruptedTests()
+        messageHeader.UpdateHandledCount();
+        _sentMessage = new Message(messageHeader, new MessageBody("test content"));
+
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), 
-                new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange")
+        };
 
-            messageHeader.UpdateHandledCount();
-            _sentMessage = new Message(messageHeader, new MessageBody("test content"));
+        _sender = new RmqMessageProducer(rmqConnection);
+        _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), _sentMessage.Header.Topic, false, false);
+        _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), _sentMessage.Header.Topic, false, 1, false);
 
-            var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange")
-            };
+        _sender.Send(_sentMessage);
+    }
 
-            _sender = new RmqMessageProducer(rmqConnection);
-            _receiver = new RmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), _sentMessage.Header.Topic, false, false);
-            _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, new ChannelName(Guid.NewGuid().ToString()), _sentMessage.Header.Topic, false, 1, false);
-
-            _sender.Send(_sentMessage);
-        }
-
-        [Fact]
-        public void  When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting()
-        {
-            //_should_return_a_channel_failure_exception
-            _firstException.Should().BeOfType<ChannelFailureException>();
-            //_should_return_an_explaining_inner_exception
-            _firstException.InnerException.Should().BeOfType<OperationInterruptedException>();
+    [Fact]
+    public void  When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting()
+    {
+        //_should_return_a_channel_failure_exception
+        _firstException.Should().BeOfType<ChannelFailureException>();
+        //_should_return_an_explaining_inner_exception
+        _firstException.InnerException.Should().BeOfType<OperationInterruptedException>();
             
-            bool exceptionHappened = false;
-            try
-            {
-                _badReceiver.Receive(TimeSpan.FromMilliseconds(2000));
-            }
-            catch (ChannelFailureException cfe)
-            {
-                exceptionHappened = true;
-                cfe.InnerException.Should().BeOfType<OperationInterruptedException>();
-            }
-            
-            exceptionHappened.Should().BeTrue();
-        }
-
-        public void Dispose()
+        bool exceptionHappened = false;
+        try
         {
-            _sender.Dispose();
-            _receiver.Dispose();
+            _badReceiver.Receive(TimeSpan.FromMilliseconds(2000));
         }
+        catch (ChannelFailureException cfe)
+        {
+            exceptionHappened = true;
+            cfe.InnerException.Should().BeOfType<OperationInterruptedException>();
+        }
+            
+        exceptionHappened.Should().BeTrue();
+    }
+
+    public void Dispose()
+    {
+        _sender.Dispose();
+        _receiver.Dispose();
     }
 }

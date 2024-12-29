@@ -28,77 +28,76 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageProducerQueueLengthTests : IDisposable
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageProducerQueueLengthTests : IDisposable
+    private readonly IAmAMessageProducerSync _messageProducer;
+    private readonly IAmAMessageConsumerSync _messageConsumer;
+    private readonly Message _messageOne;
+    private readonly Message _messageTwo;
+    private readonly ChannelName _queueName = new(Guid.NewGuid().ToString());
+
+    public RmqMessageProducerQueueLengthTests()
     {
-        private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumerSync _messageConsumer;
-        private readonly Message _messageOne;
-        private readonly Message _messageTwo;
-        private readonly ChannelName _queueName = new(Guid.NewGuid().ToString());
-
-        public RmqMessageProducerQueueLengthTests()
-        {
-            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+        var routingKey = new RoutingKey(Guid.NewGuid().ToString());
             
-            _messageOne = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                    MessageType.MT_COMMAND), 
-                new MessageBody("test content"));
+        _messageOne = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
+                MessageType.MT_COMMAND), 
+            new MessageBody("test content"));
            
-           _messageTwo = new Message(
-               new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                   MessageType.MT_COMMAND), 
-               new MessageBody("test content"));
+        _messageTwo = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
+                MessageType.MT_COMMAND), 
+            new MessageBody("test content"));
 
-             var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
-            };
-            
-            _messageProducer = new RmqMessageProducer(rmqConnection);
-
-            _messageConsumer = new RmqMessageConsumer(
-                connection: rmqConnection, 
-                queueName: _queueName, 
-                routingKey: routingKey, 
-                isDurable: false, 
-                highAvailability: false,
-                batchSize: 5,
-                maxQueueLength: 1,
-                makeChannels:OnMissingChannel.Create
-                );
-        }
-
-        [Fact]
-        public void When_rejecting_a_message_due_to_queue_length()
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            //create the infrastructure
-            _messageConsumer.Receive(TimeSpan.Zero); 
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange"),
+        };
             
-            _messageProducer.Send(_messageOne);
-            _messageProducer.Send(_messageTwo);
+        _messageProducer = new RmqMessageProducer(rmqConnection);
 
-            //check messages are flowing - absence needs to be expiry
-            var messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
-            var message = messages.First();
-            _messageConsumer.Acknowledge(message);
+        _messageConsumer = new RmqMessageConsumer(
+            connection: rmqConnection, 
+            queueName: _queueName, 
+            routingKey: routingKey, 
+            isDurable: false, 
+            highAvailability: false,
+            batchSize: 5,
+            maxQueueLength: 1,
+            makeChannels:OnMissingChannel.Create
+        );
+    }
+
+    [Fact]
+    public void When_rejecting_a_message_due_to_queue_length()
+    {
+        //create the infrastructure
+        _messageConsumer.Receive(TimeSpan.Zero); 
             
-            //should be the first message
+        _messageProducer.Send(_messageOne);
+        _messageProducer.Send(_messageTwo);
+
+        //check messages are flowing - absence needs to be expiry
+        var messages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
+        var message = messages.First();
+        _messageConsumer.Acknowledge(message);
             
-            //try to grab the next message
-            var nextMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
-            message = nextMessages.First();
-            message.Header.MessageType.Should().Be(MessageType.MT_NONE);
+        //should be the first message
+            
+        //try to grab the next message
+        var nextMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000));
+        message = nextMessages.First();
+        message.Header.MessageType.Should().Be(MessageType.MT_NONE);
 
-        }
+    }
 
-        public void Dispose()
-        {
-            _messageProducer.Dispose();
-        }
+    public void Dispose()
+    {
+        _messageProducer.Dispose();
     }
 }

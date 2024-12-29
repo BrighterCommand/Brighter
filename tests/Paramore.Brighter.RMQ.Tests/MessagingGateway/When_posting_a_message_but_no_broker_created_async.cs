@@ -4,49 +4,48 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+public class RmqBrokerNotPreCreatedTestsAsync : IDisposable
 {
-    public class RmqBrokerNotPreCreatedTestsAsync : IDisposable
+    private Message _message;
+    private RmqMessageProducer _messageProducer;
+
+    public RmqBrokerNotPreCreatedTestsAsync()
     {
-        private Message _message;
-        private RmqMessageProducer _messageProducer;
+        _message = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
+                MessageType.MT_COMMAND), 
+            new MessageBody("test content"));
 
-        public RmqBrokerNotPreCreatedTestsAsync()
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey(Guid.NewGuid().ToString()), 
-                    MessageType.MT_COMMAND), 
-                new MessageBody("test content"));
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange(Guid.NewGuid().ToString())
+        };
 
-            var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange(Guid.NewGuid().ToString())
-            };
+        _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
 
-            _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
-
-        }
+    }
         
-        [Fact]
-        public async Task When_posting_a_message_but_no_broker_created()
+    [Fact]
+    public async Task When_posting_a_message_but_no_broker_created()
+    {
+        bool exceptionHappened = false;
+        try
         {
-            bool exceptionHappened = false;
-            try
-            {
-                await _messageProducer.SendAsync(_message);
-            }
-            catch (ChannelFailureException)
-            {
-                exceptionHappened = true;
-            }
+            await _messageProducer.SendAsync(_message);
+        }
+        catch (ChannelFailureException)
+        {
+            exceptionHappened = true;
+        }
             
-            exceptionHappened.Should().BeTrue();
-        }
+        exceptionHappened.Should().BeTrue();
+    }
 
-        public void Dispose()
-        {
-            _messageProducer.Dispose();
-        }
+    public void Dispose()
+    {
+        _messageProducer.Dispose();
     }
 }

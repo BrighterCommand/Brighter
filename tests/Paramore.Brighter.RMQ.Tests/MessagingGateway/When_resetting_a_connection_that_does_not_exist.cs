@@ -29,30 +29,29 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageGatewayConnectionPoolResetConnectionDoesNotExist
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageGatewayConnectionPoolResetConnectionDoesNotExist
+    private readonly RmqMessageGatewayConnectionPool _connectionPool = new("MyConnectionName", 7);
+
+    [Fact]
+    public async Task When_resetting_a_connection_that_does_not_exist()
     {
-        private readonly RmqMessageGatewayConnectionPool _connectionPool = new("MyConnectionName", 7);
+        var connectionFactory = new ConnectionFactory {HostName = "invalidhost"};
 
-        [Fact]
-        public async Task When_resetting_a_connection_that_does_not_exist()
+        bool resetConnectionExceptionThrown = false;
+        try
         {
-            var connectionFactory = new ConnectionFactory {HostName = "invalidhost"};
-
-            bool resetConnectionExceptionThrown = false;
-            try
-            {
-                await _connectionPool.ResetConnectionAsync(connectionFactory);
-            }
-            catch (Exception )
-            {
-                resetConnectionExceptionThrown = true;
-            }                                
-            
-            resetConnectionExceptionThrown.Should().BeFalse();
-
+            await _connectionPool.ResetConnectionAsync(connectionFactory);
         }
+        catch (Exception )
+        {
+            resetConnectionExceptionThrown = true;
+        }                                
+            
+        resetConnectionExceptionThrown.Should().BeFalse();
+
     }
 }

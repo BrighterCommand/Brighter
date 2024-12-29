@@ -28,31 +28,30 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RMQMessageGatewayConnectionPoolResetConnectionExists
 {
-    [Trait("Category", "RMQ")]
-    public class RMQMessageGatewayConnectionPoolResetConnectionExists
+    private readonly RmqMessageGatewayConnectionPool _connectionPool;
+    private readonly IConnection _originalConnection;
+
+    public RMQMessageGatewayConnectionPoolResetConnectionExists()
     {
-        private readonly RmqMessageGatewayConnectionPool _connectionPool;
-        private readonly IConnection _originalConnection;
+        _connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7);
 
-        public RMQMessageGatewayConnectionPoolResetConnectionExists()
-        {
-            _connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7);
+        var connectionFactory = new ConnectionFactory { HostName = "localhost" };
 
-            var connectionFactory = new ConnectionFactory { HostName = "localhost" };
+        _originalConnection = _connectionPool.GetConnection(connectionFactory);
+    }
 
-            _originalConnection = _connectionPool.GetConnection(connectionFactory);
-        }
+    [Fact]
+    public async Task When_resetting_a_connection_that_exists()
+    {
+        var connectionFactory = new ConnectionFactory{HostName = "localhost"};
 
-        [Fact]
-        public async Task When_resetting_a_connection_that_exists()
-        {
-            var connectionFactory = new ConnectionFactory{HostName = "localhost"};
+        await _connectionPool.ResetConnectionAsync(connectionFactory);
 
-            await _connectionPool.ResetConnectionAsync(connectionFactory);
-
-            (await _connectionPool.GetConnectionAsync(connectionFactory)).Should().NotBeSameAs(_originalConnection);
-        }
+        (await _connectionPool.GetConnectionAsync(connectionFactory)).Should().NotBeSameAs(_originalConnection);
     }
 }

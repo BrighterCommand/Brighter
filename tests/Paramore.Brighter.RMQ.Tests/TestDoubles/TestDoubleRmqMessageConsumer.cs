@@ -30,53 +30,51 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 
-namespace Paramore.Brighter.RMQ.Tests.TestDoubles
+namespace Paramore.Brighter.RMQ.Tests.TestDoubles;
+/*
+ * Use to force a failure mirroring a RabbitMQ subscription failure for testing flow of failure
+ */
+
+internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
 {
-    /*
-     * Use to force a failure mirroring a RabbitMQ subscription failure for testing flow of failure
-     */
+    public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
+        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
 
-    internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
+    protected override Task EnsureChannelAsync(CancellationToken ct = default)
     {
-        public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-            : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
-
-        protected override Task EnsureChannelAsync(CancellationToken ct = default)
-        {
-            throw new BrokerUnreachableException(new Exception("Force Test Failure"));
-        }
+        throw new BrokerUnreachableException(new Exception("Force Test Failure"));
     }
+}
 
-    internal class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
+internal class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
+{
+    public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
+        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+
+    protected override Task EnsureChannelAsync(CancellationToken ct = default)
     {
-        public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-            : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
-
-        protected override Task EnsureChannelAsync(CancellationToken ct = default)
-        {
-            throw new AlreadyClosedException(new ShutdownEventArgs(ShutdownInitiator.Application, 0, "test"));
-        }
+        throw new AlreadyClosedException(new ShutdownEventArgs(ShutdownInitiator.Application, 0, "test"));
     }
+}
 
-    internal class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
+internal class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
+{
+    public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
+        : base(connection, queueName, routingKey, isDurable,isHighAvailability) { }
+
+    protected override Task EnsureChannelAsync(CancellationToken ct = default)
     {
-        public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-            : base(connection, queueName, routingKey, isDurable,isHighAvailability) { }
-
-        protected override Task EnsureChannelAsync(CancellationToken ct = default)
-        {
-            throw new OperationInterruptedException(new ShutdownEventArgs(ShutdownInitiator.Application, 0, "test"));
-        }
+        throw new OperationInterruptedException(new ShutdownEventArgs(ShutdownInitiator.Application, 0, "test"));
     }
+}
 
-    internal class NotSupportedRmqMessageConsumer : RmqMessageConsumer
+internal class NotSupportedRmqMessageConsumer : RmqMessageConsumer
+{
+    public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
+        : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
+
+    protected override Task EnsureChannelAsync(CancellationToken ct = default)
     {
-        public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
-            : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
-
-        protected override Task EnsureChannelAsync(CancellationToken ct = default)
-        {
-            throw new NotSupportedException();
-        }
+        throw new NotSupportedException();
     }
 }
