@@ -15,9 +15,9 @@ on:
       - '*.*.*'
   pull_request:
     branches: [ master, release/9X ]
-  
+
 env:
- # Stop wasting time caching packages
+  # Stop wasting time caching packages
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   # Disable sending usage data to Microsoft
   DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -33,12 +33,12 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - name: Setup dotnet 6 and 8
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - run: dotnet --info
       - uses: actions/checkout@v4
         with:
@@ -55,6 +55,7 @@ jobs:
         run: |
           dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d
           dotnet test tests/Paramore.Brighter.Extensions.Tests/Paramore.Brighter.Extensions.Tests.csproj -c Release --no-restore --no-build --verbosity d
+          dotnet test tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj  --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d      
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -79,7 +80,7 @@ jobs:
           name: nuget packages
       - name: Push generated package to NuGet
         run: dotnet nuget push **/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_KEY }} --skip-duplicate
-    
+  
   memory:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -87,46 +88,71 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n  
-        
+        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+  
   redis-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
     
     services:
-      redis:  
+      redis:
         image: redis:latest
         ports:
-        - 6379:6379
+          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5             
-      
+    
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
-  
+
+  mqtt-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    
+    services:
+      mosquitto:
+        image: efrecon/mosquitto:latest
+        ports:
+          - 1883:1883
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: MQTT Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Category=MQTT&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+
   rabbitmq-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -134,9 +160,9 @@ jobs:
 
     services:
       rabbitmq:
-        image: brightercommand/rabbitmq:3.8-management-delay
+        image: brightercommand/rabbitmq:3.13-management-delay
         ports:
-        - 5672:5672 
+          - 5672:5672
         # needed because the rabbitmq container does not provide a healthcheck
         options: >-
           --health-cmd "rabbitmqctl node_health_check"
@@ -146,12 +172,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Transport Tests
@@ -169,12 +195,12 @@ jobs:
     services:
       zookeeper:
         image: confluentinc/cp-zookeeper:latest
-        ports: 
+        ports:
           - 2181:2181
         env:
-         ZOOKEEPER_CLIENT_PORT: 2181
-         ZOOKEEPER_TICK_TIME: 2000
-         ALLOW_ANONYMOUS_LOGIN: yes
+          ZOOKEEPER_CLIENT_PORT: 2181
+          ZOOKEEPER_TICK_TIME: 2000
+          ALLOW_ANONYMOUS_LOGIN: yes
       kafka:
         image: confluentinc/cp-enterprise-kafka:latest
         ports:
@@ -198,37 +224,37 @@ jobs:
           SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
     steps:
-    - name: Install KafkaCat
-      run: |
-        sudo apt-get install kafkacat
-    - name: Sleep to let Kafka spin up
-      uses: jakejarvis/wait-action@master
-      with:
-        time: '30s'
-    - name: docker check
-      run: docker ps -a
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Setup dotnet 6
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: |
-          6.0.x
-          8.0.x
-    - name: Install dependencies
-      run: dotnet restore
-    - name: Kafka Transport Tests
-      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&Category!=Confluent&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
- 
+      - name: Install KafkaCat
+        run: |
+          sudo apt-get install kafkacat
+      - name: Sleep to let Kafka spin up
+        uses: jakejarvis/wait-action@master
+        with:
+          time: '30s'
+      - name: docker check
+        run: docker ps -a
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Kafka Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&Category!=Confluent&Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+  
   postgres-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-  
+    
     services:
       postgres:
         image: postgres
-        ports: 
+        ports:
           - 5432:5432
         env:
           POSTGRES_PASSWORD: password
@@ -239,82 +265,48 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
         run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
-        
-  eventstore-ci:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [build]
-    
-    services:
-      evenstore: 
-       image: eventstore/eventstore:release-5.0.9
-       ports: 
-         - 1113:1113
-         - 2113:2113
-       env:
-         EVENTSTORE_RUN_PROJECTIONS: ALL
-         EVENTSTORE_START_STANDARD_PROJECTIONS: true
-         EVENTSTORE_CLUSTER_SIZE: 1
-         EVENTSTORE_EXT_TCP_PORT: 1113
-         EVENTSTORE_EXT_HTTP_PORT: 2113 
-         EVENTSTORE_INSECURE: true
-         EVENTSTORE_ENABLE_EXTERNAL_TCP: true
-         EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true   
-     
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            6.0.x
-            8.0.x
-      - name: Install dependencies
-        run: dotnet restore
-      - name: EventStore Tests
-        run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj  --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
   
   sqlserver-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-  
+    
     services:
       sqlserver:
         image: mcr.microsoft.com/mssql/server
-        ports: 
+        ports:
           - 11433:1433
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: Password123!
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
         run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
-        
+  
   mysql-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-  
+    
     services:
       mariadb:
         image: mariadb:latest
@@ -327,12 +319,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -349,21 +341,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: [build]
-  
+    
     services:
       dynamo:
         image: dwmkerr/dynamodb
-        ports: 
+        ports:
           - 8000:8000
-      
+    
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -377,16 +369,16 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: us-west-2
-      AWS_DEFAULT_OUTPUT: json    
-      
+      AWS_DEFAULT_OUTPUT: json
+    
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -400,7 +392,7 @@ jobs:
           aws sns list-topics
       - name: SQS Tests
         run: dotnet test ./tests/Paramore.Brighter.AWS.Tests/Paramore.Brighter.AWS.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
-        
+  
   sqlite-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -408,12 +400,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
@@ -425,12 +417,12 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
