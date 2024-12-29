@@ -55,7 +55,7 @@
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
     <PackageVersion Include="NJsonSchema.NewtonsoftJson" Version="11.1.0" />
-    <PackageVersion Include="NUnit" Version="4.3.0" />
+    <PackageVersion Include="NUnit" Version="4.3.2" />
     <PackageVersion Include="NUnit.Analyzers" Version="4.4.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
