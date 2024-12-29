@@ -1,83 +1,78 @@
 ﻿using System;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
+using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
 {
     [Trait("Category", "AWS")]
-    [Trait("Fragile", "CI")]
-    public class SqsMessageConsumerRequeueTests : IDisposable
+    public class SqsMessageProducerRequeueTests : IDisposable
     {
-        private readonly Message _message;
+        private readonly IAmAMessageProducerSync _sender;
+        private Message _requeuedMessage;
+        private Message _receivedMessage;
         private readonly IAmAChannel _channel;
-        private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
-        private readonly MyCommand _myCommand;
+        private readonly Message _message;
 
-        public SqsMessageConsumerRequeueTests()
+        public SqsMessageProducerRequeueTests()
         {
-            _myCommand = new MyCommand{Value = "Test"};
+            MyCommand myCommand = new MyCommand{Value = "Test"};
             string correlationId = Guid.NewGuid().ToString();
             string replyTo = "http:\\queueUrl";
             string contentType = "text\\plain";
-            var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            string topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            var channelName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
             
-            SqsSubscription<MyCommand> subscription = new(
+            var subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
             );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
+                new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId, 
                     replyTo: new RoutingKey(replyTo), contentType: contentType),
-                new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
+                new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
             );
-            
+ 
             //Must have credentials stored in the SDK Credentials store or shared credentials file
+            new CredentialProfileStoreChain();
+            
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            
+            _sender = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
-            
-            _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
         }
 
         [Fact]
-        public void When_rejecting_a_message_through_gateway_with_requeue()
+        public void When_requeueing_a_message()
         {
-            _messageProducer.Send(_message);
+            _sender.Send(_message);
+            _receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000)); 
+            _channel.Requeue(_receivedMessage);
 
-            var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            
-            _channel.Reject(message);
-
-            //Let the timeout change
-            Task.Delay(TimeSpan.FromMilliseconds(3000));
-
-            //should requeue_the_message
-            message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
+            _requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
             
             //clear the queue
-            _channel.Acknowledge(message);
+            _channel.Acknowledge(_requeuedMessage );
 
-            message.Id.Should().Be(_myCommand.Id);
+            _requeuedMessage.Body.Value.Should().Be(_receivedMessage.Body.Value);
         }
 
         public void Dispose()
         {
-            //Clean up resources that we have created
             _channelFactory.DeleteTopic();
             _channelFactory.DeleteQueue();
         }

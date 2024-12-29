@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public SnsSqsType SnsType { get; set; } = SnsSqsType.Standard;
 
         /// <summary>
-        /// Amazon SNS FIFO topics and Amazon SQS FIFO queues support message deduplication, which provides
+        /// Amazon SNS FIFO topics support message deduplication, which provides
         /// exactly-once message delivery and processing as long as the following conditions are met:
         /// <list type="bullet">
         ///     <item>

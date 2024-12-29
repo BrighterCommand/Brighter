@@ -15,7 +15,7 @@ using Paramore.Brighter.ServiceActivator;
 using Polly.Registry;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]

@@ -7,48 +7,52 @@ using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
 {
     [Trait("Category", "AWS")] 
-    public class AWSValidateQueuesTests  : IDisposable
+    public class AWSAssumeQueuesTests  : IDisposable
     {
-        private readonly AWSMessagingGatewayConnection _awsConnection;
-        private readonly SqsSubscription<MyCommand> _subscription;
-        private ChannelFactory _channelFactory;
+        private readonly ChannelFactory _channelFactory;
+        private readonly SqsMessageConsumer _consumer;
 
-        public AWSValidateQueuesTests()
+        public AWSAssumeQueuesTests()
         {
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
             
-            _subscription = new SqsSubscription<MyCommand>(
+            var subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
-                makeChannels: OnMissingChannel.Validate
+                makeChannels: OnMissingChannel.Assume
             );
             
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
-            _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
+            //create the topic, we want the queue to be the issue
             //We need to create the topic at least, to check the queues
-            var producer = new SqsMessageProducer(_awsConnection, 
+            var producer = new SqsMessageProducer(awsConnection, 
                 new SnsPublication
                 {
                     MakeChannels = OnMissingChannel.Create 
                 });
+            
            producer.ConfirmTopicExistsAsync(topicName).Wait(); 
             
+            _channelFactory = new ChannelFactory(awsConnection);
+            var channel = _channelFactory.CreateChannel(subscription);
+            
+            //We need to create the topic at least, to check the queues
+            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
         }
 
         [Fact]
-        public void When_queues_missing_verify_throws()
+        public void When_queues_missing_assume_throws()
         {
-            //We have no queues so we should throw
-            //We need to do this manually in a test - will create the channel from subscriber parameters
-            _channelFactory = new ChannelFactory(_awsConnection);
-            Assert.Throws<QueueDoesNotExistException>(() => _channelFactory.CreateChannel(_subscription));
+            //we will try to get the queue url, and fail because it does not exist
+            Assert.Throws<QueueDoesNotExistException>(() => _consumer.Receive(TimeSpan.FromMilliseconds(1000)));
         }
  
         public void Dispose()

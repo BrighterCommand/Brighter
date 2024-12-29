@@ -52,21 +52,35 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             TopicFindBy topicFindBy, OnMissingChannel makeTopic, SnsSqsType snsSqsType, bool deduplication)
         {
             //on validate or assume, turn a routing key into a topicARN
-            if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate))
+            if (makeTopic is OnMissingChannel.Assume or OnMissingChannel.Validate)
+            {
                 await ValidateTopicAsync(topic, topicFindBy, makeTopic, snsSqsType);
-            else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes, snsSqsType, deduplication);
+            }
+            else if (makeTopic == OnMissingChannel.Create)
+            {
+                CreateTopic(topic, attributes, snsSqsType, deduplication);
+            }
             return ChannelTopicArn;
         }
 
-        private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes, SnsSqsType snsSqsType, bool deduplication)
+        private void CreateTopic(RoutingKey topicName, 
+            SnsAttributes snsAttributes, 
+            SnsSqsType snsSqsType, 
+            bool deduplication)
         {
             using var snsClient = _awsClientFactory.CreateSnsClient();
             var attributes = new Dictionary<string, string>();
             if (snsAttributes != null)
             {
                 if (!string.IsNullOrEmpty(snsAttributes.DeliveryPolicy))
+                {
                     attributes.Add("DeliveryPolicy", snsAttributes.DeliveryPolicy);
-                if (!string.IsNullOrEmpty(snsAttributes.Policy)) attributes.Add("Policy", snsAttributes.Policy);
+                }
+
+                if (!string.IsNullOrEmpty(snsAttributes.Policy))
+                {
+                    attributes.Add("Policy", snsAttributes.Policy);
+                }
             }
 
             string name = topicName;
@@ -83,9 +97,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             var createTopicRequest = new CreateTopicRequest(name)
             {
-                Attributes = attributes, Tags = new List<Tag> { new Tag { Key = "Source", Value = "Brighter" } }
+                Attributes = attributes, 
+                Tags = [new Tag { Key = "Source", Value = "Brighter" }]
             };
-
 
             //create topic is idempotent, so safe to call even if topic already exists
             var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
