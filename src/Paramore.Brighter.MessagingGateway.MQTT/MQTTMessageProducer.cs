@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -31,9 +32,18 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             _mqttMessagePublisher = mqttMessagePublisher;
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Disposes of the producer
+        /// </summary>
+        public void Dispose(){ }
+        
+        /// <summary>
+        /// Disposes of the producer
+        /// </summary>
+        /// <returns></returns>
+        public ValueTask DisposeAsync()
         {
-            _mqttMessagePublisher = null;
+            return new ValueTask(Task.CompletedTask);
         }
 
         /// <summary>
@@ -52,28 +62,39 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// Sends the specified message asynchronously.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Allows cancellation of the send operation</param>
         /// <returns>Task.</returns>
-        public async Task SendAsync(Message message)
+        public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
 
-            await _mqttMessagePublisher.PublishMessageAsync(message);
+            await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
         }
-
-
+        
         /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">Delay to delivery of the message.</param>
+        /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
-            delay ??= TimeSpan.Zero;
-            
-            //TODO: This is a blocking call, we should replace with a Time call
-            Task.Delay(delay.Value);
+            // delay is not natively supported
             Send(message);
         }
+
+        /// <summary>
+        /// Sens the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
+        /// <param name="cancellationToken">Allows cancellation of the Send operation</param>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        {
+            // delay is not natively supported
+            await SendAsync(message, cancellationToken);
+        }
+
+ 
     }
 }

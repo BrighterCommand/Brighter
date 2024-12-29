@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SQS.Model;
@@ -10,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")] 
-    public class AWSValidateQueuesTests  : IDisposable
+    public class AWSValidateQueuesTests  : IDisposable, IAsyncDisposable
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly SqsSubscription<MyCommand> _subscription;
@@ -26,6 +27,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
+                messagePumpType: MessagePumpType.Reactor,
                 makeChannels: OnMissingChannel.Validate
             );
             
@@ -48,14 +50,17 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //We have no queues so we should throw
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);
-            Assert.Throws<QueueDoesNotExistException>(() => _channelFactory.CreateChannel(_subscription));
+            Assert.Throws<QueueDoesNotExistException>(() => _channelFactory.CreateSyncChannel(_subscription));
         }
  
         public void Dispose()
         {
-           _channelFactory.DeleteTopic(); 
+            _channelFactory.DeleteTopicAsync().Wait(); 
         }
         
-    
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync(); 
+        }
    }
 }

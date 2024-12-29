@@ -90,7 +90,7 @@ namespace Paramore.Brighter.Policies.Handlers
         }
 
         /// <summary>
-        /// Runs the remainder of the pipeline within a task that will timeout if it does not complete within the
+        /// Runs the remainder of the pipeline within a parentTask that will timeout if it does not complete within the
         /// configured number of milliseconds
         /// </summary>
         /// <param name="command">The command.</param>
@@ -103,7 +103,7 @@ namespace Paramore.Brighter.Policies.Handlers
             var timeoutTask = Task<TRequest>.Factory.StartNew(
                 function: () =>
                 {
-                    //we already cancelled the task
+                    //we already cancelled the parentTask
                     ct.ThrowIfCancellationRequested();
                     //allow the handlers that can timeout to grab the cancellation token
                     Context?.Bag.AddOrUpdate(CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN, ct, (s, o) => o = ct);
@@ -125,10 +125,10 @@ namespace Paramore.Brighter.Policies.Handlers
 
         private Task<TRequest> TimeoutAfter(Task<TRequest> task, int millisecondsTimeout, CancellationTokenSource cancellationTokenSource)
         {
-            // Short-circuit #1: infinite timeout or task already completed
+            // Short-circuit #1: infinite timeout or parentTask already completed
             if (task.IsCompleted || (millisecondsTimeout == Timeout.Infinite))
             {
-                // Either the task has already completed or timeout will never occur.
+                // Either the parentTask has already completed or timeout will never occur.
                 // No proxy necessary.
                 return task;
             }
@@ -164,7 +164,7 @@ namespace Paramore.Brighter.Policies.Handlers
                 Timeout.Infinite
             );
 
-            // Wire up the logic for what happens when source task completes
+            // Wire up the logic for what happens when source parentTask completes
             task.ContinueWith((antecedent, state) =>
                 {
                     // Recover our state data

@@ -25,8 +25,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public static class AWSNameExtensions
     {
-        public static ChannelName ToValidSQSQueueName(this ChannelName channelName, bool isFifo = false)
+        public static ChannelName ToValidSQSQueueName(this ChannelName? channelName, bool isFifo = false)
         {
+            if (channelName is null)
+                return new ChannelName(string.Empty);
+            
             //SQS only allows 80 characters alphanumeric, hyphens, and underscores, but we might use a period in a 
             //default typename strategy
             var name = channelName.Value;

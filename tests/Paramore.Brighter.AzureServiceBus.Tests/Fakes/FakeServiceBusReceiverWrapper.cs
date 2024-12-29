@@ -14,7 +14,7 @@ public class FakeServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     public Exception CompleteException = null;
     public Exception ReceiveException = null;
     
-    public Task<IEnumerable<IBrokeredMessageWrapper>> Receive(int batchSize, TimeSpan serverWaitTime)
+    public Task<IEnumerable<IBrokeredMessageWrapper>> ReceiveAsync(int batchSize, TimeSpan serverWaitTime)
     {
         if (IsClosedOrClosing)
             throw new Exception("Connection not Open");
@@ -33,7 +33,7 @@ public class FakeServiceBusReceiverWrapper : IServiceBusReceiverWrapper
         return Task.FromResult(messages.AsEnumerable());
     }
 
-    public Task Complete(string lockToken)
+    public Task CompleteAsync(string lockToken)
     {
         if (CompleteException != null)
             throw CompleteException;
@@ -41,7 +41,7 @@ public class FakeServiceBusReceiverWrapper : IServiceBusReceiverWrapper
         return Task.CompletedTask;
     }
 
-    public Task DeadLetter(string lockToken)
+    public Task DeadLetterAsync(string lockToken)
     {
         if (DeadLetterException != null)
             throw DeadLetterException;
@@ -51,6 +51,12 @@ public class FakeServiceBusReceiverWrapper : IServiceBusReceiverWrapper
 
     public void Close()
         => IsClosedOrClosing = true;
+
+    public Task CloseAsync()
+    {
+        Close();
+        return Task.CompletedTask;
+    }
 
     public bool IsClosedOrClosing { get; private set; } = false;
 }

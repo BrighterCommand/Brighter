@@ -33,7 +33,7 @@ namespace Paramore.Brighter
     /// <summary>
     /// Interface IAmABulkMessageProducerAsync
     /// Abstracts away the Application Layer used to push messages with async/await support onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
-    /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannel"/> derived class.
+    /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannelSync"/> derived class.
     /// We provide the following default gateway applications
     /// <list type="bullet">
     /// <item>AMQP</item>

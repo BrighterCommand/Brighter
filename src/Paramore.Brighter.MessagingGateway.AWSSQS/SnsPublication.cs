@@ -38,12 +38,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// The attributes of the topic. If TopicARNs is set we will always assume that we do not
         /// need to create or validate the SNS Topic
         /// </summary>
-        public SnsAttributes SnsAttributes { get; set; }
+        public SnsAttributes? SnsAttributes { get; set; }
 
         /// <summary>
         /// If we want to use topic Arns and not topics you need to supply  the Arn to use for any message that you send to us,
         /// as we use the topic from the header to dispatch to  an Arn.
         /// </summary>
-        public string TopicArn { get; set; }
+        public string? TopicArn { get; set; }
     }
 }

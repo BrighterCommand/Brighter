@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// The <see cref="MQTTMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
     /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching.
     /// </summary>
-    public class MQTTMessageConsumer : IAmAMessageConsumer
+    public class MQTTMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
         private readonly string _topic;
         private readonly Queue<Message> _messageQueue = new Queue<Message>();
@@ -30,6 +30,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MQTTMessageConsumer" /> class.
+        /// Sync over Async within constructor
         /// </summary>
         /// <param name="configuration"></param>
         public MQTTMessageConsumer(MQTTMessagingGatewayConsumerConfiguration configuration)
@@ -62,7 +63,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             });
 
             Task connectTask = Connect(configuration.ConnectionAttempts);
-            connectTask.Wait();
+            connectTask
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <summary>
@@ -72,10 +75,27 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public void Acknowledge(Message message)
         {
         }
+        
+        /// <summary>
+        /// Not implemented Acknowledge Method.
+        /// </summary>
+        /// <param name="message"></param>
+        public Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.CompletedTask;
+        }
+
 
         public void Dispose()
         {
             _mqttClient.Dispose();
+        }
+        
+        
+        public ValueTask DisposeAsync()
+        {
+           _mqttClient.Dispose();
+           return new ValueTask(Task.CompletedTask);
         }
 
         /// <summary>
@@ -85,9 +105,19 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             _messageQueue.Clear();
         }
+        
+        /// <summary>
+        /// Clears the internal Queue buffer.
+        /// </summary>
+        /// <param name="cancellationToken">Allows cancellation of the purge task</param>
+        public Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+           Purge();
+           return Task.CompletedTask;
+        }
 
         /// <summary>
-        /// Retrieves the current recieved messages from the internal buffer.
+        /// Retrieves the current received messages from the internal buffer.
         /// </summary>
         /// <param name="timeOut">The time to delay retrieval. Defaults to 300ms</param>
         public Message[] Receive(TimeSpan? timeOut = null)
@@ -117,6 +147,11 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             return messages.ToArray();
         }
+        
+        public Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.FromResult(Receive(timeOut));
+        }
 
         /// <summary>
         /// Not implemented Reject Method.
@@ -127,6 +162,17 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         }
 
         /// <summary>
+        /// Not implemented Reject Method.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="cancellationToken"></param>
+        public Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.CompletedTask;
+        }
+
+
+        /// <summary>
         /// Not implemented Requeue Method.
         /// </summary>
         /// <param name="message"></param>
@@ -134,6 +180,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         public bool Requeue(Message message, TimeSpan? delay = null)
         {
             return false;
+        }
+        
+        public Task<bool> RequeueAsync(Message message, TimeSpan? delay = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.FromResult(false);
         }
 
         private async Task Connect(int connectionAttempts)

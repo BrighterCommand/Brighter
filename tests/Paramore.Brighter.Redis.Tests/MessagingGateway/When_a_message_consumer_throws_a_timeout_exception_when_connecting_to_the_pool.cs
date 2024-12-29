@@ -4,41 +4,37 @@ using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Redis.Tests.MessagingGateway
+namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
+
+[Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
+[Trait("Category", "Redis")]
+public class RedisMessageConsumerOperationInterruptedTests : IDisposable
 {
-    [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
-    [Trait("Category", "Redis")]
-    public class RedisMessageConsumerOperationInterruptedTests : IDisposable
+    private readonly ChannelName _queueName = new("test");
+    private readonly RoutingKey _topic = new("test");
+    private readonly RedisMessageConsumer _messageConsumer;
+    private Exception? _exception;
+
+    public RedisMessageConsumerOperationInterruptedTests()
     {
-        private const string QueueName = "test";
-        private const string Topic = "test";
-        private readonly RedisMessageConsumer _messageConsumer;
-        private Exception _exception;
+        var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
 
-        public RedisMessageConsumerOperationInterruptedTests()
-        {
-            var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
+        _messageConsumer = new RedisMessageConsumerTimeoutOnGetClient(configuration, _queueName, _topic);
+    }
 
-            _messageConsumer = new RedisMessageConsumerTimeoutOnGetClient(configuration, QueueName, Topic);
-        }
-
-        [Fact]
-        public void When_a_message_consumer_throws_a_timeout_exception_when_getting_a_client_from_the_pool()
-        {
-            _exception = Catch.Exception(() => _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000))); 
+    [Fact]
+    public void When_a_message_consumer_throws_a_timeout_exception_when_getting_a_client_from_the_pool()
+    {
+        _exception = Catch.Exception(() => _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000))); 
             
-            //_should_return_a_channel_failure_exception
-            _exception.Should().BeOfType<ChannelFailureException>();
-            
-            //_should_return_an_explaining_inner_exception
-            _exception.InnerException.Should().BeOfType<TimeoutException>();
+        _exception.Should().BeOfType<ChannelFailureException>();
+        _exception?.InnerException.Should().BeOfType<TimeoutException>();
   
-        }
+    }
         
-        public void Dispose()
-        {
-            _messageConsumer.Purge();
-            _messageConsumer.Dispose();
-        }
+    public void Dispose()
+    {
+        _messageConsumer.Purge();
+        _messageConsumer.Dispose();
     }
 }

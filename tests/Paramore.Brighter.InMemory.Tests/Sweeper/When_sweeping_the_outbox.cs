@@ -287,7 +287,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,
@@ -302,7 +302,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                bus);           
+                mediator);           
             
             var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
 

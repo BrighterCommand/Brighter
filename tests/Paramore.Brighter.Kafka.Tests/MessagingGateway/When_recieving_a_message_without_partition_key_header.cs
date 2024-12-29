@@ -17,7 +17,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
     private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
-    private readonly IAmAMessageConsumer _consumer;
+    private readonly IAmAMessageConsumerSync _consumer;
     private readonly IProducer<string,byte[]> _producer;
 
     public KafkaMessageProducerMissingHeaderTests(ITestOutputHelper output)
@@ -66,6 +66,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
                     groupId: groupId,
                     numOfPartitions: 1,
                     replicationFactor: 1,
+                    messagePumpType: MessagePumpType.Reactor,
                     makeChannels: OnMissingChannel.Create
                 )
             );

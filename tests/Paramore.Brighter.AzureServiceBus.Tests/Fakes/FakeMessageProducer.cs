@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.Fakes;
@@ -10,11 +11,14 @@ public class FakeMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducer
     public List<Message> SentMessages { get; } = new List<Message>();
     public Publication Publication { get; }
     public Activity Span { get; set; }
-    public Task SendAsync(Message message)
+    public Task SendAsync(Message message, CancellationToken cancellationToken = default)
     {
         Send(message);
         return Task.CompletedTask;
     }
+
+    public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        => await SendAsync(message, cancellationToken);
 
     public void Send(Message message)
         => SentMessages.Add(message);
@@ -24,6 +28,10 @@ public class FakeMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducer
     
     public void Dispose()
     {
-        // TODO release managed resources here
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return new ValueTask(Task.CompletedTask);
     }
 }
