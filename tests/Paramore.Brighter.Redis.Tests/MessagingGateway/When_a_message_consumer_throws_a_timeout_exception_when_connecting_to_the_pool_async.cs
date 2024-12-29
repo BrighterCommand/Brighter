@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
@@ -8,14 +9,14 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
 
 [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
-public class RedisMessageConsumerOperationInterruptedTests : IDisposable
+public class RedisMessageConsumerOperationInterruptedTestsAsync : IAsyncDisposable
 {
     private readonly ChannelName _queueName = new("test");
     private readonly RoutingKey _topic = new("test");
     private readonly RedisMessageConsumer _messageConsumer;
     private Exception? _exception;
 
-    public RedisMessageConsumerOperationInterruptedTests()
+    public RedisMessageConsumerOperationInterruptedTestsAsync()
     {
         var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
 
@@ -23,18 +24,17 @@ public class RedisMessageConsumerOperationInterruptedTests : IDisposable
     }
 
     [Fact]
-    public void When_a_message_consumer_throws_a_timeout_exception_when_getting_a_client_from_the_pool()
+    public async Task When_a_message_consumer_throws_a_timeout_exception_when_getting_a_client_from_the_pool_async()
     {
-        _exception = Catch.Exception(() => _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000))); 
-            
+        _exception = await Catch.ExceptionAsync(() => _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000)));
+
         _exception.Should().BeOfType<ChannelFailureException>();
         _exception?.InnerException.Should().BeOfType<TimeoutException>();
-  
     }
-        
-    public void Dispose()
+
+    public async ValueTask DisposeAsync()
     {
-        _messageConsumer.Purge();
-        _messageConsumer.Dispose();
+        await _messageConsumer.PurgeAsync();
+        await _messageConsumer.DisposeAsync();
     }
 }

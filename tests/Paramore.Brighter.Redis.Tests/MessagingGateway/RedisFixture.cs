@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Redis;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
-    public class RedisFixture : IDisposable
+    public class RedisFixture : IAsyncDisposable, IDisposable
     {
         private ChannelName _queueName = new ChannelName("test");
         private readonly RoutingKey _topic = new RoutingKey("test");
@@ -35,6 +36,13 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             MessageConsumer.Purge();
             MessageConsumer.Dispose();
             MessageProducer.Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await MessageConsumer.PurgeAsync();
+            await MessageConsumer.DisposeAsync();
+            await MessageProducer.DisposeAsync();
         }
     }
 }
