@@ -10,14 +10,14 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
     [Trait("Category", "MSSQL")]
-    public class OrderTest : IAsyncDisposable, IDisposable
+    public class OrderTestAsync : IAsyncDisposable, IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topicName = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry;
-        private readonly IAmAMessageConsumerSync _consumer;
+        private readonly IAmAMessageConsumerAsync _consumer;
 
-        public OrderTest()
+        public OrderTestAsync()
         {
             var testHelper = new MsSqlTestHelper();
             testHelper.SetupQueueDb();
@@ -27,61 +27,61 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             var sub = new Subscription<MyCommand>(
                 new SubscriptionName(_queueName),
                 new ChannelName(_topicName), routingKey,
-                messagePumpType: MessagePumpType.Reactor);
+                messagePumpType: MessagePumpType.Proactor);
 
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration,
                 [new() { Topic = routingKey }]
-            ).Create();
-            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
+            ).CreateAsync().Result;
+            _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).CreateAsync(sub);
         }
 
         [Fact]
-        public void When_a_message_is_sent_keep_order()
+        public async Task When_a_message_is_sent_keep_order()
         {
-            IAmAMessageConsumerSync consumer = _consumer;
+            IAmAMessageConsumerAsync consumer = _consumer;
             //Send a sequence of messages to Kafka
-            var msgId = SendMessage();
-            var msgId2 = SendMessage();
-            var msgId3 = SendMessage();
-            var msgId4 = SendMessage();
+            var msgId = await SendMessageAsync();
+            var msgId2 = await SendMessageAsync();
+            var msgId3 = await SendMessageAsync();
+            var msgId4 = await SendMessageAsync();
 
             //Now read those messages in order
 
-            var firstMessage = ConsumeMessages(consumer);
+            var firstMessage = await ConsumeMessagesAsync(consumer);
             var message = firstMessage.First();
             message.Empty.Should().BeFalse("A message should be returned");
             message.Id.Should().Be(msgId);
 
-            var secondMessage = ConsumeMessages(consumer);
+            var secondMessage = await ConsumeMessagesAsync(consumer);
             message = secondMessage.First();
             message.Empty.Should().BeFalse("A message should be returned");
             message.Id.Should().Be(msgId2);
 
-            var thirdMessages = ConsumeMessages(consumer);
+            var thirdMessages = await ConsumeMessagesAsync(consumer);
             message = thirdMessages.First();
             message.Empty.Should().BeFalse("A message should be returned");
             message.Id.Should().Be(msgId3);
 
-            var fourthMessage = ConsumeMessages(consumer);
+            var fourthMessage = await ConsumeMessagesAsync(consumer);
             message = fourthMessage.First();
             message.Empty.Should().BeFalse("A message should be returned");
             message.Id.Should().Be(msgId4);
         }
 
-        private string SendMessage()
+        private async Task<string> SendMessageAsync()
         {
             var messageId = Guid.NewGuid().ToString();
 
             var routingKey = new RoutingKey(_topicName);
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
+            await ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey)).SendAsync(new Message(
                 new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND),
                 new MessageBody($"test content [{_queueName}]")));
 
             return messageId;
         }
 
-        private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
+        private async Task<IEnumerable<Message>> ConsumeMessagesAsync(IAmAMessageConsumerAsync consumer)
         {
             var messages = Array.Empty<Message>();
             int maxTries = 0;
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 try
                 {
                     maxTries++;
-                    messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
+                    messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                         break;
@@ -105,16 +105,16 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             return messages;
         }
 
-        public async ValueTask DisposeAsync()
-        {
-            await ((IAmAMessageConsumerAsync)_consumer).DisposeAsync();
-            _producerRegistry.Dispose();
-        }
-
         public void Dispose()
         {
-            _consumer?.Dispose();
-            _producerRegistry?.Dispose();
+            _producerRegistry.Dispose();
+            ((IAmAMessageConsumerSync)_consumer).Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            _producerRegistry.Dispose();
+            await _consumer.DisposeAsync();
         }
     }
 }

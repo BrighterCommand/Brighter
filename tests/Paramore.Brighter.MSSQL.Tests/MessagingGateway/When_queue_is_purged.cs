@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
     [Trait("Category", "MSSQL")]
-    public class PurgeTest
+    public class PurgeTest :  IAsyncDisposable, IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry; 
@@ -24,11 +24,14 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             _routingKey = new RoutingKey(Guid.NewGuid().ToString());
             
-            var sub = new Subscription<MyCommand>(new SubscriptionName(_queueName),
-                new ChannelName(_routingKey.Value), _routingKey);
+            var sub = new Subscription<MyCommand>(
+                new SubscriptionName(_queueName),
+                new ChannelName(_routingKey.Value), _routingKey,
+                messagePumpType: MessagePumpType.Reactor);
+            
             _producerRegistry = new MsSqlProducerRegistryFactory(
-                testHelper.QueueConfiguration, 
-                new Publication[] {new() {Topic = _routingKey}}
+                testHelper.QueueConfiguration,
+                [new() {Topic = _routingKey}]
             ).Create();
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
@@ -37,8 +40,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         public void When_queue_is_Purged()
         {
             IAmAMessageConsumerSync consumer = _consumer;
-            try
-            {
                 //Send a sequence of messages to Kafka
                 var msgId = SendMessage();
                 
@@ -56,11 +57,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 message = nextMessage.First();
                 
                 Assert.Equal(new Message(), message);
-            }
-            finally
-            {
-                consumer?.Dispose();
-            }
         }
 
         private string SendMessage()
@@ -75,7 +71,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         }
         private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
         {
-            var messages = new Message[0];
+            var messages = Array.Empty<Message>();
             int maxTries = 0;
             do
             {
@@ -97,21 +93,16 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             return messages;
         }
 
-    }
-
-    public class ExampleCommand : ICommand
-    {
-
-        public string Id { get; set; }
-
-        public ExampleCommand()
+        public async ValueTask DisposeAsync()
         {
-            Id = Guid.NewGuid().ToString();
+            await ((IAmAMessageConsumerAsync)_consumer).DisposeAsync();
+            _producerRegistry.Dispose();
         }
-        
-        /// <summary>
-        /// Gets or sets the span that this operation live within
-        /// </summary>
-        public Activity Span { get; set; }
+
+        public void Dispose()
+        {
+            _consumer.Dispose();
+            _producerRegistry.Dispose();
+        }
     }
 }
