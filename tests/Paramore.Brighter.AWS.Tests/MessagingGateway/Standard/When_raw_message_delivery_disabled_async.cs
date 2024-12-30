@@ -11,16 +11,16 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard;
 
-[Trait("Category", "AWS")] 
+[Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
+public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
-    private readonly IAmAChannelSync _channel;
+    private readonly IAmAChannelAsync _channel;
     private readonly RoutingKey _routingKey;
 
-    public SqsRawMessageDeliveryTests()
+    public SqsRawMessageDeliveryTestsAsync()
     {
         var awsConnection = GatewayFactory.CreateFactory();
 
@@ -30,67 +30,66 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 
         var bufferSize = 10;
 
-        //Set rawMessageDelivery to false
-        _channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
+        // Set rawMessageDelivery to false
+        _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
-            channelName:new ChannelName(channelName),
-            routingKey:_routingKey,
+            channelName: new ChannelName(channelName),
+            routingKey: _routingKey,
             bufferSize: bufferSize,
             makeChannels: OnMissingChannel.Create,
-            messagePumpType: MessagePumpType.Reactor,
             rawMessageDelivery: false));
 
-        _messageProducer = new SqsMessageProducer(awsConnection, 
+        _messageProducer = new SqsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create 
+                MakeChannels = OnMissingChannel.Create
             });
     }
 
     [Fact]
-    public void When_raw_message_delivery_disabled()
+    public async Task When_raw_message_delivery_disabled_async()
     {
-        //arrange
+        // Arrange
         var messageHeader = new MessageHeader(
-            Guid.NewGuid().ToString(), 
-            _routingKey, 
-            MessageType.MT_COMMAND, 
-            correlationId: Guid.NewGuid().ToString(), 
-            replyTo: RoutingKey.Empty, 
+            Guid.NewGuid().ToString(),
+            _routingKey,
+            MessageType.MT_COMMAND,
+            correlationId: Guid.NewGuid().ToString(),
+            replyTo: RoutingKey.Empty,
             contentType: "text\\plain");
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
         messageHeader.Bag.Add(customHeaderItem.Key, customHeaderItem.Value);
 
-        var messageToSent = new Message(messageHeader, new MessageBody("test content one"));
+        var messageToSend = new Message(messageHeader, new MessageBody("test content one"));
 
-        //act
-        _messageProducer.Send(messageToSent);
+        // Act
+        await _messageProducer.SendAsync(messageToSend);
 
-        var messageReceived = _channel.Receive(TimeSpan.FromMilliseconds(10000));
+        var messageReceived = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
 
-        _channel.Acknowledge(messageReceived);
+        await _channel.AcknowledgeAsync(messageReceived);
 
-        //assert
-        messageReceived.Id.Should().Be(messageToSent.Id);
-        messageReceived.Header.Topic.Should().Be(messageToSent.Header.Topic);
-        messageReceived.Header.MessageType.Should().Be(messageToSent.Header.MessageType);
-        messageReceived.Header.CorrelationId.Should().Be(messageToSent.Header.CorrelationId);
-        messageReceived.Header.ReplyTo.Should().Be(messageToSent.Header.ReplyTo);
-        messageReceived.Header.ContentType.Should().Be(messageToSent.Header.ContentType);
+        // Assert
+        messageReceived.Id.Should().Be(messageToSend.Id);
+        messageReceived.Header.Topic.Should().Be(messageToSend.Header.Topic);
+        messageReceived.Header.MessageType.Should().Be(messageToSend.Header.MessageType);
+        messageReceived.Header.CorrelationId.Should().Be(messageToSend.Header.CorrelationId);
+        messageReceived.Header.ReplyTo.Should().Be(messageToSend.Header.ReplyTo);
+        messageReceived.Header.ContentType.Should().Be(messageToSend.Header.ContentType);
         messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
-        messageReceived.Body.Value.Should().Be(messageToSent.Body.Value);
+        messageReceived.Body.Value.Should().Be(messageToSend.Body.Value);
     }
-
+        
     public void Dispose()
     {
         _channelFactory.DeleteTopicAsync().Wait(); 
         _channelFactory.DeleteQueueAsync().Wait();
     }
-        
+
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync(); 
+        await _channelFactory.DeleteTopicAsync();
         await _channelFactory.DeleteQueueAsync();
     }
 }

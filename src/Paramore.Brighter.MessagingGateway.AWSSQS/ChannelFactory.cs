@@ -209,8 +209,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             
         if (_subscription.MakeChannels == OnMissingChannel.Assume)
             return;
-
-        using var sqsClient = new AmazonSQSClient(AwsConnection.Credentials, AwsConnection.Region);
+        
+        using var sqsClient = new AWSClientFactory(AwsConnection).CreateSqsClient();
         var queueName = _subscription.ChannelName.ToValidSQSQueueName();
         var topicName = _subscription.RoutingKey.ToValidSNSTopicName();
 
@@ -309,7 +309,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             if (!string.IsNullOrEmpty(_queueUrl))
             {
                 s_logger.LogDebug("Queue created: {URL}", _queueUrl);
-                using var snsClient = new AmazonSimpleNotificationServiceClient(AwsConnection.Credentials, AwsConnection.Region);
+                using var snsClient = new AWSClientFactory(AwsConnection).CreateSnsClient();
                 await CheckSubscriptionAsync(_subscription.MakeChannels, sqsClient, snsClient);
             }
             else
@@ -452,8 +452,13 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
                     exists = false;
                     return true;
                 }
+
                 return false;
             });
+        }
+        catch (QueueDoesNotExistException)
+        {
+            exists = false;
         }
 
         return (exists, queueUrl);

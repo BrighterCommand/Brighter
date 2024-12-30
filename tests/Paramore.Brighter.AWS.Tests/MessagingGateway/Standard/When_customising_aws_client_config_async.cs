@@ -1,85 +1,76 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard;
 
 [Trait("Category", "AWS")]
-public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
+public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
-    private readonly IAmAChannelSync _channel;
+    private readonly IAmAChannelAsync _channel;
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
 
     private readonly InterceptingDelegatingHandler _publishHttpHandler = new();
     private readonly InterceptingDelegatingHandler _subscribeHttpHandler = new();
 
-    public CustomisingAwsClientConfigTests()
+    public CustomisingAwsClientConfigTestsAsync()
     {
-        MyCommand myCommand = new() { Value = "Test" };
+        MyCommand myCommand = new() {Value = "Test"};
         string correlationId = Guid.NewGuid().ToString();
-        const string replyTo = "http:\\queueUrl";
-        const string contentType = "text\\plain";
+        string replyTo = "http:\\queueUrl";
+        string contentType = "text\\plain";
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var partitionKey = $"Partition-Key-{Guid.NewGuid().ToString()}".Truncate(45);
-
+        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
-
+            
         SqsSubscription<MyCommand> subscription = new(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            routingKey: routingKey,
-            sqsType: SnsSqsType.Fifo
+            messagePumpType: MessagePumpType.Proactor,
+            routingKey: routingKey
         );
-
+            
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: partitionKey),
-            new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
+                replyTo: new RoutingKey(replyTo), contentType: contentType),
+            new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
         );
 
-        (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
-        var subscribeAwsConnection = new AWSMessagingGatewayConnection(credentials, region, config =>
+        var subscribeAwsConnection = GatewayFactory.CreateFactory(config =>
         {
             config.HttpClientFactory = new InterceptingHttpClientFactory(_subscribeHttpHandler);
         });
-
+           
         _channelFactory = new ChannelFactory(subscribeAwsConnection);
-        _channel = _channelFactory.CreateSyncChannel(subscription);
+        _channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        var publishAwsConnection = new AWSMessagingGatewayConnection(credentials, region, config =>
+        var publishAwsConnection =  GatewayFactory.CreateFactory(config =>
         {
             config.HttpClientFactory = new InterceptingHttpClientFactory(_publishHttpHandler);
         });
 
-        _messageProducer = new SqsMessageProducer(publishAwsConnection,
-            new SnsPublication
-            {
-                Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create, SnsType = SnsSqsType.Fifo
-            });
+        _messageProducer = new SqsMessageProducer(publishAwsConnection, new SnsPublication{Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create});
     }
 
     [Fact]
     public async Task When_customising_aws_client_config()
     {
         //arrange
-        _messageProducer.Send(_message);
-
+        await _messageProducer.SendAsync(_message);
+            
         await Task.Delay(1000);
-
-        var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-
+            
+        var message =await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+            
         //clear the queue
-        _channel.Acknowledge(message);
+        await _channel.AcknowledgeAsync(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
         _publishHttpHandler.RequestCount.Should().BeGreaterThan(0);

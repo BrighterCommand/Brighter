@@ -6,6 +6,7 @@ services:
     environment:
       # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
       - "SERVICES=s3,sqs,sns,dynamodb"
+      - "DEBUG=1"
     ports:
       - "4566:4566" # LocalStack Gateway
       - "4510-4559:4510-4559" # External services port range

@@ -2,19 +2,17 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class AWSValidateInfrastructureByConventionTestsAsync : IAsyncDisposable, IDisposable
+    public class AWSValidateInfrastructureTestsAsync : IDisposable, IAsyncDisposable
     {
         private readonly Message _message;
         private readonly IAmAMessageConsumerAsync _consumer;
@@ -22,7 +20,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
-        public AWSValidateInfrastructureByConventionTestsAsync()
+        public AWSValidateInfrastructureTestsAsync()
         {
             _myCommand = new MyCommand { Value = "Test" };
             string correlationId = Guid.NewGuid().ToString();
@@ -46,8 +44,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
             );
 
-            (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
-            var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            var awsConnection = GatewayFactory.CreateFactory();
 
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateAsyncChannel(subscription);
@@ -56,7 +53,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 name: new SubscriptionName(channelName),
                 channelName: channel.Name,
                 routingKey: routingKey,
-                findTopicBy: TopicFindBy.Convention,
+                findTopicBy: TopicFindBy.Name,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Validate
             );
@@ -65,8 +62,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 awsConnection,
                 new SnsPublication
                 {
-                    FindTopicBy = TopicFindBy.Convention,
-                    MakeChannels = OnMissingChannel.Validate
+                    FindTopicBy = TopicFindBy.Name,
+                    MakeChannels = OnMissingChannel.Validate,
+                    Topic = new RoutingKey(topicName)
                 }
             );
 

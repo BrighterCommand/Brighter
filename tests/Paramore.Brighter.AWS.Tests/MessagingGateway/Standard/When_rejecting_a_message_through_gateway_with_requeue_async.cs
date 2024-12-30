@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Amazon;
+using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
@@ -12,29 +13,29 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
+public class SqsMessageConsumerRequeueTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
-    private readonly SqsMessageConsumer _consumer;
+    private readonly IAmAChannelAsync _channel;
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSAssumeInfrastructureTests()
+    public SqsMessageConsumerRequeueTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
         string contentType = "text\\plain";
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        string topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         SqsSubscription<MyCommand> subscription = new(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
+            messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create
         );
 
@@ -46,46 +47,35 @@ public class AWSAssumeInfrastructureTests : IDisposable, IAsyncDisposable
 
         var awsConnection = GatewayFactory.CreateFactory();
 
-        //We need to do this manually in a test - will create the channel from subscriber parameters
-        //This doesn't look that different from our create tests - this is because we create using the channel factory in
-        //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
         _channelFactory = new ChannelFactory(awsConnection);
-        var channel = _channelFactory.CreateSyncChannel(subscription);
+        _channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        //Now change the subscription to validate, just check what we made
-        subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: channel.Name,
-            routingKey: routingKey,
-            messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Assume
-        );
-
-        _messageProducer = new SqsMessageProducer(awsConnection,
-            new SnsPublication { MakeChannels = OnMissingChannel.Assume });
-
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
+        _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
     }
 
     [Fact]
-    public void When_infastructure_exists_can_assume()
+    public async Task When_rejecting_a_message_through_gateway_with_requeue_async()
     {
-        //arrange
-        _messageProducer.Send(_message);
+        await _messageProducer.SendAsync(_message);
 
-        var messages = _consumer.Receive(TimeSpan.FromMilliseconds(5000));
+        var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
-        //Assert
-        var message = messages.First();
+        await _channel.RejectAsync(message);
+
+        // Let the timeout change
+        await Task.Delay(TimeSpan.FromMilliseconds(3000));
+
+        // should requeue_the_message
+        message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+
+        // clear the queue
+        await _channel.AcknowledgeAsync(message);
+
         message.Id.Should().Be(_myCommand.Id);
-
-        //clear the queue
-        _consumer.Acknowledge(message);
     }
 
     public void Dispose()
     {
-        //Clean up resources that we have created
         _channelFactory.DeleteTopicAsync().Wait();
         _channelFactory.DeleteQueueAsync().Wait();
     }

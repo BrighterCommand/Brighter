@@ -13,73 +13,72 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard;
 
 [Trait("Category", "AWS")]
-public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
+public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
 {
-    private readonly IAmAMessageProducerSync _sender;
+    private readonly IAmAMessageProducerAsync _sender;
     private Message _requeuedMessage;
     private Message _receivedMessage;
-    private readonly IAmAChannelSync _channel;
+    private readonly IAmAChannelAsync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
 
-    public SqsMessageProducerRequeueTests()
+    public SqsMessageProducerRequeueTestsAsync()
     {
-        MyCommand myCommand = new MyCommand{Value = "Test"};
+        MyCommand myCommand = new MyCommand { Value = "Test" };
         string correlationId = Guid.NewGuid().ToString();
         string replyTo = "http:\\queueUrl";
         string contentType = "text\\plain";
         var channelName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
-            
+
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
-            routingKey: routingKey
+            routingKey: routingKey,
+            messagePumpType: MessagePumpType.Proactor,
+            makeChannels: OnMissingChannel.Create
         );
-            
+
         _message = new Message(
-            new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId, 
+            new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
-            new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
         );
- 
-        //Must have credentials stored in the SDK Credentials store or shared credentials file
+
         new CredentialProfileStoreChain();
-            
+
         var awsConnection = GatewayFactory.CreateFactory();
-            
-        _sender = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
-            
-        //We need to do this manually in a test - will create the channel from subscriber parameters
+
+        _sender = new SqsMessageProducer(awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+
         _channelFactory = new ChannelFactory(awsConnection);
-        _channel = _channelFactory.CreateSyncChannel(subscription);
+        _channel = _channelFactory.CreateAsyncChannel(subscription);
     }
 
     [Fact]
-    public void When_requeueing_a_message()
+    public async Task When_requeueing_a_message_async()
     {
-        _sender.Send(_message);
-        _receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000)); 
-        _channel.Requeue(_receivedMessage);
+        await _sender.SendAsync(_message);
+        _receivedMessage = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+        await _channel.RequeueAsync(_receivedMessage);
 
-        _requeuedMessage = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            
-        //clear the queue
-        _channel.Acknowledge(_requeuedMessage );
+        _requeuedMessage = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+
+        await _channel.AcknowledgeAsync(_requeuedMessage);
 
         _requeuedMessage.Body.Value.Should().Be(_receivedMessage.Body.Value);
     }
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
+        _channelFactory.DeleteTopicAsync().Wait();
         _channelFactory.DeleteQueueAsync().Wait();
     }
-        
+
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync(); 
+        await _channelFactory.DeleteTopicAsync();
         await _channelFactory.DeleteQueueAsync();
     }
 }
