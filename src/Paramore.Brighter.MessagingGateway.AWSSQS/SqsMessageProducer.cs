@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,12 +20,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -33,10 +37,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
-        private readonly AWSMessagingGatewayConnection _connection;
         private readonly SnsPublication _publication;
         private readonly AWSClientFactory _clientFactory;
-        
+
         /// <summary>
         /// The publication configuration for this producer
         /// </summary>
@@ -45,7 +48,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// The OTel Span we are writing Producer events too
         /// </summary>
-        public Activity Span { get; set; }
+        public Activity? Span { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
@@ -54,86 +58,117 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public SqsMessageProducer(AWSMessagingGatewayConnection connection, SnsPublication publication)
             : base(connection)
         {
-            _connection = connection;
             _publication = publication;
             _clientFactory = new AWSClientFactory(connection);
 
             if (publication.TopicArn != null)
                 ChannelTopicArn = publication.TopicArn;
-
         }
-        
-       public async Task<bool> ConfirmTopicExistsAsync(string topic = null)
-       {
-           //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
-           if (string.IsNullOrEmpty(ChannelTopicArn))
-           {
-               await EnsureTopicAsync(
-                   topic != null ? new RoutingKey(topic) : _publication.Topic,
-                   _publication.SnsAttributes,
-                   _publication.FindTopicBy,
-                   _publication.MakeChannels,
-                   _publication.SnsType,
-                   _publication.Deduplication);
-           }
-
-           return !string.IsNullOrEmpty(ChannelTopicArn);
-       }
-       
-       /// <summary>
-       /// Sends the specified message.
-       /// </summary>
-       /// <param name="message">The message.</param>
-       public async Task SendAsync(Message message)
-       {
-           s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}", 
-               message.Header.Topic, message.Id, message.Body);
-            
-           await ConfirmTopicExistsAsync(message.Header.Topic);
-
-           using var client = _clientFactory.CreateSnsClient();
-           var publisher = new SqsMessagePublisher(ChannelTopicArn, client, _publication.SnsType, _publication.Deduplication);
-           var messageId = await publisher.PublishAsync(message);
-           if (messageId != null)
-           {
-               s_logger.LogDebug(
-                   "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
-                   message.Header.Topic, message.Id, messageId);
-               return;
-           }
-
-           throw new InvalidOperationException(
-               string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
-       }
-
-        /// <summary>
-        /// Sends the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Send(Message message)
-        {
-            SendAsync(message).Wait();
-        }
-
-        /// <summary>
-        /// Sends the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="delay">The sending delay</param>
-        /// <returns>Task.</returns>
-        public void SendWithDelay(Message message, TimeSpan? delay= null)
-        {
-            //TODO: Delay should set a visibility timeout
-            Send(message);
-        }
-        
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-        public void Dispose()
+        public void Dispose() { }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public ValueTask DisposeAsync()
         {
-            
+            return new ValueTask(Task.CompletedTask);
+        }
+
+        public bool ConfirmTopicExists(string? topic = null) =>
+            BrighterSynchronizationHelper.Run(async () => await ConfirmTopicExistsAsync(topic));
+
+        public async Task<bool> ConfirmTopicExistsAsync(string? topic = null,
+            CancellationToken cancellationToken = default)
+        {
+            //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
+            if (!string.IsNullOrEmpty(ChannelTopicArn)) return !string.IsNullOrEmpty(ChannelTopicArn);
+
+            RoutingKey? routingKey = null;
+            if (topic is null && _publication.Topic is not null)
+                routingKey = _publication.Topic;
+            else if (topic is not null)
+                routingKey = new RoutingKey(topic);
+
+            if (routingKey is null)
+                throw new ConfigurationException("No topic specified for producer");
+
+            await EnsureTopicAsync(
+                routingKey,
+                _publication.FindTopicBy,
+                _publication.SnsAttributes,
+                _publication.MakeChannels,
+                _publication.SnsType,
+                _publication.Deduplication,
+                cancellationToken);
+
+            return !string.IsNullOrEmpty(ChannelTopicArn);
+        }
+
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Allows cancellation of the Send operation</param>
+        public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
+        {
+            s_logger.LogDebug(
+                "SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
+                message.Header.Topic, message.Id, message.Body);
+
+            await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
+
+            if (string.IsNullOrEmpty(ChannelTopicArn))
+                throw new InvalidOperationException(
+                    $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body} as the topic does not exist");
+
+            using var client = _clientFactory.CreateSnsClient();
+            var publisher = new SqsMessagePublisher(ChannelTopicArn!, client, _publication.SnsType, _publication.Deduplication);
+            var messageId = await publisher.PublishAsync(message);
+
+            if (messageId == null)
+                throw new InvalidOperationException(
+                    $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
+
+            s_logger.LogDebug(
+                "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+                message.Header.Topic, message.Id, messageId);
+        }
+
+        /// <summary>
+        /// Sends the specified message.
+        /// Sync over Async
+        /// </summary>
+        /// <param name="message">The message.</param>
+        public void Send(Message message) => BrighterSynchronizationHelper.Run(() => SendAsync(message));
+
+        /// <summary>
+        /// Sends the specified message, with a delay.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delay">The sending delay</param>
+        /// <returns>Task.</returns>
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
+        {
+            //TODO: Delay should set a visibility timeout
+            Send(message);
+        }
+
+        /// <summary>
+        /// Sends the specified message, with a delay
+        /// </summary>
+        /// <param name="message">The message</param>
+        /// <param name="delay">The sending delay</param>
+        /// <param name="cancellationToken">Cancels the send operation</param>
+        /// <exception cref="NotImplementedException"></exception>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay,
+            CancellationToken cancellationToken = default)
+        {
+            //TODO: Delay should set the visibility timeout
+            await SendAsync(message, cancellationToken);
         }
     }
 }

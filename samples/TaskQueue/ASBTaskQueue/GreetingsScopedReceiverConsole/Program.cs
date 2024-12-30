@@ -38,7 +38,7 @@ namespace GreetingsScopedReceiverConsole
                             timeOut: TimeSpan.FromMilliseconds(400),
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: true),
+                            messagePumpType: MessagePumpType.Proactor),
 
                         new AzureServiceBusSubscription<GreetingEvent>(
                             new SubscriptionName("Event"),
@@ -47,7 +47,7 @@ namespace GreetingsScopedReceiverConsole
                             timeOut: TimeSpan.FromMilliseconds(400),
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: false)
+                            messagePumpType: MessagePumpType.Proactor)
                     };
 
                     //TODO: add your ASB qualified name here

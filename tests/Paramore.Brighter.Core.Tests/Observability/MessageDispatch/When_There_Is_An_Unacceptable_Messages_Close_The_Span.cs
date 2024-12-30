@@ -70,10 +70,10 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), _channel, tracer, instrumentationOptions)
             {
-                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = 1000
+                Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
             };
             
             //in theory the message pump should see this from the consumer when the queue is empty

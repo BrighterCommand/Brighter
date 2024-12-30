@@ -264,7 +264,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             TimeSpan? minimumAge = null, 
             bool useBulk = false,
             RequestContext requestContext = null,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object> args = null,
+            bool runOnBackgroundThread = true)
         {
             Commands.Add(CommandType.Clear);
             ClearParamsList.Add(new ClearParams

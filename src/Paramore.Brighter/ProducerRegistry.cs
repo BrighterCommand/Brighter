@@ -4,9 +4,26 @@ using System.Linq;
 
 namespace Paramore.Brighter
 {
-    public class ProducerRegistry(Dictionary<RoutingKey, IAmAMessageProducer> messageProducers) : IAmAProducerRegistry
+    public class ProducerRegistry(Dictionary<RoutingKey, IAmAMessageProducer>? messageProducers) 
+        : IAmAProducerRegistry
     {
         private readonly bool _hasProducers = messageProducers != null && messageProducers.Any();
+        
+        /// <summary>
+        /// An iterable list of all the producers in the registry
+        /// </summary>
+        public IEnumerable<IAmAMessageProducer> Producers { get { return messageProducers is not null ? messageProducers.Values : Array.Empty<IAmAMessageProducer>(); } }
+        
+        /// <summary>
+        /// An iterable list of all the sync producers in the registry
+        /// </summary>
+        public IEnumerable<IAmAMessageProducerSync> ProducersSync => messageProducers is not null ? messageProducers.Values.Cast<IAmAMessageProducerSync>() : Array.Empty<IAmAMessageProducerSync>(); 
+
+        /// <summary>
+        /// An iterable list of all the sync producers in the registry
+        /// </summary>
+        public IEnumerable<IAmAMessageProducerAsync> ProducersAsync => messageProducers is not null ? messageProducers.Values.Cast<IAmAMessageProducerAsync>() : Array.Empty<IAmAMessageProducerAsync>(); 
+
 
         /// <summary>
         /// Will call CloseAll to terminate producers
@@ -21,19 +38,23 @@ namespace Paramore.Brighter
          {
              CloseAll();
          }
-         
-        /// <summary>
-        /// Iterates through all the producers and disposes them, as they may have unmanaged resources that should be shut down in an orderly fashion
-        /// </summary>
-        public void CloseAll()
-        {
-            foreach (var producer in messageProducers)
-            {
-                producer.Value.Dispose();
-            }
-            
-            messageProducers.Clear();
-        }
+
+         /// <summary>
+         /// Iterates through all the producers and disposes them, as they may have unmanaged resources that should be shut down in an orderly fashion
+         /// </summary>
+         public void CloseAll()
+         {
+             if (messageProducers is not null)
+             {
+                 foreach (var producer in messageProducers)
+                 {
+                     if (producer.Value is IDisposable disposable)
+                         disposable.Dispose();
+                 }
+
+                 messageProducers.Clear();
+             }
+         }
 
 
         /// <summary>
@@ -43,7 +64,30 @@ namespace Paramore.Brighter
         /// <returns>A producer</returns>
         public IAmAMessageProducer LookupBy(RoutingKey topic)
         {
-            return messageProducers[topic];
+            if (!_hasProducers)
+                throw new ConfigurationException("No producers found in the registry");
+            
+            return messageProducers![topic];
+        }
+
+        /// <summary>
+        /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
+        /// </summary>
+        /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
+        /// <returns>A producer</returns>
+        public IAmAMessageProducerAsync LookupAsyncBy(RoutingKey topic)
+        {
+            return (IAmAMessageProducerAsync)LookupBy(topic);
+        }
+        
+        /// <summary>
+        /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
+        /// </summary>
+        /// <param name="topic">The <see cref="RoutingKey"/> we want to find the producer for</param>
+        /// <returns>A producer</returns>
+        public IAmAMessageProducerSync LookupSyncBy(RoutingKey topic)
+        {
+            return (IAmAMessageProducerSync)LookupBy(topic);
         }
 
         /// <summary>
@@ -58,20 +102,17 @@ namespace Paramore.Brighter
             where producer.Value.Publication.RequestType == typeof(TRequest)
                 select producer.Value.Publication;
 
-            if (publications.Count() > 1)
+            var publicationsArray = publications as Publication[] ?? publications.ToArray();
+            
+            if (publicationsArray.Count() > 1)
                 throw new ConfigurationException("Only one producer per request type is supported. Have you added the request type to multiple Publications?");
             
-            var publication = publications.FirstOrDefault();
+            var publication = publicationsArray.FirstOrDefault();
             
             if (publication is null)
                 throw new ConfigurationException("No producer found for request type. Have you set the request type on the Publication?");
 
             return publication;
         }
-
-        /// <summary>
-        /// An iterable list of all the producers in the registry
-        /// </summary>
-        public IEnumerable<IAmAMessageProducer> Producers { get { return messageProducers.Values; } }
     }
 }

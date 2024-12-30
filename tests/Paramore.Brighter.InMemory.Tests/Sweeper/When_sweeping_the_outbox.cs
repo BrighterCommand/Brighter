@@ -52,7 +52,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,
@@ -67,9 +67,10 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                bus);
+                mediator);
 
-            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+
+            var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var events = new[]
             {
@@ -84,7 +85,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             //Act
             timeProvider.Advance(timeSinceSent); // -- let the messages expire
 
-            sweeper.Sweep();
+            await sweeper.SweepAsync();
 
             await Task.Delay(1000); //Give the sweep time to run
 
@@ -128,7 +129,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();            
             
-            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,
@@ -143,9 +144,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                bus);
+                mediator);
             
-            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+            var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var events = new[]
             {
@@ -160,7 +161,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             //Act
             timeProvider.Advance(timeSinceSent); // -- let the messages expire
 
-            sweeper.SweepAsyncOutbox();
+            await sweeper.SweepAsync();
 
             await Task.Delay(1000); //Give the sweep time to run
 
@@ -203,7 +204,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,
@@ -218,11 +219,11 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                bus);
+                mediator);
             
             var sweeper = new OutboxSweeper(
                 timeSinceSent, 
-                commandProcessor, 
+                mediator, 
                 new InMemoryRequestContextFactory());
 
             var oldEvent = new MyEvent{Value = "old"};
@@ -243,7 +244,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             //Act
             
-            sweeper.Sweep();
+            await sweeper.SweepAsync();
 
             await Task.Delay(1000); //Give the sweep time to run
 
@@ -287,7 +288,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             mapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            var mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry,
                 new DefaultPolicy(),
                 mapperRegistry,
@@ -302,9 +303,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                bus);           
+                mediator);           
             
-            var sweeper = new OutboxSweeper(timeSinceSent, commandProcessor, new InMemoryRequestContextFactory());
+            var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var oldEvent = new MyEvent{Value = "old"};
             commandProcessor.DepositPost(oldEvent);
@@ -323,7 +324,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             }
 
             //Act
-            sweeper.SweepAsyncOutbox();
+            await sweeper.SweepAsync();
 
             await Task.Delay(1000); //Give the sweep time to run
 

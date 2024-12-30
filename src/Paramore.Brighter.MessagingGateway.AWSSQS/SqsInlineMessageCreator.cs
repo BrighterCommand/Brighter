@@ -1,5 +1,4 @@
 ﻿#region Licence
-
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -20,7 +19,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
 
 using System;
@@ -40,15 +38,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
             var topic = HeaderResult<RoutingKey>.Empty();
-            var messageId = HeaderResult<string>.Empty();
-            var contentType = HeaderResult<string>.Empty();
-            var correlationId = HeaderResult<string>.Empty();
+            var messageId = HeaderResult<string?>.Empty();
+            var contentType = HeaderResult<string?>.Empty();
+            var correlationId = HeaderResult<string?>.Empty();
             var handledCount = HeaderResult<int>.Empty();
             var messageType = HeaderResult<MessageType>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var receiptHandle = HeaderResult<string>.Empty();
-            var replyTo = HeaderResult<string>.Empty();
-            var subject = HeaderResult<string>.Empty();
+            var replyTo = HeaderResult<string?>.Empty();
+            var subject = HeaderResult<string?>.Empty();
 
             Message message;
             try
@@ -72,20 +70,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 //TODO:CLOUD_EVENTS parse from headers
 
                 var messageHeader = new MessageHeader(
-                    messageId: messageId.Result,
-                    topic: topic.Result,
+                    messageId: messageId.Result ?? string.Empty,
+                    topic: topic.Result ?? RoutingKey.Empty,
                     messageType: messageType.Result,
                     source: null,
                     type: "",
                     timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                    correlationId: correlationId.Success ? correlationId.Result : "",
-                    replyTo: new RoutingKey(replyTo.Result),
-                    contentType: contentType.Result,
+                    correlationId: correlationId.Success ? correlationId.Result : string.Empty,
+                    replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
+                    contentType: contentType.Result ?? "plain/text",
                     handledCount: handledCount.Result,
                     dataSchema: null,
                     subject: subject.Result,
                     delayed: TimeSpan.Zero,
-                    partitionKey: partitionKey.Result
+                    partitionKey: partitionKey.Result ?? string.Empty
                 );
 
                 message = new Message(messageHeader, ReadMessageBody(jsonDocument));
@@ -99,6 +97,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 if (deduplicationId.Success)
                 {
+                    // TODO: Remove hard code
                     message.Header.Bag.Add("DeduplicationId", deduplicationId);
                 }
 
@@ -110,8 +109,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
                 message = FailureMessage(topic, messageId);
             }
-
-
+            
             return message;
         }
 
@@ -133,17 +131,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning($"Failed while deserializing Sqs Message body, ex: {ex}");
             }
 
-            return messageAttributes;
+            return messageAttributes ?? new Dictionary<string, JsonElement>();
         }
 
-        private HeaderResult<string> ReadContentType()
+        private HeaderResult<string?> ReadContentType()
         {
             if (_messageAttributes.TryGetValue(HeaderNames.ContentType, out var contentType))
             {
-                return new HeaderResult<string>(contentType.GetValueInString(), true);
+                return new HeaderResult<string?>(contentType.GetValueInString(), true);
             }
 
-            return new HeaderResult<string>(string.Empty, true);
+            return new HeaderResult<string?>(string.Empty, true);
         }
 
         private Dictionary<string, object> ReadMessageBag()
@@ -152,28 +150,33 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 try
                 {
+                    var json = headerBag.GetValueInString();
+                    if (string.IsNullOrEmpty(json))
+                        return new Dictionary<string, object>();
+                    
                     var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(
-                        headerBag.GetValueInString(),
+                        json!,
                         JsonSerialisationOptions.Options);
-
-                    return bag;
+                    
+                    return bag ?? new Dictionary<string, object>();
                 }
                 catch (Exception)
                 {
+                    //suppress any errors in deserialization
                 }
             }
 
             return new Dictionary<string, object>();
         }
 
-        private HeaderResult<string> ReadReplyTo()
+        private HeaderResult<string?> ReadReplyTo()
         {
             if (_messageAttributes.TryGetValue(HeaderNames.ReplyTo, out var replyTo))
             {
-                return new HeaderResult<string>(replyTo.GetValueInString(), true);
+                return new HeaderResult<string?>(replyTo.GetValueInString(), true);
             }
 
-            return new HeaderResult<string>(string.Empty, true);
+            return new HeaderResult<string?>(string.Empty, true);
         }
 
         private HeaderResult<DateTime> ReadTimestamp()
@@ -215,24 +218,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<int>(0, true);
         }
 
-        private HeaderResult<string> ReadCorrelationId()
+        private HeaderResult<string?> ReadCorrelationId()
         {
             if (_messageAttributes.TryGetValue(HeaderNames.CorrelationId, out var correlationId))
             {
-                return new HeaderResult<string>(correlationId.GetValueInString(), true);
+                return new HeaderResult<string?>(correlationId.GetValueInString(), true);
             }
 
-            return new HeaderResult<string>(string.Empty, true);
+            return new HeaderResult<string?>(string.Empty, true);
         }
 
-        private HeaderResult<string> ReadMessageId()
+        private HeaderResult<string?> ReadMessageId()
         {
             if (_messageAttributes.TryGetValue(HeaderNames.Id, out var messageId))
             {
-                return new HeaderResult<string>(messageId.GetValueInString(), true);
+                return new HeaderResult<string?>(messageId.GetValueInString(), true);
             }
 
-            return new HeaderResult<string>(string.Empty, true);
+            return new HeaderResult<string?>(string.Empty, true);
         }
 
         private HeaderResult<RoutingKey> ReadTopic()
@@ -240,7 +243,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (_messageAttributes.TryGetValue(HeaderNames.Topic, out var topicArn))
             {
                 //we have an arn, and we want the topic
-                var arnElements = topicArn.GetValueInString().Split(':');
+                var s = topicArn.GetValueInString();
+                if (string.IsNullOrEmpty(s))
+                    return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
+                
+                var arnElements = s!.Split(':');
                 var topic = arnElements[(int)ARNAmazonSNS.TopicName];
 
                 return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
@@ -249,13 +256,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
         }
 
-        private static HeaderResult<string> ReadMessageSubject(JsonDocument jsonDocument)
+        private static HeaderResult<string?> ReadMessageSubject(JsonDocument jsonDocument)
         {
             try
             {
                 if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
                 {
-                    return new HeaderResult<string>(value.GetString(), true);
+                    return new HeaderResult<string?>(value.GetString(), true);
                 }
             }
             catch (Exception ex)
@@ -263,7 +270,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
             }
 
-            return new HeaderResult<string>(null, true);
+            return new HeaderResult<string?>(null, true);
         }
 
         private static MessageBody ReadMessageBody(JsonDocument jsonDocument)

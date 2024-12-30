@@ -14,15 +14,15 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class SQSBufferedConsumerTests : IDisposable
+    public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
     {
         private readonly SqsMessageProducer _messageProducer;
         private readonly SqsMessageConsumer _consumer;
-        private readonly string _topicName;
+        private readonly string _topicName; 
         private readonly ChannelFactory _channelFactory;
-        private const string _contentType = "text\\plain";
-        private const int _bufferSize = 3;
-        private const int _messageCount = 4;
+        private const string ContentType = "text\\plain";
+        private const int BufferSize = 3;
+        private const int MessageCount = 4;
 
         public SQSBufferedConsumerTests()
         {
@@ -30,58 +30,59 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
             _channelFactory = new ChannelFactory(awsConnection);
-
             var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-
+                
             //we need the channel to create the queues and notifications
             var routingKey = new RoutingKey(_topicName);
-
-            var channel = _channelFactory.CreateChannel(new SqsSubscription<MyCommand>(
+            
+            var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
-                channelName: new ChannelName(channelName),
-                routingKey: routingKey,
-                bufferSize: _bufferSize,
+                channelName:new ChannelName(channelName),
+                routingKey:routingKey,
+                bufferSize: BufferSize,
                 makeChannels: OnMissingChannel.Create
-            ));
-
+                ));
+            
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
-            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey,
-                _bufferSize);
-            _messageProducer = new SqsMessageProducer(awsConnection,
-                new SnsPublication { MakeChannels = OnMissingChannel.Create });
+            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
+            _messageProducer = new SqsMessageProducer(awsConnection, 
+                new SnsPublication
+                {
+                    MakeChannels = OnMissingChannel.Create 
+                });
         }
-
+            
         [Fact]
         public async Task When_a_message_consumer_reads_multiple_messages()
         {
             var routingKey = new RoutingKey(_topicName);
-
+            
             var messageOne = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
                 new MessageBody("test content one")
-            );
-
-            var messageTwo = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                );
+            
+            var messageTwo= new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
                 new MessageBody("test content two")
-            );
-
-            var messageThree = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                );
+           
+            var messageThree= new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
                 new MessageBody("test content three")
-            );
-
-            var messageFour = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND,
-                    correlationId: Guid.NewGuid().ToString(), contentType: _contentType),
+                );
+             
+            var messageFour= new Message(
+                new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND, 
+                    correlationId: Guid.NewGuid().ToString(), contentType: ContentType),
                 new MessageBody("test content four")
-            );
-
+                );
+             
             //send MESSAGE_COUNT messages 
             _messageProducer.Send(messageOne);
             _messageProducer.Send(messageTwo);
@@ -95,37 +96,49 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
             do
             {
                 iteration++;
-                var outstandingMessageCount = _messageCount - messagesReceivedCount;
+                var outstandingMessageCount = MessageCount - messagesReceivedCount;
 
                 //retrieve  messages
                 var messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
-
+                
                 messages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
-
+                
                 //should not receive more than buffer in one hit
-                messages.Length.Should().BeLessOrEqualTo(_bufferSize);
+                messages.Length.Should().BeLessOrEqualTo(BufferSize);
 
                 var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
                 foreach (var message in moreMessages)
                 {
                     messagesReceived.Add(message);
-                    _consumer.Acknowledge(message);
+                   _consumer.Acknowledge(message);
                 }
-
+                 
                 messagesReceivedCount = messagesReceived.Count;
-
+                
                 await Task.Delay(1000);
-            } while ((iteration <= 5) && (messagesReceivedCount < _messageCount));
 
+            } while ((iteration <= 5) && (messagesReceivedCount <  MessageCount));
+    
 
             messagesReceivedCount.Should().Be(4);
-        }
 
+        }
+        
         public void Dispose()
         {
             //Clean up resources that we have created
-            _channelFactory.DeleteTopic();
-            _channelFactory.DeleteQueue();
+            _channelFactory.DeleteTopicAsync().Wait();
+            _channelFactory.DeleteQueueAsync().Wait();
+            _messageProducer.Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync();
+            await _channelFactory.DeleteQueueAsync();
+            await ((IAmAMessageProducerAsync) _messageProducer).DisposeAsync();
         }
     }
 }
+
+

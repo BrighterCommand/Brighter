@@ -64,7 +64,7 @@ public class SqsSubscription : Subscription
     /// <summary>
     ///  The JSON serialization of the queue's access control policy.
     /// </summary>
-    public string IAMPolicy { get; }
+    public string? IAMPolicy { get; }
 
     /// <summary>
     /// Indicate that the Raw Message Delivery setting is enabled or disabled
@@ -74,18 +74,18 @@ public class SqsSubscription : Subscription
     /// <summary>
     /// The policy that controls when we send messages to a DLQ after too many requeue attempts
     /// </summary>
-    public RedrivePolicy RedrivePolicy { get; }
+    public RedrivePolicy? RedrivePolicy { get; }
 
     /// <summary>
     /// The attributes of the topic. If TopicARN is set we will always assume that we do not
     /// need to create or validate the SNS Topic
     /// </summary>
-    public SnsAttributes SnsAttributes { get; }
+    public SnsAttributes? SnsAttributes { get; }
 
     /// <summary>
     /// A list of resource tags to use when creating the queue
     /// </summary>
-    public Dictionary<string, string> Tags { get; }
+    public Dictionary<string, string>? Tags { get; }
 
     /// <summary>
     /// The AWS SQS type.
@@ -122,7 +122,7 @@ public class SqsSubscription : Subscription
     /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
     /// <param name="requeueDelay">The number of milliseconds to delay the delivery of a requeue message for.</param>
     /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-    /// <param name="runAsync">Is this channel read asynchronously</param>
+    /// <param name="messagePumpType">Is this channel read asynchronously</param>
     /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
     /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
     /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
@@ -140,37 +140,38 @@ public class SqsSubscription : Subscription
     /// <param name="contentBasedDeduplication">Enables or disable content-based deduplication</param>
     /// <param name="deduplicationScope">Specifies whether message deduplication occurs at the message group or queue level</param>
     /// <param name="fifoThroughputLimit">Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group</param>
-    public SqsSubscription(Type dataType,
-        SubscriptionName name = null,
-        ChannelName channelName = null,
-        RoutingKey routingKey = null,
+    public SqsSubscription(
+        Type dataType,
+        SubscriptionName? name = null,
+        ChannelName? channelName = null,
+        RoutingKey? routingKey = null,
         int bufferSize = 1,
         int noOfPerformers = 1,
         TimeSpan? timeOut = null,
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
-        bool runAsync = false,
-        IAmAChannelFactory channelFactory = null,
+        MessagePumpType messagePumpType = MessagePumpType.Proactor,
+        IAmAChannelFactory? channelFactory = null,
         int lockTimeout = 10,
         int delaySeconds = 0,
         int messageRetentionPeriod = 345600,
         TopicFindBy findTopicBy = TopicFindBy.Name,
-        string iAmPolicy = null,
-        RedrivePolicy redrivePolicy = null,
-        SnsAttributes snsAttributes = null,
-        Dictionary<string, string> tags = null,
+        string? iAmPolicy = null,
+        RedrivePolicy? redrivePolicy = null,
+        SnsAttributes? snsAttributes = null,
+        Dictionary<string, string>? tags = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         bool rawMessageDelivery = true,
-        int emptyChannelDelay = 500,
-        int channelFailureDelay = 1000,
+        TimeSpan? emptyChannelDelay = null,
+        TimeSpan? channelFailureDelay = null,
         SnsSqsType sqsType = SnsSqsType.Standard,
         bool contentBasedDeduplication = false,
         DeduplicationScope? deduplicationScope = null,
         int? fifoThroughputLimit = null
     )
         : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
-            requeueDelay, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay,
+            requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
             channelFailureDelay)
     {
         LockTimeout = lockTimeout;
@@ -210,7 +211,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
     /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
     /// <param name="requeueDelay">The number of milliseconds to delay the delivery of a requeue message for.</param>
     /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-    /// <param name="runAsync">Is this channel read asynchronously</param>
+    /// <param name="messagePumpType">Is this channel read asynchronously</param>
     /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
     /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
     /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
@@ -228,40 +229,41 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
     /// <param name="contentBasedDeduplication">Enables or disable content-based deduplication</param>
     /// <param name="deduplicationScope">Specifies whether message deduplication occurs at the message group or queue level</param>
     /// <param name="fifoThroughputLimit">Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group</param>
-    public SqsSubscription(SubscriptionName name = null,
-        ChannelName channelName = null,
-        RoutingKey routingKey = null,
+    public SqsSubscription(
+        SubscriptionName? name = null,
+        ChannelName? channelName = null,
+        RoutingKey? routingKey = null,
         int bufferSize = 1,
         int noOfPerformers = 1,
         TimeSpan? timeOut = null,
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
-        bool runAsync = false,
-        IAmAChannelFactory channelFactory = null,
+        MessagePumpType messagePumpType = MessagePumpType.Proactor,
+        IAmAChannelFactory? channelFactory = null,
         int lockTimeout = 10,
         int delaySeconds = 0,
         int messageRetentionPeriod = 345600,
         TopicFindBy findTopicBy = TopicFindBy.Name,
-        string iAmPolicy = null,
-        RedrivePolicy redrivePolicy = null,
-        SnsAttributes snsAttributes = null,
-        Dictionary<string, string> tags = null,
+        string? iAmPolicy = null,
+        RedrivePolicy? redrivePolicy = null,
+        SnsAttributes? snsAttributes = null,
+        Dictionary<string, string>? tags = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         bool rawMessageDelivery = true,
-        int emptyChannelDelay = 500,
-        int channelFailureDelay = 1000,
+        TimeSpan? emptyChannelDelay = null,
+        TimeSpan? channelFailureDelay = null,
         SnsSqsType sqsType = SnsSqsType.Standard,
         bool contentBasedDeduplication = false,
         DeduplicationScope? deduplicationScope = null,
-        int? fifoThroughputLimit = null)
+        int? fifoThroughputLimit = null
+    )
         : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
             requeueDelay,
-            unacceptableMessageLimit, runAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod,
-            findTopicBy,
+            unacceptableMessageLimit, messagePumpType, channelFactory, lockTimeout, delaySeconds,
+            messageRetentionPeriod, findTopicBy,
             iAmPolicy, redrivePolicy, snsAttributes, tags, makeChannels, rawMessageDelivery, emptyChannelDelay,
-            channelFailureDelay,
-            sqsType, contentBasedDeduplication, deduplicationScope, fifoThroughputLimit)
+            channelFailureDelay, sqsType, contentBasedDeduplication, deduplicationScope, fifoThroughputLimit)
     {
     }
 }

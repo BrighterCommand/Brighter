@@ -13,8 +13,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
     [Trait("Fragile", "CI")]
     public class ASBProducerTests : IDisposable
     {
-        private readonly IAmAChannel _topicChannel;
-        private readonly IAmAChannel _queueChannel;
+        private readonly IAmAChannelSync _topicChannel;
+        private readonly IAmAChannelSync _queueChannel;
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly ASBTestCommand _command;
         private readonly string _correlationId;
@@ -61,12 +61,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var clientProvider = ASBCreds.ASBClientProvider;
             _administrationClient = new AdministrationClientWrapper(clientProvider);
-            _administrationClient.CreateSubscription(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration());
+            _administrationClient.CreateSubscriptionAsync(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration())
+                .GetAwaiter()
+                .GetResult();
 
             var channelFactory =
                 new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider));
-            _topicChannel = channelFactory.CreateChannel(subscription);
-            _queueChannel = channelFactory.CreateChannel(queueSubscription);
+            _topicChannel = channelFactory.CreateSyncChannel(subscription);
+            _queueChannel = channelFactory.CreateSyncChannel(queueSubscription);
 
             _producerRegistry = new AzureServiceBusProducerRegistryFactory(
                 clientProvider,
