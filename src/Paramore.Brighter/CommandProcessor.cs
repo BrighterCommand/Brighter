@@ -965,46 +965,7 @@ namespace Paramore.Brighter
                 _tracer?.EndSpan(span);
             }
         }
-
-        /// <summary>
-        /// Flushes any outstanding message box message to the broker.
-        /// This will be run on a background task.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostAsync{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object},bool,System.Threading.CancellationToken)"/>
-        /// </summary>
-        /// <param name="amountToClear">The maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age to clear (Default 5 second).</param>
-        /// <param name="useBulk">Use the bulk send on the producer.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        /// <param name="runOnBackgroundThread">Run the clear operations on a Background Thread</param>
-        public void ClearOutstandingFromOutbox(
-            int amountToClear = 100,
-            TimeSpan? minimumAge = null,
-            bool useBulk = false,
-            RequestContext? requestContext = null,
-            Dictionary<string, object>? args = null,
-            bool runOnBackgroundThread = true
-        )
-        {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
-            var context = InitRequestContext(span, requestContext);
-
-            try
-            {
-                var minAge = minimumAge ?? TimeSpan.FromMilliseconds(5000);
-                s_mediator!.ClearOutstandingFromOutbox(amountToClear, minAge, useBulk, context, args, runOnBackgroundThread);
-            }
-            catch (Exception e)
-            {
-                _tracer?.AddExceptionToSpan(span, [e]);
-                throw;
-            }
-            finally
-            {
-                _tracer?.EndSpan(span);
-            }
-        }
-
+        
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
         /// The message is placed into a message queue but not into the outbox.

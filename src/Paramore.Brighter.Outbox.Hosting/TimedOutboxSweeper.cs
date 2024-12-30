@@ -33,7 +33,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
-namespace Paramore.Brighter.Extensions.Hosting
+namespace Paramore.Brighter.Outbox.Hosting
 {
     /// <summary>
     /// Runs a sweeper that will find outstanding messages in the Outbox and produce them via a broker
@@ -74,8 +74,7 @@ namespace Paramore.Brighter.Extensions.Hosting
         {
             s_logger.LogInformation("Outbox Sweeper Service is starting.");
 
-            _timer = new Timer(Sweep, null, TimeSpan.Zero,
-                TimeSpan.FromSeconds(_options.TimerInterval));
+            _timer = new Timer(Sweep, null, TimeSpan.Zero, TimeSpan.FromSeconds(_options.TimerInterval));
 
             return Task.CompletedTask;
         }
@@ -95,16 +94,16 @@ namespace Paramore.Brighter.Extensions.Hosting
         }
 
         /// <summary>
-        /// Cleans up the <see cref="Timer"/> used by the <see cref="TimedOutboxSweeper"/>
+        /// Cleans up the <see cref="System.Threading.Timer"/> used by the <see cref="TimedOutboxSweeper"/>
         /// </summary>
         public void Dispose()
         {
             _timer?.Dispose();
         }
 
-        private void Sweep(object state)
+        private async void Sweep(object state)
         {
-            var lockId = _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None).Result;
+            var lockId = await _distributedLock.ObtainLockAsync(LockingResourceName, CancellationToken.None);
             if (lockId != null)
             {
                 s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
@@ -112,24 +111,23 @@ namespace Paramore.Brighter.Extensions.Hosting
                 var scope = _serviceScopeFactory.CreateScope();
                 try
                 {
-                    IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
+                    IAmAnOutboxProducerMediator outboxProducerMediator = scope.ServiceProvider.GetService<IAmAnOutboxProducerMediator>();
 
                     var outBoxSweeper = new OutboxSweeper(
                         timeSinceSent: _options.MinimumMessageAge,
-                        commandProcessor: commandProcessor,
+                        outboxProducerMediator: outboxProducerMediator,
                         new InMemoryRequestContextFactory(),
                         _options.BatchSize,
                         _options.UseBulk,
                         _options.Args);
                     
-                        outBoxSweeper.Sweep();
+                        await outBoxSweeper.SweepAsync();
                 }
                 finally
                 {
                     //on a timer thread, so blocking is OK
-                    _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None)
-                        .GetAwaiter()
-                        .GetResult();
+                    await _distributedLock.ReleaseLockAsync(LockingResourceName, lockId, CancellationToken.None);
+                        
                     scope.Dispose();
                 }
             }

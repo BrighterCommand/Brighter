@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,37 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 
-namespace Paramore.Brighter.Extensions.Hosting
+namespace Paramore.Brighter.Outbox.Hosting
 {
-    /// <summary>
-    /// The configuration options for <see cref="TimedOutboxSweeper"/>
-    /// </summary>
-    public class TimedOutboxSweeperOptions
+    public class TimedOutboxArchiverOptions
     {
         /// <summary>
-        /// The timer interval in Seconds. 
+        /// The timer interval in seconds. 
         /// </summary>
-        public int TimerInterval { get; set; } = 5;
-        /// <summary>
-        /// The age a message to pickup by the sweeper in milliseconds.
-        /// </summary>
-        public TimeSpan MinimumMessageAge { get; set; } = TimeSpan.FromSeconds(5);
+        public int TimerInterval { get; set; } = 15;
 
         /// <summary>
-        /// The maximum number of messages to dispatch.
+        /// The minimum age in hours to Archive
         /// </summary>
-        public int BatchSize { get; set; } = 100;
-
-        /// <summary>
-        /// An optional 'bag' of arguments that the sweeper needs for a specific flavor of outbox
-        /// </summary>
-        public readonly Dictionary<string, object> Args = new Dictionary<string, object>();
-
-        /// <summary>
-        /// Use bulk operations to dispatch messages.
-        /// </summary>
-        public bool UseBulk { get; set; } = false;
+        public TimeSpan MinimumAge { get; set; } = TimeSpan.FromHours(24);
     }
 }

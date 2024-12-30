@@ -27,7 +27,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
-namespace Paramore.Brighter.Extensions.Hosting
+namespace Paramore.Brighter.Outbox.Hosting
 {
     public static class HostedServiceCollectionExtensions
     {

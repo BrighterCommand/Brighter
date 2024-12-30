@@ -27,6 +27,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
     private readonly Brighter.CommandProcessor _commandProcessor;
     private readonly string _topic;
     private readonly InternalBus _internalBus = new();
+    private readonly IAmAnOutboxProducerMediator _mediator;
 
     public CommandProcessorClearOutstandingObservabilityTests()
     {
@@ -80,7 +81,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
             {routingKey, producer}
         });
         
-        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+        _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
             producerRegistry, 
             policyRegistry, 
             messageMapperRegistry, 
@@ -96,7 +97,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
             handlerFactory, 
             new InMemoryRequestContextFactory(),
             policyRegistry, 
-            bus,
+            _mediator,
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );
@@ -121,7 +122,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
         //reset the parent span as deposit and clear are siblings
         
         context.Span = parentActivity;
-        _commandProcessor.ClearOutstandingFromOutbox(3, TimeSpan.Zero, false, context);
+        await _mediator.ClearOutstandingFromOutboxAsync(3, TimeSpan.Zero, false, context);
 
         await Task.Delay(3000);     //allow bulk clear to run -- can make test fragile
         

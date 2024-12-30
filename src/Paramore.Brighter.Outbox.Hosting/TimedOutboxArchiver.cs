@@ -30,7 +30,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 // ReSharper disable StaticMemberInGenericType
 
-namespace Paramore.Brighter.Extensions.Hosting
+namespace Paramore.Brighter.Outbox.Hosting
 {
     /// <summary>
     /// The archiver will find messages in the outbox that are older than a certain age and archive them
