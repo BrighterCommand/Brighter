@@ -57,11 +57,13 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="requestContext">The context of the request pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        void ClearOutstandingFromOutbox(int amountToClear,
+        /// <param name="cancellationToken">Cancellation Token</param>
+        Task ClearOutstandingFromOutboxAsync(int amountToClear,
             TimeSpan minimumAge,
             bool useBulk,
             RequestContext requestContext,
-            Dictionary<string, object>? args = null);
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Given a request, run the transformation pipeline to create a message
@@ -97,13 +99,25 @@ namespace Paramore.Brighter
         /// <exception cref="ArgumentOutOfRangeException">Thrown if there is no message mapper for the request</exception>
         void CreateRequestFromMessage<TRequest>(Message message, RequestContext? requestContext, out TRequest request)
             where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Do we have an async outbox defined?
+        /// </summary>
+        /// <returns>true if defined</returns>
+        bool HasAsyncOutbox();
+
+        /// <summary>
+        /// Do we have a synchronous outbox defined?
+        /// </summary>
+        /// <returns>true if defined</returns>
+        bool HasOutbox();
     }
     
     /// <summary>
     /// An external bus service allows us to send messages to external systems
     /// The interaction with the CommandProcessor is mostly via the Outbox and the Message Mapper
     /// </summary>
-    public interface IAmAnOutboxProducerMediator<TMessage, TTransaction> : IDisposable
+    public interface IAmAnOutboxProducerMediator<TMessage, TTransaction> : IAmAnOutboxProducerMediator
     {
         /// <summary>
         /// Adds a message to the outbox
@@ -139,18 +153,6 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             IAmABoxTransactionProvider<TTransaction>? overridingTransactionProvider = null,
             string? batchId = null);
-
-        /// <summary>
-        /// Do we have an async outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        bool HasAsyncOutbox();
-
-        /// <summary>
-        /// Do we have a synchronous outbox defined?
-        /// </summary>
-        /// <returns>true if defined</returns>
-        bool HasOutbox();
         
         /// <summary>
         /// Commence a batch of outbox messages to add

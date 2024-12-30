@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj" />
+      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.Outbox.Hosting\Paramore.Brighter.Outbox.Hosting.csproj" />
       <ProjectReference Include="..\..\WebAPI_Common\DbMaker\DbMaker.csproj" />
       <ProjectReference Include="..\..\WebAPI_Common\TransportMaker\TransportMaker.csproj" />
       <ProjectReference Include="..\GreetingsApp\GreetingsApp.csproj" />
