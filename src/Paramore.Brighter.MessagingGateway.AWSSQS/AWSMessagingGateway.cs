@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.SimpleNotificationService.Model;
+using Amazon.SQS;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
@@ -75,9 +76,11 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         string name = topicName;
         if (snsSqsType == SnsSqsType.Fifo)
         {
-            name += ".fifo";
+            if (!name.EndsWith(".fifo"))
+            {
+                name += ".fifo";
+            }
 
-            // TODO: Remove hard code
             attributes.Add("FifoTopic", "true");
             if (deduplication)
             {

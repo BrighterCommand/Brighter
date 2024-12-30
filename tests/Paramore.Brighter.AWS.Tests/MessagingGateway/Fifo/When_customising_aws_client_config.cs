@@ -12,10 +12,10 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
-public class CustomisingAwsClientConfigTests : IDisposable
+public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
-    private readonly IAmAChannel _channel;
+    private readonly IAmAChannelSync _channel;
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
 
@@ -54,7 +54,7 @@ public class CustomisingAwsClientConfigTests : IDisposable
         });
 
         _channelFactory = new ChannelFactory(subscribeAwsConnection);
-        _channel = _channelFactory.CreateChannel(subscription);
+        _channel = _channelFactory.CreateSyncChannel(subscription);
 
         var publishAwsConnection = new AWSMessagingGatewayConnection(credentials, region, config =>
         {
@@ -64,9 +64,7 @@ public class CustomisingAwsClientConfigTests : IDisposable
         _messageProducer = new SqsMessageProducer(publishAwsConnection,
             new SnsPublication
             {
-                Topic = new RoutingKey(topicName), 
-                MakeChannels = OnMissingChannel.Create,
-                SnsType = SnsSqsType.Fifo
+                Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create, SnsType = SnsSqsType.Fifo
             });
     }
 
@@ -90,8 +88,14 @@ public class CustomisingAwsClientConfigTests : IDisposable
 
     public void Dispose()
     {
-        _channelFactory?.DeleteTopic();
-        _channelFactory?.DeleteQueue();
-        _messageProducer?.Dispose();
+        //Clean up resources that we have created
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 }

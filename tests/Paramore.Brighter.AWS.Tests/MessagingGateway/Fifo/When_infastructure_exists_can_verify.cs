@@ -14,10 +14,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureTests : IDisposable
+public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
-    private readonly IAmAMessageConsumer _consumer;
+    private readonly IAmAMessageConsumerSync _consumer;
     private readonly SqsMessageProducer _messageProducer;
     private readonly MyCommand _myCommand;
     private readonly ChannelFactory _channelFactory;
@@ -33,7 +33,7 @@ public class AWSValidateInfrastructureTests : IDisposable
         var partitionKey = $"Partition-Key-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
-        SqsSubscription<MyCommand> subscription = new(
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
@@ -55,7 +55,7 @@ public class AWSValidateInfrastructureTests : IDisposable
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
         _channelFactory = new ChannelFactory(awsConnection);
-        var channel = _channelFactory.CreateChannel(subscription);
+        var channel = _channelFactory.CreateSyncChannel(subscription);
 
         //Now change the subscription to validate, just check what we made
         subscription = new(
@@ -103,9 +103,18 @@ public class AWSValidateInfrastructureTests : IDisposable
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopic();
-        _channelFactory.DeleteQueue();
+        //Clean up resources that we have created
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
         _consumer.Dispose();
         _messageProducer.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await ((IAmAMessageConsumerAsync)_consumer).DisposeAsync();
+        await _messageProducer.DisposeAsync();
     }
 }

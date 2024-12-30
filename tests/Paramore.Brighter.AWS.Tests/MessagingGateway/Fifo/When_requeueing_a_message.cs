@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
@@ -12,12 +13,12 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
-public class SqsMessageProducerRequeueTests : IDisposable
+public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
 {
     private Message _requeuedMessage;
     private Message _receivedMessage;
     private readonly IAmAMessageProducerSync _sender;
-    private readonly IAmAChannel _channel;
+    private readonly IAmAChannelSync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
 
@@ -29,7 +30,7 @@ public class SqsMessageProducerRequeueTests : IDisposable
         const string contentType = "text\\plain";
         var channelName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var partitionKey= $"PartitionKey-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var partitionKey = $"PartitionKey-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         var subscription = new SqsSubscription<MyCommand>(
@@ -50,15 +51,12 @@ public class SqsMessageProducerRequeueTests : IDisposable
         (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
         var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
-        _sender = new SqsMessageProducer(awsConnection, new SnsPublication
-        {
-            MakeChannels = OnMissingChannel.Create,
-            SnsType = SnsSqsType.Fifo
-        });
+        _sender = new SqsMessageProducer(awsConnection,
+            new SnsPublication { MakeChannels = OnMissingChannel.Create, SnsType = SnsSqsType.Fifo });
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(awsConnection);
-        _channel = _channelFactory.CreateChannel(subscription);
+        _channel = _channelFactory.CreateSyncChannel(subscription);
     }
 
     [Fact]
@@ -78,7 +76,13 @@ public class SqsMessageProducerRequeueTests : IDisposable
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopic();
-        _channelFactory.DeleteQueue();
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 }

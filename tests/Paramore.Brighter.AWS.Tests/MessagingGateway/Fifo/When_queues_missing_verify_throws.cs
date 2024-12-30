@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SQS.Model;
@@ -9,8 +10,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
-[Trait("Category", "AWS")] 
-public class AWSValidateQueuesTests  : IDisposable
+[Trait("Category", "AWS")]
+public class AWSValidateQueuesTests : IDisposable, IAsyncDisposable
 {
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
@@ -21,7 +22,7 @@ public class AWSValidateQueuesTests  : IDisposable
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
-            
+
         _subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
@@ -29,19 +30,14 @@ public class AWSValidateQueuesTests  : IDisposable
             makeChannels: OnMissingChannel.Validate,
             sqsType: SnsSqsType.Fifo
         );
-            
+
         (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
         _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            
+
         //We need to create the topic at least, to check the queues
-        var producer = new SqsMessageProducer(_awsConnection, 
-            new SnsPublication
-            {
-                MakeChannels = OnMissingChannel.Create,
-                SnsType = SnsSqsType.Fifo
-            });
-        producer.ConfirmTopicExistsAsync(topicName).Wait(); 
-            
+        var producer = new SqsMessageProducer(_awsConnection,
+            new SnsPublication { MakeChannels = OnMissingChannel.Create, SnsType = SnsSqsType.Fifo });
+        producer.ConfirmTopicExistsAsync(topicName).Wait();
     }
 
     [Fact]
@@ -50,11 +46,16 @@ public class AWSValidateQueuesTests  : IDisposable
         //We have no queues so we should throw
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);
-        Assert.Throws<QueueDoesNotExistException>(() => _channelFactory.CreateChannel(_subscription));
+        Assert.Throws<QueueDoesNotExistException>(() => _channelFactory.CreateSyncChannel(_subscription));
     }
- 
+
     public void Dispose()
     {
-        _channelFactory.DeleteTopic(); 
+        _channelFactory.DeleteTopicAsync().Wait();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
     }
 }

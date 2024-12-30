@@ -12,10 +12,10 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
-public class SqsMessageProducerSendTests : IDisposable
+public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
-    private readonly IAmAChannel _channel;
+    private readonly IAmAChannelSync _channel;
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
@@ -39,7 +39,7 @@ public class SqsMessageProducerSendTests : IDisposable
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_topicName);
 
-        SqsSubscription<MyCommand> subscription = new(
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
@@ -58,12 +58,12 @@ public class SqsMessageProducerSendTests : IDisposable
         var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
         _channelFactory = new ChannelFactory(awsConnection);
-        _channel = _channelFactory.CreateChannel(subscription);
+        _channel = _channelFactory.CreateSyncChannel(subscription);
 
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SnsPublication
             {
-                Topic = new RoutingKey(_topicName), 
+                Topic = new RoutingKey(_topicName),
                 MakeChannels = OnMissingChannel.Create,
                 SnsType = SnsSqsType.Fifo,
                 Deduplication = true
@@ -121,9 +121,17 @@ public class SqsMessageProducerSendTests : IDisposable
 
     public void Dispose()
     {
-        _channelFactory?.DeleteTopic();
-        _channelFactory?.DeleteQueue();
-        _messageProducer?.Dispose();
+        //Clean up resources that we have created
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+        _messageProducer.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await _messageProducer.DisposeAsync();
     }
 
     private static DateTime RoundToSeconds(DateTime dateTime)

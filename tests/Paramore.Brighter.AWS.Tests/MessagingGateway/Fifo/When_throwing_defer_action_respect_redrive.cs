@@ -19,15 +19,16 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SnsReDrivePolicySDlqTests
+public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessagePump _messagePump;
     private readonly Message _message;
     private readonly string _dlqChannelName;
-    private readonly IAmAChannel _channel;
+    private readonly IAmAChannelSync _channel;
     private readonly SqsMessageProducer _sender;
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
+    private readonly ChannelFactory _channelFactory;
 
     public SnsReDrivePolicySDlqTests()
     {
@@ -71,19 +72,19 @@ public class SnsReDrivePolicySDlqTests
 
         //how do we send to the queue
         _sender = new SqsMessageProducer(
-            _awsConnection, 
-            new SnsPublication 
-            { 
-                Topic = routingKey, 
-                RequestType = typeof(MyDeferredCommand), 
+            _awsConnection,
+            new SnsPublication
+            {
+                Topic = routingKey,
+                RequestType = typeof(MyDeferredCommand),
                 MakeChannels = OnMissingChannel.Create,
                 SnsType = SnsSqsType.Fifo
             }
         );
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
-        ChannelFactory channelFactory = new(_awsConnection);
-        _channel = channelFactory.CreateChannel(_subscription);
+        _channelFactory = new(_awsConnection);
+        _channel = _channelFactory.CreateSyncChannel(_subscription);
 
         //how do we handle a command
         IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
@@ -104,12 +105,13 @@ public class SnsReDrivePolicySDlqTests
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
             null
-        ); 
+        );
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
-            
+
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-        _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
-            null,  new InMemoryRequestContextFactory(), _channel)
+        //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
+        _messagePump = new Reactor<MyDeferredCommand>(provider, messageMapperRegistry,
+            null, new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };
@@ -129,7 +131,8 @@ public class SnsReDrivePolicySDlqTests
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
-            throw new AmazonSQSException($"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
+            throw new AmazonSQSException(
+                $"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
         }
 
         return response.Messages.Count;
@@ -152,10 +155,22 @@ public class SnsReDrivePolicySDlqTests
 
         //wait for the pump to stop once it gets a quit message
         await Task.WhenAll(task);
-            
+
         await Task.Delay(5000);
 
         //inspect the dlq
         GetDLQCount(_dlqChannelName).Should().Be(1);
+    }
+
+    public void Dispose()
+    {
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 }

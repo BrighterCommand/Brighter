@@ -14,7 +14,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SQSBufferedConsumerTests : IDisposable
+public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
 {
     private readonly SqsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
@@ -37,7 +37,7 @@ public class SQSBufferedConsumerTests : IDisposable
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_topicName);
 
-        var channel = _channelFactory.CreateChannel(new SqsSubscription<MyCommand>(
+        var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
@@ -49,7 +49,7 @@ public class SQSBufferedConsumerTests : IDisposable
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
-        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey,
+        _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(),
             _bufferSize);
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SnsPublication
@@ -162,7 +162,15 @@ public class SQSBufferedConsumerTests : IDisposable
     public void Dispose()
     {
         //Clean up resources that we have created
-        _channelFactory.DeleteTopic();
-        _channelFactory.DeleteQueue();
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+        _messageProducer.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await ((IAmAMessageProducerAsync)_messageProducer).DisposeAsync();
     }
 }

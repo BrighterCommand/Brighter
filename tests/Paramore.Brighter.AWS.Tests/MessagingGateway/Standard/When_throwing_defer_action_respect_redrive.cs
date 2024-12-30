@@ -19,7 +19,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-     public class SnsReDrivePolicySDlqTests
+    public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;

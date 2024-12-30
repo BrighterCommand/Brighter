@@ -97,8 +97,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 if (deduplicationId.Success)
                 {
-                    // TODO: Remove hard code
-                    message.Header.Bag.Add("DeduplicationId", deduplicationId);
+                    message.Header.Bag.Add(HeaderNames.DeduplicationId, deduplicationId);
                 }
 
                 if (receiptHandle.Success)

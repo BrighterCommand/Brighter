@@ -15,10 +15,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByArnTests : IDisposable
+public class AWSValidateInfrastructureByArnTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
-    private readonly IAmAMessageConsumer _consumer;
+    private readonly IAmAMessageConsumerSync _consumer;
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
@@ -55,7 +55,7 @@ public class AWSValidateInfrastructureByArnTests : IDisposable
         //This doesn't look that different from our create tests - this is because we create using the channel factory in
         //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
         _channelFactory = new ChannelFactory(awsConnection);
-        var channel = _channelFactory.CreateChannel(subscription);
+        var channel = _channelFactory.CreateSyncChannel(subscription);
 
         var topicArn = FindTopicArn(credentials, region, routingKey.Value);
         var routingKeyArn = new RoutingKey(topicArn);
@@ -104,10 +104,19 @@ public class AWSValidateInfrastructureByArnTests : IDisposable
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopic();
-        _channelFactory.DeleteQueue();
+        //Clean up resources that we have created
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
         _consumer.Dispose();
         _messageProducer.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
+        await ((IAmAMessageConsumerAsync)_consumer).DisposeAsync();
+        await _messageProducer.DisposeAsync();
     }
 
     private static string FindTopicArn(AWSCredentials credentials, RegionEndpoint region, string topicName)

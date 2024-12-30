@@ -16,10 +16,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SqsMessageProducerDlqTests : IDisposable
+public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
 {
     private readonly SqsMessageProducer _sender;
-    private readonly IAmAChannel _channel;
+    private readonly IAmAChannelSync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
     private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -62,7 +62,7 @@ public class SqsMessageProducerDlqTests : IDisposable
 
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(_awsConnection);
-        _channel = _channelFactory.CreateChannel(subscription);
+        _channel = _channelFactory.CreateSyncChannel(subscription);
     }
 
     [Fact]
@@ -87,8 +87,14 @@ public class SqsMessageProducerDlqTests : IDisposable
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopic();
-        _channelFactory.DeleteQueue();
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 
     private int GetDLQCount(string queueName)

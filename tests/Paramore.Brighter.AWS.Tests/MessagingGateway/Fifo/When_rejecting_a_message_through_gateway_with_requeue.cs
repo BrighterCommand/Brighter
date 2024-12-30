@@ -13,17 +13,17 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SqsMessageConsumerRequeueTests : IDisposable
+public class SqsMessageConsumerRequeueTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
-    private readonly IAmAChannel _channel;
+    private readonly IAmAChannelSync _channel;
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
     public SqsMessageConsumerRequeueTests()
     {
-        _myCommand = new MyCommand{Value = "Test"};
+        _myCommand = new MyCommand { Value = "Test" };
         const string replyTo = "http:\\queueUrl";
         const string contentType = "text\\plain";
         var correlationId = Guid.NewGuid().ToString();
@@ -31,33 +31,30 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         var topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var partitionKey = $"PartitionKey-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
-            
-        SqsSubscription<MyCommand> subscription = new(
+
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             sqsType: SnsSqsType.Fifo
         );
-            
+
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: partitionKey),
-            new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
-            
+
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
         var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            
+
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(awsConnection);
-        _channel = _channelFactory.CreateChannel(subscription);
-            
-        _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication
-        {
-            MakeChannels = OnMissingChannel.Create,
-            SnsType = SnsSqsType.Fifo
-        });
+        _channel = _channelFactory.CreateSyncChannel(subscription);
+
+        _messageProducer = new SqsMessageProducer(awsConnection,
+            new SnsPublication { MakeChannels = OnMissingChannel.Create, SnsType = SnsSqsType.Fifo });
     }
 
     [Fact]
@@ -66,7 +63,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         _messageProducer.Send(_message);
 
         var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            
+
         _channel.Reject(message);
 
         //Let the timeout change
@@ -74,7 +71,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
 
         //should requeue_the_message
         message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            
+
         //clear the queue
         _channel.Acknowledge(message);
 
@@ -83,8 +80,13 @@ public class SqsMessageConsumerRequeueTests : IDisposable
 
     public void Dispose()
     {
-        //Clean up resources that we have created
-        _channelFactory.DeleteTopic();
-        _channelFactory.DeleteQueue();
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
@@ -10,13 +11,13 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
-[Trait("Category", "AWS")] 
+[Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class SqsRawMessageDeliveryTests : IDisposable
+public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 {
     private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
-    private readonly IAmAChannel _channel;
+    private readonly IAmAChannelSync _channel;
     private readonly RoutingKey _routingKey;
 
     public SqsRawMessageDeliveryTests()
@@ -31,22 +32,20 @@ public class SqsRawMessageDeliveryTests : IDisposable
         var bufferSize = 10;
 
         //Set rawMessageDelivery to false
-        _channel = _channelFactory.CreateChannel(new SqsSubscription<MyCommand>(
+        _channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
-            channelName:new ChannelName(channelName),
-            routingKey:_routingKey,
+            channelName: new ChannelName(channelName),
+            routingKey: _routingKey,
             bufferSize: bufferSize,
             makeChannels: OnMissingChannel.Create,
             rawMessageDelivery: false,
             sqsType: SnsSqsType.Fifo,
             contentBasedDeduplication: true));
 
-        _messageProducer = new SqsMessageProducer(awsConnection, 
+        _messageProducer = new SqsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create,
-                SnsType = SnsSqsType.Fifo,
-                Deduplication = true
+                MakeChannels = OnMissingChannel.Create, SnsType = SnsSqsType.Fifo, Deduplication = true
             });
     }
 
@@ -56,21 +55,15 @@ public class SqsRawMessageDeliveryTests : IDisposable
         //arrange
         var partitionKey = Guid.NewGuid().ToString();
         var deduplicationId = Guid.NewGuid().ToString();
-        
+
         var messageHeader = new MessageHeader(
-            Guid.NewGuid().ToString(), 
-            _routingKey, 
-            MessageType.MT_COMMAND, 
-            correlationId: Guid.NewGuid().ToString(), 
-            replyTo: RoutingKey.Empty, 
+            Guid.NewGuid().ToString(),
+            _routingKey,
+            MessageType.MT_COMMAND,
+            correlationId: Guid.NewGuid().ToString(),
+            replyTo: RoutingKey.Empty,
             contentType: "text\\plain",
-            partitionKey: partitionKey)
-        {
-            Bag =
-            {
-                [HeaderNames.DeduplicationId] = deduplicationId
-            }
-        };
+            partitionKey: partitionKey) { Bag = { [HeaderNames.DeduplicationId] = deduplicationId } };
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
         messageHeader.Bag.Add(customHeaderItem.Key, customHeaderItem.Value);
@@ -96,12 +89,17 @@ public class SqsRawMessageDeliveryTests : IDisposable
         messageReceived.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId).And.ContainValue(deduplicationId);
         messageReceived.Header.Bag.Should().ContainKey(HeaderNames.MessageGroupId).And.ContainValue(partitionKey);
         messageReceived.Body.Value.Should().Be(messageToSent.Body.Value);
-        
     }
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopic();
-        _channelFactory.DeleteQueue();
+        _channelFactory.DeleteTopicAsync().Wait();
+        _channelFactory.DeleteQueueAsync().Wait();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _channelFactory.DeleteTopicAsync();
+        await _channelFactory.DeleteQueueAsync();
     }
 }
