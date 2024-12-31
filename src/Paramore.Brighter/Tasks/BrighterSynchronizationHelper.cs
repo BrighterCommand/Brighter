@@ -389,11 +389,11 @@ public class BrighterSynchronizationHelper : IDisposable
             foreach (var (task, propagateExceptions) in _taskQueue.GetConsumingEnumerable())
             {
                 _taskScheduler.DoTryExecuteTask(task);
+                _activeTasks.TryRemove(task, out _);
 
                 if (!propagateExceptions) continue;
 
                 task.GetAwaiter().GetResult();
-                _activeTasks.TryRemove(task, out _);
             }
         });
 

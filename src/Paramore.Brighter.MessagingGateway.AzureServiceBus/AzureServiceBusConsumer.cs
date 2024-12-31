@@ -157,7 +157,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// </summary>
     /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(() => ReceiveAsync(timeOut));
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(async () => await ReceiveAsync(timeOut));
         
     /// <summary>
     /// Receives the specified queue name.
@@ -230,7 +230,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message) => BrighterSynchronizationHelper.Run(() => RejectAsync(message));
+    public void Reject(Message message) => BrighterSynchronizationHelper.Run(async () => await RejectAsync(message));
 
     /// <summary>
     /// Rejects the specified message.
@@ -268,7 +268,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <param name="message"></param>
     /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
     /// <returns>True if the message should be acked, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(() => RequeueAsync(message, delay));
+    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(async () => await RequeueAsync(message, delay));
 
     /// <summary>
     /// Requeues the specified message.

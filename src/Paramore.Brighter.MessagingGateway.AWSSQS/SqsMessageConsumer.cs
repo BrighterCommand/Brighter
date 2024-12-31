@@ -77,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(() => AcknowledgeAsync(message));
+        public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(async () => await AcknowledgeAsync(message));
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -112,7 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message) => BrighterSynchronizationHelper.Run(() => RejectAsync(message));
+        public void Reject(Message message) => BrighterSynchronizationHelper.Run(async () => await RejectAsync(message));
 
         /// <summary>
         /// Rejects the specified message.
@@ -158,7 +158,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Purges the specified queue name.
         /// Sync over Async
         /// </summary>
-        public void Purge() => BrighterSynchronizationHelper.Run(() => PurgeAsync());
+        public void Purge() => BrighterSynchronizationHelper.Run(async () => await PurgeAsync());
         
         /// <summary>
         /// Purges the specified queue name.
@@ -187,7 +187,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over async 
         /// </summary>
         /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
-        public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(() => ReceiveAsync(timeOut));
+        public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(async () => await ReceiveAsync(timeOut));
 
         /// <summary>
         /// Receives the specified queue name.
@@ -255,7 +255,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }      
 
 
-        public bool Requeue(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(() => RequeueAsync(message, delay));
+        public bool Requeue(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(async () => await RequeueAsync(message, delay));
 
         /// <summary>
         /// Re-queues the specified message.

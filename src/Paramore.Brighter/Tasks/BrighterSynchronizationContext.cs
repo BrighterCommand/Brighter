@@ -33,10 +33,8 @@ namespace Paramore.Brighter.Tasks
     /// Only uses one thread, so predictable performance, but may have many messages queued. Once queue length exceeds
     /// buffer size, we will stop reading new work.
     /// </remarks>
-    internal class BrighterSynchronizationContext : SynchronizationContext
+    public class BrighterSynchronizationContext : SynchronizationContext
     {
-        private readonly ExecutionContext? _executionContext;
-
         /// <summary>
         /// Gets the synchronization helper.
         /// </summary>
@@ -62,7 +60,6 @@ namespace Paramore.Brighter.Tasks
         public BrighterSynchronizationContext(BrighterSynchronizationHelper synchronizationHelper)
         {
             SynchronizationHelper = synchronizationHelper;
-            _executionContext = ExecutionContext.Capture();
         }
 
         /// <summary>
@@ -132,37 +129,26 @@ namespace Paramore.Brighter.Tasks
             Debug.IndentLevel = 0;
             
             if (callback == null) throw new ArgumentNullException(nameof(callback));
-            var ctxt = ExecutionContext.Capture();
-            bool queued = SynchronizationHelper.Enqueue(new ContextMessage(callback, state, ctxt), true);
+            bool queued = SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
             
             if (queued) return;
             
             //NOTE: if we got here, something went wrong, we should have been able to queue the message
             //mostly this seems to be a problem with the task we are running completing, but work is still being queued to the 
             //synchronization context. 
-            // If the execution context can help, we might be able to redirect; if not just run immediately on this thread
-            
             var contextCallback = new ContextCallback(callback);
-            if (ctxt != null && ctxt  != _executionContext)
-            {
-                Debug.WriteLine(string.Empty);
-                Debug.IndentLevel = 1;
-                Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
-                Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
-                Debug.IndentLevel = 0;
-                SynchronizationHelper.ExecuteOnContext(ctxt, contextCallback, state);
-            }
-            else
-            {
-                Debug.WriteLine(string.Empty);
-                Debug.IndentLevel = 1;
-                Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
-                Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
-                Debug.IndentLevel = 0;
-                //just execute inline
-                SynchronizationHelper.ExecuteImmediately(contextCallback, state); 
-            }
             Debug.WriteLine(string.Empty);
+            Debug.IndentLevel = 1;
+            Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
+            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+            Debug.IndentLevel = 0;
+                
+            //just execute inline
+            // current thread already owns the context, so just execute inline to prevent deadlocks
+            //if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
+                //SynchronizationHelper.ExecuteImmediately(contextCallback, state);
+            //else
+                base.Post(callback, state);
             
         }
 
@@ -186,11 +172,40 @@ namespace Paramore.Brighter.Tasks
             }
             else
             {
-                var ctxt = ExecutionContext.Capture();
-                var task = SynchronizationHelper.MakeTask(new ContextMessage(callback, state, ctxt));
+                var task = SynchronizationHelper.MakeTask(new ContextMessage(callback, state));
                 if (!task.Wait(Timeout)) // Timeout mechanism
                     throw new TimeoutException("BrighterSynchronizationContext: Send operation timed out.");
             }
+        }
+        
+        private void ExecuteImmediately(ContextCallback contextCallback, object? state)
+        {
+            Debug.WriteLine(string.Empty);
+            Debug.IndentLevel = 1;
+            Debug.Fail("BrighterSynchronizationContext: ExecuteImmediately. We should never get here");
+            Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {contextCallback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
+            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+            Debug.IndentLevel = 0;
+            //just execute inline
+            SynchronizationHelper.ExecuteImmediately(contextCallback, state);
+        }
+
+        /// <summary>
+        /// We should never get here as we should not be called from the wrong context
+        /// </summary>
+        /// <param name="contextCallback"></param>
+        /// <param name="state">Any state to pass to the callback</param>
+        /// <param name="ctxt"></param>
+        /// <param name="callback">The callback to execute</param>
+        private void ExecuteOnCallersContext(ContextCallback contextCallback, object? state, ExecutionContext ctxt)
+        {
+            Debug.WriteLine(string.Empty);
+            Debug.IndentLevel = 1;
+            Debug.Fail("BrighterSynchronizationContext: ExecuteOnCallersContext. We should never get here");
+            Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {contextCallback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
+            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
+            Debug.IndentLevel = 0;
+            SynchronizationHelper.ExecuteOnContext(ctxt, contextCallback, state);
         }
     }
 }
