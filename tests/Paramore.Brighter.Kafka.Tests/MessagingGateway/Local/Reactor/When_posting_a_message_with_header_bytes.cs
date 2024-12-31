@@ -76,6 +76,10 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
         _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
     }
 
+    /// <summary>
+    /// NOTE: This test needs the schema registry to be running, and has hardcoded it's port to 8081. Both of those
+    /// may cause this test to fail, so check them if in doubt
+    /// </summary>
     [Fact]
     public void When_posting_a_message_via_the_messaging_gateway()
     {
