@@ -189,23 +189,5 @@ namespace Paramore.Brighter.Tasks
             //just execute inline
             SynchronizationHelper.ExecuteImmediately(contextCallback, state);
         }
-
-        /// <summary>
-        /// We should never get here as we should not be called from the wrong context
-        /// </summary>
-        /// <param name="contextCallback"></param>
-        /// <param name="state">Any state to pass to the callback</param>
-        /// <param name="ctxt"></param>
-        /// <param name="callback">The callback to execute</param>
-        private void ExecuteOnCallersContext(ContextCallback contextCallback, object? state, ExecutionContext ctxt)
-        {
-            Debug.WriteLine(string.Empty);
-            Debug.IndentLevel = 1;
-            Debug.Fail("BrighterSynchronizationContext: ExecuteOnCallersContext. We should never get here");
-            Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {contextCallback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
-            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
-            Debug.IndentLevel = 0;
-            SynchronizationHelper.ExecuteOnContext(ctxt, contextCallback, state);
-        }
     }
 }
