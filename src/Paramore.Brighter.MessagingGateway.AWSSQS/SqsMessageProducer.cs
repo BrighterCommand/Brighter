@@ -143,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Send(Message message) => BrighterSynchronizationHelper.Run(() => SendAsync(message));
+        public void Send(Message message) => BrighterSynchronizationHelper.Run(async () => await SendAsync(message));
 
         /// <summary>
         /// Sends the specified message, with a delay.

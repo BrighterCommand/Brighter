@@ -306,25 +306,27 @@ public class BrighterSynchronizationContextsTests
 
         context.Execute(task);
 
+        var taskTwo = context.Factory.StartNew(
+            () => { value = 2; },
+            context.Factory.CancellationToken,
+            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
+            context.TaskScheduler);
+
+        taskTwo.ContinueWith(_ => { throw new Exception("Should not run"); }, TaskScheduler.Default);
+
+        bool exceptionRan = false;
         try
         {
-            var taskTwo = context.Factory.StartNew(
-                () => { value = 2; },
-                context.Factory.CancellationToken,
-                context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-                context.TaskScheduler);
-
-            taskTwo.ContinueWith(_ => { throw new Exception("Should not run"); }, TaskScheduler.Default);
-
             context.Execute(taskTwo);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            throw;
+            exceptionRan = true;
         }
+        //there should be no pending work
 
         value.Should().Be(1);
+        exceptionRan.Should().BeFalse();
     }
 
     [Fact]
