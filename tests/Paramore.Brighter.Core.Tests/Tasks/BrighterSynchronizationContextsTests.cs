@@ -6,15 +6,13 @@
 #endregion
 
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.Tasks;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.SynchronizationContext;
+namespace Paramore.Brighter.Core.Tests.Tasks;
 
 public class BrighterSynchronizationContextsTests
 {
@@ -117,6 +115,20 @@ public class BrighterSynchronizationContextsTests
         var result = BrighterSynchronizationHelper.Run(async () =>
         {
             Task.Delay(50).GetAwaiter().GetResult();
+            resumed = true;
+            return 17;
+        });
+        resumed.Should().BeTrue();
+        result.Should().Be(17);
+    }
+    
+    [Fact]
+    public void Run_AsyncTaskWithResultAndConfigurateAwait_BlockingCode_Still_Ends()
+    {
+        bool resumed = false;
+        var result = BrighterSynchronizationHelper.Run(async () =>
+        {
+            await Task.Delay(50).ConfigureAwait(false);
             resumed = true;
             return 17;
         });
