@@ -96,8 +96,8 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
         receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
         receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
         receivedMessage.Body.Value.Should().Be(message.Body.Value);
-        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ")
-            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z")
+            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z"));
         receivedCommand.Id.Should().Be(command.Id);
         receivedCommand.Value.Should().Be(command.Value);
     }
@@ -111,8 +111,10 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
-                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                //Let topic propagate in the broker
+                await Task.Delay(500); 
+                //set timespan to zero so that we will not block
+                messages = await _consumer.ReceiveAsync(TimeSpan.Zero);
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
