@@ -145,9 +145,9 @@ namespace Paramore.Brighter.Tasks
                 
             //just execute inline
             // current thread already owns the context, so just execute inline to prevent deadlocks
-            //if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
-                //SynchronizationHelper.ExecuteImmediately(contextCallback, state);
-            //else
+            if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
+                SynchronizationHelper.ExecuteImmediately(contextCallback, state);
+            else
                 base.Post(callback, state);
             
         }
