@@ -160,7 +160,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         if (ChannelTopicArn == null)
             return;
 
-        using var snsClient = new AmazonSimpleNotificationServiceClient(AwsConnection.Credentials, AwsConnection.Region);
+        using var snsClient = new AWSClientFactory(AwsConnection).CreateSnsClient();
         (bool exists, string? _) = await new ValidateTopicByArn(snsClient).ValidateAsync(ChannelTopicArn);
         if (exists)
         {
