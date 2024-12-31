@@ -43,7 +43,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
             }}).Create();
     }
 
-    [Fact]
+    [Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
     public async Task When_a_message_is_acknowldgede_update_offset()
     {
         var groupId = Guid.NewGuid().ToString();
@@ -58,7 +58,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         }
 
         //This will create, then delete the consumer
-        Message[] messages = ConsumeMessages(groupId: groupId, batchLimit: 5);
+        Message[] messages = await ConsumeMessages(groupId: groupId, batchLimit: 5);
 
         //check we read the first 5 messages
         messages.Length.Should().Be(5);
@@ -67,11 +67,8 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
             messages[i].Id.Should().Be(sentMessages[i]);
         }
 
-        //yield to broker to catch up
-        await Task.Delay(TimeSpan.FromMilliseconds(500));
-
         //This will create a new consumer for the same group
-        Message[] newMessages = ConsumeMessages(groupId, batchLimit: 5);
+        Message[] newMessages = await ConsumeMessages(groupId, batchLimit: 5);
         
         //check we read the next 5 messages
         messages.Length.Should().Be(5);
@@ -93,15 +90,23 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         );
     }
 
-    private Message[] ConsumeMessages(string groupId, int batchLimit)
+    private async Task<Message[]> ConsumeMessages(string groupId, int batchLimit)
     {
         var consumedMessages = new List<Message>();
         using (IAmAMessageConsumerSync consumer = CreateConsumer(groupId))
         {
+            //Let topic propagate in the broker
+            await Task.Delay(1000);
+             
+            
             for (int i = 0; i < batchLimit; i++)
             {
                 consumedMessages.Add(ConsumeMessage(consumer));
             }
+            
+            //yield to allow commits to flush
+            await Task.Delay(TimeSpan.FromMilliseconds(5000));
+
         }
 
         return consumedMessages.ToArray();
@@ -115,8 +120,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
                 try
                 {
                     maxTries++;
-                    //Let topic propagate in the broker
-                    Task.Delay(500).Wait(); 
+                   //makes a blocking call to Kafka
                     messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)

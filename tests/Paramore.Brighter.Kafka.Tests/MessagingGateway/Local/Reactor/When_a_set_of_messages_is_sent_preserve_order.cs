@@ -46,8 +46,11 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
     }
 
     [Fact]
-    public void When_a_message_is_sent_keep_order()
+    public async Task When_a_message_is_sent_keep_order()
     {
+        //Let topic propogate
+        await Task.Delay(500);
+         
         IAmAMessageConsumerSync consumer = null;
         try
         {
@@ -58,9 +61,8 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
             var msgId4 = SendMessage();
                   
             consumer = CreateConsumer();
-                
-            //Now read those messages in order
-                
+            
+            //Now read messages in order
             var firstMessage = ConsumeMessages(consumer);
             var message = firstMessage.First();
             message.Id.Should().Be(msgId);
@@ -116,8 +118,6 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
             try
             {
                 maxTries++;
-                //Let topic propagate in the broker
-                Task.Delay(500).Wait();
                 messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)

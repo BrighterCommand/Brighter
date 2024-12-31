@@ -63,6 +63,9 @@ public class KafkaConsumerDeclareTests : IDisposable
     [Fact]
     public async Task When_a_consumer_declares_topics()
     {
+        //Let topic propogate
+        await Task.Delay(500);
+        
         var routingKey = new RoutingKey(_topic);
             
         var message = new Message(
@@ -73,9 +76,17 @@ public class KafkaConsumerDeclareTests : IDisposable
             new MessageBody($"test content [{_queueName}]")
         );
             
-        //This should fail, if consumer can't create the topic as set to Assume
         ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
 
+        Message messages = ConsumeMessage();
+
+        messages.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+        messages.Header.PartitionKey.Should().Be(_partitionKey);
+        messages.Body.Value.Should().Be(message.Body.Value);
+    }
+
+    private Message ConsumeMessage()
+    {
         Message[] messages = new Message[0];
         int maxTries = 0;
         do
@@ -83,8 +94,6 @@ public class KafkaConsumerDeclareTests : IDisposable
             try
             {
                 maxTries++;
-                //Let topic propagate in the broker
-                await Task.Delay(500); 
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                 _consumer.Acknowledge(messages[0]);
                     
@@ -100,10 +109,7 @@ public class KafkaConsumerDeclareTests : IDisposable
 
         } while (maxTries <= 3);
 
-        messages.Length.Should().Be(1);
-        messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        messages[0].Header.PartitionKey.Should().Be(_partitionKey);
-        messages[0].Body.Value.Should().Be(message.Body.Value);
+        return messages[0];
     }
 
     public void Dispose()

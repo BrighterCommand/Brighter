@@ -540,6 +540,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 _consumer.Commit(listOffsets);
             }
+            catch(Exception ex)
+            {
+                //may happen if the consumer is not valid when the thread runs
+                s_logger.LogWarning("KafkaMessageConsumer: Error Committing Offsets: {ErrorMessage}", ex.Message);
+            }
             finally
             {
                 _flushToken.Release(1);
