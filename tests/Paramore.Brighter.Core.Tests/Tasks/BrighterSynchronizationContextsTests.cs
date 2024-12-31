@@ -151,26 +151,26 @@ public class BrighterSynchronizationContextsTests
     }
 
     [Fact]
-    public void Current_FromAsyncContext_IsAsyncContext()
+    public void Current_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelper()
     {
-        BrighterSynchronizationHelper observedContext = null;
-        var context = new BrighterSynchronizationHelper();
+        BrighterSynchronizationHelper observedHelper = null;
+        var helper = new BrighterSynchronizationHelper();
 
-        var task = context.Factory.StartNew(
-            () => { observedContext = BrighterSynchronizationHelper.Current; },
-            context.Factory.CancellationToken,
-            context.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            context.TaskScheduler);
+        var task = helper.Factory.StartNew(
+            () => { observedHelper = BrighterSynchronizationHelper.Current; },
+            helper.Factory.CancellationToken,
+            helper.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
+            helper.TaskScheduler);
 
-        context.Execute(task);
+        helper.Execute(task);
 
-        observedContext.Should().Be(context);
+        observedHelper.Should().Be(helper);
     }
 
     [Fact]
-    public void SynchronizationContextCurrent_FromAsyncContext_IsAsyncContextSynchronizationContext()
+    public void SynchronizationContextCurrent_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelperSynchronizationContext()
     {
-        System.Threading.SynchronizationContext observedContext = null;
+        System.Threading.SynchronizationContext? observedContext = null;
         var context = new BrighterSynchronizationHelper();
 
         var task = context.Factory.StartNew(
@@ -361,6 +361,35 @@ public class BrighterSynchronizationContextsTests
         }
 
         threadPoolExceptionRan.Should().BeTrue();
+    }
+    
+    [Fact]
+    public async Task SynchronizationContextCurrent_FromAsyncContext_PostFromAnotherThread()
+    {
+        System.Threading.SynchronizationContext? observedContext = null;
+        var helper = new BrighterSynchronizationHelper();
+
+        var task = helper.Factory.StartNew(
+            () => { observedContext =BrighterSynchronizationContext.Current; },
+            helper.Factory.CancellationToken,
+            helper.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
+            helper.TaskScheduler);
+
+        //this should complete the task
+        helper.Execute(task);
+        
+        //but this simulates us being disposed
+        observedContext.OperationCompleted();
+
+        //we may be called on a different thread
+        int value = 1;
+        await Task.Run(() =>
+        {
+            observedContext .Post(_ => value = 2, null);
+        });
+        
+        value.Should().Be(2);
+
     }
 
     [Fact]
