@@ -8,7 +8,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Proactor;
 
 [Trait("Category", "Kafka")]
 [Trait("Fragile", "CI")]
@@ -68,7 +68,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         }
 
         //yield to broker to catch up
-        await Task.Delay(TimeSpan.FromSeconds(5));
+        await Task.Delay(TimeSpan.FromMilliseconds(500));
 
         //This will create a new consumer
         Message[] newMessages = await ConsumeMessagesAsync(groupId, batchLimit: 5);
@@ -107,15 +107,17 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
 
         async Task<Message> ConsumeMessageAsync(IAmAMessageConsumerAsync consumer)
         {
-            Message[] messages = new []{new Message()};
+            Message[] messages = [new Message()];
             int maxTries = 0;
             do
             {
                 try
                 {
                     maxTries++;
-                    await Task.Delay(500); //Let topic propagate in the broker
-                    messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                    //Let topic propagate in the broker
+                    await Task.Delay(500); 
+                    //use TimeSpan.Zero to avoid blocking
+                    messages = await consumer.ReceiveAsync(TimeSpan.Zero);
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     {

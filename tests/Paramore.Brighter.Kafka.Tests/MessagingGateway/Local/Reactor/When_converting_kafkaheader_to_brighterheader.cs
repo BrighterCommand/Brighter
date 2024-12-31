@@ -6,7 +6,7 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
 public class KafkaHeaderToBrighterTests  
 {

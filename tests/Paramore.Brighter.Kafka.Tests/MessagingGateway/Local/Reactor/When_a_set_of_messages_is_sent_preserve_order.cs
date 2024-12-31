@@ -9,7 +9,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
@@ -109,14 +109,15 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
 
     private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
     {
-        var messages = new Message[0];
+        var messages = Array.Empty<Message>();
         int maxTries = 0;
         do
         {
             try
             {
                 maxTries++;
-                Task.Delay(500).Wait(); //Let topic propagate in the broker
+                //Let topic propagate in the broker
+                Task.Delay(500).Wait();
                 messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)

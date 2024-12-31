@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
-using System.Text.Json;
 using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
 public class KafkaDefaultMessageHeaderBuilderTests 
 {

@@ -6,7 +6,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
@@ -83,7 +83,8 @@ public class KafkaConsumerDeclareTests : IDisposable
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
+                //Let topic propagate in the broker
+                await Task.Delay(500); 
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                 _consumer.Acknowledge(messages[0]);
                     
