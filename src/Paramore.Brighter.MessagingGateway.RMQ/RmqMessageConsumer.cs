@@ -142,7 +142,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// Acknowledges the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(() =>AcknowledgeAsync(message));
+    public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(async () =>await AcknowledgeAsync(message));
 
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -170,7 +170,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public void Purge() => BrighterSynchronizationHelper.Run(() => PurgeAsync());
+    public void Purge() => BrighterSynchronizationHelper.Run(async () => await PurgeAsync());
 
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
@@ -295,7 +295,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// <param name="message"></param>
     /// <param name="timeout">Time to delay delivery of the message.</param>
     /// <returns>True if message deleted, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? timeout = null) => BrighterSynchronizationHelper.Run(() => RequeueAsync(message, timeout));
+    public bool Requeue(Message message, TimeSpan? timeout = null) => BrighterSynchronizationHelper.Run(async () => await RequeueAsync(message, timeout));
 
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
