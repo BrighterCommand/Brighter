@@ -18,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks;
@@ -60,13 +61,14 @@ internal class BrighterTaskScheduler : TaskScheduler
         
        var queued = _synchronizationHelper.Enqueue((Task)task, false);
        if (!queued)
-   {
+       {
            Debug.IndentLevel = 1;
            Debug.WriteLine($"BrighterTaskScheduler: QueueTask Failed to queue task {task.ToString()} on {System.Threading.Thread.CurrentThread.ManagedThreadId}");
            Debug.IndentLevel = 0;
+           new Thread(TryExecuteNewThread) { IsBackground = true }.Start(task);
        }
     }
-
+    
     /// <summary>
     /// Attempts to execute the specified task on the current thread.
     /// </summary>
@@ -99,6 +101,30 @@ internal class BrighterTaskScheduler : TaskScheduler
     {
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterTaskScheduler: DoTryExecuteTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Debug.IndentLevel = 0;
+        
+        TryExecuteTask(task);
+    }
+    
+    /// <summary>
+    /// In a new thread, attempts to execute the specified task.
+    /// </summary>
+    /// <remarks>
+    /// This is a little "Hail Mary" to try and execute a task that has failed to queue because we have already completed the synchronization context.
+    /// Seems to be caused by an Exection Context that has our scheduler as the default, as it fools ConfigureAwait
+    /// </remarks>
+    /// <param name="obj"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    private void TryExecuteNewThread(object? obj)
+    {
+        var task = obj as Task;
+        if (task  == null)
+        {
+            throw new ArgumentNullException(nameof(obj));
+        }
+        
+        Debug.IndentLevel = 1;
+        Debug.WriteLine($"BrighterTaskScheduler: Use TryExecuteNewThread for {task} on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
         
         TryExecuteTask(task);
