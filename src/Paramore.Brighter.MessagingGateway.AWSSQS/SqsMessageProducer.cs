@@ -76,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new ValueTask(Task.CompletedTask);    
         }
         
-        public bool ConfirmTopicExists(string? topic = null) => BrighterSynchronizationHelper.Run(async () => await ConfirmTopicExistsAsync(topic));
+        public bool ConfirmTopicExists(string? topic = null) => BrighterAsyncContext.Run(async () => await ConfirmTopicExistsAsync(topic));
         
        public async Task<bool> ConfirmTopicExistsAsync(string? topic = null, CancellationToken cancellationToken = default)
        {
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Send(Message message) => BrighterSynchronizationHelper.Run(async () => await SendAsync(message));
+        public void Send(Message message) => BrighterAsyncContext.Run(async () => await SendAsync(message));
 
         /// <summary>
         /// Sends the specified message, with a delay.

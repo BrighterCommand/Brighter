@@ -6,8 +6,6 @@
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false).
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
-// Originally based on:
-
 //Also based on:
 // https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
 // https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
@@ -33,12 +31,14 @@ namespace Paramore.Brighter.Tasks
     /// Only uses one thread, so predictable performance, but may have many messages queued. Once queue length exceeds
     /// buffer size, we will stop reading new work.
     /// </remarks>
-    public class BrighterSynchronizationContext : SynchronizationContext
+    public class BrighterSynchronizationContext : SynchronizationContext, IDisposable
     {
+        private bool _disposed;
+        
         /// <summary>
         /// Gets the synchronization helper.
         /// </summary>
-        public BrighterSynchronizationHelper SynchronizationHelper { get; }
+        public BrighterAsyncContext AsyncContext { get; }
 
         /// <summary>
         /// Gets or sets the timeout for send operations.
@@ -56,10 +56,16 @@ namespace Paramore.Brighter.Tasks
         /// <summary>
         /// Initializes a new instance of the <see cref="BrighterSynchronizationContext"/> class.
         /// </summary>
-        /// <param name="synchronizationHelper">The synchronization helper.</param>
-        public BrighterSynchronizationContext(BrighterSynchronizationHelper synchronizationHelper)
+        /// <param name="asyncContext">The synchronization helper.</param>
+        public BrighterSynchronizationContext(BrighterAsyncContext asyncContext)
         {
-            SynchronizationHelper = synchronizationHelper;
+            AsyncContext = asyncContext;
+        }
+        
+        public void Dispose()
+        {
+            //SynchronizationHelper.Dispose();
+            _disposed = true;
         }
 
         /// <summary>
@@ -68,7 +74,7 @@ namespace Paramore.Brighter.Tasks
         /// <returns>A new <see cref="System.Threading.SynchronizationContext"/> object.</returns>
         public override SynchronizationContext CreateCopy()
         {
-            return new BrighterSynchronizationContext(SynchronizationHelper);
+            return new BrighterSynchronizationContext(AsyncContext);
         }
         
         ///inheritdoc /> 
@@ -77,13 +83,13 @@ namespace Paramore.Brighter.Tasks
             var other = obj as BrighterSynchronizationContext;
             if (other == null)
                 return false;
-            return (SynchronizationHelper == other.SynchronizationHelper);
+            return (AsyncContext == other.AsyncContext);
         }
         
         ///inheritdoc /> 
         public override int GetHashCode()
         {
-            return SynchronizationHelper.GetHashCode();
+            return AsyncContext.GetHashCode();
         }
 
         /// <summary>
@@ -91,14 +97,16 @@ namespace Paramore.Brighter.Tasks
         /// </summary>
         public override void OperationCompleted()
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(BrighterSynchronizationContext));
+            
             Debug.WriteLine(string.Empty);
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterSynchronizationContext: OperationCompleted on thread {Thread.CurrentThread.ManagedThreadId}");
             Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
             Debug.IndentLevel = 0;
 
-            
-            SynchronizationHelper.OperationCompleted();
+            AsyncContext.OperationCompleted();
         }
 
         /// <summary>
@@ -106,13 +114,16 @@ namespace Paramore.Brighter.Tasks
         /// </summary>
         public override void OperationStarted()
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(BrighterSynchronizationContext));
+            
             Debug.WriteLine(string.Empty);
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterSynchronizationContext: OperationStarted on thread {Thread.CurrentThread.ManagedThreadId}");
             Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
             Debug.IndentLevel = 0;
 
-            SynchronizationHelper.OperationStarted();
+            AsyncContext.OperationStarted();
         }
 
         /// <summary>
@@ -122,34 +133,18 @@ namespace Paramore.Brighter.Tasks
         /// <param name="state">The object passed to the delegate.</param>
         public override void Post(SendOrPostCallback callback, object? state)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(BrighterSynchronizationContext));
+            
+            if (callback == null) throw new ArgumentNullException(nameof(callback));
+            
             Debug.WriteLine(string.Empty);
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterSynchronizationContext: Post {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
             Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
             Debug.IndentLevel = 0;
             
-            if (callback == null) throw new ArgumentNullException(nameof(callback));
-            bool queued = SynchronizationHelper.Enqueue(new ContextMessage(callback, state), true);
-            
-            if (queued) return;
-            
-            //NOTE: if we got here, something went wrong, we should have been able to queue the message
-            //mostly this seems to be a problem with the task we are running completing, but work is still being queued to the 
-            //synchronization context. 
-            var contextCallback = new ContextCallback(callback);
-            Debug.WriteLine(string.Empty);
-            Debug.IndentLevel = 1;
-            Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
-            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
-            Debug.IndentLevel = 0;
-                
-            //just execute inline
-            // current thread already owns the context, so just execute inline to prevent deadlocks
-            if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
-                SynchronizationHelper.ExecuteImmediately(contextCallback, state);
-            else
-                base.Post(callback, state);
-            
+            AsyncContext.Enqueue(AsyncContext.Factory.Run(() => callback(state)), true);
         }
 
         /// <summary>
@@ -159,6 +154,9 @@ namespace Paramore.Brighter.Tasks
         /// <param name="state">The object passed to the delegate.</param>
         public override void Send(SendOrPostCallback callback, object? state)
         {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(BrighterSynchronizationContext));
+            
             Debug.WriteLine(string.Empty);
             Debug.IndentLevel = 1;
             Debug.WriteLine($"BrighterSynchronizationContext: Send {callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
@@ -166,28 +164,15 @@ namespace Paramore.Brighter.Tasks
             Debug.IndentLevel = 0;
             
             // current thread already owns the context, so just execute inline to prevent deadlocks
-            if (BrighterSynchronizationHelper.Current == SynchronizationHelper)
+            if (BrighterAsyncContext.Current == AsyncContext)
             {
                 callback(state);
             }
             else
             {
-                var task = SynchronizationHelper.MakeTask(new ContextMessage(callback, state));
-                if (!task.Wait(Timeout)) // Timeout mechanism
-                    throw new TimeoutException("BrighterSynchronizationContext: Send operation timed out.");
+                var task = AsyncContext.Factory.Run(() => callback(state));
+                task.WaitAndUnwrapException();
             }
-        }
-        
-        private void ExecuteImmediately(ContextCallback contextCallback, object? state)
-        {
-            Debug.WriteLine(string.Empty);
-            Debug.IndentLevel = 1;
-            Debug.Fail("BrighterSynchronizationContext: ExecuteImmediately. We should never get here");
-            Debug.WriteLine($"BrighterSynchronizationContext: Post Failed to queue {contextCallback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId}");
-            Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {ParentTaskId}");
-            Debug.IndentLevel = 0;
-            //just execute inline
-            SynchronizationHelper.ExecuteImmediately(contextCallback, state);
         }
     }
 }

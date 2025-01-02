@@ -90,7 +90,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             //NOTE: Don't make this a method body, as opposed to an expression, unless you want it to
             //break deep in AsyncTaskMethodBuilder for some hard to explain reasons
-            BrighterSynchronizationHelper.Run(async () => await EventLoop());
+            BrighterAsyncContext.Run(async () => await EventLoop());
         }
 
         private async Task Acknowledge(Message message)

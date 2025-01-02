@@ -104,7 +104,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// <param name="message">The message.</param>
     /// <param name="delay">Delay to delivery of the message.</param>
     /// <returns>Task.</returns>
-    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterSynchronizationHelper.Run(async () => await SendWithDelayAsync(message, delay));
+    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
 
     /// <summary>
     /// Sends the specified message

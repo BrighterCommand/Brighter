@@ -20,7 +20,7 @@ public class BrighterSynchronizationContextsTests
     public void AsyncContext_StaysOnSameThread()
     {
         var testThread = Thread.CurrentThread.ManagedThreadId;
-        var contextThread = BrighterSynchronizationHelper.Run(() => Thread.CurrentThread.ManagedThreadId);
+        var contextThread = BrighterAsyncContext.Run(() => Thread.CurrentThread.ManagedThreadId);
         testThread.Should().Be(contextThread);
     }
 
@@ -28,7 +28,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_AsyncVoid_BlocksUntilCompletion()
     {
         bool resumed = false;
-        BrighterSynchronizationHelper.Run((Action)(async () =>
+        BrighterAsyncContext.Run((Action)(async () =>
         {
             await Task.Yield();
             resumed = true;
@@ -41,7 +41,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_AsyncVoid_BlocksUntilCompletion_RunsContinuation()
     {
         bool resumed = false;
-        BrighterSynchronizationHelper.Run((Action)(async () =>
+        BrighterAsyncContext.Run((Action)(async () =>
         {
             await Task.Delay(50);
             resumed = true;
@@ -54,7 +54,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_FuncThatCallsAsyncVoid_BlocksUntilCompletion()
     {
         bool resumed = false;
-        var result = BrighterSynchronizationHelper.Run((Func<int>)(() =>
+        var result = BrighterAsyncContext.Run((Func<int>)(() =>
         {
             Action asyncVoid = async () =>
             {
@@ -72,7 +72,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_AsyncTask_BlocksUntilCompletion()
     {
         bool resumed = false;
-        BrighterSynchronizationHelper.Run(async () =>
+        BrighterAsyncContext.Run(async () =>
         {
             await Task.Yield();
             resumed = true;
@@ -84,7 +84,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_AsyncTask_BlockingCode_Still_Ends()
     {
         bool resumed = false;
-        BrighterSynchronizationHelper.Run(() =>
+        BrighterAsyncContext.Run(() =>
         {
             Task.Delay(50).GetAwaiter().GetResult();
             resumed = true;
@@ -97,7 +97,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_AsyncTaskWithResult_BlocksUntilCompletion()
     {
         bool resumed = false;
-        var result = BrighterSynchronizationHelper.Run(async () =>
+        var result = BrighterAsyncContext.Run(async () =>
         {
             await Task.Yield();
             resumed = true;
@@ -112,7 +112,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_AsyncTaskWithResult_BlockingCode_Still_Ends()
     {
         bool resumed = false;
-        var result = BrighterSynchronizationHelper.Run(async () =>
+        var result = BrighterAsyncContext.Run(async () =>
         {
             Task.Delay(50).GetAwaiter().GetResult();
             resumed = true;
@@ -126,7 +126,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_AsyncTaskWithResultAndConfigurateAwait_BlockingCode_Still_Ends()
     {
         bool resumed = false;
-        var result = BrighterSynchronizationHelper.Run(async () =>
+        var result = BrighterAsyncContext.Run(async () =>
         {
             await Task.Delay(50).ConfigureAwait(false);
             resumed = true;
@@ -140,7 +140,7 @@ public class BrighterSynchronizationContextsTests
     public void Run_AsyncTaskWithResult_ContainsMultipleAsyncTasks_Still_Ends()
     {
         bool resumed = false;
-        var result = BrighterSynchronizationHelper.Run(async () =>
+        var result = BrighterAsyncContext.Run(async () =>
         {
             await MultiTask();
             resumed = true;
@@ -159,17 +159,17 @@ public class BrighterSynchronizationContextsTests
     [Fact]
     public void Current_WithoutAsyncContext_IsNull()
     {
-        BrighterSynchronizationHelper.Current.Should().BeNull();
+        BrighterAsyncContext.Current.Should().BeNull();
     }
 
     [Fact]
     public void Current_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelper()
     {
-        BrighterSynchronizationHelper observedHelper = null;
-        var helper = new BrighterSynchronizationHelper();
+        BrighterAsyncContext observedHelper = null;
+        var helper = new BrighterAsyncContext();
 
         var task = helper.Factory.StartNew(
-            () => { observedHelper = BrighterSynchronizationHelper.Current; },
+            () => { observedHelper = BrighterAsyncContext.Current; },
             helper.Factory.CancellationToken,
             helper.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
             helper.TaskScheduler);
@@ -178,12 +178,31 @@ public class BrighterSynchronizationContextsTests
 
         observedHelper.Should().Be(helper);
     }
-
+    
     [Fact]
+    public async Task Run_AsyncTaskWithResult_ContainsMultipleAsyncTasks_Still_Ends2()
+    {
+        bool resumed = false;
+        var newTask = Task.Factory.StartNew(() => BrighterAsyncContext.Run(async () =>
+        {
+            await Task.Delay(100);
+            resumed = true;
+            return 17;
+        }));
+        
+        await Task.Delay(100);
+
+        var result =await Task.WhenAll(newTask);
+
+        resumed.Should().BeTrue();
+        result[0].Should().Be(17);
+    }
+
+    [Fact]                 
     public void SynchronizationContextCurrent_FromBrighterSynchronizationHelper_IsBrighterSynchronizationHelperSynchronizationContext()
     {
         System.Threading.SynchronizationContext? observedContext = null;
-        var context = new BrighterSynchronizationHelper();
+        var context = new BrighterAsyncContext();
 
         var task = context.Factory.StartNew(
             () => { observedContext = System.Threading.SynchronizationContext.Current; },
@@ -200,7 +219,7 @@ public class BrighterSynchronizationContextsTests
     public void TaskSchedulerCurrent_FromAsyncContext_IsThreadPoolTaskScheduler()
     {
         TaskScheduler observedScheduler = null;
-        var context = new BrighterSynchronizationHelper();
+        var context = new BrighterAsyncContext();
 
         var task = context.Factory.StartNew(
             () => { observedScheduler = TaskScheduler.Current; },
@@ -216,7 +235,7 @@ public class BrighterSynchronizationContextsTests
     [Fact]
     public void TaskScheduler_MaximumConcurrency_IsOne()
     {
-        var context = new BrighterSynchronizationHelper();
+        var context = new BrighterAsyncContext();
         context.TaskScheduler.MaximumConcurrencyLevel.Should().Be(1);
     }
 
@@ -226,7 +245,7 @@ public class BrighterSynchronizationContextsTests
         bool propogatesException = false;
         try
         {
-            BrighterSynchronizationHelper.Run(() => { throw new NotImplementedException(); });
+            BrighterAsyncContext.Run(() => { throw new NotImplementedException(); });
         }
         catch (Exception e)
         {
@@ -242,7 +261,7 @@ public class BrighterSynchronizationContextsTests
         bool propogatesException = false;
         try
         {
-            BrighterSynchronizationHelper.Run(async () =>
+            BrighterAsyncContext.Run(async () =>
             {
                 await Task.Yield();
                 throw new NotImplementedException();
@@ -264,7 +283,7 @@ public class BrighterSynchronizationContextsTests
         {
             var runningThread = new TaskFactory().StartNew(() =>
             {
-                BrighterSynchronizationHelper.Run(async () =>
+                BrighterAsyncContext.Run(async () =>
                 {
                     await Task.Yield();
                     throw new NotImplementedException();
@@ -287,7 +306,7 @@ public class BrighterSynchronizationContextsTests
         bool propogatesException = false;
         try
         {
-            BrighterSynchronizationHelper.Run(async () =>
+            BrighterAsyncContext.Run(async () =>
             {
                 System.Threading.SynchronizationContext.Current.Post(_ =>
                 {
@@ -308,7 +327,7 @@ public class BrighterSynchronizationContextsTests
     public void Task_AfterExecute_NeverRuns()
     {
         int value = 0;
-        var context = new BrighterSynchronizationHelper();
+        var context = new BrighterAsyncContext();
 
         var task = context.Factory.StartNew(
             () => { value = 1; },
@@ -345,7 +364,7 @@ public class BrighterSynchronizationContextsTests
     public async Task Task_AfterExecute_Runs_On_ThreadPool()
     {
         int value = 0;
-        var context = new BrighterSynchronizationHelper();
+        var context = new BrighterAsyncContext();
 
         var task = context.Factory.StartNew(
             () => { value = 1; },
@@ -376,39 +395,10 @@ public class BrighterSynchronizationContextsTests
     }
     
     [Fact]
-    public async Task SynchronizationContextCurrent_FromAsyncContext_PostFromAnotherThread()
-    {
-        System.Threading.SynchronizationContext? observedContext = null;
-        var helper = new BrighterSynchronizationHelper();
-
-        var task = helper.Factory.StartNew(
-            () => { observedContext =BrighterSynchronizationContext.Current; },
-            helper.Factory.CancellationToken,
-            helper.Factory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            helper.TaskScheduler);
-
-        //this should complete the task
-        helper.Execute(task);
-        
-        //but this simulates us being disposed
-        observedContext.OperationCompleted();
-
-        //we may be called on a different thread
-        int value = 1;
-        await Task.Run(() =>
-        {
-            observedContext .Post(_ => value = 2, null);
-        });
-        
-        value.Should().Be(2);
-
-    }
-
-    [Fact]
     public void SynchronizationContext_IsEqualToCopyOfItself()
     {
         var synchronizationContext1 =
-            BrighterSynchronizationHelper.Run(() => System.Threading.SynchronizationContext.Current);
+            BrighterAsyncContext.Run(() => System.Threading.SynchronizationContext.Current);
         var synchronizationContext2 = synchronizationContext1.CreateCopy();
 
         synchronizationContext1.GetHashCode().Should().Be(synchronizationContext2.GetHashCode());
@@ -419,7 +409,7 @@ public class BrighterSynchronizationContextsTests
     [Fact]
     public void Id_IsEqualToTaskSchedulerId()
     {
-        var context = new BrighterSynchronizationHelper();
+        var context = new BrighterAsyncContext();
         context.Id.Should().Be(context.TaskScheduler.Id);
     }
 }
