@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,53 +20,79 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
-namespace Paramore.Brighter.MessagingGateway.AWSSQS
-{
-    public static class AWSNameExtensions
-    {
-        public static ChannelName ToValidSQSQueueName(this ChannelName? channelName, bool isFifo = false)
-        {
-            if (channelName is null)
-                return new ChannelName(string.Empty);
-            
-            //SQS only allows 80 characters alphanumeric, hyphens, and underscores, but we might use a period in a 
-            //default typename strategy
-            var name = channelName.Value;
-            name = name.Replace(".", "_");
-            if (name.Length > 80)
-                name = name.Substring(0, 80);
+namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-            if (isFifo)
+public static class AWSNameExtensions
+{
+    public static ChannelName ToValidSQSQueueName(this ChannelName? channelName, bool isFifo = false)
+    {
+        if (channelName is null)
+        {
+            return new ChannelName(string.Empty);
+        }
+
+        //SQS only allows 80 characters alphanumeric, hyphens, and underscores, but we might use a period in a 
+        //default typename strategy
+        var name = channelName.Value;
+        if (isFifo)
+        {
+            if (name.EndsWith(".fifo"))
             {
-                name = name + ".fifo";
+                name = name.Substring(0, name.Length - 5);
             }
 
-            return new ChannelName(name);
+            name = name.Replace(".", "_");
+            if (name.Length > 75)
+            {
+                name = name.Substring(0, 75);
+            }
+
+            name += ".fifo";
+        }
+        else
+        {
+            name = name.Replace(".", "_");
+            if (name.Length > 80)
+            {
+                name = name.Substring(0, 80);
+            }
         }
 
-        public static RoutingKey ToValidSNSTopicName(this RoutingKey routingKey)
+        return new ChannelName(name);
+    }
+
+    public static RoutingKey ToValidSNSTopicName(this RoutingKey routingKey, bool isFifo = false)
+    {
+        //SNS only topic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
+        //underscores (_) are allowed. Topic names must be unique within an AWS account.
+        var topic = routingKey.Value;
+        if (isFifo)
         {
-            //SNS only topic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
-            //underscores (_) are allowed. Topic names must be unique within an AWS account.
-            var topic = routingKey.Value;
+            if (topic.EndsWith(".fifo"))
+            {
+                topic = topic.Substring(0, topic.Length - 5);
+            }
+
+            topic = topic.Replace(".", "_");
+            if(topic.Length > 251)
+            {
+                topic = topic.Substring(0, 251);
+            }
+            
+            topic += ".fifo";
+        }
+        else
+        {
             topic = topic.Replace(".", "_");
             if (topic.Length > 256)
+            {
                 topic = topic.Substring(0, 256);
-            
-            return new RoutingKey(topic);
+            }
         }
-        
-        public static string ToValidSNSTopicName(this string topic)
-        {
-            //SNS only topic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
-            //underscores (_) are allowed. Topic names must be unique within an AWS account.
-            topic = topic.Replace(".", "_");
-            if (topic.Length > 256)
-                topic = topic.Substring(0, 256);
-            
-            return topic;
-        }
-     }
+
+        return new RoutingKey(topic);
+    }
 }

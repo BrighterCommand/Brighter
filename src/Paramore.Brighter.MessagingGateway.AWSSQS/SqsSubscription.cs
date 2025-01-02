@@ -166,7 +166,7 @@ public class SqsSubscription : Subscription
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null,
         SnsSqsType sqsType = SnsSqsType.Standard,
-        bool contentBasedDeduplication = false,
+        bool contentBasedDeduplication = true,
         DeduplicationScope? deduplicationScope = null,
         int? fifoThroughputLimit = null
     )
@@ -254,7 +254,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null,
         SnsSqsType sqsType = SnsSqsType.Standard,
-        bool contentBasedDeduplication = false,
+        bool contentBasedDeduplication = true,
         DeduplicationScope? deduplicationScope = null,
         int? fifoThroughputLimit = null
     )

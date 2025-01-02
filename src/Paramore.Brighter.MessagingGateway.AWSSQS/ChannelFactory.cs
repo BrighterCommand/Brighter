@@ -123,8 +123,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             await EnsureQueueAsync();
 
             return new ChannelAsync(
-                subscription.ChannelName.ToValidSQSQueueName(),
-                subscription.RoutingKey.ToValidSNSTopicName(),
+                subscription.ChannelName.ToValidSQSQueueName(_subscription.SqsType == SnsSqsType.Fifo),
+                subscription.RoutingKey.ToValidSNSTopicName(_subscription.SqsType == SnsSqsType.Fifo),
                 _messageConsumerFactory.CreateAsync(subscription),
                 subscription.BufferSize
             );
@@ -143,7 +143,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
         using var sqsClient = new AWSClientFactory(AwsConnection).CreateSqsClient();
         (bool exists, string? queueUrl) queueExists =
-            await QueueExistsAsync(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
+            await QueueExistsAsync(sqsClient, _subscription.ChannelName.ToValidSQSQueueName(_subscription.SqsType == SnsSqsType.Fifo));
 
         if (queueExists.exists && queueExists.queueUrl != null)
         {
@@ -205,8 +205,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             await EnsureQueueAsync();
 
             return new Channel(
-                subscription.ChannelName.ToValidSQSQueueName(),
-                subscription.RoutingKey.ToValidSNSTopicName(),
+                subscription.ChannelName.ToValidSQSQueueName(_subscription.SqsType == SnsSqsType.Fifo),
+                subscription.RoutingKey.ToValidSNSTopicName(_subscription.SqsType == SnsSqsType.Fifo),
                 _messageConsumerFactory.Create(subscription),
                 subscription.BufferSize
             );
@@ -224,8 +224,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             return;
 
         using var sqsClient = new AWSClientFactory(AwsConnection).CreateSqsClient();
-        var queueName = _subscription.ChannelName.ToValidSQSQueueName();
-        var topicName = _subscription.RoutingKey.ToValidSNSTopicName();
+        var queueName = _subscription.ChannelName.ToValidSQSQueueName(_subscription.SqsType == SnsSqsType.Fifo);
+        var topicName = _subscription.RoutingKey.ToValidSNSTopicName(_subscription.SqsType == SnsSqsType.Fifo);
 
         (bool exists, _) = await QueueExistsAsync(sqsClient, queueName);
         if (!exists)
@@ -257,7 +257,9 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     private async Task CreateQueueAsync(AmazonSQSClient sqsClient)
     {
         if (_subscription is null)
+        {
             throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
+        }
 
         s_logger.LogDebug("Queue does not exist, creating queue: {ChannelName} subscribed to {Topic} on {Region}",
             _subscription.ChannelName.Value, _subscription.RoutingKey.Value, AwsConnection.Region);
