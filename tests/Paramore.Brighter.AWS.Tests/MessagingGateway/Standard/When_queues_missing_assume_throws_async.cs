@@ -32,7 +32,7 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
 
         //create the topic, we want the queue to be the issue
         //We need to create the topic at least, to check the queues
-        var producer = new SqsMessageProducer(awsConnection,
+        var producer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Create

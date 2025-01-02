@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (p.Topic is null)
                     throw new ConfigurationException($"Missing topic on Publication"); 
                 
-                var producer = new SqsMessageProducer(_connection, p);
+                var producer = new SnsMessageProducer(_connection, p);
                 if (producer.ConfirmTopicExists())
                     producers[p.Topic] = producer;
                 else
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (p.Topic is null)
                     throw new ConfigurationException($"Missing topic on Publication"); 
                 
-                var producer = new SqsMessageProducer(_connection, p);
+                var producer = new SnsMessageProducer(_connection, p);
                 if (await producer.ConfirmTopicExistsAsync())
                     producers[p.Topic] = producer;
                 else

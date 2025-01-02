@@ -119,14 +119,12 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         switch (findTopicBy)
         {
             case TopicFindBy.Arn:
-                return new ValidateTopicByArn(AwsConnection.Credentials, AwsConnection.Region,
-                    AwsConnection.ClientConfigAction);
+                return new ValidateTopicByArn(_awsClientFactory.CreateSnsClient());
             case TopicFindBy.Convention:
                 return new ValidateTopicByArnConvention(AwsConnection.Credentials, AwsConnection.Region,
                     AwsConnection.ClientConfigAction, type);
             case TopicFindBy.Name:
-                return new ValidateTopicByName(AwsConnection.Credentials, AwsConnection.Region,
-                    AwsConnection.ClientConfigAction, type);
+                return new ValidateTopicByName(_awsClientFactory.CreateSnsClient(), type);
             default:
                 throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey");
         }

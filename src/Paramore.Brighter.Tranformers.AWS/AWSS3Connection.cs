@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,32 +20,35 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
- 
+
 #endregion
 
+#nullable enable
+using System;
 using Amazon;
 using Amazon.Runtime;
 
-namespace Paramore.Brighter.Tranformers.AWS
+namespace Paramore.Brighter.Tranformers.AWS;
+
+/// <summary>
+/// Used to create an AWS Client
+/// </summary>
+public class AWSS3Connection
 {
     /// <summary>
-    /// Used to create an AWS Client
+    /// Constructs a credentials instance
     /// </summary>
-    public class AWSS3Connection
+    /// <param name="credentials">A credentials object for an AWS service</param>
+    /// <param name="region">The AWS region to connect to</param>
+    /// <param name="clientConfig">The AWS client configuration.</param>
+    public AWSS3Connection(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfig = null)
     {
-                /// <summary>
-                /// Constructs a credentials instance
-                /// </summary>
-                /// <param name="credentials">A credentials object for an AWS service</param>
-                /// <param name="region">The AWS region to connect to</param>
-                public AWSS3Connection(AWSCredentials credentials, RegionEndpoint region)
-                {
-                    Credentials = credentials;
-                    Region = region;
-                }
-        
-                public AWSCredentials Credentials { get; }
-                public RegionEndpoint Region { get; }
-         
+        Credentials = credentials;
+        Region = region;
+        ClientConfig = clientConfig;
     }
+
+    public AWSCredentials Credentials { get; }
+    public RegionEndpoint Region { get; }
+    public Action<ClientConfig>? ClientConfig { get; }
 }

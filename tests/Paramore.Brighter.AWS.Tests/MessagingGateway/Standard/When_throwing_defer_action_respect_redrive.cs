@@ -25,7 +25,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
     private readonly Message _message;
     private readonly string _dlqChannelName;
     private readonly IAmAChannelSync _channel;
-    private readonly SqsMessageProducer _sender;
+    private readonly SnsMessageProducer _sender;
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
     private readonly ChannelFactory _channelFactory;
@@ -69,13 +69,11 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         _awsConnection = GatewayFactory.CreateFactory();
 
         //how do we send to the queue
-        _sender = new SqsMessageProducer(
-            _awsConnection, 
-            new SnsPublication 
-            { 
-                Topic = routingKey, 
-                RequestType = typeof(MyDeferredCommand), 
-                MakeChannels = OnMissingChannel.Create 
+        _sender = new SnsMessageProducer(
+            _awsConnection,
+            new SnsPublication
+            {
+                Topic = routingKey, RequestType = typeof(MyDeferredCommand), MakeChannels = OnMissingChannel.Create
             }
         );
 
@@ -102,20 +100,20 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
             null
-        ); 
+        );
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
-            
+
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-        _messagePump = new Reactor<MyDeferredCommand>(provider, messageMapperRegistry, 
-            null,  new InMemoryRequestContextFactory(), _channel)
+        _messagePump = new Reactor<MyDeferredCommand>(provider, messageMapperRegistry,
+            null, new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
         };
     }
 
-    public int GetDLQCount(string queueName)
+    private int GetDLQCount(string queueName)
     {
-        using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+        using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient(); 
         var queueUrlResponse = sqsClient.GetQueueUrlAsync(queueName).GetAwaiter().GetResult();
         var response = sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {
@@ -127,7 +125,8 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
-            throw new AmazonSQSException($"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
+            throw new AmazonSQSException(
+                $"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
         }
 
         return response.Messages.Count;
@@ -150,13 +149,13 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
         //wait for the pump to stop once it gets a quit message
         await Task.WhenAll(task);
-            
+
         await Task.Delay(5000);
 
         //inspect the dlq
         GetDLQCount(_dlqChannelName).Should().Be(1);
     }
-        
+
     public void Dispose()
     {
         _channelFactory.DeleteTopicAsync().Wait();

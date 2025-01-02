@@ -29,7 +29,7 @@ public class AWSValidateMissingTopicTests
     public void When_topic_missing_verify_throws(SnsSqsType type, string partitionKey)
     {
         //arrange
-        var producer = new SqsMessageProducer(_awsConnection,
+        var producer = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate,

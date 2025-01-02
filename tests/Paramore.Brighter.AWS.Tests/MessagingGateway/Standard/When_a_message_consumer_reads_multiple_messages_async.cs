@@ -14,7 +14,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard;
 [Trait("Fragile", "CI")]
 public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 {
-    private readonly SqsMessageProducer _messageProducer;
+    private readonly SnsMessageProducer _messageProducer;
     private readonly SqsMessageConsumer _consumer;
     private readonly string _topicName;
     private readonly ChannelFactory _channelFactory;
@@ -44,7 +44,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
         //just for the tests, so create a new consumer from the properties
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), BufferSize);
-        _messageProducer = new SqsMessageProducer(awsConnection,
+        _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication { MakeChannels = OnMissingChannel.Create });
     }
 

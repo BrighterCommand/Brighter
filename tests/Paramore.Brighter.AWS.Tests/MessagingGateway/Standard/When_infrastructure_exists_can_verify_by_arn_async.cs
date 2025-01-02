@@ -19,7 +19,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
-    private readonly SqsMessageProducer _messageProducer;
+    private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
@@ -52,7 +52,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        var topicArn = FindTopicArn(credentials, region, routingKey.Value).Result;
+        var topicArn = FindTopicArn(awsConnection, routingKey.Value).Result;
         var routingKeyArn = new RoutingKey(topicArn);
 
         subscription = new(
@@ -63,7 +63,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
             makeChannels: OnMissingChannel.Validate
         );
 
-        _messageProducer = new SqsMessageProducer(
+        _messageProducer = new SnsMessageProducer(
             awsConnection,
             new SnsPublication
             {
@@ -91,13 +91,13 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         await _consumer.AcknowledgeAsync(message);
     }
 
-    private async Task<string> FindTopicArn(AWSCredentials credentials, RegionEndpoint region, string topicName)
+    private static async Task<string> FindTopicArn(AWSMessagingGatewayConnection connection, string topicName)
     {
-        var snsClient = new AmazonSimpleNotificationServiceClient(credentials, region);
+        using var snsClient = new AWSClientFactory(connection).CreateSnsClient();
         var topicResponse = await snsClient.FindTopicAsync(topicName);
         return topicResponse.TopicArn;
     }
-        
+
     public void Dispose()
     {
         //Clean up resources that we have created
@@ -106,7 +106,7 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         ((IAmAMessageConsumerSync)_consumer).Dispose();
         _messageProducer.Dispose();
     }
-        
+
     public async ValueTask DisposeAsync()
     {
         await _channelFactory.DeleteTopicAsync();

@@ -25,7 +25,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
     private readonly Message _message;
     private readonly string _dlqChannelName;
     private readonly IAmAChannelAsync _channel;
-    private readonly SqsMessageProducer _sender;
+    private readonly SnsMessageProducer _sender;
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
     private readonly ChannelFactory _channelFactory;
@@ -59,7 +59,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(
+        _sender = new SnsMessageProducer(
             _awsConnection,
             new SnsPublication
             {
@@ -100,7 +100,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
     public async Task<int> GetDLQCountAsync(string queueName)
     {
-        using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+        using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
         var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName);
         var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {

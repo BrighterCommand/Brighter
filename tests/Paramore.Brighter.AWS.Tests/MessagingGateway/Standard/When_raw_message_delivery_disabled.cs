@@ -15,7 +15,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard;
 [Trait("Fragile", "CI")]
 public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 {
-    private readonly SqsMessageProducer _messageProducer;
+    private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly IAmAChannelSync _channel;
     private readonly RoutingKey _routingKey;
@@ -40,7 +40,7 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
             messagePumpType: MessagePumpType.Reactor,
             rawMessageDelivery: false));
 
-        _messageProducer = new SqsMessageProducer(awsConnection, 
+        _messageProducer = new SnsMessageProducer(awsConnection, 
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Create 

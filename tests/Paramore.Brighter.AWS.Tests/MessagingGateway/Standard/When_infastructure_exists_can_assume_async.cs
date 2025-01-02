@@ -15,7 +15,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard;
 public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
 {     private readonly Message _message;
     private readonly SqsMessageConsumer _consumer;
-    private readonly SqsMessageProducer _messageProducer;
+    private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
@@ -60,7 +60,7 @@ public class AWSAssumeInfrastructureTestsAsync  : IDisposable, IAsyncDisposable
             makeChannels: OnMissingChannel.Assume
         );
             
-        _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Assume});
+        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Assume});
 
         _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName());
     }

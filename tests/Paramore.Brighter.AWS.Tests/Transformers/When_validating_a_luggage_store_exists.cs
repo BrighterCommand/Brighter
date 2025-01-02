@@ -32,10 +32,10 @@ public class S3LuggageStoreExistsTests
     public S3LuggageStoreExistsTests()
     {
         //arrange
-        (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
- 
-        _client = new AmazonS3Client(credentials, region);
-        _stsClient = new AmazonSecurityTokenServiceClient(credentials, region);
+        var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
+        _client = factory.CreateS3Client();
+        _stsClient = factory.CreateStsClient(); 
+
 
         var services = new ServiceCollection();
         services.AddHttpClient();

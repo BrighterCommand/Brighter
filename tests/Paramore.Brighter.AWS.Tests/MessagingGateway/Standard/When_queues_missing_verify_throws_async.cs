@@ -31,7 +31,7 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
         _awsConnection = GatewayFactory.CreateFactory();
 
         // We need to create the topic at least, to check the queues
-        var producer = new SqsMessageProducer(_awsConnection,
+        var producer = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Create

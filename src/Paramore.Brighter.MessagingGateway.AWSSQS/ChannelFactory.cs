@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,6 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
@@ -61,12 +63,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
         _retryPolicy = Policy
             .Handle<InvalidOperationException>()
-            .WaitAndRetryAsync(new[]
-            {
-                TimeSpan.FromSeconds(1),
-                TimeSpan.FromSeconds(5),
-                TimeSpan.FromSeconds(10)
-            });
+            .WaitAndRetryAsync(new[] { TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) });
     }
 
     /// <summary>
@@ -76,8 +73,13 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
     /// <returns>An instance of <see cref="IAmAChannelSync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public IAmAChannelSync CreateSyncChannel(Subscription subscription) => BrighterSynchronizationHelper.Run(async () => await CreateSyncChannelAsync(subscription));
-        
+    public IAmAChannelSync CreateSyncChannel(Subscription subscription)
+    {
+        // TODO: Uncomment when the BrighterSynchronizationHelper is fixed, today the code isn't working because it's stuck is wired infinity loop
+        // return BrighterSynchronizationHelper.Run(async () => await CreateSyncChannelAsync(subscription));
+        return CreateSyncChannelAsync(subscription).GetAwaiter().GetResult();
+    }
+
     /// <summary>
     /// Creates the input channel.
     /// </summary>
@@ -87,7 +89,12 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
     /// <returns>An instance of <see cref="IAmAChannelAsync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription) => BrighterSynchronizationHelper.Run(async () => await CreateAsyncChannelAsync(subscription));
+    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
+    {
+        // TODO: Uncomment when the BrighterSynchronizationHelper is fixed, today the code isn't working because it's stuck is wired infinity loop
+        // return BrighterSynchronizationHelper.Run(async () => await CreateAsyncChannelAsync(subscription));
+        return CreateAsyncChannelAsync(subscription).GetAwaiter().GetResult();
+    }
 
     /// <summary>
     /// Creates the input channel.
@@ -96,18 +103,21 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="ct">Cancels the creation operation</param>
     /// <returns>An instance of <see cref="IAmAChannelAsync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
+    public async Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,
+        CancellationToken ct = default)
     {
         var channel = await _retryPolicy.ExecuteAsync(async () =>
         {
             SqsSubscription? sqsSubscription = subscription as SqsSubscription;
-            _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+            _subscription = sqsSubscription ??
+                            throw new ConfigurationException(
+                                "We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-            await EnsureTopicAsync(_subscription.RoutingKey, 
+            await EnsureTopicAsync(_subscription.RoutingKey,
                 _subscription.FindTopicBy,
                 _subscription.SnsAttributes,
                 _subscription.MakeChannels,
-                _subscription.SqsType, 
+                _subscription.SqsType,
                 _subscription.ContentBasedDeduplication,
                 ct);
             await EnsureQueueAsync();
@@ -122,7 +132,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
         return channel;
     }
-        
+
     /// <summary>
     /// Deletes the queue.
     /// </summary>
@@ -131,8 +141,9 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         if (_subscription?.ChannelName is null)
             return;
 
-        using var sqsClient = new AmazonSQSClient(AwsConnection.Credentials, AwsConnection.Region);
-        (bool exists, string? queueUrl) queueExists = await QueueExistsAsync(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
+        using var sqsClient = new AWSClientFactory(AwsConnection).CreateSqsClient();
+        (bool exists, string? queueUrl) queueExists =
+            await QueueExistsAsync(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
 
         if (queueExists.exists && queueExists.queueUrl != null)
         {
@@ -156,7 +167,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         if (_subscription == null)
             return;
-            
+
         if (ChannelTopicArn == null)
             return;
 
@@ -175,16 +186,18 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             }
         }
     }
-        
+
     private async Task<IAmAChannelSync> CreateSyncChannelAsync(Subscription subscription)
     {
         var channel = await _retryPolicy.ExecuteAsync(async () =>
         {
             SqsSubscription? sqsSubscription = subscription as SqsSubscription;
-            _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+            _subscription = sqsSubscription ??
+                            throw new ConfigurationException(
+                                "We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-            await EnsureTopicAsync(_subscription.RoutingKey, 
-                _subscription.FindTopicBy, 
+            await EnsureTopicAsync(_subscription.RoutingKey,
+                _subscription.FindTopicBy,
                 _subscription.SnsAttributes,
                 _subscription.MakeChannels,
                 _subscription.SqsType,
@@ -201,15 +214,15 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
         return channel;
     }
-  
+
     private async Task EnsureQueueAsync()
     {
         if (_subscription is null)
             throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
-            
+
         if (_subscription.MakeChannels == OnMissingChannel.Assume)
             return;
-        
+
         using var sqsClient = new AWSClientFactory(AwsConnection).CreateSqsClient();
         var queueName = _subscription.ChannelName.ToValidSQSQueueName();
         var topicName = _subscription.RoutingKey.ToValidSNSTopicName();
@@ -229,13 +242,15 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             else if (_subscription.MakeChannels == OnMissingChannel.Validate)
             {
                 var message = $"Queue does not exist: {queueName} for {topicName} on {AwsConnection.Region}";
-                s_logger.LogDebug("Queue does not exist: {ChannelName} for {Topic} on {Region}", queueName, topicName, AwsConnection.Region);
+                s_logger.LogDebug("Queue does not exist: {ChannelName} for {Topic} on {Region}", queueName, topicName,
+                    AwsConnection.Region);
                 throw new QueueDoesNotExistException(message);
             }
         }
         else
         {
-            s_logger.LogDebug("Queue exists: {ChannelName} subscribed to {Topic} on {Region}", queueName, topicName, AwsConnection.Region);
+            s_logger.LogDebug("Queue exists: {ChannelName} subscribed to {Topic} on {Region}", queueName, topicName,
+                AwsConnection.Region);
         }
     }
 
@@ -243,16 +258,21 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         if (_subscription is null)
             throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
-            
-        s_logger.LogDebug("Queue does not exist, creating queue: {ChannelName} subscribed to {Topic} on {Region}", _subscription.ChannelName.Value, _subscription.RoutingKey.Value, AwsConnection.Region);
+
+        s_logger.LogDebug("Queue does not exist, creating queue: {ChannelName} subscribed to {Topic} on {Region}",
+            _subscription.ChannelName.Value, _subscription.RoutingKey.Value, AwsConnection.Region);
         _queueUrl = null;
         try
         {
             var attributes = new Dictionary<string, string>();
             if (_subscription.RedrivePolicy != null && _dlqARN != null)
             {
-                var policy = new { maxReceiveCount = _subscription.RedrivePolicy.MaxReceiveCount, deadLetterTargetArn = _dlqARN };
-                attributes.Add(QueueAttributeName.RedrivePolicy, JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
+                var policy = new
+                {
+                    maxReceiveCount = _subscription.RedrivePolicy.MaxReceiveCount, deadLetterTargetArn = _dlqARN
+                };
+                attributes.Add(QueueAttributeName.RedrivePolicy,
+                    JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
             }
 
             attributes.Add(QueueAttributeName.DelaySeconds, _subscription.DelaySeconds.ToString());
@@ -260,7 +280,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             if (_subscription.IAMPolicy != null) attributes.Add(QueueAttributeName.Policy, _subscription.IAMPolicy);
             attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds, _subscription.TimeOut.Seconds.ToString());
             attributes.Add(QueueAttributeName.VisibilityTimeout, _subscription.LockTimeout.ToString());
-            
+
             var tags = new Dictionary<string, string> { { "Source", "Brighter" } };
             if (_subscription.Tags != null)
             {
@@ -269,7 +289,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
                     tags.Add(tag.Key, tag.Value);
                 }
             }
-            
+
             var queueName = _subscription.ChannelName.Value;
             if (_subscription.SqsType == SnsSqsType.Fifo)
             {
@@ -296,13 +316,9 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
                     });
                 }
             }
-            
 
-            var request = new CreateQueueRequest(queueName)
-            {
-                Attributes = attributes,
-                Tags = tags
-            };
+
+            var request = new CreateQueueRequest(queueName) { Attributes = attributes, Tags = tags };
             var response = await sqsClient.CreateQueueAsync(request);
             _queueUrl = response.QueueUrl;
 
@@ -314,26 +330,35 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             }
             else
             {
-                throw new InvalidOperationException($"Could not create queue: {_subscription.ChannelName.Value} subscribed to {ChannelTopicArn} on {AwsConnection.Region}");
+                throw new InvalidOperationException(
+                    $"Could not create queue: {_subscription.ChannelName.Value} subscribed to {ChannelTopicArn} on {AwsConnection.Region}");
             }
         }
         catch (QueueDeletedRecentlyException ex)
         {
-            var error = $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
-            s_logger.LogError(ex, "Could not create queue {ChannelName} because {ErrorMessage} waiting 60s to retry", _subscription.ChannelName.Value, ex.Message);
+            var error =
+                $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
+            s_logger.LogError(ex, "Could not create queue {ChannelName} because {ErrorMessage} waiting 60s to retry",
+                _subscription.ChannelName.Value, ex.Message);
             Thread.Sleep(TimeSpan.FromSeconds(30));
             throw new ChannelFailureException(error, ex);
         }
         catch (AmazonSQSException ex)
         {
-            var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
-            s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
+            var error =
+                $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
+            s_logger.LogError(ex,
+                "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}",
+                _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
             throw new InvalidOperationException(error, ex);
         }
         catch (HttpErrorResponseException ex)
         {
-            var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
-            s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
+            var error =
+                $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
+            s_logger.LogError(ex,
+                "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}",
+                _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
             throw new InvalidOperationException(error, ex);
         }
     }
@@ -342,10 +367,10 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         if (_subscription is null)
             throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
-            
+
         if (_subscription.RedrivePolicy == null)
             throw new InvalidOperationException("ChannelFactory: RedrivePolicy cannot be null when creating a DLQ");
-            
+
         try
         {
             var request = new CreateQueueRequest(_subscription.RedrivePolicy.DeadlLetterQueueName.Value);
@@ -356,41 +381,51 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             {
                 var attributesRequest = new GetQueueAttributesRequest
                 {
-                    QueueUrl = queueUrl,
-                    AttributeNames = ["QueueArn"]
+                    QueueUrl = queueUrl, AttributeNames = ["QueueArn"]
                 };
                 var attributesResponse = await sqsClient.GetQueueAttributesAsync(attributesRequest);
 
                 if (attributesResponse.HttpStatusCode != HttpStatusCode.OK)
-                    throw new InvalidOperationException($"Could not find ARN of DLQ, status: {attributesResponse.HttpStatusCode}");
+                    throw new InvalidOperationException(
+                        $"Could not find ARN of DLQ, status: {attributesResponse.HttpStatusCode}");
 
                 _dlqARN = attributesResponse.QueueARN;
             }
             else
-                throw new InvalidOperationException($"Could not find create DLQ, status: {createDeadLetterQueueResponse.HttpStatusCode}");
+                throw new InvalidOperationException(
+                    $"Could not find create DLQ, status: {createDeadLetterQueueResponse.HttpStatusCode}");
         }
         catch (QueueDeletedRecentlyException ex)
         {
-            var error = $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
-            s_logger.LogError(ex, "Could not create queue {ChannelName} because {ErrorMessage} waiting 60s to retry", _subscription.ChannelName.Value, ex.Message);
+            var error =
+                $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
+            s_logger.LogError(ex, "Could not create queue {ChannelName} because {ErrorMessage} waiting 60s to retry",
+                _subscription.ChannelName.Value, ex.Message);
             Thread.Sleep(TimeSpan.FromSeconds(30));
             throw new ChannelFailureException(error, ex);
         }
         catch (AmazonSQSException ex)
         {
-            var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
-            s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
+            var error =
+                $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
+            s_logger.LogError(ex,
+                "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}",
+                _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
             throw new InvalidOperationException(error, ex);
         }
         catch (HttpErrorResponseException ex)
         {
-            var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
-            s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}", _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
+            var error =
+                $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {AwsConnection.Region.DisplayName} because {ex.Message}";
+            s_logger.LogError(ex,
+                "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}",
+                _queueUrl, _subscription.RoutingKey.Value, AwsConnection.Region.DisplayName, ex.Message);
             throw new InvalidOperationException(error, ex);
         }
     }
 
-    private async Task CheckSubscriptionAsync(OnMissingChannel makeSubscriptions, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
+    private async Task CheckSubscriptionAsync(OnMissingChannel makeSubscriptions, AmazonSQSClient sqsClient,
+        AmazonSimpleNotificationServiceClient snsClient)
     {
         if (makeSubscriptions == OnMissingChannel.Assume)
             return;
@@ -399,7 +434,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         {
             if (makeSubscriptions == OnMissingChannel.Validate)
             {
-                throw new BrokerUnreachableException($"Subscription validation error: could not find subscription for {_queueUrl}");
+                throw new BrokerUnreachableException(
+                    $"Subscription validation error: could not find subscription for {_queueUrl}");
             }
             else if (makeSubscriptions == OnMissingChannel.Create)
             {
@@ -414,7 +450,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         if (!string.IsNullOrEmpty(arn))
         {
             var response = await snsClient.SetSubscriptionAttributesAsync(
-                new SetSubscriptionAttributesRequest(arn, "RawMessageDelivery", _subscription?.RawMessageDelivery.ToString())
+                new SetSubscriptionAttributesRequest(arn, "RawMessageDelivery",
+                    _subscription?.RawMessageDelivery.ToString())
             );
             if (response.HttpStatusCode != HttpStatusCode.OK)
             {
@@ -423,7 +460,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         }
         else
         {
-            throw new InvalidOperationException($"Could not subscribe to topic: {ChannelTopicArn} from queue: {_queueUrl} in region {AwsConnection.Region}");
+            throw new InvalidOperationException(
+                $"Could not subscribe to topic: {ChannelTopicArn} from queue: {_queueUrl} in region {AwsConnection.Region}");
         }
     }
 
@@ -431,7 +469,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         if (string.IsNullOrEmpty(channelName))
             return (false, null);
-            
+
         bool exists = false;
         string? queueUrl = null;
         try
@@ -464,7 +502,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         return (exists, queueUrl);
     }
 
-    private async Task<bool> SubscriptionExistsAsync(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
+    private async Task<bool> SubscriptionExistsAsync(AmazonSQSClient sqsClient,
+        AmazonSimpleNotificationServiceClient snsClient)
     {
         string? queueArn = await GetQueueArnForChannelAsync(sqsClient);
 
@@ -475,7 +514,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         ListSubscriptionsByTopicResponse response;
         do
         {
-            response = await snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = ChannelTopicArn });
+            response = await snsClient.ListSubscriptionsByTopicAsync(
+                new ListSubscriptionsByTopicRequest { TopicArn = ChannelTopicArn });
             exists = response.Subscriptions.Any(sub => (sub.Protocol.ToLower() == "sqs") && (sub.Endpoint == queueArn));
         } while (!exists && response.NextToken != null);
 
@@ -512,13 +552,16 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         ListSubscriptionsByTopicResponse response;
         do
         {
-            response = await snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest { TopicArn = ChannelTopicArn });
+            response = await snsClient.ListSubscriptionsByTopicAsync(
+                new ListSubscriptionsByTopicRequest { TopicArn = ChannelTopicArn });
             foreach (var sub in response.Subscriptions)
             {
-                var unsubscribe = await snsClient.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = sub.SubscriptionArn });
+                var unsubscribe =
+                    await snsClient.UnsubscribeAsync(new UnsubscribeRequest { SubscriptionArn = sub.SubscriptionArn });
                 if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
                 {
-                    s_logger.LogError("Error unsubscribing from {TopicResourceName} for sub {ChannelResourceName}", ChannelTopicArn, sub.SubscriptionArn);
+                    s_logger.LogError("Error unsubscribing from {TopicResourceName} for sub {ChannelResourceName}",
+                        ChannelTopicArn, sub.SubscriptionArn);
                 }
             }
         } while (response.NextToken != null);

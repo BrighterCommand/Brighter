@@ -19,7 +19,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard;
 [Trait("Fragile", "CI")]
 public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 {
-    private readonly SqsMessageProducer _sender;
+    private readonly SnsMessageProducer _sender;
     private readonly IAmAChannelAsync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
@@ -53,7 +53,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SqsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
 
@@ -80,9 +80,9 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         dlqCount.Should().Be(1);
     }
 
-    public async Task<int> GetDLQCountAsync(string queueName)
+    private async Task<int> GetDLQCountAsync(string queueName)
     {
-        using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
+        using var sqsClient = new AWSClientFactory(_awsConnection).CreateSqsClient();
         var queueUrlResponse = await sqsClient.GetQueueUrlAsync(queueName);
         var response = await sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
         {
@@ -93,7 +93,8 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
-            throw new AmazonSQSException($"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
+            throw new AmazonSQSException(
+                $"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
         }
 
         return response.Messages.Count;

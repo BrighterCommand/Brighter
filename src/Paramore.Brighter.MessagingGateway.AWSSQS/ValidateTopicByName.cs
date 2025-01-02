@@ -44,6 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="credentials">The AWS credentials.</param>
         /// <param name="region">The AWS region.</param>
         /// <param name="clientConfigAction">An optional action to configure the client.</param>
+        /// <param name="type">The SNS Type.</param>
         public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null, SnsSqsType type = SnsSqsType.Standard)
         {
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
@@ -55,9 +56,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Initializes a new instance of the <see cref="ValidateTopicByName"/> class.
         /// </summary>
         /// <param name="snsClient">The SNS client.</param>
-        public ValidateTopicByName(AmazonSimpleNotificationServiceClient snsClient)
+        /// <param name="type">The SNS Type.</param>
+        public ValidateTopicByName(AmazonSimpleNotificationServiceClient snsClient, SnsSqsType type = SnsSqsType.Standard)
         {
             _snsClient = snsClient;
+            _type = type;
         }
 
         /// <summary>

@@ -16,7 +16,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
     {
         private readonly Message _message;
         private readonly IAmAMessageConsumerAsync _consumer;
-        private readonly SqsMessageProducer _messageProducer;
+        private readonly SnsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Standard
                 makeChannels: OnMissingChannel.Validate
             );
 
-            _messageProducer = new SqsMessageProducer(
+            _messageProducer = new SnsMessageProducer(
                 awsConnection,
                 new SnsPublication
                 {

@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public override async Task<(bool, string? TopicArn)> ValidateAsync(string topic, CancellationToken cancellationToken = default)
         {
             var topicArn = await GetArnFromTopic(topic);
-            return await base.ValidateAsync(topicArn);
+            return await base.ValidateAsync(topicArn, cancellationToken);
         }
 
         /// <summary>

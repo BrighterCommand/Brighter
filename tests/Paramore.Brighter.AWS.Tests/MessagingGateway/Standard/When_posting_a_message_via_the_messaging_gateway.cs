@@ -14,7 +14,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
-    private readonly SqsMessageProducer _messageProducer;
+    private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
     private readonly string _correlationId;
@@ -51,7 +51,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
             
-        _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
+        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
     }
 
     [Fact]

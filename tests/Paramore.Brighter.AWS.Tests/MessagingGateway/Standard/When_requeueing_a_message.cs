@@ -49,7 +49,7 @@ public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
             
         var awsConnection = GatewayFactory.CreateFactory();
             
-        _sender = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
+        _sender = new SnsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
             
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(awsConnection);

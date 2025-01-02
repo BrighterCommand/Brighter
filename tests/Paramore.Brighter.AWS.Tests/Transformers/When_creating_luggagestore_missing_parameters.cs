@@ -25,10 +25,10 @@ public class S3LuggageUploadMissingParametersTests
     public S3LuggageUploadMissingParametersTests()
     {
         //arrange
-        (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
+        var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
 
-        _client = new AmazonS3Client(credentials, region);
-        _stsClient = new AmazonSecurityTokenServiceClient(credentials, region);
+        _client = factory.CreateS3Client();
+        _stsClient = factory.CreateStsClient(); 
 
         var services = new ServiceCollection();
         services.AddHttpClient();

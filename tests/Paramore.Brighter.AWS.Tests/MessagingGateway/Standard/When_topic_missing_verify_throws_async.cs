@@ -28,7 +28,7 @@ public class AWSValidateMissingTopicTestsAsync
     public async Task When_topic_missing_verify_throws_async()
     {
         // arrange
-        var producer = new SqsMessageProducer(_awsConnection,
+        var producer = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate

@@ -42,10 +42,10 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             
             _myCommand = new MyLargeCommand(6000);
 
-            (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
+           var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
 
-            _client = new AmazonS3Client(credentials, region);
-            AmazonSecurityTokenServiceClient stsClient = new(credentials, region);
+            _client = factory.CreateS3Client();
+            var stsClient = factory.CreateStsClient();
 
             var services = new ServiceCollection();
             services.AddHttpClient();

@@ -14,7 +14,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
 {
     private readonly Message _message;
     private readonly IAmAChannelAsync _channel;
-    private readonly SqsMessageProducer _messageProducer;
+    private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
 
     private readonly InterceptingDelegatingHandler _publishHttpHandler = new();
@@ -56,7 +56,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
             config.HttpClientFactory = new InterceptingHttpClientFactory(_publishHttpHandler);
         });
 
-        _messageProducer = new SqsMessageProducer(publishAwsConnection, new SnsPublication{Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create});
+        _messageProducer = new SnsMessageProducer(publishAwsConnection, new SnsPublication{Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create});
     }
 
     [Fact]
