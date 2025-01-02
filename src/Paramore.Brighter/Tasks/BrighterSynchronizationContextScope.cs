@@ -6,8 +6,6 @@
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false).
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
-// Originally based on:
-
 //Also based on:
 // https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
 // https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
@@ -68,10 +66,14 @@ internal sealed class  BrighterSynchronizationContextScope :  SingleDisposable<o
         Debug.WriteLine($"BrighterSynchronizationContext: Parent Task {_newContext?.ParentTaskId}");
         Debug.IndentLevel = 0;
         Debug.WriteLine("}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}");
-        
-        if (_newContext is not null) _newContext.ParentTaskId = 0;
-        _newContext = null;
-        
+
+        if (_newContext is not null)
+        {
+            _newContext.ParentTaskId = 0;
+            _newContext.Dispose();
+            _newContext = null;
+        }
+
         // Restore the original synchronization context
         SynchronizationContext.SetSynchronizationContext(_hasOriginalContext ? _originalContext : null);
         

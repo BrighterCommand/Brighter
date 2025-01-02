@@ -6,8 +6,6 @@
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false).
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
-// Originally based on:
-
 //Also based on:
 // https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
 // https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
@@ -31,43 +29,16 @@ namespace Paramore.Brighter.Tasks;
 /// continuations and not a thread pool scheduler. This is because we want to run the continuations on the same thread.
 /// We also create a task factory that uses the scheduler, so that we can easily create tasks that are queued to the scheduler.
 /// </summary>
-public class BrighterSynchronizationHelper : IDisposable
+public class BrighterAsyncContext : IDisposable
 {
     private readonly BrighterTaskQueue _taskQueue = new();
-    private readonly ConcurrentDictionary<Task, byte> _activeTasks = new();
 
     private readonly BrighterSynchronizationContext? _synchronizationContext;
     private readonly BrighterTaskScheduler _taskScheduler;
     private readonly TaskFactory _taskFactory;
-    private readonly TaskFactory _defaultTaskFactory;
 
     private int _outstandingOperations;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="BrighterSynchronizationHelper"/> class.
-    /// </summary>
-    public BrighterSynchronizationHelper()
-    {
-        _taskScheduler = new BrighterTaskScheduler(this);
-        _synchronizationContext = new BrighterSynchronizationContext(this);
-        _taskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.HideScheduler, TaskContinuationOptions.HideScheduler, _taskScheduler);
-
-        _defaultTaskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.None, TaskContinuationOptions.None, TaskScheduler.Default);
-    }
-
-    /// <summary>
-    /// What tasks are currently active?
-    /// <remarks>
-    /// Used for debugging
-    /// </remarks>
-    /// </summary>
-    public IEnumerable<Task> ActiveTasks => _activeTasks.Keys;
-
-    /// <summary>
-    /// A default task factory, used to return to the default task factory
-    /// </summary>
-    internal TaskFactory DefaultTaskFactory => _defaultTaskFactory;
-
+    
     /// <summary>
     /// Access the task factory
     /// </summary>
@@ -103,38 +74,34 @@ public class BrighterSynchronizationHelper : IDisposable
     public SynchronizationContext? SynchronizationContext => _synchronizationContext;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="BrighterAsyncContext"/> class.
+    /// </summary>
+    public BrighterAsyncContext()
+    {
+        _taskScheduler = new BrighterTaskScheduler(this);
+        _synchronizationContext = new BrighterSynchronizationContext(this);
+        _taskFactory = new TaskFactory(CancellationToken.None, TaskCreationOptions.HideScheduler, TaskContinuationOptions.HideScheduler, _taskScheduler);
+    }
+
+
+    /// <summary>
     /// Disposes the synchronization helper and clears the task queue.
     /// </summary>
     public void Dispose()
     {
-        _taskQueue.CompleteAdding();
         _taskQueue.Dispose();
     }
 
     /// <summary>
     /// Gets the current synchronization helper.
     /// </summary>
-    public static BrighterSynchronizationHelper? Current
+    public static BrighterAsyncContext? Current
     {
         get
         {
             var syncContext = SynchronizationContext.Current as BrighterSynchronizationContext;
-            return syncContext?.SynchronizationHelper;
+            return syncContext?.AsyncContext;
         }
-    }
-
-    /// <summary>
-    /// Enqueues a context message for execution.
-    /// </summary>
-    /// <param name="message">The context message to enqueue.</param>
-    /// <param name="propagateExceptions">Indicates whether to propagate exceptions.</param>
-    public bool Enqueue(ContextMessage message, bool propagateExceptions)
-    {
-        Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterSynchronizationHelper: Enqueueing message {message.Callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
-        Debug.IndentLevel = 0;
-
-        return Enqueue(MakeTask(message), propagateExceptions);
     }
 
     /// <summary>
@@ -142,7 +109,7 @@ public class BrighterSynchronizationHelper : IDisposable
     /// </summary>
     /// <param name="task">The task to enqueue.</param>
     /// <param name="propagateExceptions">Indicates whether to propagate exceptions.</param>
-    public bool Enqueue(Task task, bool propagateExceptions)
+    public void Enqueue(Task task, bool propagateExceptions)
     {
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Enqueueing task {task.Id} on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
@@ -150,30 +117,9 @@ public class BrighterSynchronizationHelper : IDisposable
 
         OperationStarted();
         task.ContinueWith(_ => OperationCompleted(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, _taskScheduler);
-        if (_taskQueue.TryAdd(task, propagateExceptions))
-        {
-            _activeTasks.TryAdd(task, 0);
-            return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Creates a task from a context message.
-    /// </summary>
-    /// <param name="message">The context message.</param>
-    /// <returns>The created task.</returns>
-    public Task MakeTask(ContextMessage message)
-    {
-        Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterSynchronizationHelper:Making task for message {message.Callback.Method.Name} on thread {Thread.CurrentThread.ManagedThreadId} for BrighterSynchronizationHelper {Id}");
-        Debug.IndentLevel = 0;
-
-        return _taskFactory.StartNew(
-            () => message.Callback(message.State),
-            _taskFactory.CancellationToken,
-            _taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            _taskScheduler);
+        _taskQueue.TryAdd(task, propagateExceptions);
+        
+        //if we fail to add to the queue, just drop the Task
     }
 
     /// <summary>
@@ -221,21 +167,14 @@ public class BrighterSynchronizationHelper : IDisposable
         if (action == null)
             throw new ArgumentNullException(nameof(action));
 
-        using var synchronizationHelper = new BrighterSynchronizationHelper();
+        using var context = new BrighterAsyncContext();
 
-        var task = synchronizationHelper._taskFactory.StartNew(
-            action,
-            synchronizationHelper._taskFactory.CancellationToken,
-            synchronizationHelper._taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            synchronizationHelper._taskFactory.Scheduler ?? TaskScheduler.Default
-            );
-
-        synchronizationHelper.Execute(task);
-        task.GetAwaiter().GetResult();
+        var task = context._taskFactory.Run(action);
+        context.Execute(task);
+        task.WaitAndUnwrapException();
 
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Action {action.Method.Name} completed on thread {Thread.CurrentThread.ManagedThreadId}");
-        Debug.WriteLine(synchronizationHelper.ActiveTasks.Count());
         Debug.IndentLevel = 0;
         Debug.WriteLine("....................................................................................................................");
      }
@@ -259,25 +198,19 @@ public class BrighterSynchronizationHelper : IDisposable
         if (func == null)
             throw new ArgumentNullException(nameof(func));
 
-        using var synchronizationHelper = new BrighterSynchronizationHelper();
+        using var context = new BrighterAsyncContext();
 
-        var task = synchronizationHelper._taskFactory.StartNew(
-            func,
-            synchronizationHelper._taskFactory.CancellationToken,
-            synchronizationHelper._taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            synchronizationHelper._taskFactory.Scheduler ?? TaskScheduler.Default
-            );
+        var task = context._taskFactory.Run(func);
 
-        synchronizationHelper.Execute(task);
+        context.Execute(task);
 
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Function {func.Method.Name} completed on thread {Thread.CurrentThread.ManagedThreadId}");
-        Debug.WriteLine($"BrighterSynchronizationHelper: Active task count: {synchronizationHelper.ActiveTasks.Count()}");
         Debug.WriteLine($"BrighterSynchronizationHelper: Task Status: {task.Status}");
         Debug.IndentLevel = 0;
         Debug.WriteLine("....................................................................................................................");
 
-        return task.GetAwaiter().GetResult();
+        return task.WaitAndUnwrapException();
 
     }
 
@@ -297,29 +230,20 @@ public class BrighterSynchronizationHelper : IDisposable
         if (func == null)
             throw new ArgumentNullException(nameof(func));
 
-        using var synchronizationHelper = new BrighterSynchronizationHelper();
+        using var context = new BrighterAsyncContext();
 
-        synchronizationHelper.OperationStarted();
+        context.OperationStarted();
 
-        var task = synchronizationHelper._taskFactory.StartNew(
-            func,
-            synchronizationHelper._taskFactory.CancellationToken,
-            synchronizationHelper._taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-            synchronizationHelper._taskFactory.Scheduler ?? TaskScheduler.Default
-            )
-            .Unwrap()
-            .ContinueWith(t =>
-            {
-                synchronizationHelper.OperationCompleted();
-                t.GetAwaiter().GetResult();
-            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, synchronizationHelper._taskScheduler);
-
-        synchronizationHelper.Execute(task);
-        task.GetAwaiter().GetResult();
+        var task = context._taskFactory.Run(func).ContinueWith(t =>
+        {
+            context.OperationCompleted();
+            t.WaitAndUnwrapException();
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, context._taskScheduler);
+        context.Execute(task);
+        task.WaitAndUnwrapException();
 
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Function {func.Method.Name} completed on thread {Thread.CurrentThread.ManagedThreadId}");
-        Debug.WriteLine($"BrighterSynchronizationHelper: Active task count: {synchronizationHelper.ActiveTasks.Count()}");
         Debug.WriteLine($"BrighterSynchronizationHelper: Task Status: {task.Status}");
         Debug.IndentLevel = 0;
         Debug.WriteLine("....................................................................................................................");
@@ -344,31 +268,24 @@ public class BrighterSynchronizationHelper : IDisposable
         if (func == null)
             throw new ArgumentNullException(nameof(func));
 
-        using var synchronizationHelper = new BrighterSynchronizationHelper();
+        using var context = new BrighterAsyncContext();
 
-        var task = synchronizationHelper._taskFactory.StartNew(
-                func,
-                synchronizationHelper._taskFactory.CancellationToken,
-                synchronizationHelper._taskFactory.CreationOptions | TaskCreationOptions.DenyChildAttach,
-                synchronizationHelper._taskFactory.Scheduler ?? TaskScheduler.Default
-                )
-                .Unwrap()
-                .ContinueWith(t =>
-                {
-                    synchronizationHelper.OperationCompleted();
-                    return t.GetAwaiter().GetResult();
-                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, synchronizationHelper._taskScheduler);
+        context.OperationStarted();
+        var task = context._taskFactory.Run(func).ContinueWith(t =>
+        {
+            context.OperationCompleted();
+            return t.WaitAndUnwrapException();
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, context._taskScheduler);
 
-        synchronizationHelper.Execute(task);
+        context.Execute(task);
 
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterSynchronizationHelper: Function {func.Method.Name} completed on thread {Thread.CurrentThread.ManagedThreadId}");
-        Debug.WriteLine($"BrighterSynchronizationHelper: Active task count: {synchronizationHelper.ActiveTasks.Count()}");
         Debug.WriteLine($"BrighterSynchronizationHelper: Task Status: {task.Status}");
         Debug.IndentLevel = 0;
         Debug.WriteLine("....................................................................................................................");
 
-        return task.GetAwaiter().GetResult();
+        return task.WaitAndUnwrapException();
     }
 
     /// <summary>
@@ -389,11 +306,9 @@ public class BrighterSynchronizationHelper : IDisposable
             foreach (var (task, propagateExceptions) in _taskQueue.GetConsumingEnumerable())
             {
                 _taskScheduler.DoTryExecuteTask(task);
-                _activeTasks.TryRemove(task, out _);
 
-                if (!propagateExceptions) continue;
-
-                task.GetAwaiter().GetResult();
+                if (propagateExceptions)
+                    task.WaitAndUnwrapException();
             }
         });
 
@@ -431,29 +346,6 @@ public class BrighterSynchronizationHelper : IDisposable
         Debug.IndentLevel = 0;
         Debug.WriteLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 
-    }
-
-    /// <summary>
-    /// Executes a task on the specified execution context.
-    /// </summary>
-    /// <param name="ctxt">The execution context.</param>
-    /// <param name="contextCallback">The context callback to execute.</param>
-    /// <param name="state">The state object to pass to the callback.</param>
-    public void ExecuteOnContext(ExecutionContext ctxt, ContextCallback contextCallback, object? state)
-    {
-        Debug.WriteLine(string.Empty);
-        Debug.WriteLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-        Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterSynchronizationHelper: Executing task immediately on original execution context for BrighterSynchronizationHelper {Id}");
-        Debug.IndentLevel = 0;
-        
-        ExecutionContext.Run(ctxt, contextCallback, state);
-        
-        Debug.IndentLevel = 1;
-        Debug.WriteLine($"BrighterSynchronizationHelper: Execution completed on original execution context for BrighterSynchronizationHelper {Id}");
-        Debug.IndentLevel = 0;
-        Debug.WriteLine("++++++++++++++++++++++++++++++++++++++++++++++++++++++");
- 
     }
 
     /// <summary>

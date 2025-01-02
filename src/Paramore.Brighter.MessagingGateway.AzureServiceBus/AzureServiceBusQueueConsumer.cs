@@ -80,7 +80,7 @@ public class AzureServiceBusQueueConsumer : AzureServiceBusConsumer
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public override void Purge() => BrighterSynchronizationHelper.Run(async () => await PurgeAsync());
+    public override void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
         
     /// <summary>
     /// Purges the specified queue name.

@@ -142,7 +142,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// Acknowledges the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Acknowledge(Message message) => BrighterSynchronizationHelper.Run(async () =>await AcknowledgeAsync(message));
+    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async () =>await AcknowledgeAsync(message));
 
     public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default)
     {
@@ -170,7 +170,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public void Purge() => BrighterSynchronizationHelper.Run(async () => await PurgeAsync());
+    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
 
     public async Task PurgeAsync(CancellationToken cancellationToken = default)
     {
@@ -215,7 +215,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// <param name="timeOut">The timeout in milliseconds. We retry on timeout 5 ms intervals, with a min of 5ms
     /// until the timeout value is reached. </param>
     /// <returns>Message.</returns>
-    public Message[] Receive(TimeSpan? timeOut = null) => BrighterSynchronizationHelper.Run(async () => await ReceiveAsync(timeOut)); 
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut)); 
 
     /// <summary>
     /// Receives the specified queue name.
@@ -295,7 +295,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// <param name="message"></param>
     /// <param name="timeout">Time to delay delivery of the message.</param>
     /// <returns>True if message deleted, false otherwise</returns>
-    public bool Requeue(Message message, TimeSpan? timeout = null) => BrighterSynchronizationHelper.Run(async () => await RequeueAsync(message, timeout));
+    public bool Requeue(Message message, TimeSpan? timeout = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, timeout));
 
     public async Task<bool> RequeueAsync(Message message, TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
@@ -346,7 +346,7 @@ public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync, IA
     /// Rejects the specified message.
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Reject(Message message) => BrighterSynchronizationHelper.Run(async () => await RejectAsync(message));
+    public void Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
     public async Task RejectAsync(Message message, CancellationToken cancellationToken = default)
     {
