@@ -73,13 +73,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
     /// <returns>An instance of <see cref="IAmAChannelSync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public IAmAChannelSync CreateSyncChannel(Subscription subscription)
-    {
-        // TODO: Uncomment when the BrighterSynchronizationHelper is fixed, today the code isn't working because it's stuck is wired infinity loop
-        // return BrighterSynchronizationHelper.Run(async () => await CreateSyncChannelAsync(subscription));
-        return CreateSyncChannelAsync(subscription).GetAwaiter().GetResult();
-    }
-
+    public IAmAChannelSync CreateSyncChannel(Subscription subscription) => BrighterAsyncContext.Run(async () => await CreateSyncChannelAsync(subscription));
+        
     /// <summary>
     /// Creates the input channel.
     /// </summary>
@@ -89,12 +84,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
     /// <returns>An instance of <see cref="IAmAChannelAsync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
-    {
-        // TODO: Uncomment when the BrighterSynchronizationHelper is fixed, today the code isn't working because it's stuck is wired infinity loop
-        // return BrighterSynchronizationHelper.Run(async () => await CreateAsyncChannelAsync(subscription));
-        return CreateAsyncChannelAsync(subscription).GetAwaiter().GetResult();
-    }
+    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription) => BrighterAsyncContext.Run(async () => await CreateAsyncChannelAsync(subscription));
 
     /// <summary>
     /// Creates the input channel.
@@ -132,7 +122,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
         return channel;
     }
-
+        
     /// <summary>
     /// Deletes the queue.
     /// </summary>
@@ -167,7 +157,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         if (_subscription == null)
             return;
-
+            
         if (ChannelTopicArn == null)
             return;
 
@@ -186,7 +176,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             }
         }
     }
-
+        
     private async Task<IAmAChannelSync> CreateSyncChannelAsync(Subscription subscription)
     {
         var channel = await _retryPolicy.ExecuteAsync(async () =>
@@ -214,7 +204,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
         return channel;
     }
-
+  
     private async Task EnsureQueueAsync()
     {
         if (_subscription is null)
@@ -471,7 +461,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         if (string.IsNullOrEmpty(channelName))
             return (false, null);
-
+            
         bool exists = false;
         string? queueUrl = null;
         try
@@ -492,7 +482,6 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
                     exists = false;
                     return true;
                 }
-
                 return false;
             });
         }

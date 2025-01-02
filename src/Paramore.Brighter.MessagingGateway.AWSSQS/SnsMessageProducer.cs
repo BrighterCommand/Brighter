@@ -78,7 +78,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     public ValueTask DisposeAsync() => new();
 
     public bool ConfirmTopicExists(string? topic = null) =>
-        BrighterSynchronizationHelper.Run(async () => await ConfirmTopicExistsAsync(topic));
+        BrighterAsyncContext.Run(async () => await ConfirmTopicExistsAsync(topic));
 
     public async Task<bool> ConfirmTopicExistsAsync(string? topic = null,
         CancellationToken cancellationToken = default)

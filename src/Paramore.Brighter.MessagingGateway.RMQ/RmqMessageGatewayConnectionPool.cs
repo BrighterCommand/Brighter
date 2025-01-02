@@ -53,7 +53,7 @@ public class RmqMessageGatewayConnectionPool(string connectionName, ushort conne
     /// </summary>
     /// <param name="connectionFactory"></param>
     /// <returns></returns>
-    public IConnection GetConnection(ConnectionFactory connectionFactory) => BrighterSynchronizationHelper.Run(() => GetConnectionAsync(connectionFactory));
+    public IConnection GetConnection(ConnectionFactory connectionFactory) => BrighterAsyncContext.Run(() => GetConnectionAsync(connectionFactory));
 
     /// <summary>
     /// Return matching RabbitMQ subscription if exist (match by amqp scheme)

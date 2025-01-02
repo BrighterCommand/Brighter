@@ -79,12 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over Async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
-        {
-            // TODO: Uncomment when the BrighterSynchronizationHelper is fixed, today the code isn't working because it's stuck is wired infinity loop
-            // BrighterSynchronizationHelper.Run(async () => await AcknowledgeAsync(message));
-            AcknowledgeAsync(message).GetAwaiter().GetResult();
-        }
+        public void Acknowledge(Message message) => BrighterAsyncContext.Run(async () => await AcknowledgeAsync(message));
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -125,8 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Sync over async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Reject(Message message) =>
-            BrighterSynchronizationHelper.Run(async () => await RejectAsync(message));
+        public void Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
         /// <summary>
         /// Rejects the specified message.
@@ -174,8 +168,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Purges the specified queue name.
         /// Sync over Async
         /// </summary>
-        public void Purge() => BrighterSynchronizationHelper.Run(async () => await PurgeAsync());
-
+        public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
+        
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
@@ -197,18 +191,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 throw;
             }
         }
-
-        /// <summary>
+        
+         /// <summary>
         /// Receives the specified queue name.
         /// Sync over async 
         /// </summary>
         /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
-        public Message[] Receive(TimeSpan? timeOut = null)
-        {
-            // TODO: Uncomment when the BrighterSynchronizationHelper is fixed, today the code isn't working because it's stuck is wired infinity loop
-            // return BrighterSynchronizationHelper.Run(async () => await ReceiveAsync(timeOut));
-            return ReceiveAsync(timeOut).GetAwaiter().GetResult();
-        }
+        public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
 
         /// <summary>
         /// Receives the specified queue name.
@@ -278,11 +267,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
 
             return messages;
-        }
+        }      
 
 
-        public bool Requeue(Message message, TimeSpan? delay = null) =>
-            BrighterSynchronizationHelper.Run(async () => await RequeueAsync(message, delay));
+        public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
 
         /// <summary>
         /// Re-queues the specified message.
