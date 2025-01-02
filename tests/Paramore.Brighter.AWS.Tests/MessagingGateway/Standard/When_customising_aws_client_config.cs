@@ -17,20 +17,17 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
     private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
 
-    private readonly InterceptingDelegatingHandler _publishHttpHandler = new();
-    private readonly InterceptingDelegatingHandler _subscribeHttpHandler = new();
-
     public CustomisingAwsClientConfigTests()
     {
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
         MyCommand myCommand = new() { Value = "Test" };
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        var correlationId = Guid.NewGuid().ToString();
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
-        SqsSubscription<MyCommand> subscription = new(
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             messagePumpType: MessagePumpType.Reactor,
@@ -45,7 +42,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
 
         var subscribeAwsConnection = GatewayFactory.CreateFactory(config =>
         {
-            config.HttpClientFactory = new InterceptingHttpClientFactory(_subscribeHttpHandler);
+            config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sync_sub"));
         });
 
         _channelFactory = new ChannelFactory(subscribeAwsConnection);
@@ -53,7 +50,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
 
         var publishAwsConnection = GatewayFactory.CreateFactory(config =>
         {
-            config.HttpClientFactory = new InterceptingHttpClientFactory(_publishHttpHandler);
+            config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sync_pub"));
         });
 
         _messageProducer = new SnsMessageProducer(publishAwsConnection,
@@ -74,8 +71,11 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         _channel.Acknowledge(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
-        _publishHttpHandler.RequestCount.Should().BeGreaterThan(0);
-        _subscribeHttpHandler.RequestCount.Should().BeGreaterThan(0);
+        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("sync_sub");
+        InterceptingDelegatingHandler.RequestCount["sync_sub"].Should().BeGreaterThan(0);
+        
+        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("sync_pub");
+        InterceptingDelegatingHandler.RequestCount["sync_pub"].Should().BeGreaterThan(0);
     }
 
     public void Dispose()

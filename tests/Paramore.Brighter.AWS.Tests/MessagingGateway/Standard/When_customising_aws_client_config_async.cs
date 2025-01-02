@@ -17,46 +17,46 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
     private readonly SnsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
 
-    private readonly InterceptingDelegatingHandler _publishHttpHandler = new();
-    private readonly InterceptingDelegatingHandler _subscribeHttpHandler = new();
-
     public CustomisingAwsClientConfigTestsAsync()
     {
-        MyCommand myCommand = new() {Value = "Test"};
+        MyCommand myCommand = new() { Value = "Test" };
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
         string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
-            
-        SqsSubscription<MyCommand> subscription = new(
+
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             messagePumpType: MessagePumpType.Proactor,
             routingKey: routingKey
         );
-            
+
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
-            new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
         );
 
         var subscribeAwsConnection = GatewayFactory.CreateFactory(config =>
         {
-            config.HttpClientFactory = new InterceptingHttpClientFactory(_subscribeHttpHandler);
+            config.HttpClientFactory =
+                new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("async_sub"));
         });
-           
+
         _channelFactory = new ChannelFactory(subscribeAwsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        var publishAwsConnection =  GatewayFactory.CreateFactory(config =>
+        var publishAwsConnection = GatewayFactory.CreateFactory(config =>
         {
-            config.HttpClientFactory = new InterceptingHttpClientFactory(_publishHttpHandler);
+            config.HttpClientFactory =
+                new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("async_pub"));
         });
 
-        _messageProducer = new SnsMessageProducer(publishAwsConnection, new SnsPublication{Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create});
+        _messageProducer = new SnsMessageProducer(publishAwsConnection,
+            new SnsPublication { Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create });
     }
 
     [Fact]
@@ -64,17 +64,20 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
     {
         //arrange
         await _messageProducer.SendAsync(_message);
-            
+
         await Task.Delay(1000);
-            
-        var message =await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
-            
+
+        var message = await _channel.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
+
         //clear the queue
         await _channel.AcknowledgeAsync(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
-        _publishHttpHandler.RequestCount.Should().BeGreaterThan(0);
-        _subscribeHttpHandler.RequestCount.Should().BeGreaterThan(0);
+        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("async_sub");
+        InterceptingDelegatingHandler.RequestCount["async_sub"].Should().BeGreaterThan(0);
+
+        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("async_pub");
+        InterceptingDelegatingHandler.RequestCount["async_pub"].Should().BeGreaterThan(0);
     }
 
     public void Dispose()
