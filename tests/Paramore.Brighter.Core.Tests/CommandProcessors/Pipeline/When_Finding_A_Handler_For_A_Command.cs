@@ -35,21 +35,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
+        private SubscriberRegistry _subscriberRegistry;
 
         public PipelineBuildForCommandTests()
         {
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyCommandHandler>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyCommandHandler>();
             var handlerFactory = new SimpleHandlerFactorySync(_ => new MyCommandHandler());
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
         public void When_Finding_A_Handler_For_A_Command()
         {
-            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _pipeline = _pipelineBuilder.Build(observers.First(), new RequestContext());
 
            //_should_return_the_my_command_handler_as_the_implicit_handler
             _pipeline.Should().BeOfType<MyCommandHandler>();

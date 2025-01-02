@@ -38,21 +38,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         private static IHandleRequestsAsync<MyCommand> _chainOfResponsibility;
         private static RequestContext _requestContext;
         private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
+        private SubscriberRegistry _subscriberRegistry;
 
         public PipelineForCommandAsyncTests()
         {
-            var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
             var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyCommandHandlerAsync(_receivedMessages));
             _requestContext = new RequestContext();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, asyncHandlerFactory: handlerFactory);
+            _chainBuilder = new PipelineBuilder<MyCommand>(asyncHandlerFactory: handlerFactory);
         }
 
         [Fact]
         public void When_Building_A_Handler_For_An_Async_Command()
         {
-            _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false).First();
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _chainOfResponsibility = _chainBuilder.BuildAsync(observers.First(), _requestContext, false);
 
             _chainOfResponsibility.Context.Should().NotBeNull();
             _chainOfResponsibility.Context.Should().BeSameAs(_requestContext);

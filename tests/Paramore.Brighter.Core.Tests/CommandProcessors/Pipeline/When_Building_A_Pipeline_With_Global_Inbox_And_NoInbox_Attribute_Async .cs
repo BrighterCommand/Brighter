@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,16 +14,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     public class PipelineGlobalInboxNoInboxAttributeAsyncTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
-        private AsyncPipelines<MyCommand> _chainOfResponsibility;
+        private IEnumerable<IHandleRequestsAsync<MyCommand>> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
+        private SubscriberRegistry _subscriberRegistry;
 
 
         public PipelineGlobalInboxNoInboxAttributeAsyncTests()
         {
             IAmAnInboxSync inbox = new InMemoryInbox(new FakeTimeProvider());
             
-            var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyNoInboxCommandHandlerAsync>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.RegisterAsync<MyCommand, MyNoInboxCommandHandlerAsync>();
             
             var container = new ServiceCollection();
             container.AddTransient<MyNoInboxCommandHandlerAsync>();
@@ -35,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             
             InboxConfiguration inboxConfiguration = new();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactoryAsync)handlerFactory, inboxConfiguration);
             
         }
 
@@ -43,7 +45,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public void When_Building_A_Pipeline_With_Global_Inbox_Async()
         {
             //act
-            _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false);
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _chainOfResponsibility = observers.Select(o => _chainBuilder.BuildAsync(o, _requestContext, false));
             
             //assert
             var tracer = TracePipelineAsync(_chainOfResponsibility.First());

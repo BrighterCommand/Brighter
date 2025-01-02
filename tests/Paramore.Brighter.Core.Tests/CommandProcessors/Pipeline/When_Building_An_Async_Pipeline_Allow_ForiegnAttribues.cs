@@ -14,11 +14,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
     private readonly PipelineBuilder<MyCommand> _pipeline_Builder;
     private IHandleRequestsAsync<MyCommand> _pipeline;
+    private SubscriberRegistry _subscriberRegistry;
 
     public PipelineForiegnAttributesAsyncTests()
     {
-        var registry = new SubscriberRegistry();
-        registry.RegisterAsync<MyCommand, MyObsoleteCommandHandlerAsync>();
+        _subscriberRegistry = new SubscriberRegistry();
+        _subscriberRegistry.RegisterAsync<MyCommand, MyObsoleteCommandHandlerAsync>();
 
         var container = new ServiceCollection();
 
@@ -29,14 +30,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
  
         var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-        _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
+        _pipeline_Builder = new PipelineBuilder<MyCommand>((IAmAHandlerFactoryAsync)handlerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
     }
 
     [Fact]
     public void When_Building_An_Async_Pipeline_Allow_ForeignAttributes()
     {
-        _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
+        var observers = _subscriberRegistry.Get<MyCommand>();
+        _pipeline = _pipeline_Builder.BuildAsync(observers.First(), new RequestContext(), false);
 
         TraceFilters().ToString().Should().Be("MyValidationHandlerAsync`1|MyObsoleteCommandHandlerAsync|MyLoggingHandlerAsync`1|");
     }

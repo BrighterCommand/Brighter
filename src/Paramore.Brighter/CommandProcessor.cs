@@ -236,16 +236,21 @@ namespace Paramore.Brighter
             if (_subscriberRegistry is null)
                 throw new ArgumentException("A subscriberRegistry must be configured.");
 
-            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
+            var observers = _subscriberRegistry.Get<T>();
+                
+            var handlerCount = observers.Count();
+            
+            using var builder = new PipelineBuilder<T>(_handlerFactorySync, _inboxConfiguration);
             try
             {
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
                     command.Id);
-                var handlerChain = builder.Build(context);
+                
+                AssertValidSendPipeline(command, handlerCount);
+                
+                var handler = builder.Build(observers.First(), context);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
-
-                handlerChain.First().Handle(command);
+                handler.Handle(command);
             }
             catch (Exception e)
             {
@@ -283,17 +288,22 @@ namespace Paramore.Brighter
             
             if (_subscriberRegistry is null)
                 throw new ArgumentException("A subscriberRegistry must be configured.");
+            
+            var observers = _subscriberRegistry.Get<T>();
+                
+            var handlerCount = observers.Count();
 
-            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
+            using var builder = new PipelineBuilder<T>(_handlerFactoryAsync, _inboxConfiguration);
             try
             {
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}",
                     command.GetType(), command.Id);
-                var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
+                
+                AssertValidSendPipeline(command, handlerCount);
+                
+                var handler = builder.BuildAsync(observers.First(), context, continueOnCapturedContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
-
-                await handlerChain.First().HandleAsync(command, cancellationToken)
+                await handler.HandleAsync(command, cancellationToken)
                     .ConfigureAwait(continueOnCapturedContext);
             }
             catch (Exception e)
@@ -331,23 +341,28 @@ namespace Paramore.Brighter
                 if (_subscriberRegistry is null)
                     throw new ArgumentException("A subscriberRegistry must be configured.");
                 
-                using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration);
-                s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
-                    @event.Id);
-                var handlerChain = builder.Build(context);
-
-                var handlerCount = handlerChain.Count();
-
+                var observers = _subscriberRegistry.Get<T>();
+                
+                var handlerCount = observers.Count();
+                
                 s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount,
                    @event.GetType(), @event.Id);
 
                 var exceptions = new ConcurrentBag<Exception>();
-                Parallel.ForEach(handlerChain, (handleRequests) =>
+                // Parallel.ForEach(handlerChain, (handleRequests) =>
+                // {
+                foreach (Type observer in observers)
                 {
+                    s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
+                        @event.Id);
+                    using var builder = new PipelineBuilder<T>(_handlerFactorySync, _inboxConfiguration);
+                    
+                    var handleRequests = builder.Build(observer, context);
                     try
                     {
                         var handlerName = handleRequests.Name.ToString();
-                        handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
+                        handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event,
+                            span, options: _instrumentationOptions)!;
                         context.Span = handlerSpans[handlerName];
                         handleRequests.Handle(@event);
                         context.Span = span;
@@ -356,7 +371,8 @@ namespace Paramore.Brighter
                     {
                         exceptions.Add(e);
                     }
-                });
+                }
+                // });
                 
                 _tracer?.LinkSpans(handlerSpans);
 
@@ -404,30 +420,32 @@ namespace Paramore.Brighter
             if (_subscriberRegistry is null)
                 throw new ArgumentException("A subscriberRegistry must be configured.");
             
-            using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
+            var observers = _subscriberRegistry.Get<T>();
+                
+            var handlerCount = observers.Count();
+            
+            s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
+                @event.GetType(), @event.Id);
+            
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
              try
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
                     @event.Id);
 
-                var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
-                var handlerCount = handlerChain.Count();
-
-                s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount,
-                    @event.GetType(), @event.Id
-                );
-
                 var exceptions = new ConcurrentBag<Exception>();
 
                 try
                 {
                     var tasks = new List<Task>();
-                    foreach (var handleRequests in handlerChain)
+                    foreach (var observer in observers)
                     {
-                        handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
-                        context.Span =handlerSpans[handleRequests.Name.ToString()];
-                        tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
+                        using var builder = new PipelineBuilder<T>(_handlerFactoryAsync, _inboxConfiguration);
+                        var handler = builder.BuildAsync(observer, context, continueOnCapturedContext);
+                        
+                        handlerSpans[handler.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
+                        context.Span =handlerSpans[handler.Name.ToString()];
+                        tasks.Add(handler.HandleAsync(@event, cancellationToken));
                         context.Span = span;
                     }
                     

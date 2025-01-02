@@ -12,22 +12,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
     private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
     private IHandleRequests<MyCommand> _pipeline;
+    private SubscriberRegistry _subscriberRegistry;
 
     public PipelineWithHandlerDependenciesTests()
     {
-        var registry = new SubscriberRegistry();
-        registry.Register<MyCommand, MyDependentCommandHandler>();
+        _subscriberRegistry = new SubscriberRegistry();
+        _subscriberRegistry.Register<MyCommand, MyDependentCommandHandler>();
         var handlerFactory =
             new SimpleHandlerFactorySync(_ => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession())));
 
-        _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+        _pipelineBuilder = new PipelineBuilder<MyCommand>(handlerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
     }
 
     [Fact]
     public void When_Finding_A_Handler_That_Has_Dependencies()
     {
-        _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+        var observers = _subscriberRegistry.Get<MyCommand>();
+        _pipeline = _pipelineBuilder.Build(observers.First(), new RequestContext());
 
         // _should_return_the_command_handler_as_the_implicit_handler
         _pipeline.Should().BeOfType<MyDependentCommandHandler>();

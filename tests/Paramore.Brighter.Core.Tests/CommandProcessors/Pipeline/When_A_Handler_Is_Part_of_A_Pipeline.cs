@@ -37,11 +37,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
+        private SubscriberRegistry _subscriberRegistry;
 
         public PipelineBuilderTests()
         {
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyImplicitHandler>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyImplicitHandler>();
 
             var container = new ServiceCollection();
             container.AddTransient<MyImplicitHandler>();
@@ -50,14 +51,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
        
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactorySync)handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
         public void When_A_Handler_Is_Part_of_A_Pipeline()
         {
-            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _pipeline = _pipelineBuilder.Build(observers.First(), new RequestContext());
 
             TracePipeline().ToString().Should().Contain("MyImplicitHandler");
             TracePipeline().ToString().Should().Contain("MyLoggingHandler");

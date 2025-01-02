@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,16 +17,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     public class PipelineGlobalInboxWhenUseInboxTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
-        private Pipelines<MyCommand> _chainOfResponsibility;
+        private IEnumerable<IHandleRequests<MyCommand>> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
+        private SubscriberRegistry _subscriberRegistry;
 
 
         public PipelineGlobalInboxWhenUseInboxTests()
         {
             IAmAnInboxSync inbox = new InMemoryInbox(new FakeTimeProvider());
             
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyCommandInboxedHandler>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyCommandInboxedHandler>();
             
             var container = new ServiceCollection();
             container.AddTransient<MyCommandInboxedHandler>();
@@ -43,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 onceOnly: true, 
                 actionOnExists: OnceOnlyAction.Throw);
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
             
         }
 
@@ -58,7 +60,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _chainOfResponsibility = observers.Select(o => _chainBuilder.Build(o, _requestContext));
 
             var chain = _chainOfResponsibility.First();
             var myCommand = new MyCommand();
