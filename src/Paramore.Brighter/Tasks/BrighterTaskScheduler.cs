@@ -6,8 +6,6 @@
 // not run continuations on the same thread as the async operation if used with ConfigureAwait(false.
 // This is important for the ServiceActivator, as we want to ensure ordering on a single thread and not use the thread pool.
 
-// Originally based on:
-
 //Also based on:
 // https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
 // https://raw.githubusercontent.com/Microsoft/vs-threading/refs/heads/main/src/Microsoft.VisualStudio.Threading/SingleThreadedSynchronizationContext.cs
@@ -29,15 +27,15 @@ namespace Paramore.Brighter.Tasks;
 /// </summary>
 internal class BrighterTaskScheduler : TaskScheduler
 {
-    private readonly BrighterSynchronizationHelper _synchronizationHelper;
+    private readonly BrighterAsyncContext _asyncContext;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BrighterTaskScheduler"/> class.
     /// </summary>
-    /// <param name="synchronizationHelper">The synchronizationHelper in which tasks should be executed.</param>
-    public BrighterTaskScheduler(BrighterSynchronizationHelper synchronizationHelper)
+    /// <param name="asyncContext">The synchronizationHelper in which tasks should be executed.</param>
+    public BrighterTaskScheduler(BrighterAsyncContext asyncContext)
     {
-        _synchronizationHelper = synchronizationHelper;
+        _asyncContext = asyncContext;
     }
 
     /// <summary>
@@ -46,7 +44,7 @@ internal class BrighterTaskScheduler : TaskScheduler
     /// <returns>An enumerable of the scheduled tasks.</returns>
     protected override IEnumerable<Task> GetScheduledTasks()
     {
-        return _synchronizationHelper.GetScheduledTasks();
+        return _asyncContext.GetScheduledTasks();
     }
 
     /// <summary>
@@ -59,14 +57,9 @@ internal class BrighterTaskScheduler : TaskScheduler
         Debug.WriteLine($"BrighterTaskScheduler: QueueTask on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
         
-       var queued = _synchronizationHelper.Enqueue((Task)task, false);
-       if (!queued)
-       {
-           Debug.IndentLevel = 1;
-           Debug.WriteLine($"BrighterTaskScheduler: QueueTask Failed to queue task {task.ToString()} on {System.Threading.Thread.CurrentThread.ManagedThreadId}");
-           Debug.IndentLevel = 0;
-           new Thread(TryExecuteNewThread) { IsBackground = true }.Start(task);
-       }
+       _asyncContext.Enqueue((Task)task, false);
+       
+       // If we fail to add to the queue, just drop the Task.
     }
     
     /// <summary>
@@ -80,9 +73,8 @@ internal class BrighterTaskScheduler : TaskScheduler
         Debug.IndentLevel = 1;
         Debug.WriteLine($"BrighterTaskScheduler: TryExecuteTaskInline on thread {System.Threading.Thread.CurrentThread.ManagedThreadId}");
         Debug.IndentLevel = 0;
-        
-        return (BrighterSynchronizationHelper.Current == _synchronizationHelper) && TryExecuteTask(task);
-        
+
+        return BrighterAsyncContext.Current == _asyncContext && TryExecuteTask(task);
     }
 
     /// <summary>

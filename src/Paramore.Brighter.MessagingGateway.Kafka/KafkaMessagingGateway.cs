@@ -67,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     throw new ChannelFailureException($"Topic: {Topic.Value} does not exist");
 
                 if (!exists && MakeChannels == OnMissingChannel.Create)
-                    BrighterSynchronizationHelper.Run(async () => await MakeTopic());
+                    BrighterAsyncContext.Run(async () => await MakeTopic());
             }
         }
 

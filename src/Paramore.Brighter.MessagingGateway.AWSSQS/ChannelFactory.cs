@@ -77,7 +77,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
     /// <returns>An instance of <see cref="IAmAChannelSync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public IAmAChannelSync CreateSyncChannel(Subscription subscription) => BrighterSynchronizationHelper.Run(async () => await CreateSyncChannelAsync(subscription));
+    public IAmAChannelSync CreateSyncChannel(Subscription subscription) => BrighterAsyncContext.Run(async () => await CreateSyncChannelAsync(subscription));
         
     /// <summary>
     /// Creates the input channel.
@@ -88,7 +88,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
     /// <returns>An instance of <see cref="IAmAChannelAsync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription) => BrighterSynchronizationHelper.Run(async () => await CreateAsyncChannelAsync(subscription));
+    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription) => BrighterAsyncContext.Run(async () => await CreateAsyncChannelAsync(subscription));
 
     /// <summary>
     /// Creates the input channel.
