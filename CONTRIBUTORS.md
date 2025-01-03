@@ -22,11 +22,10 @@ Brighter contributors (sorted alphabeticaly)
  * New ASB Transport
  
 **[Ian Cooper](https://github.com/iancooper)**
-  * Wrote first version of Command Processor, Policy, RavenDb Outbox, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
+  * Wrote first version of Command Processor, Policy, RavenDb Outbox, Redis Messaging Gateway, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
   * Various fixes
-  * Project Technical Lead
+  * Project Owner
   * Committer
-  * Redis Messaging Gateway
   
 **[Derek Comartin](https://github.com/dcomartin)**
  * MySQL outbox and inbox
