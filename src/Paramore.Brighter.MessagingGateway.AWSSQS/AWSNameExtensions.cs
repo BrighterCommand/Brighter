@@ -34,21 +34,7 @@ public static class AWSNameExtensions
             return new ChannelName(string.Empty);
         }
 
-        //SQS only allows 80 characters alphanumeric, hyphens, and underscores, but we might use a period in a 
-        //default typename strategy
-        var queue = channelName.Value;
-        var maxLength = isFifo ? 75 : 80;
-
-        queue = queue.Replace('.', '_');
-        if (queue.Length > maxLength)
-        {
-            queue = queue.Substring(0, maxLength);
-        }
-
-        if (isFifo)
-        {
-            queue += ".fifo";
-        }
+        var queue = Truncate(channelName.Value, isFifo, 80);
 
         return new ChannelName(queue);
     }
@@ -60,19 +46,29 @@ public static class AWSNameExtensions
     {
         //SNS only topic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
         //underscores (_) are allowed. Topic names must be unique within an AWS account.
-        var maxLength = isFifo ? 251 : 256;
+        return Truncate(topic, isFifo, 256);
+    }
 
-        topic = topic.Replace('.', '_');
-        if (topic.Length > maxLength)
+    private static string Truncate(string name, bool isFifo, int maxLength)
+    {
+        maxLength = isFifo switch
         {
-            topic = topic.Substring(0, maxLength);
+            true when name.EndsWith("fifo") => name.Length - 5,
+            true => maxLength - 5,
+            false => maxLength
+        };
+
+        if (name.Length > maxLength)
+        {
+            name = name.Substring(0, maxLength);
         }
 
+        name = name.Replace('.', '_');
         if (isFifo)
         {
-            topic += ".fifo";
+            name += ".fifo";
         }
 
-        return topic;
+        return name;
     }
 }
