@@ -83,10 +83,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account");
 
-            if (_type == SnsSqsType.Fifo && !topicName.EndsWith(".fifo"))
-            {
-               topicName += ".fifo"; 
-            }
+            topicName = topicName.ToValidSNSTopicName(_type == SnsSqsType.Fifo);
 
             return new Arn
             {

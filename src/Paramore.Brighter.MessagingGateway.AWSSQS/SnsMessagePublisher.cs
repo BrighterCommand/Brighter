@@ -37,15 +37,12 @@ public class SnsMessagePublisher
     private readonly string _topicArn;
     private readonly AmazonSimpleNotificationServiceClient _client;
     private readonly SnsSqsType _snsSqsType;
-    private readonly bool _deduplication;
 
-    public SnsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, SnsSqsType snsSqsType,
-        bool deduplication)
+    public SnsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, SnsSqsType snsSqsType)
     {
         _topicArn = topicArn;
         _client = client;
         _snsSqsType = snsSqsType;
-        _deduplication = deduplication;
     }
 
     public async Task<string?> PublishAsync(Message message)
@@ -74,7 +71,7 @@ public class SnsMessagePublisher
         if (_snsSqsType == SnsSqsType.Fifo)
         {
             publishRequest.MessageGroupId = message.Header.PartitionKey;
-            if (_deduplication && message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
+            if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
             {
                 publishRequest.MessageDeduplicationId = (string)deduplicationId;
             }

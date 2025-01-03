@@ -76,11 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </remarks>
         public async Task<(bool, string? TopicArn)> ValidateAsync(string topicName, CancellationToken cancellationToken = default)
         {
-            if (_type == SnsSqsType.Fifo && !topicName.EndsWith(".fifo"))
-            {
-                topicName += ".fifo";
-            }
-            
+            topicName = topicName.ToValidSNSTopicName(_type == SnsSqsType.Fifo);
             var topic = await _snsClient.FindTopicAsync(topicName);
             return (topic != null, topic?.TopicArn);
         }

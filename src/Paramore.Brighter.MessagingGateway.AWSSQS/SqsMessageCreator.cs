@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Amazon;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
@@ -72,6 +73,7 @@ internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
             var receiptHandle = ReadReceiptHandle(sqsMessage);
             var partitionKey = ReadPartitionKey(sqsMessage);
             var deduplicationId = ReadDeduplicationId(sqsMessage);
+            var subject = ReadSubject(sqsMessage);
 
             var bodyType = (contentType.Success ? contentType.Result : "plain/text");
 
@@ -87,7 +89,7 @@ internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
                 contentType: bodyType!,
                 handledCount: handledCount.Result,
                 dataSchema: null,
-                subject: null,
+                subject: subject.Success ? subject.Result : string.Empty,
                 delayed: TimeSpan.Zero,
                 partitionKey: partitionKey.Success ? partitionKey.Result : string.Empty
             );
@@ -230,13 +232,25 @@ internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
         return new HeaderResult<string?>(string.Empty, true);
     }
 
-    private HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
+    private static HeaderResult<RoutingKey> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
     {
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue? value))
         {
             //we have an arn, and we want the topic
-            var arnElements = value.StringValue.Split(':');
-            var topic = arnElements[(int)ARNAmazonSNS.TopicName];
+            var topic = value.StringValue;
+            if (Arn.TryParse(value.StringValue, out var arn))
+            {
+                topic = arn.Resource;
+            }
+            else
+            {
+                var indexOf = value.StringValue.LastIndexOf('/');
+                if (indexOf != -1)
+                {
+                    topic = value.StringValue.Substring(indexOf + 1);
+                }
+            }
+
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }
 
@@ -262,6 +276,18 @@ internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
             //we have an arn, and we want the topic
             var messageGroupId = value;
             return new HeaderResult<string>(messageGroupId, true);
+        }
+
+        return new HeaderResult<string>(null, false);
+    }
+
+    private static HeaderResult<string> ReadSubject(Amazon.SQS.Model.Message sqsMessage)
+    {
+        if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Subject, out var value))
+        {
+            //we have an arn, and we want the topic
+            var subject = value.StringValue;
+            return new HeaderResult<string>(subject, true);
         }
 
         return new HeaderResult<string>(null, false);

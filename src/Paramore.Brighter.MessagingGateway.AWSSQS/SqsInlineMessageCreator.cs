@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Amazon;
 using Amazon.SQS;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -239,13 +240,19 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
     {
         if (_messageAttributes.TryGetValue(HeaderNames.Topic, out var topicArn))
         {
-            //we have an arn, and we want the topic
-            var s = topicArn.GetValueInString();
-            if (string.IsNullOrEmpty(s))
-                return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
-
-            var arnElements = s!.Split(':');
-            var topic = arnElements[(int)ARNAmazonSNS.TopicName];
+            var topic = topicArn.GetValueInString() ?? string.Empty;
+            if (Arn.TryParse(topic, out var arn))
+            {
+                topic = arn.Resource;
+            }
+            else
+            {
+                var indexOf = topic.LastIndexOf('/');
+                if (indexOf != -1)
+                {
+                    topic = topic.Substring(indexOf + 1);
+                }
+            }
 
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }

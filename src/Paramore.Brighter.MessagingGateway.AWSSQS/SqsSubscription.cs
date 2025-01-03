@@ -54,12 +54,30 @@ public class SqsSubscription : Subscription
     public int MessageRetentionPeriod { get; }
 
     /// <summary>
+    /// The routing key type.
+    /// </summary>
+    public RoutingKeyType RoutingKeyType { get; }
+
+    /// <summary>
+    /// Indicates how we should treat the routing key
+    /// QueueFindBy.Url -> the routing key is an URL
+    /// TopicFindBy.Name -> Treat the routing key as a name & use GetQueueUrl to find it 
+    /// </summary>
+    public QueueFindBy QueueFindBy { get; }
+
+    /// <summary>
     /// Indicates how we should treat the routing key
     /// TopicFindBy.Arn -> the routing key is an Arn
     /// TopicFindBy.Convention -> The routing key is a name, but use convention to make an Arn for this account
     /// TopicFindBy.Name -> Treat the routing key as a name & use ListTopics to find it (rate limited 30/s)
     /// </summary>
     public TopicFindBy FindTopicBy { get; }
+
+    /// <summary>
+    /// The attributes of the topic. If TopicARN is set we will always assume that we do not
+    /// need to create or validate the SNS Topic
+    /// </summary>
+    public SnsAttributes? SnsAttributes { get; }
 
     /// <summary>
     ///  The JSON serialization of the queue's access control policy.
@@ -76,11 +94,6 @@ public class SqsSubscription : Subscription
     /// </summary>
     public RedrivePolicy? RedrivePolicy { get; }
 
-    /// <summary>
-    /// The attributes of the topic. If TopicARN is set we will always assume that we do not
-    /// need to create or validate the SNS Topic
-    /// </summary>
-    public SnsAttributes? SnsAttributes { get; }
 
     /// <summary>
     /// A list of resource tags to use when creating the queue
@@ -140,6 +153,8 @@ public class SqsSubscription : Subscription
     /// <param name="contentBasedDeduplication">Enables or disable content-based deduplication</param>
     /// <param name="deduplicationScope">Specifies whether message deduplication occurs at the message group or queue level</param>
     /// <param name="fifoThroughputLimit">Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group</param>
+    /// <param name="routingKeyType">Specifies the routing key type</param>
+    /// <param name="queueFindBy">How the queue should be found when <paramref name="routingKeyType"/> is point-to-point.</param>
     public SqsSubscription(
         Type dataType,
         SubscriptionName? name = null,
@@ -168,7 +183,9 @@ public class SqsSubscription : Subscription
         SnsSqsType sqsType = SnsSqsType.Standard,
         bool contentBasedDeduplication = true,
         DeduplicationScope? deduplicationScope = null,
-        int? fifoThroughputLimit = null
+        int? fifoThroughputLimit = null,
+        RoutingKeyType routingKeyType = RoutingKeyType.PubSub,
+        QueueFindBy queueFindBy = QueueFindBy.Name
     )
         : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
             requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay,
@@ -187,6 +204,8 @@ public class SqsSubscription : Subscription
         ContentBasedDeduplication = contentBasedDeduplication;
         DeduplicationScope = deduplicationScope;
         FifoThroughputLimit = fifoThroughputLimit;
+        RoutingKeyType = routingKeyType;
+        QueueFindBy = queueFindBy;
     }
 }
 
@@ -229,6 +248,8 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
     /// <param name="contentBasedDeduplication">Enables or disable content-based deduplication</param>
     /// <param name="deduplicationScope">Specifies whether message deduplication occurs at the message group or queue level</param>
     /// <param name="fifoThroughputLimit">Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group</param>
+    /// <param name="routingKeyType">Specifies the routing key type</param>
+    /// <param name="queueFindBy">How the queue should be found when <paramref name="routingKeyType"/> is point-to-point.</param>
     public SqsSubscription(
         SubscriptionName? name = null,
         ChannelName? channelName = null,
@@ -256,14 +277,17 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         SnsSqsType sqsType = SnsSqsType.Standard,
         bool contentBasedDeduplication = true,
         DeduplicationScope? deduplicationScope = null,
-        int? fifoThroughputLimit = null
+        int? fifoThroughputLimit = null,
+        RoutingKeyType routingKeyType = RoutingKeyType.PubSub,
+        QueueFindBy queueFindBy = QueueFindBy.Name
     )
         : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount,
             requeueDelay,
             unacceptableMessageLimit, messagePumpType, channelFactory, lockTimeout, delaySeconds,
             messageRetentionPeriod, findTopicBy,
             iAmPolicy, redrivePolicy, snsAttributes, tags, makeChannels, rawMessageDelivery, emptyChannelDelay,
-            channelFailureDelay, sqsType, contentBasedDeduplication, deduplicationScope, fifoThroughputLimit)
+            channelFailureDelay, sqsType, contentBasedDeduplication, deduplicationScope, fifoThroughputLimit,
+            routingKeyType)
     {
     }
 }

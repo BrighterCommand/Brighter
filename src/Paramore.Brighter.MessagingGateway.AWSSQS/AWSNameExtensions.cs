@@ -34,10 +34,14 @@ public static class AWSNameExtensions
             return new ChannelName(string.Empty);
         }
 
-        var queue = Truncate(channelName.Value, isFifo, 80);
-
-        return new ChannelName(queue);
+        return new ChannelName(ToValidSQSQueueName(channelName.Value, isFifo));
     }
+    
+    public static RoutingKey ToValidSQSQueueName(this RoutingKey routingKey, bool isFifo = false)
+        => new(ToValidSQSQueueName(routingKey.Value, isFifo));
+
+    public static  string ToValidSQSQueueName(this string queue, bool isFifo = false) 
+        => Truncate(queue, isFifo, 80);
 
     public static RoutingKey ToValidSNSTopicName(this RoutingKey routingKey, bool isFifo = false)
         => new(routingKey.Value.ToValidSNSTopicName(isFifo));

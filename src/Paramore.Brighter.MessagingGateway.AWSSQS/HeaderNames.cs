@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,20 +20,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
 public static class HeaderNames
 {
-    public static readonly string Id = "id";
-    public static string Topic = "topic";
-    public static string ContentType = "content-type";
-    public static readonly string CorrelationId = "correlation-id";
-    public static readonly string HandledCount = "handled-count";
-    public static readonly string MessageType = "message-type";
-    public static readonly string Timestamp = "timestamp";
-    public static readonly string ReplyTo = "reply-to";
-    public static string Bag = "bag"; 
+    public const string Id = "id";
+    public const string Topic = "topic";
+    public const string ContentType = "content-type";
+    public const string CorrelationId = "correlation-id";
+    public const string HandledCount = "handled-count";
+    public const string MessageType = "message-type";
+    public const string Timestamp = "timestamp";
+    public const string ReplyTo = "reply-to";
+    public const string Subject = "subject";
+    public const string Bag = "bag";
     public const string DeduplicationId = "messageDeduplicationId";
 }

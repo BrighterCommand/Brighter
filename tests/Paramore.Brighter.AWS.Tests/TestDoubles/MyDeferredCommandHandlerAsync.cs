@@ -1,8 +1,8 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter;
 using Paramore.Brighter.Actions;
-using Paramore.Brighter.AWS.Tests.TestDoubles;
+
+namespace Paramore.Brighter.AWS.Tests.TestDoubles;
 
 internal class MyDeferredCommandHandlerAsync : RequestHandlerAsync<MyDeferredCommand>
 {

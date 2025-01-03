@@ -84,27 +84,34 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
         CancellationToken cancellationToken = default)
     {
         //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
-        if (!string.IsNullOrEmpty(ChannelTopicArn)) return !string.IsNullOrEmpty(ChannelTopicArn);
+        if (!string.IsNullOrEmpty(ChannelTopicArn))
+        {
+            return true;
+        }
 
         RoutingKey? routingKey = null;
-        if (topic is null && _publication.Topic is not null)
-            routingKey = _publication.Topic;
-        else if (topic is not null)
+        if (topic is not null)
+        {
             routingKey = new RoutingKey(topic);
+        }
+        else if (_publication.Topic is not null)
+        {
+            routingKey = _publication.Topic;
+        }
 
         if (routingKey is null)
+        {
             throw new ConfigurationException("No topic specified for producer");
+        }
 
-        await EnsureTopicAsync(
+        var topicArn = await EnsureTopicAsync(
             routingKey,
             _publication.FindTopicBy,
             _publication.SnsAttributes,
             _publication.MakeChannels,
-            _publication.SnsType,
-            _publication.Deduplication,
             cancellationToken);
 
-        return !string.IsNullOrEmpty(ChannelTopicArn);
+        return !string.IsNullOrEmpty(topicArn);
     }
 
     /// <summary>
@@ -115,17 +122,18 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
     {
         s_logger.LogDebug(
-            "SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
+            "SNSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
             message.Header.Topic, message.Id, message.Body);
 
         await ConfirmTopicExistsAsync(message.Header.Topic, cancellationToken);
 
-        if (string.IsNullOrEmpty(ChannelTopicArn))
+        if (string.IsNullOrEmpty(ChannelAddress))
             throw new InvalidOperationException(
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body} as the topic does not exist");
 
         using var client = _clientFactory.CreateSnsClient();
-        var publisher = new SnsMessagePublisher(ChannelTopicArn!, client, _publication.SnsType, _publication.Deduplication);
+        var publisher = new SnsMessagePublisher(ChannelAddress!, client,
+            _publication.SnsAttributes?.Type ?? SnsSqsType.Standard);
         var messageId = await publisher.PublishAsync(message);
 
         if (messageId == null)
@@ -133,7 +141,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}");
 
         s_logger.LogDebug(
-            "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+            "SNSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
             message.Header.Topic, message.Id, messageId);
     }
 
@@ -151,7 +159,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// <param name="delay">The sending delay</param>
     /// <returns>Task.</returns>
     public void SendWithDelay(Message message, TimeSpan? delay = null)
-    {   
+    {
         // SNS doesn't support publish with delay
         Send(message);
     }
