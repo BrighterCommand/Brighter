@@ -23,24 +23,26 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
     public AWSValidateInfrastructureByConventionTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        var correlationId = Guid.NewGuid().ToString();
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
 
-        SqsSubscription<MyCommand> subscription = new(
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            sqsType: SnsSqsType.Fifo
         );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType),
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: messageGroupId),
             new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
 
@@ -59,12 +61,18 @@ public class AWSValidateInfrastructureByConventionTests : IDisposable, IAsyncDis
             routingKey: routingKey,
             findTopicBy: TopicFindBy.Convention,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate
+            makeChannels: OnMissingChannel.Validate,
+            sqsType: SnsSqsType.Fifo
         );
 
         _messageProducer = new SnsMessageProducer(
             awsConnection,
-            new SnsPublication { FindTopicBy = TopicFindBy.Convention, MakeChannels = OnMissingChannel.Validate }
+            new SnsPublication
+            {
+                FindTopicBy = TopicFindBy.Convention, 
+                MakeChannels = OnMissingChannel.Validate,
+                SnsType = SnsSqsType.Fifo
+            }
         );
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);

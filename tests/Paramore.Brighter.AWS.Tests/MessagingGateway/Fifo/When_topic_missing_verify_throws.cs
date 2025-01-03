@@ -21,22 +21,23 @@ public class AWSValidateMissingTopicTests
         //Because we don't use channel factory to create the infrastructure -it won't exist
     }
 
-    [Theory]
-    [InlineData(SnsSqsType.Standard, null)]
-    [InlineData(SnsSqsType.Fifo, "123")]
-    public void When_topic_missing_verify_throws(SnsSqsType type, string partitionKey)
+    [Fact]
+    public void When_topic_missing_verify_throws()
     {
         //arrange
         var producer = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
                 MakeChannels = OnMissingChannel.Validate,
-                SnsType = type
+                SnsType = SnsSqsType.Fifo 
             });
+        
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
 
         //act && assert
         Assert.Throws<BrokerUnreachableException>(() => producer.Send(new Message(
-            new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: "plain/text") { PartitionKey = partitionKey},
+            new MessageHeader("", _routingKey, MessageType.MT_EVENT, 
+                type: "plain/text", partitionKey: messageGroupId),
             new MessageBody("Test"))));
     }
 }

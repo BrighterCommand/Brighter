@@ -37,9 +37,7 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create,
-            sqsType: SnsSqsType.Fifo,
-            contentBasedDeduplication: true
-        );
+            sqsType: SnsSqsType.Fifo);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,

@@ -21,20 +21,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-namespace Paramore.Brighter.MessagingGateway.AWSSQS
+namespace Paramore.Brighter.MessagingGateway.AWSSQS;
+
+public static class HeaderNames
 {
-    public static class HeaderNames
-    {
-        public static readonly string Id = "id";
-        public static string Topic = "topic";
-        public static string ContentType = "content-type";
-        public static readonly string CorrelationId = "correlation-id";
-        public static readonly string HandledCount = "handled-count";
-        public static readonly string MessageType = "message-type";
-        public static readonly string Timestamp = "timestamp";
-        public static readonly string ReplyTo = "reply-to";
-        public static string Bag = "bag"; 
-        public const string MessageGroupId = "MessageGroupId";
-        public const string DeduplicationId = "MessageDeduplicationId";
-    }
+    public static readonly string Id = "id";
+    public static string Topic = "topic";
+    public static string ContentType = "content-type";
+    public static readonly string CorrelationId = "correlation-id";
+    public static readonly string HandledCount = "handled-count";
+    public static readonly string MessageType = "message-type";
+    public static readonly string Timestamp = "timestamp";
+    public static readonly string ReplyTo = "reply-to";
+    public static string Bag = "bag"; 
+    public const string DeduplicationId = "messageDeduplicationId";
 }

@@ -222,7 +222,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     MaxNumberOfMessages = _batchSize,
                     WaitTimeSeconds = timeOut.Value.Seconds,
-                    MessageAttributeNames = new List<string> { "All" },
+                    MessageAttributeNames = ["All"],
+                    MessageSystemAttributeNames = ["All"]
                 };
 
                 var receiveResponse = await client.ReceiveMessageAsync(request, cancellationToken);
@@ -252,7 +253,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             if (sqsMessages.Length == 0)
             {
-                return new[] { _noopMessage };
+                return [_noopMessage];
             }
 
             var messages = new Message[sqsMessages.Length];

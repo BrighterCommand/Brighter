@@ -142,12 +142,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// Sync over Async
     /// </summary>
     /// <param name="message">The message.</param>
-    public void Send(Message message)
-    {
-        // TODO: Uncomment when the BrighterSynchronizationHelper is fixed, today the code isn't working because it's stuck is wired infinity loop
-        // BrighterSynchronizationHelper.Run(async () => await SendWithDelayAsync(message, delay));
-        SendAsync(message).GetAwaiter().GetResult();
-    }
+    public void Send(Message message) => BrighterAsyncContext.Run(async () => await SendAsync(message));
 
     /// <summary>
     /// Sends the specified message, with a delay.

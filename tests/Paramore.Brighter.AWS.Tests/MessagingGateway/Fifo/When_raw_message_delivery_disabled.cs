@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Fifo;
 
-[Trait("Category", "AWS")] 
+[Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
 public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 {
@@ -31,17 +31,20 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
         //Set rawMessageDelivery to false
         _channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
-            channelName:new ChannelName(channelName),
-            routingKey:_routingKey,
+            channelName: new ChannelName(channelName),
+            routingKey: _routingKey,
             bufferSize: bufferSize,
             makeChannels: OnMissingChannel.Create,
             messagePumpType: MessagePumpType.Reactor,
-            rawMessageDelivery: false));
+            rawMessageDelivery: false,
+            sqsType: SnsSqsType.Fifo));
 
-        _messageProducer = new SnsMessageProducer(awsConnection, 
+        _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create 
+                MakeChannels = OnMissingChannel.Create, 
+                SnsType = SnsSqsType.Fifo,
+                Deduplication = true
             });
     }
 
@@ -49,13 +52,22 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
     public void When_raw_message_delivery_disabled()
     {
         //arrange
+        var messageGroupId = $"MessageGroupId{Guid.NewGuid():N}";
+        var deduplicationId = $"DeduplicationId{Guid.NewGuid():N}";
         var messageHeader = new MessageHeader(
-            Guid.NewGuid().ToString(), 
-            _routingKey, 
-            MessageType.MT_COMMAND, 
-            correlationId: Guid.NewGuid().ToString(), 
-            replyTo: RoutingKey.Empty, 
-            contentType: "text\\plain");
+            Guid.NewGuid().ToString(),
+            _routingKey,
+            MessageType.MT_COMMAND,
+            correlationId: Guid.NewGuid().ToString(),
+            replyTo: RoutingKey.Empty,
+            contentType: "text\\plain",
+            partitionKey: messageGroupId)
+        {
+            Bag =
+            {
+                [HeaderNames.DeduplicationId] = deduplicationId
+            }
+        };
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
         messageHeader.Bag.Add(customHeaderItem.Key, customHeaderItem.Value);
@@ -71,24 +83,28 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
 
         //assert
         messageReceived.Id.Should().Be(messageToSent.Id);
-        messageReceived.Header.Topic.Should().Be(messageToSent.Header.Topic);
+        messageReceived.Header.Topic.Should().Be(messageToSent.Header.Topic.ToValidSNSTopicName(true));
         messageReceived.Header.MessageType.Should().Be(messageToSent.Header.MessageType);
         messageReceived.Header.CorrelationId.Should().Be(messageToSent.Header.CorrelationId);
         messageReceived.Header.ReplyTo.Should().Be(messageToSent.Header.ReplyTo);
         messageReceived.Header.ContentType.Should().Be(messageToSent.Header.ContentType);
         messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
         messageReceived.Body.Value.Should().Be(messageToSent.Body.Value);
+
+        messageReceived.Header.PartitionKey.Should().Be(messageGroupId);
+        messageReceived.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
+        messageReceived.Header.Bag[HeaderNames.DeduplicationId].Should().Be(deduplicationId);
     }
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
+        _channelFactory.DeleteTopicAsync().Wait();
         _channelFactory.DeleteQueueAsync().Wait();
     }
-        
+
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync(); 
+        await _channelFactory.DeleteTopicAsync();
         await _channelFactory.DeleteQueueAsync();
     }
 }

@@ -29,13 +29,17 @@ public class AWSValidateMissingTopicTestsAsync
         var producer = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Validate
+                MakeChannels = OnMissingChannel.Validate,
+                SnsType = SnsSqsType.Fifo
             });
 
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
+        
         // act & assert
         await Assert.ThrowsAsync<BrokerUnreachableException>(async () => 
             await producer.SendAsync(new Message(
-                new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: "plain/text"),
+                new MessageHeader("", _routingKey, MessageType.MT_EVENT, 
+                    type: "plain/text", partitionKey: messageGroupId),
                 new MessageBody("Test"))));
     }
 }

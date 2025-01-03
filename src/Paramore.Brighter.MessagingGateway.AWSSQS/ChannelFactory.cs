@@ -73,8 +73,9 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
     /// <returns>An instance of <see cref="IAmAChannelSync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public IAmAChannelSync CreateSyncChannel(Subscription subscription) => BrighterAsyncContext.Run(async () => await CreateSyncChannelAsync(subscription));
-        
+    public IAmAChannelSync CreateSyncChannel(Subscription subscription) =>
+        BrighterAsyncContext.Run(async () => await CreateSyncChannelAsync(subscription));
+
     /// <summary>
     /// Creates the input channel.
     /// </summary>
@@ -84,7 +85,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     /// <param name="subscription">An SqsSubscription, the subscription parameter to create the channel with.</param>
     /// <returns>An instance of <see cref="IAmAChannelAsync"/>.</returns>
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an SqsSubscription.</exception>
-    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription) => BrighterAsyncContext.Run(async () => await CreateAsyncChannelAsync(subscription));
+    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription) =>
+        BrighterAsyncContext.Run(async () => await CreateAsyncChannelAsync(subscription));
 
     /// <summary>
     /// Creates the input channel.
@@ -122,7 +124,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
         return channel;
     }
-        
+
     /// <summary>
     /// Deletes the queue.
     /// </summary>
@@ -133,7 +135,8 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
         using var sqsClient = new AWSClientFactory(AwsConnection).CreateSqsClient();
         (bool exists, string? queueUrl) queueExists =
-            await QueueExistsAsync(sqsClient, _subscription.ChannelName.ToValidSQSQueueName(_subscription.SqsType == SnsSqsType.Fifo));
+            await QueueExistsAsync(sqsClient,
+                _subscription.ChannelName.ToValidSQSQueueName(_subscription.SqsType == SnsSqsType.Fifo));
 
         if (queueExists.exists && queueExists.queueUrl != null)
         {
@@ -157,7 +160,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         if (_subscription == null)
             return;
-            
+
         if (ChannelTopicArn == null)
             return;
 
@@ -176,7 +179,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             }
         }
     }
-        
+
     private async Task<IAmAChannelSync> CreateSyncChannelAsync(Subscription subscription)
     {
         var channel = await _retryPolicy.ExecuteAsync(async () =>
@@ -204,7 +207,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
         return channel;
     }
-  
+
     private async Task EnsureQueueAsync()
     {
         if (_subscription is null)
@@ -358,14 +361,35 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     private async Task CreateDLQAsync(AmazonSQSClient sqsClient)
     {
         if (_subscription is null)
+        {
             throw new InvalidOperationException("ChannelFactory: Subscription cannot be null");
+        }
 
         if (_subscription.RedrivePolicy == null)
+        {
             throw new InvalidOperationException("ChannelFactory: RedrivePolicy cannot be null when creating a DLQ");
+        }
 
         try
         {
-            var request = new CreateQueueRequest(_subscription.RedrivePolicy.DeadlLetterQueueName.Value);
+            var queue = _subscription.RedrivePolicy.DeadlLetterQueueName.Value;
+            var attributes = new Dictionary<string, string>();
+            if (_subscription.SqsType == SnsSqsType.Fifo)
+            {
+                if (!queue.EndsWith(".fifo"))
+                {
+                    queue += ".fifo";
+                }
+
+                attributes.Add(QueueAttributeName.FifoQueue, "true");
+                if (_subscription.ContentBasedDeduplication)
+                {
+                    attributes.Add(QueueAttributeName.ContentBasedDeduplication, "true");
+                }
+            }
+
+            var request = new CreateQueueRequest(queue) { Attributes = attributes };
+
             var createDeadLetterQueueResponse = await sqsClient.CreateQueueAsync(request);
             var queueUrl = createDeadLetterQueueResponse.QueueUrl;
 
@@ -375,11 +399,14 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
                 {
                     QueueUrl = queueUrl, AttributeNames = ["QueueArn"]
                 };
+
                 var attributesResponse = await sqsClient.GetQueueAttributesAsync(attributesRequest);
 
                 if (attributesResponse.HttpStatusCode != HttpStatusCode.OK)
+                {
                     throw new InvalidOperationException(
                         $"Could not find ARN of DLQ, status: {attributesResponse.HttpStatusCode}");
+                }
 
                 _dlqARN = attributesResponse.QueueARN;
             }
@@ -461,7 +488,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         if (string.IsNullOrEmpty(channelName))
             return (false, null);
-            
+
         bool exists = false;
         string? queueUrl = null;
         try
@@ -482,6 +509,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
                     exists = false;
                     return true;
                 }
+
                 return false;
             });
         }

@@ -30,12 +30,13 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
 
     public SnsReDrivePolicySDlqTests()
     {
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var correlationId = Guid.NewGuid().ToString();
+        var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
 
         //how are we consuming
@@ -49,17 +50,14 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Reactor,
             //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
-            redrivePolicy: new RedrivePolicy
-            (
-                deadLetterQueueName: new ChannelName(_dlqChannelName),
-                maxReceiveCount: 2
-            ));
+            redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
+            sqsType: SnsSqsType.Fifo);
 
         //what do we send
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType),
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: messageGroupId),
             new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
         );
 
@@ -71,7 +69,11 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             _awsConnection,
             new SnsPublication
             {
-                Topic = routingKey, RequestType = typeof(MyDeferredCommand), MakeChannels = OnMissingChannel.Create
+                Topic = routingKey, 
+                RequestType = typeof(MyDeferredCommand), 
+                MakeChannels = OnMissingChannel.Create,
+                SnsType = SnsSqsType.Fifo,
+                Deduplication = true
             }
         );
 
@@ -118,7 +120,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             QueueUrl = queueUrlResponse.QueueUrl,
             WaitTimeSeconds = 5,
             MessageSystemAttributeNames = ["ApproximateReceiveCount"],
-            MessageAttributeNames = new List<string> { "All" }
+            MessageAttributeNames = ["All"]
         }).GetAwaiter().GetResult();
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
@@ -151,7 +153,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         //inspect the dlq
-        GetDLQCount(_dlqChannelName).Should().Be(1);
+        GetDLQCount(_dlqChannelName + ".fifo").Should().Be(1);
     }
 
     public void Dispose()

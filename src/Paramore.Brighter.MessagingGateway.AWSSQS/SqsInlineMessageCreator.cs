@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,298 +20,294 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Amazon.SQS;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
-namespace Paramore.Brighter.MessagingGateway.AWSSQS
+namespace Paramore.Brighter.MessagingGateway.AWSSQS;
+
+internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
 {
-    internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
+
+    private Dictionary<string, JsonElement> _messageAttributes = new();
+
+    public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsInlineMessageCreator>();
+        var topic = HeaderResult<RoutingKey>.Empty();
+        var messageId = HeaderResult<string?>.Empty();
 
-        private Dictionary<string, JsonElement> _messageAttributes = new Dictionary<string, JsonElement>();
-
-        public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
+        Message message;
+        try
         {
-            var topic = HeaderResult<RoutingKey>.Empty();
-            var messageId = HeaderResult<string?>.Empty();
-            var contentType = HeaderResult<string?>.Empty();
-            var correlationId = HeaderResult<string?>.Empty();
-            var handledCount = HeaderResult<int>.Empty();
-            var messageType = HeaderResult<MessageType>.Empty();
-            var timeStamp = HeaderResult<DateTime>.Empty();
-            var receiptHandle = HeaderResult<string>.Empty();
-            var replyTo = HeaderResult<string?>.Empty();
-            var subject = HeaderResult<string?>.Empty();
+            var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
+            _messageAttributes = ReadMessageAttributes(jsonDocument);
 
-            Message message;
-            try
+            topic = ReadTopic();
+            messageId = ReadMessageId();
+            var contentType = ReadContentType();
+            var correlationId = ReadCorrelationId();
+            var handledCount = ReadHandledCount();
+            var messageType = ReadMessageType();
+            var timeStamp = ReadTimestamp();
+            var replyTo = ReadReplyTo();
+            var subject = ReadMessageSubject(jsonDocument);
+            var receiptHandle = ReadReceiptHandle(sqsMessage);
+            var partitionKey = ReadPartitionKey(sqsMessage);
+            var deduplicationId = ReadDeduplicationId(sqsMessage);
+
+            //TODO:CLOUD_EVENTS parse from headers
+
+            var messageHeader = new MessageHeader(
+                messageId: messageId.Result ?? string.Empty,
+                topic: topic.Result ?? RoutingKey.Empty,
+                messageType: messageType.Result,
+                source: null,
+                type: "",
+                timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                correlationId: correlationId.Success ? correlationId.Result : string.Empty,
+                replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
+                contentType: contentType.Result ?? "plain/text",
+                handledCount: handledCount.Result,
+                dataSchema: null,
+                subject: subject.Result,
+                delayed: TimeSpan.Zero,
+                partitionKey: partitionKey.Result ?? string.Empty
+            );
+
+            message = new Message(messageHeader, ReadMessageBody(jsonDocument));
+
+            //deserialize the bag 
+            var bag = ReadMessageBag();
+            foreach (var key in bag.Keys)
             {
-                var jsonDocument = JsonDocument.Parse(sqsMessage.Body);
-                _messageAttributes = ReadMessageAttributes(jsonDocument);
-
-                topic = ReadTopic();
-                messageId = ReadMessageId();
-                contentType = ReadContentType();
-                correlationId = ReadCorrelationId();
-                handledCount = ReadHandledCount();
-                messageType = ReadMessageType();
-                timeStamp = ReadTimestamp();
-                replyTo = ReadReplyTo();
-                subject = ReadMessageSubject(jsonDocument);
-                receiptHandle = ReadReceiptHandle(sqsMessage);
-                var partitionKey = ReadPartitionKey();
-                var deduplicationId = ReadMessageDeduplicationId();
-
-                //TODO:CLOUD_EVENTS parse from headers
-
-                var messageHeader = new MessageHeader(
-                    messageId: messageId.Result ?? string.Empty,
-                    topic: topic.Result ?? RoutingKey.Empty,
-                    messageType: messageType.Result,
-                    source: null,
-                    type: "",
-                    timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
-                    correlationId: correlationId.Success ? correlationId.Result : string.Empty,
-                    replyTo: replyTo.Result is not null ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
-                    contentType: contentType.Result ?? "plain/text",
-                    handledCount: handledCount.Result,
-                    dataSchema: null,
-                    subject: subject.Result,
-                    delayed: TimeSpan.Zero,
-                    partitionKey: partitionKey.Result ?? string.Empty
-                );
-
-                message = new Message(messageHeader, ReadMessageBody(jsonDocument));
-
-                //deserialize the bag 
-                var bag = ReadMessageBag();
-                foreach (var key in bag.Keys)
-                {
-                    message.Header.Bag.Add(key, bag[key]);
-                }
-
-                if (deduplicationId.Success)
-                {
-                    message.Header.Bag.Add(HeaderNames.DeduplicationId, deduplicationId);
-                }
-
-                if (receiptHandle.Success)
-                    message.Header.Bag.Add("ReceiptHandle", sqsMessage.ReceiptHandle);
+                message.Header.Bag.Add(key, bag[key]);
             }
-            catch (Exception e)
+
+            if (deduplicationId.Success)
             {
-                s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
-                message = FailureMessage(topic, messageId);
+                message.Header.Bag[HeaderNames.DeduplicationId] = deduplicationId.Result;
             }
-            
-            return message;
+
+            if (receiptHandle.Success)
+            {
+                message.Header.Bag.Add("ReceiptHandle", sqsMessage.ReceiptHandle);
+            }
+        }
+        catch (Exception e)
+        {
+            s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
+            message = FailureMessage(topic, messageId);
         }
 
-        private static Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
+        return message;
+    }
+
+    private static Dictionary<string, JsonElement> ReadMessageAttributes(JsonDocument jsonDocument)
+    {
+        var messageAttributes = new Dictionary<string, JsonElement>();
+
+        try
         {
-            var messageAttributes = new Dictionary<string, JsonElement>();
-
-            try
+            if (jsonDocument.RootElement.TryGetProperty("MessageAttributes", out var attributes))
             {
-                if (jsonDocument.RootElement.TryGetProperty("MessageAttributes", out var attributes))
-                {
-                    messageAttributes = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-                        attributes.GetRawText(),
-                        JsonSerialisationOptions.Options);
-                }
+                messageAttributes = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+                    attributes.GetRawText(),
+                    JsonSerialisationOptions.Options);
             }
-            catch (Exception ex)
-            {
-                s_logger.LogWarning($"Failed while deserializing Sqs Message body, ex: {ex}");
-            }
-
-            return messageAttributes ?? new Dictionary<string, JsonElement>();
+        }
+        catch (Exception ex)
+        {
+            s_logger.LogWarning($"Failed while deserializing Sqs Message body, ex: {ex}");
         }
 
-        private HeaderResult<string?> ReadContentType()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.ContentType, out var contentType))
-            {
-                return new HeaderResult<string?>(contentType.GetValueInString(), true);
-            }
+        return messageAttributes ?? new Dictionary<string, JsonElement>();
+    }
 
-            return new HeaderResult<string?>(string.Empty, true);
+    private HeaderResult<string?> ReadContentType()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.ContentType, out var contentType))
+        {
+            return new HeaderResult<string?>(contentType.GetValueInString(), true);
         }
 
-        private Dictionary<string, object> ReadMessageBag()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.Bag, out var headerBag))
-            {
-                try
-                {
-                    var json = headerBag.GetValueInString();
-                    if (string.IsNullOrEmpty(json))
-                        return new Dictionary<string, object>();
-                    
-                    var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(
-                        json!,
-                        JsonSerialisationOptions.Options);
-                    
-                    return bag ?? new Dictionary<string, object>();
-                }
-                catch (Exception)
-                {
-                    //suppress any errors in deserialization
-                }
-            }
+        return new HeaderResult<string?>(string.Empty, true);
+    }
 
-            return new Dictionary<string, object>();
-        }
-
-        private HeaderResult<string?> ReadReplyTo()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.ReplyTo, out var replyTo))
-            {
-                return new HeaderResult<string?>(replyTo.GetValueInString(), true);
-            }
-
-            return new HeaderResult<string?>(string.Empty, true);
-        }
-
-        private HeaderResult<DateTime> ReadTimestamp()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.Timestamp, out var timeStamp))
-            {
-                if (DateTime.TryParse(timeStamp.GetValueInString(), out var value))
-                {
-                    return new HeaderResult<DateTime>(value, true);
-                }
-            }
-
-            return new HeaderResult<DateTime>(DateTime.UtcNow, true);
-        }
-
-        private HeaderResult<MessageType> ReadMessageType()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.MessageType, out var messageType))
-            {
-                if (Enum.TryParse(messageType.GetValueInString(), out MessageType value))
-                {
-                    return new HeaderResult<MessageType>(value, true);
-                }
-            }
-
-            return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
-        }
-
-        private HeaderResult<int> ReadHandledCount()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.HandledCount, out var handledCount))
-            {
-                if (int.TryParse(handledCount.GetValueInString(), out var value))
-                {
-                    return new HeaderResult<int>(value, true);
-                }
-            }
-
-            return new HeaderResult<int>(0, true);
-        }
-
-        private HeaderResult<string?> ReadCorrelationId()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.CorrelationId, out var correlationId))
-            {
-                return new HeaderResult<string?>(correlationId.GetValueInString(), true);
-            }
-
-            return new HeaderResult<string?>(string.Empty, true);
-        }
-
-        private HeaderResult<string?> ReadMessageId()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.Id, out var messageId))
-            {
-                return new HeaderResult<string?>(messageId.GetValueInString(), true);
-            }
-
-            return new HeaderResult<string?>(string.Empty, true);
-        }
-
-        private HeaderResult<RoutingKey> ReadTopic()
-        {
-            if (_messageAttributes.TryGetValue(HeaderNames.Topic, out var topicArn))
-            {
-                //we have an arn, and we want the topic
-                var s = topicArn.GetValueInString();
-                if (string.IsNullOrEmpty(s))
-                    return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
-                
-                var arnElements = s!.Split(':');
-                var topic = arnElements[(int)ARNAmazonSNS.TopicName];
-
-                return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
-            }
-
-            return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
-        }
-
-        private static HeaderResult<string?> ReadMessageSubject(JsonDocument jsonDocument)
+    private Dictionary<string, object> ReadMessageBag()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.Bag, out var headerBag))
         {
             try
             {
-                if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
+                var json = headerBag.GetValueInString();
+                if (string.IsNullOrEmpty(json))
                 {
-                    return new HeaderResult<string?>(value.GetString(), true);
+                    return new Dictionary<string, object>();
                 }
-            }
-            catch (Exception ex)
-            {
-                s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
-            }
 
-            return new HeaderResult<string?>(null, true);
+                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(json!,
+                    JsonSerialisationOptions.Options);
+
+                return bag ?? new Dictionary<string, object>();
+            }
+            catch (Exception)
+            {
+                //suppress any errors in deserialization
+            }
         }
 
-        private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
+        return new Dictionary<string, object>();
+    }
+
+    private HeaderResult<string?> ReadReplyTo()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.ReplyTo, out var replyTo))
         {
-            try
-            {
-                if (jsonDocument.RootElement.TryGetProperty("Message", out var value))
-                {
-                    return new MessageBody(value.GetString());
-                }
-            }
-            catch (Exception ex)
-            {
-                s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
-            }
-
-            return new MessageBody(string.Empty);
+            return new HeaderResult<string?>(replyTo.GetValueInString(), true);
         }
 
-        private HeaderResult<string> ReadPartitionKey()
+        return new HeaderResult<string?>(string.Empty, true);
+    }
+
+    private HeaderResult<DateTime> ReadTimestamp()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.Timestamp, out var timeStamp))
         {
-            if (_messageAttributes.TryGetValue(HeaderNames.MessageGroupId, out var value))
+            if (DateTime.TryParse(timeStamp.GetValueInString(), out var value))
             {
-                //we have an arn, and we want the topic
-                var messageGroupId = value.GetValueInString();
-                return new HeaderResult<string>(messageGroupId, true);
+                return new HeaderResult<DateTime>(value, true);
             }
-
-            return new HeaderResult<string>(string.Empty, true);
         }
 
-        private HeaderResult<string> ReadMessageDeduplicationId()
+        return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+    }
+
+    private HeaderResult<MessageType> ReadMessageType()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.MessageType, out var messageType))
         {
-            if (_messageAttributes.TryGetValue(HeaderNames.DeduplicationId, out var value))
+            if (Enum.TryParse(messageType.GetValueInString(), out MessageType value))
             {
-                //we have an arn, and we want the topic
-                var deduplicationId = value.GetValueInString();
-                return new HeaderResult<string>(deduplicationId, true);
+                return new HeaderResult<MessageType>(value, true);
             }
-
-            return new HeaderResult<string>(string.Empty, true);
         }
+
+        return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
+    }
+
+    private HeaderResult<int> ReadHandledCount()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.HandledCount, out var handledCount))
+        {
+            if (int.TryParse(handledCount.GetValueInString(), out var value))
+            {
+                return new HeaderResult<int>(value, true);
+            }
+        }
+
+        return new HeaderResult<int>(0, true);
+    }
+
+    private HeaderResult<string?> ReadCorrelationId()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.CorrelationId, out var correlationId))
+        {
+            return new HeaderResult<string?>(correlationId.GetValueInString(), true);
+        }
+
+        return new HeaderResult<string?>(string.Empty, true);
+    }
+
+    private HeaderResult<string?> ReadMessageId()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.Id, out var messageId))
+        {
+            return new HeaderResult<string?>(messageId.GetValueInString(), true);
+        }
+
+        return new HeaderResult<string?>(string.Empty, true);
+    }
+
+    private HeaderResult<RoutingKey> ReadTopic()
+    {
+        if (_messageAttributes.TryGetValue(HeaderNames.Topic, out var topicArn))
+        {
+            //we have an arn, and we want the topic
+            var s = topicArn.GetValueInString();
+            if (string.IsNullOrEmpty(s))
+                return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
+
+            var arnElements = s!.Split(':');
+            var topic = arnElements[(int)ARNAmazonSNS.TopicName];
+
+            return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
+        }
+
+        return new HeaderResult<RoutingKey>(RoutingKey.Empty, true);
+    }
+
+    private static HeaderResult<string?> ReadMessageSubject(JsonDocument jsonDocument)
+    {
+        try
+        {
+            if (jsonDocument.RootElement.TryGetProperty("Subject", out var value))
+            {
+                return new HeaderResult<string?>(value.GetString(), true);
+            }
+        }
+        catch (Exception ex)
+        {
+            s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
+        }
+
+        return new HeaderResult<string?>(null, true);
+    }
+
+    private static MessageBody ReadMessageBody(JsonDocument jsonDocument)
+    {
+        try
+        {
+            if (jsonDocument.RootElement.TryGetProperty("Message", out var value))
+            {
+                return new MessageBody(value.GetString());
+            }
+        }
+        catch (Exception ex)
+        {
+            s_logger.LogWarning($"Failed to parse Sqs Message Body to valid Json Document, ex: {ex}");
+        }
+
+        return new MessageBody(string.Empty);
+    }
+
+    private static HeaderResult<string> ReadPartitionKey(Amazon.SQS.Model.Message sqsMessage)
+    {
+        if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageGroupId, out var value))
+        {
+            //we have an arn, and we want the topic
+            var messageGroupId = value;
+            return new HeaderResult<string>(messageGroupId, true);
+        }
+
+        return new HeaderResult<string>(string.Empty, false);
+    }
+
+    private static HeaderResult<string> ReadDeduplicationId(Amazon.SQS.Model.Message sqsMessage)
+    {
+        if (sqsMessage.Attributes.TryGetValue(MessageSystemAttributeName.MessageDeduplicationId, out var value))
+        {
+            //we have an arn, and we want the topic
+            var messageGroupId = value;
+            return new HeaderResult<string>(messageGroupId, true);
+        }
+
+        return new HeaderResult<string>(string.Empty, false);
     }
 }

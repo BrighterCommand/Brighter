@@ -25,7 +25,8 @@ public class AWSAssumeQueuesTests  : IDisposable, IAsyncDisposable
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Assume
+            makeChannels: OnMissingChannel.Assume,
+            sqsType: SnsSqsType.Fifo
         );
             
         var awsConnection = GatewayFactory.CreateFactory();
@@ -35,7 +36,8 @@ public class AWSAssumeQueuesTests  : IDisposable, IAsyncDisposable
         var producer = new SnsMessageProducer(awsConnection, 
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create 
+                MakeChannels = OnMissingChannel.Create,
+                SnsType = SnsSqsType.Fifo
             });
             
         producer.ConfirmTopicExistsAsync(topicName).Wait(); 

@@ -30,12 +30,13 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
     public SnsReDrivePolicySDlqTestsAsync()
     {
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var correlationId = Guid.NewGuid().ToString();
+        var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
 
         _subscription = new SqsSubscription<MyCommand>(
@@ -51,7 +52,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType),
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: messageGroupId),
             new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
         );
 
@@ -63,7 +64,9 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             {
                 Topic = routingKey,
                 RequestType = typeof(MyDeferredCommand),
-                MakeChannels = OnMissingChannel.Create
+                MakeChannels = OnMissingChannel.Create,
+                SnsType = SnsSqsType.Fifo,
+                Deduplication = true
             }
         );
 
@@ -92,7 +95,9 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         _messagePump = new Proactor<MyDeferredCommand>(provider, messageMapperRegistry,
             new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
         {
-            Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
+            Channel = _channel, 
+            TimeOut = TimeSpan.FromMilliseconds(5000), 
+            RequeueCount = 3
         };
     }
 
@@ -110,7 +115,8 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
         if (response.HttpStatusCode != HttpStatusCode.OK)
         {
-            throw new AmazonSQSException($"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
+            throw new AmazonSQSException(
+                $"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
         }
 
         return response.Messages.Count;
@@ -131,7 +137,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
 
         await Task.Delay(5000);
 
-        int dlqCount = await GetDLQCountAsync(_dlqChannelName);
+        var dlqCount = await GetDLQCountAsync(_dlqChannelName + ".fifo");
         dlqCount.Should().Be(1);
     }
 

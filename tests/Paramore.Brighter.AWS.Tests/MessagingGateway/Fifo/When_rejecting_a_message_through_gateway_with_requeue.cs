@@ -22,23 +22,25 @@ public class SqsMessageConsumerRequeueTests : IDisposable
     public SqsMessageConsumerRequeueTests()
     {
         _myCommand = new MyCommand{Value = "Test"};
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        var correlationId = Guid.NewGuid().ToString();
         var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
+        var topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
             
         SqsSubscription<MyCommand> subscription = new(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             messagePumpType: MessagePumpType.Reactor,
-            routingKey: routingKey
+            routingKey: routingKey,
+            sqsType: SnsSqsType.Fifo
         );
             
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType),
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: messageGroupId),
             new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
         );
             
@@ -49,7 +51,12 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
             
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
+        _messageProducer = new SnsMessageProducer(awsConnection, 
+            new SnsPublication
+            {
+                MakeChannels = OnMissingChannel.Create,
+                SnsType = SnsSqsType.Fifo
+            });
     }
 
     [Fact]

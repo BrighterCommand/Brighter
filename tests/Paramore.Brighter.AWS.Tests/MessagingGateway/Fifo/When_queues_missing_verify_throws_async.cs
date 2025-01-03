@@ -25,7 +25,8 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
-            makeChannels: OnMissingChannel.Validate
+            makeChannels: OnMissingChannel.Validate,
+            sqsType: SnsSqsType.Fifo
         );
 
         _awsConnection = GatewayFactory.CreateFactory();
@@ -34,7 +35,8 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
         var producer = new SnsMessageProducer(_awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create
+                MakeChannels = OnMissingChannel.Create,
+                SnsType = SnsSqsType.Fifo
             });
         producer.ConfirmTopicExistsAsync(topicName).Wait();
     }

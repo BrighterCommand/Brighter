@@ -25,33 +25,34 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
     public AWSValidateInfrastructureByArnTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        var correlationId = Guid.NewGuid().ToString();
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
-        SqsSubscription<MyCommand> subscription = new(
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            sqsType: SnsSqsType.Fifo
         );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType),
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: messageGroupId),
             new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
 
-        (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
-        var awsConnection = GatewayFactory.CreateFactory(credentials, region);
+        var awsConnection = GatewayFactory.CreateFactory();
 
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        var topicArn = FindTopicArn(awsConnection, routingKey.Value).Result;
+        var topicArn = FindTopicArn(awsConnection, routingKey.ToValidSNSTopicName(true)).Result;
         var routingKeyArn = new RoutingKey(topicArn);
 
         subscription = new(
@@ -59,7 +60,8 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
             channelName: channel.Name,
             routingKey: routingKeyArn,
             findTopicBy: TopicFindBy.Arn,
-            makeChannels: OnMissingChannel.Validate
+            makeChannels: OnMissingChannel.Validate,
+            sqsType: SnsSqsType.Fifo
         );
 
         _messageProducer = new SnsMessageProducer(
@@ -69,7 +71,8 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
                 Topic = routingKey,
                 TopicArn = topicArn,
                 FindTopicBy = TopicFindBy.Arn,
-                MakeChannels = OnMissingChannel.Validate
+                MakeChannels = OnMissingChannel.Validate,
+                SnsType = SnsSqsType.Fifo
             });
 
         _consumer = new SqsMessageConsumerFactory(awsConnection).CreateAsync(subscription);

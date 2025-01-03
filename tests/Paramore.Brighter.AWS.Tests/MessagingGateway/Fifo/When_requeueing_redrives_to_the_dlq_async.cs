@@ -27,31 +27,39 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
     public SqsMessageProducerDlqTestsAsync()
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
         _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var correlationId = Guid.NewGuid().ToString();
+        var channelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
         var routingKey = new RoutingKey(topicName);
 
-        SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
+            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
+            sqsType: SnsSqsType.Fifo
         );
 
         _message = new Message(
             new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
-                replyTo: new RoutingKey(replyTo), contentType: contentType),
+                replyTo: new RoutingKey(replyTo), contentType: contentType, partitionKey: messageGroupId ),
             new MessageBody(JsonSerializer.Serialize((object)myCommand, JsonSerialisationOptions.Options))
         );
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
+        _sender = new SnsMessageProducer(_awsConnection,
+            new SnsPublication
+            {
+                MakeChannels = OnMissingChannel.Create,
+                SnsType = SnsSqsType.Fifo,
+                Deduplication = true
+            });
 
         _sender.ConfirmTopicExistsAsync(topicName).Wait();
 
@@ -74,7 +82,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         await Task.Delay(5000);
 
-        int dlqCount = await GetDLQCountAsync(_dlqChannelName);
+        int dlqCount = await GetDLQCountAsync(_dlqChannelName + ".fifo");
         dlqCount.Should().Be(1);
     }
 

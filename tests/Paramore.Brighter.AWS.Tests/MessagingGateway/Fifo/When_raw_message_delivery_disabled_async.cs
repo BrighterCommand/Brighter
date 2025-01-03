@@ -26,7 +26,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         var channelName = $"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         _routingKey = new RoutingKey($"Raw-Msg-Delivery-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
 
-        var bufferSize = 10;
+        const int bufferSize = 10;
 
         // Set rawMessageDelivery to false
         _channel = _channelFactory.CreateAsyncChannel(new SqsSubscription<MyCommand>(
@@ -35,12 +35,13 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             routingKey: _routingKey,
             bufferSize: bufferSize,
             makeChannels: OnMissingChannel.Create,
-            rawMessageDelivery: false));
+            rawMessageDelivery: false,
+            sqsType: SnsSqsType.Fifo));
 
         _messageProducer = new SnsMessageProducer(awsConnection,
             new SnsPublication
             {
-                MakeChannels = OnMissingChannel.Create
+                MakeChannels = OnMissingChannel.Create, SnsType = SnsSqsType.Fifo, Deduplication = true
             });
     }
 
@@ -48,13 +49,16 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
     public async Task When_raw_message_delivery_disabled_async()
     {
         // Arrange
+        var messageGroupId = $"MessageGroupId{Guid.NewGuid():N}";
+        var deduplicationId = $"DeduplicationId{Guid.NewGuid():N}";
         var messageHeader = new MessageHeader(
             Guid.NewGuid().ToString(),
             _routingKey,
             MessageType.MT_COMMAND,
             correlationId: Guid.NewGuid().ToString(),
             replyTo: RoutingKey.Empty,
-            contentType: "text\\plain");
+            contentType: "text\\plain",
+            partitionKey: messageGroupId) { Bag = { [HeaderNames.DeduplicationId] = deduplicationId } };
 
         var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");
         messageHeader.Bag.Add(customHeaderItem.Key, customHeaderItem.Value);
@@ -70,18 +74,21 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
 
         // Assert
         messageReceived.Id.Should().Be(messageToSend.Id);
-        messageReceived.Header.Topic.Should().Be(messageToSend.Header.Topic);
+        messageReceived.Header.Topic.Should().Be(messageToSend.Header.Topic.ToValidSNSTopicName(true));
         messageReceived.Header.MessageType.Should().Be(messageToSend.Header.MessageType);
         messageReceived.Header.CorrelationId.Should().Be(messageToSend.Header.CorrelationId);
         messageReceived.Header.ReplyTo.Should().Be(messageToSend.Header.ReplyTo);
         messageReceived.Header.ContentType.Should().Be(messageToSend.Header.ContentType);
         messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
         messageReceived.Body.Value.Should().Be(messageToSend.Body.Value);
+        messageReceived.Header.PartitionKey.Should().Be(messageGroupId);
+        messageReceived.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
+        messageReceived.Header.Bag[HeaderNames.DeduplicationId].Should().Be(deduplicationId);
     }
-        
+
     public void Dispose()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
+        _channelFactory.DeleteTopicAsync().Wait();
         _channelFactory.DeleteQueueAsync().Wait();
     }
 

@@ -21,6 +21,8 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
     private readonly string _replyTo;
     private readonly string _contentType;
     private readonly string _topicName;
+    private readonly string _messageGroupId;
+    private readonly string _deduplicationId;
 
     public SqsMessageProducerSendAsyncTests()
     {
@@ -28,21 +30,27 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _correlationId = Guid.NewGuid().ToString();
         _replyTo = "http:\\queueUrl";
         _contentType = "text\\plain";
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        _messageGroupId = $"MessageGroup{Guid.NewGuid():N}";
+        _deduplicationId = $"DeduplicationId{Guid.NewGuid():N}";
         _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(_topicName);
 
-        SqsSubscription<MyCommand> subscription = new(
+        var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            rawMessageDelivery: false
+            rawMessageDelivery: false,
+            sqsType: SnsSqsType.Fifo
         );
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: _correlationId,
-                replyTo: new RoutingKey(_replyTo), contentType: _contentType),
+                replyTo: new RoutingKey(_replyTo), contentType: _contentType, partitionKey: _messageGroupId)
+            {
+                Bag = { [HeaderNames.DeduplicationId] = _deduplicationId }
+            },
             new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
 
@@ -51,7 +59,14 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication { Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SnsMessageProducer(awsConnection,
+            new SnsPublication
+            {
+                Topic = new RoutingKey(_topicName), 
+                MakeChannels = OnMissingChannel.Create,
+                SnsType = SnsSqsType.Fifo,
+                Deduplication = true
+            });
     }
 
     [Fact]
@@ -85,8 +100,12 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
         message.Header.Delayed.Should().Be(TimeSpan.Zero);
         // {"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
         message.Body.Value.Should().Be(_message.Body.Value);
+
+        message.Header.PartitionKey.Should().Be(_messageGroupId);
+        message.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
+        message.Header.Bag[HeaderNames.DeduplicationId].Should().Be(_deduplicationId);
     }
-        
+
     public void Dispose()
     {
         //Clean up resources that we have created
