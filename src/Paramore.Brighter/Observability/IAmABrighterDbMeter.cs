@@ -36,7 +36,7 @@ public interface IAmABrighterDbMeter
     
     /// <summary>
     /// Checks if any of the instrument members has any listeners
-    /// For example, this will be false if the associated meters are registered
+    /// For example, this will be false if the associated meters are not registered
     /// </summary>
     bool Enabled { get; }
 }

@@ -18,7 +18,6 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Diagnostics;
-using Paramore.Brighter.Extensions.Diagnostics.obj;
 using Paramore.Brighter.Observability;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
