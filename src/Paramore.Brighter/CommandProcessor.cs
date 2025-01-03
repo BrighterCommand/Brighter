@@ -355,6 +355,7 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(),
                         @event.Id);
+                    
                     using var builder = new PipelineBuilder<T>(_handlerFactorySync, _inboxConfiguration);
                     
                     var handleRequests = builder.Build(observer, context);

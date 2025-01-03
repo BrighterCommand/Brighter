@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         
         internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
-            public IHandleRequests Create(Type handlerType)
+            public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
             {
                 if (handlerType == typeof(MyPreAndPostDecoratedHandler))
                 {
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 return null;
             }
 
-            public void Release(IHandleRequests handler)
+            public void Release(IHandleRequests handler, IAmALifetime lifetime)
             {
                 var disposable = handler as IDisposable;
                 disposable?.Dispose();
