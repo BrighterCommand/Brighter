@@ -5,7 +5,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Proactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
@@ -26,7 +26,8 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
                 Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new KafkaPublication[] {new KafkaPublication
+            [
+                new KafkaPublication
             {
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
@@ -36,7 +37,8 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
                 MakeChannels = OnMissingChannel.Create
-            }}).Create();
+            }
+            ]).Create();
     }
 
     //[Fact(Skip = "Does not fail on docker container as has topic creation set to true")]

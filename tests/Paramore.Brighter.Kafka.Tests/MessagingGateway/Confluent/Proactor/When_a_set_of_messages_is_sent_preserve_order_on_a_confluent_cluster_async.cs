@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using FluentAssertions;
@@ -9,39 +10,58 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Confluent.Proactor;
 
 [Trait("Category", "Kafka")]
+[Trait("Category", "Confluent")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
+public class KafkaMessageConsumerConfluentPreservesOrderAsync : IDisposable
 {
+    private const string _groupId = "Kafka Message Producer Assume Topic Test";
     private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
-    private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
+    private readonly string _bootStrapServer;
+    private readonly string _userName;
+    private readonly string _password;
 
-    public KafkaMessageConsumerPreservesOrderAsync(ITestOutputHelper output)
+    public KafkaMessageConsumerConfluentPreservesOrderAsync(ITestOutputHelper output)
     {
+        // -- Confluent supply these values, see their .NET examples for your account
+        // You need to set those values as environment variables, which we then read, in order
+        // to run these tests
+
+        _bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER");
+        _userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
+        _password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
+
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "Kafka Producer Send Test",
-                BootStrapServers = new[] {"localhost:9092"}
+                BootStrapServers = new[] {_bootStrapServer},
+                SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol.SaslSsl,
+                SaslMechanisms = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism.Plain,
+                SaslUsername = _userName,
+                SaslPassword = _password,
+                SslCaLocation = SupplyCertificateLocation()
+
             },
             new[] {new KafkaPublication
-            {
-                Topic = new RoutingKey(_topic),
-                NumPartitions = 1,
-                ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests,
-                //your production values ought to be lower
-                MessageTimeoutMs = 2000,
-                RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).Create();
+                {
+                    Topic = new RoutingKey(_topic),
+                    NumPartitions = 1,
+                    ReplicationFactor = 3,
+                    //These timeouts support running on a container using the same host as the tests,
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 10000,
+                    RequestTimeoutMs = 10000,
+                    MakeChannels = OnMissingChannel.Create //This will not make the topic
+                }
+            }).Create();
     }
 
     [Fact]
@@ -111,15 +131,17 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
 
     private async Task<IEnumerable<Message>> ConsumeMessagesAsync(IAmAMessageConsumerAsync consumer)
     {
-        var messages = new Message[0];
+        var messages = Array.Empty<Message>();
         int maxTries = 0;
         do
         {
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
-                messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                //Let topic propagate in the broker
+                await Task.Delay(500); 
+                //use TimeSpan.Zero to avoid blocking
+                messages = await consumer.ReceiveAsync(TimeSpan.Zero);
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     break;
@@ -139,18 +161,23 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
         return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Consumer Test",
-                    BootStrapServers = new[] { "localhost:9092" }
+                    Name = "Kafka Producer Send Test",
+                    BootStrapServers = new[] {_bootStrapServer},
+                    SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol.SaslSsl,
+                    SaslMechanisms = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism.Plain,
+                    SaslUsername = _userName,
+                    SaslPassword = _password,
+                    SslCaLocation = SupplyCertificateLocation()
+
                 })
             .CreateAsync(new KafkaSubscription<MyCommand>(
-                name: new SubscriptionName("Paramore.Brighter.Tests"),
                 channelName: new ChannelName(_queueName),
                 routingKey: new RoutingKey(_topic),
-                groupId: _kafkaGroupId,
+                groupId: _groupId,
                 offsetDefault: AutoOffsetReset.Earliest,
                 commitBatchSize:1,
                 numOfPartitions: 1,
-                replicationFactor: 1,
+                replicationFactor: 3,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create
             ));
@@ -159,5 +186,13 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
     public void Dispose()
     {
         _producerRegistry.Dispose();
+    }
+
+    private string SupplyCertificateLocation()
+    {
+        //For different platforms, we have to figure out how to get the connection right
+        //see: https://docs.confluent.io/platform/current/tutorials/examples/clients/docs/csharp.html
+
+        return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "/usr/local/etc/openssl@1.1/cert.pem" : null;
     }
 }

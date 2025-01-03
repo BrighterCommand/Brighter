@@ -47,10 +47,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
             };
 
-            if (message.Header.TimeStamp != default)
-                headers.Add(HeaderNames.TIMESTAMP, message.Header.TimeStamp.ToString().ToByteArray());
-            else
-                headers.Add(HeaderNames.TIMESTAMP, DateTimeOffset.UtcNow.ToString().ToByteArray());
+            string timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
+            if (message.Header.TimeStamp.DateTime != default)
+            {
+                timeStampAsString = message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture);
+            }
+
+            headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
             
             if (message.Header.CorrelationId != string.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToByteArray());
@@ -64,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!string.IsNullOrEmpty(message.Header.ReplyTo))
                 headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
             
-            headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.Delayed.ToString().ToByteArray());
+            headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.Delayed.TotalMilliseconds.ToString(CultureInfo.InvariantCulture).ToByteArray());
             
             headers.Add(HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString().ToByteArray());
             

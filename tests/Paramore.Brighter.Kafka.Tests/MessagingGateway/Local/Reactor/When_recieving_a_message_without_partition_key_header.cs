@@ -10,43 +10,44 @@ using Xunit;
 using Xunit.Abstractions;
 using Acks = Confluent.Kafka.Acks;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
-public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
+public class KafkaMessageProducerMissingHeaderTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
-    private readonly IAmAMessageConsumerAsync _consumer;
-    private readonly IProducer<string, byte[]> _producer;
+    private readonly IAmAMessageConsumerSync _consumer;
+    private readonly IProducer<string,byte[]> _producer;
 
-    public KafkaMessageProducerMissingHeaderTestsAsync(ITestOutputHelper output)
+    public KafkaMessageProducerMissingHeaderTests(ITestOutputHelper output)
     {
         const string groupId = "Kafka Message Producer Missing Header Test";
         _output = output;
-
+        
+        
         var clientConfig = new ClientConfig
         {
             Acks = (Acks)((int)Acks.All),
             BootstrapServers = string.Join(",", new[] { "localhost:9092" }),
-            ClientId = "Kafka Producer Send with Missing Header Tests",
+            ClientId = "Kafka Producer Send with Missing Header Tests", 
         };
 
         var producerConfig = new ProducerConfig(clientConfig)
         {
-            BatchNumMessages = 10,
+            BatchNumMessages = 10, 
             EnableIdempotence = true,
             MaxInFlight = 1,
             LingerMs = 5,
             MessageTimeoutMs = 5000,
             MessageSendMaxRetries = 3,
-            Partitioner = Confluent.Kafka.Partitioner.ConsistentRandom,
+            Partitioner = global::Confluent.Kafka.Partitioner.ConsistentRandom,
             QueueBufferingMaxMessages = 10,
-            QueueBufferingMaxKbytes = 1048576,
+            QueueBufferingMaxKbytes =  1048576,
             RequestTimeoutMs = 500,
             RetryBackoffMs = 100,
         };
-
+        
         _producer = new ProducerBuilder<string, byte[]>(producerConfig)
             .SetErrorHandler((_, error) =>
             {
@@ -59,19 +60,20 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
                 {
                     Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
                 })
-            .CreateAsync(new KafkaSubscription<MyCommand>(
+            .Create(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: groupId,
                     numOfPartitions: 1,
                     replicationFactor: 1,
-                    messagePumpType: MessagePumpType.Proactor,
+                    messagePumpType: MessagePumpType.Reactor,
                     makeChannels: OnMissingChannel.Create
-                ));
+                )
+            );
     }
 
     [Fact]
-    public async Task When_recieving_a_message_without_partition_key_header()
+    public void When_recieving_a_message_without_partition_key_header()
     {
         var command = new MyCommand { Value = "Test Content" };
 
@@ -80,34 +82,34 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         var value = Encoding.UTF8.GetBytes(body);
         var kafkaMessage = new Message<string, byte[]>
         {
-            Key = command.Id,
+            Key = command.Id, 
             Value = value
         };
 
-        await _producer.ProduceAsync(_topic, kafkaMessage);
+       _producer.Produce(_topic, kafkaMessage, report => _output.WriteLine(report.ToString()) );
 
-        var receivedMessage = await GetMessageAsync();
+        var receivedMessage = GetMessage();
 
         //Where we lack a partition key header, assume non-Brighter header and set to message key
         receivedMessage.Header.PartitionKey.Should().Be(command.Id);
         receivedMessage.Body.Bytes.Should().Equal(value);
     }
 
-    private async Task<Message> GetMessageAsync()
+    private Message GetMessage()
     {
-        Message[] messages = Array.Empty<Message>();
+        Message[] messages = new Message[0];
         int maxTries = 0;
         do
         {
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
-                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                Task.Delay(500).Wait(); //Let topic propagate in the broker
+                messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
-                    await _consumer.AcknowledgeAsync(messages[0]);
+                    _consumer.Acknowledge(messages[0]);
                     break;
                 }
             }
@@ -123,16 +125,10 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
 
         return messages[0];
     }
-    
+
     public void Dispose()
     {
         _producer?.Dispose();
-        ((IAmAMessageConsumerSync)_consumer)?.Dispose();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _producer?.Dispose();
-        await _consumer.DisposeAsync();
+        _consumer?.Dispose();
     }
 }

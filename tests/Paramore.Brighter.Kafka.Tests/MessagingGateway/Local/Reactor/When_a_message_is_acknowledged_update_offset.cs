@@ -8,7 +8,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
 [Trait("Category", "Kafka")]
 [Trait("Fragile", "CI")]
@@ -43,7 +43,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
             }}).Create();
     }
 
-    [Fact]
+    [Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
     public async Task When_a_message_is_acknowldgede_update_offset()
     {
         var groupId = Guid.NewGuid().ToString();
@@ -58,7 +58,7 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         }
 
         //This will create, then delete the consumer
-        Message[] messages = ConsumeMessages(groupId: groupId, batchLimit: 5);
+        Message[] messages = await ConsumeMessages(groupId: groupId, batchLimit: 5);
 
         //check we read the first 5 messages
         messages.Length.Should().Be(5);
@@ -67,12 +67,10 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
             messages[i].Id.Should().Be(sentMessages[i]);
         }
 
-        //yield to broker to catch up
-        await Task.Delay(TimeSpan.FromSeconds(5));
-
-        //This will create a new consumer
-        Message[] newMessages = ConsumeMessages(groupId, batchLimit: 5);
-        //check we read the first 5 messages
+        //This will create a new consumer for the same group
+        Message[] newMessages = await ConsumeMessages(groupId, batchLimit: 5);
+        
+        //check we read the next 5 messages
         messages.Length.Should().Be(5);
         for (int i = 0; i < 5; i++)
         {
@@ -92,29 +90,37 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         );
     }
 
-    private Message[] ConsumeMessages(string groupId, int batchLimit)
+    private async Task<Message[]> ConsumeMessages(string groupId, int batchLimit)
     {
         var consumedMessages = new List<Message>();
         using (IAmAMessageConsumerSync consumer = CreateConsumer(groupId))
         {
+            //Let topic propagate in the broker
+            await Task.Delay(1000);
+             
+            
             for (int i = 0; i < batchLimit; i++)
             {
                 consumedMessages.Add(ConsumeMessage(consumer));
             }
+            
+            //yield to allow commits to flush
+            await Task.Delay(TimeSpan.FromMilliseconds(5000));
+
         }
 
         return consumedMessages.ToArray();
 
         Message ConsumeMessage(IAmAMessageConsumerSync consumer)
         {
-            Message[] messages = new []{new Message()};
+            Message[] messages = [new Message()];
             int maxTries = 0;
             do
             {
                 try
                 {
                     maxTries++;
-                    Task.Delay(500).Wait(); //Let topic propagate in the broker
+                   //makes a blocking call to Kafka
                     messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)

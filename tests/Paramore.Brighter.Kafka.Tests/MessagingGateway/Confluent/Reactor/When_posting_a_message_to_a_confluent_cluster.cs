@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 using SaslMechanism = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism;
 using SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Confluent.Reactor;
 
 [Trait("Category", "Kafka")]
 [Trait("Category", "Confluent")]

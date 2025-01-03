@@ -8,20 +8,20 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")] //Kafka doesn't like multiple consumers of a partition
-public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
+public class KafkaMessageProducerSendTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
-    private readonly IAmAMessageConsumerAsync _consumer;
+    private readonly IAmAMessageConsumerSync _consumer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageProducerSendTestsAsync(ITestOutputHelper output)
+    public KafkaMessageProducerSendTests(ITestOutputHelper output)
     {
         const string groupId = "Kafka Message Producer Send Test";
         _output = output;
@@ -37,33 +37,33 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 1,
-                    //These timeouts support running on a container using the same host as the tests,
+                    //These timeouts support running on a container using the same host as the tests, 
                     //your production values ought to be lower
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }
-            }).CreateAsync().Result;
+            }).Create();
 
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
                 })
-            .CreateAsync(new KafkaSubscription<MyCommand>(
+            .Create(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: groupId,
                     numOfPartitions: 1,
                     replicationFactor: 1,
-                    messagePumpType: MessagePumpType.Proactor,
+                    messagePumpType: MessagePumpType.Reactor,
                     makeChannels: OnMissingChannel.Create
                 )
             );
     }
 
     [Fact]
-    public async Task When_posting_a_message()
+    public void When_posting_a_message()
     {
         var command = new MyCommand { Value = "Test Content" };
 
@@ -71,7 +71,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
         var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
         var routingKey = new RoutingKey(_topic);
-
+            
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
             {
@@ -86,9 +86,9 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             },
             new MessageBody(body));
 
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey)).SendAsync(message);
+        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
 
-        var receivedMessage = await GetMessageAsync();
+        var receivedMessage = GetMessage();
 
         var receivedCommand = JsonSerializer.Deserialize<MyCommand>(receivedMessage.Body.Value, JsonSerialisationOptions.Options);
 
@@ -96,13 +96,13 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
         receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
         receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
         receivedMessage.Body.Value.Should().Be(message.Body.Value);
-        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ")
-            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mmZ")
+            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mmZ"));
         receivedCommand.Id.Should().Be(command.Id);
         receivedCommand.Value.Should().Be(command.Value);
     }
 
-    private async Task<Message> GetMessageAsync()
+    private Message GetMessage()
     {
         Message[] messages = [];
         int maxTries = 0;
@@ -111,12 +111,12 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
-                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                Task.Delay(500).Wait(); //Let topic propagate in the broker
+                messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
-                    await _consumer.AcknowledgeAsync(messages[0]);
+                    _consumer.Acknowledge(messages[0]);
                     break;
                 }
             }
@@ -132,16 +132,10 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
 
         return messages[0];
     }
-    
+
     public void Dispose()
     {
         _producerRegistry?.Dispose();
-        ((IAmAMessageConsumerSync)_consumer)?.Dispose();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-            _producerRegistry.Dispose();
-            await _consumer.DisposeAsync();
+        _consumer?.Dispose();
     }
 }

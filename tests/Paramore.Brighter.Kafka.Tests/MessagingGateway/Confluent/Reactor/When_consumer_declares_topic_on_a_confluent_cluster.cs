@@ -1,32 +1,6 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2014 Wayne Hunsley <whunsley@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
-using System.Linq;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -35,19 +9,21 @@ using Xunit.Abstractions;
 using SaslMechanism = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism;
 using SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Confluent.Reactor;
 
 [Trait("Category", "Kafka")]
 [Trait("Category", "Confluent")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class KafkaConfluentProducerAssumeTests : IDisposable
+public class KafkaConfluentConsumerDeclareTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString(); 
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
+    private readonly IAmAMessageConsumerSync _consumer;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaConfluentProducerAssumeTests ()
+    public KafkaConfluentConsumerDeclareTests(ITestOutputHelper output)
     {
         string SupplyCertificateLocation()
         {
@@ -61,23 +37,25 @@ public class KafkaConfluentProducerAssumeTests : IDisposable
         // You need to set those values as environment variables, which we then read, in order
         // to run these tests
 
+        const string groupId = "Kafka Message Producer Send Test";
         string bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER"); 
         string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
         string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
             
+        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
                 Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {bootStrapServer},
-                SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol.SaslSsl,
-                SaslMechanisms = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism.Plain,
+                SecurityProtocol = SecurityProtocol.SaslSsl,
+                SaslMechanisms = SaslMechanism.Plain,
                 SaslUsername = userName,
                 SaslPassword = password,
                 SslCaLocation = SupplyCertificateLocation()
                     
             },
-            new KafkaPublication[] {new KafkaPublication
+            new[] {new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -89,11 +67,33 @@ public class KafkaConfluentProducerAssumeTests : IDisposable
                     MakeChannels = OnMissingChannel.Create //This will not make the topic
                 }
             }).Create(); 
+            
+        //This should force creation of the topic - will fail if no topic creation code
+        _consumer = new KafkaMessageConsumerFactory(
+                new KafkaMessagingGatewayConfiguration
+                {
+                    Name = "Kafka Producer Send Test",
+                    BootStrapServers = new[] {bootStrapServer},
+                    SecurityProtocol = SecurityProtocol.SaslSsl,
+                    SaslMechanisms = SaslMechanism.Plain,
+                    SaslUsername = userName,
+                    SaslPassword = password,
+                    SslCaLocation = SupplyCertificateLocation()
+                })
+            .Create(new KafkaSubscription<MyCommand>(
+                    channelName: new ChannelName(_queueName), 
+                    routingKey: new RoutingKey(_topic),
+                    groupId: groupId,
+                    numOfPartitions: 1,
+                    replicationFactor: 3,
+                    makeChannels: OnMissingChannel.Create
+                )
+            );
   
     }
 
     [Fact]
-    public void When_a_consumer_declares_topics_on_a_confluent_cluster()
+    public async Task When_a_consumer_declares_topics_on_a_confluent_cluster()
     {
         var routingKey = new RoutingKey(_topic);
             
@@ -102,29 +102,43 @@ public class KafkaConfluentProducerAssumeTests : IDisposable
             {
                 PartitionKey = _partitionKey
             },
-            new MessageBody($"test content [{_queueName}]")
-        );
+            new MessageBody($"test content [{_queueName}]"));
+            
+        //This should fail, if consumer can't create the topic as set to Assume
+        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
 
-        bool messagePublished = false;
-            
-            
-        var producer = _producerRegistry.LookupBy(routingKey);
-        var producerConfirm = producer as ISupportPublishConfirmation;
-        producerConfirm.OnMessagePublished += delegate(bool success, string id)
+        Message[] messages = new Message[0];
+        int maxTries = 0;
+        do
         {
-            if (success) messagePublished = true;
-        };
-            
-        ((IAmAMessageProducerSync)producer).Send(message);
+            try
+            {
+                maxTries++;
+                await Task.Delay(500); //Let topic propagate in the broker
+                messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
+                _consumer.Acknowledge(messages[0]);
+                    
+                if (messages[0].Header.MessageType != MessageType.MT_NONE)
+                    break;
+                        
+            }
+            catch (ChannelFailureException cfx)
+            {
+                //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
+                _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+            }
 
-        //Give this a chance to succeed - will fail
-        Task.Delay(5000);
+        } while (maxTries <= 3);
 
-        messagePublished.Should().BeFalse();
+        messages.Length.Should().Be(1);
+        messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+        messages[0].Header.PartitionKey.Should().Be(_partitionKey);
+        messages[0].Body.Value.Should().Be(message.Body.Value);
     }
 
     public void Dispose()
     {
         _producerRegistry?.Dispose();
+        _consumer?.Dispose();
     }
 }
