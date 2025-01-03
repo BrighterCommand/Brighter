@@ -1,5 +1,6 @@
 ﻿using System;
-using Paramore.Brighter;
+
+namespace Paramore.Brighter.AWS.Tests.TestDoubles;
 
 public class QuickHandlerFactoryAsync : IAmAHandlerFactoryAsync
 {

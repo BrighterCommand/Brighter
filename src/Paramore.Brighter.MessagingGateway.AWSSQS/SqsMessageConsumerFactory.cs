@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             return new SqsMessageConsumer(
                 awsConnection: _awsConnection, 
-                queueName: subscription.ChannelName.ToValidSQSQueueName(), 
+                queueName: subscription.ChannelName.ToValidSQSQueueName(sqsSubscription.SqsType == SnsSqsType.Fifo), 
                 batchSize: subscription.BufferSize,
                 hasDLQ: sqsSubscription.RedrivePolicy == null,
                 rawMessageDelivery: sqsSubscription.RawMessageDelivery

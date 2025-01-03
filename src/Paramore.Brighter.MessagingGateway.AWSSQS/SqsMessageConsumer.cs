@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,6 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
@@ -39,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public class SqsMessageConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsMessageConsumer>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageConsumer>();
 
         private readonly AWSClientFactory _clientFactory;
         private readonly string _queueName;
@@ -64,9 +66,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (string.IsNullOrEmpty(queueName))
                 throw new ConfigurationException("QueueName is mandatory");
-            
+
             _clientFactory = new AWSClientFactory(awsConnection);
-             _queueName = queueName!;
+            _queueName = queueName!;
             _batchSize = batchSize;
             _hasDlq = hasDLQ;
             _rawMessageDelivery = rawMessageDelivery;
@@ -84,7 +86,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cancellationToken">Cancels the ackowledge operation</param>
-        public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AcknowledgeAsync(Message message,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
                 return;
@@ -95,14 +98,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 using var client = _clientFactory.CreateSqsClient();
                 var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
-                await client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle), cancellationToken);
+                await client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle),
+                    cancellationToken);
 
-                s_logger.LogInformation("SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}", message.Id, receiptHandle,
+                s_logger.LogInformation(
+                    "SqsMessageConsumer: Deleted the message {Id} with receipt handle {ReceiptHandle} on the queue {URL}",
+                    message.Id, receiptHandle,
                     urlResponse.QueueUrl);
             }
             catch (Exception exception)
             {
-                s_logger.LogError(exception, "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
+                s_logger.LogError(exception,
+                    "SqsMessageConsumer: Error during deleting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
+                    message.Id, receiptHandle, _queueName);
                 throw;
             }
         }
@@ -138,9 +146,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (_hasDlq)
                 {
                     await client.ChangeMessageVisibilityAsync(
-                        new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0), 
+                        new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0),
                         cancellationToken
-                        );
+                    );
                 }
                 else
                 {
@@ -149,7 +157,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (Exception exception)
             {
-                s_logger.LogError(exception, "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
+                s_logger.LogError(exception,
+                    "SqsMessageConsumer: Error during rejecting the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
+                    message.Id, receiptHandle, _queueName);
                 throw;
             }
         }
@@ -194,7 +204,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="timeOut">The timeout. AWS uses whole seconds. Anything greater than 0 uses long-polling.  </param>
         /// <param name="cancellationToken">Cancel the receive operation</param>
-        public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             AmazonSQSClient? client = null;
             Amazon.SQS.Model.Message[] sqsMessages;
@@ -204,13 +215,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
                 timeOut ??= TimeSpan.Zero;
 
-                s_logger.LogDebug("SqsMessageConsumer: Preparing to retrieve next message from queue {URL}",  urlResponse.QueueUrl);
+                s_logger.LogDebug("SqsMessageConsumer: Preparing to retrieve next message from queue {URL}",
+                    urlResponse.QueueUrl);
 
                 var request = new ReceiveMessageRequest(urlResponse.QueueUrl)
                 {
                     MaxNumberOfMessages = _batchSize,
                     WaitTimeSeconds = timeOut.Value.Seconds,
-                    MessageAttributeNames = new List<string> {"All"},
+                    MessageAttributeNames = ["All"],
+                    MessageSystemAttributeNames = ["All"]
                 };
 
                 var receiveResponse = await client.ReceiveMessageAsync(request, cancellationToken);
@@ -229,7 +242,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, "SqsMessageConsumer: There was an error listening to queue {ChannelName} ", _queueName);
+                s_logger.LogError(e, "SqsMessageConsumer: There was an error listening to queue {ChannelName} ",
+                    _queueName);
                 throw;
             }
             finally
@@ -239,15 +253,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             if (sqsMessages.Length == 0)
             {
-                return new[] {_noopMessage};
+                return [_noopMessage];
             }
 
             var messages = new Message[sqsMessages.Length];
             for (int i = 0; i < sqsMessages.Length; i++)
             {
                 var message = SqsMessageCreatorFactory.Create(_rawMessageDelivery).CreateMessage(sqsMessages[i]);
-                s_logger.LogInformation("SqsMessageConsumer: Received message from queue {ChannelName}, message: {1}{Request}",
-                    _queueName, Environment.NewLine, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
+                s_logger.LogInformation(
+                    "SqsMessageConsumer: Received message from queue {ChannelName}, message: {1}{Request}",
+                    _queueName, Environment.NewLine,
+                    JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
                 messages[i] = message;
             }
 
@@ -269,7 +285,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (!message.Header.Bag.TryGetValue("ReceiptHandle", out object? value))
                 return false;
-            
+
             delay ??= TimeSpan.Zero;
 
             var receiptHandle = value.ToString();
@@ -282,9 +298,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     var urlResponse = await client.GetQueueUrlAsync(_queueName, cancellationToken);
                     await client.ChangeMessageVisibilityAsync(
-                        new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, delay.Value.Seconds), 
+                        new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, delay.Value.Seconds),
                         cancellationToken
-                        );
+                    );
                 }
 
                 s_logger.LogInformation("SqsMessageConsumer: re-queued the message {Id}", message.Id);
@@ -293,7 +309,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (Exception exception)
             {
-                s_logger.LogError(exception, "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
+                s_logger.LogError(exception,
+                    "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}",
+                    message.Id, receiptHandle, _queueName);
                 return false;
             }
         }

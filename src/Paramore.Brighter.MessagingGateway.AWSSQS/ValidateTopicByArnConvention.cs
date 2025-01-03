@@ -39,6 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         private readonly RegionEndpoint _region;
         private readonly AmazonSecurityTokenServiceClient _stsClient;
+        private readonly SnsSqsType _type;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ValidateTopicByArnConvention"/> class.
@@ -46,10 +47,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="credentials">The AWS credentials.</param>
         /// <param name="region">The AWS region.</param>
         /// <param name="clientConfigAction">An optional action to configure the client.</param>
-        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null)
+        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null, SnsSqsType type = SnsSqsType.Standard) 
             : base(credentials, region, clientConfigAction)
         {
             _region = region;
+            _type = type;
 
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _stsClient = clientFactory.CreateStsClient();
@@ -64,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public override async Task<(bool, string? TopicArn)> ValidateAsync(string topic, CancellationToken cancellationToken = default)
         {
             var topicArn = await GetArnFromTopic(topic);
-            return await base.ValidateAsync(topicArn);
+            return await base.ValidateAsync(topicArn, cancellationToken);
         }
 
         /// <summary>
@@ -80,6 +82,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             );
 
             if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account");
+
+            topicName = topicName.ToValidSNSTopicName(_type == SnsSqsType.Fifo);
 
             return new Arn
             {

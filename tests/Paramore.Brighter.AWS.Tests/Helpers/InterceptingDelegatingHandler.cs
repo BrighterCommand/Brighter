@@ -1,18 +1,21 @@
-﻿using System.Net.Http;
+﻿using System.Collections.Concurrent;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.AWS.Tests.Helpers
+namespace Paramore.Brighter.AWS.Tests.Helpers;
+
+internal class InterceptingDelegatingHandler(string tag) : DelegatingHandler
 {
-    internal class InterceptingDelegatingHandler : DelegatingHandler
+    public static ConcurrentDictionary<string, int> RequestCount { get; } = new();
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        public int RequestCount { get; private set; }
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        if (!RequestCount.TryAdd(tag, 1))
         {
-            RequestCount++;
-
-            return await base.SendAsync(request, cancellationToken);
+            RequestCount[tag] += 1;
         }
+
+        return await base.SendAsync(request, cancellationToken);
     }
 }

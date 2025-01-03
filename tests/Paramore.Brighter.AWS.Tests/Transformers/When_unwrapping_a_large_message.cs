@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers
 {
-    [Trait("Category", "AWS")] 
+    [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
     public class LargeMessagePaylodUnwrapTests : IDisposable
     {
@@ -37,13 +37,13 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
                 null
             );
-            
-            mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
-            
-            (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
 
-            _client = new AmazonS3Client(credentials, region);
-            AmazonSecurityTokenServiceClient stsClient = new(credentials, region);
+            mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+
+            var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
+
+            _client = factory.CreateS3Client();
+            var stsClient = factory.CreateStsClient();
 
             var services = new ServiceCollection();
             services.AddHttpClient();
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             IHttpClientFactory httpClientFactory = provider.GetService<IHttpClientFactory>();
 
             _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-            
+
             _luggageStore = S3LuggageStore
                 .CreateAsync(
                     client: _client,
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                     stsClient: stsClient,
 #pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                     bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618 
+#pragma warning restore CS0618
                     tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                     acl: S3CannedACL.Private,
                     abortFailedUploadsAfterDays: 1,
@@ -69,23 +69,25 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                 .GetAwaiter()
                 .GetResult();
 
-            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
+            var messageTransformerFactory =
+                new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
             _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
         }
-    
+
         [Fact]
         public async Task When_unwrapping_a_large_message()
         {
             //arrange
             await Task.Delay(3000); //allow bucket definition to propagate
-            
+
             //store our luggage and get the claim check
             var contents = DataGenerator.CreateString(6000);
             var myCommand = new MyLargeCommand(1) { Value = contents };
-            var commandAsJson = JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
-        
-            var stream = new MemoryStream();                                                                               
+            var commandAsJson =
+                JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
+
+            var stream = new MemoryStream();
             var writer = new StreamWriter(stream);
             await writer.WriteAsync(commandAsJson);
             await writer.FlushAsync();
@@ -94,12 +96,13 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             //pretend we ran through the claim check
             myCommand.Value = $"Claim Check {id}";
- 
+
             //set the headers, so that we have a claim check listed
             var message = new Message(
-                new MessageHeader(myCommand.Id, new RoutingKey("MyLargeCommand"), MessageType.MT_COMMAND, 
+                new MessageHeader(myCommand.Id, new RoutingKey("MyLargeCommand"), MessageType.MT_COMMAND,
                     timeStamp: DateTime.UtcNow),
-                new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
+                new MessageBody(JsonSerializer.Serialize(myCommand,
+                    new JsonSerializerOptions(JsonSerializerDefaults.General)))
             );
 
             message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
@@ -107,7 +110,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             //act
             var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
             var transformedMessage = await transformPipeline.UnwrapAsync(message, new RequestContext());
-        
+
             //assert
             //contents should be from storage
             transformedMessage.Value.Should().Be(contents);

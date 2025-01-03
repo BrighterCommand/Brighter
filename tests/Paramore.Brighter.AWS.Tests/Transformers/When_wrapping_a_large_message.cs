@@ -42,10 +42,10 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             
             _myCommand = new MyLargeCommand(6000);
 
-            (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
+           var factory = new AWSClientFactory(GatewayFactory.CreateFactory());
 
-            _client = new AmazonS3Client(credentials, region);
-            AmazonSecurityTokenServiceClient stsClient = new(credentials, region);
+            _client = factory.CreateS3Client();
+            var stsClient = factory.CreateStsClient();
 
             var services = new ServiceCollection();
             services.AddHttpClient();
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 #pragma warning disable CS0618 // It is obsolete, but we want the string value here not the replacement one
                     bucketRegion: S3Region.EUW1,
 #pragma warning restore CS0618
-                    tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
+                    tags: [new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" }],
                     acl: S3CannedACL.Private,
                     abortFailedUploadsAfterDays: 1,
                     deleteGoodUploadsAfterDays: 1)
