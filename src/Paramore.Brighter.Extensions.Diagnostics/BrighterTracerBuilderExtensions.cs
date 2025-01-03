@@ -17,9 +17,33 @@ public static class BrighterTracerBuilderExtensions
 
         
             builder.AddSource(brighterTracer.ActivitySource.Name);
+            builder.AddProcessor<BrighterMetricsFromTracesProcessor>();
         });
         
         return builder;
     }
-
+    
+    /// <summary>
+    /// Register a tail-based sampler delegating the sampling decision to any OpenTelemetry Sampler.
+    /// </summary>
+    /// <remarks>
+    /// Examples:
+    /// <code>
+    /// // Use a TraceIdRatioBasedSampler with 25% sampling rate
+    /// builder.SetTailSampler(new TraceIdRatioBasedSampler(0.25));
+    /// 
+    /// // Use default constructor of AlwaysOnSampler
+    /// builder.SetTailSampler&lt;AlwaysOnSampler&gt;();
+    /// </code>
+    /// </remarks>
+    /// <param name="builder">The TracerProviderBuilder to configure</param>
+    /// <param name="sampler">Optional sampler instance. If null, will create new instance using default constructor</param>
+    /// <typeparam name="TSampler">Type of sampler to use</typeparam>
+    /// <returns>The TracerProviderBuilder for chaining</returns>
+    public static TracerProviderBuilder SetTailSampler<TSampler>(this TracerProviderBuilder builder, TSampler sampler = null)
+        where TSampler : Sampler, new()
+    {
+        builder.AddProcessor(new TailSamplerProcessor(sampler ?? new TSampler()));
+        return builder;
+    }
 }
