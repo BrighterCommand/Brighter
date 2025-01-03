@@ -33,7 +33,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Jamie Clayton](https://github.com/mit-jamie-clayton)**
 * Documentation fixes
 
-**[ACraven](https://github.com/acraven)**
+**[A Craven](https://github.com/acraven)**
   * Various fixes
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
@@ -41,9 +41,6 @@ Brighter contributors (sorted alphabeticaly)
   * Work on Postel's Law (Tolerant Reader) messaging approach
   
 **[Scott Hanselman](https://github.com/shanselman)**
-  * Various fixes 
-
-**[Thijmen Stavenuiter](https://github.com/Thijmen)**
   * Various fixes 
 
 **[Toby Henderson](https://github.com/holytshirt)**
@@ -163,6 +160,9 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
   * Command Sourcing Once-Only improvements
   * Inbox improvements
+
+**[Thijmen Stavenuiter](https://github.com/Thijmen)**
+  * Various fixes 
 
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes
