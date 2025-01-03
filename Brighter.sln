@@ -117,7 +117,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI_EFCore", "WebAPI_EFC
 		samples\WebAPI\WebAPI_EFCore\tests.http = samples\WebAPI\WebAPI_EFCore\tests.http
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Extensions.Hosting", "src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj", "{722B348B-846B-4338-B7F5-DB9C865C3F64}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Outbox.Hosting", "src\Paramore.Brighter.Outbox.Hosting\Paramore.Brighter.Outbox.Hosting.csproj", "{722B348B-846B-4338-B7F5-DB9C865C3F64}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Sqlite", "src\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj", "{2CFEA876-7ABB-466A-AABA-AA461414B676}"
 EndProject

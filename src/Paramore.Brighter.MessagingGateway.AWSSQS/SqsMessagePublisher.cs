@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _client = client;
         }
 
-        public async Task<string> PublishAsync(Message message)
+        public async Task<string?> PublishAsync(Message message)
         {
             var messageString = message.Body.Value;
             var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);
@@ -62,7 +62,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             messageAttributes.Add(HeaderNames.Bag, new MessageAttributeValue{StringValue = Convert.ToString(bagJson), DataType = "String"});
             publishRequest.MessageAttributes = messageAttributes;
-            
             
              var response = await _client.PublishAsync(publishRequest);
              if (response.HttpStatusCode == System.Net.HttpStatusCode.OK || response.HttpStatusCode == System.Net.HttpStatusCode.Created || response.HttpStatusCode == System.Net.HttpStatusCode.Accepted)

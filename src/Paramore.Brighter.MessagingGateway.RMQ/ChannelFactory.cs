@@ -19,49 +19,96 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ;
+
+/// <summary>
+/// Factory class for creating RabbitMQ channels.
+/// </summary>
+public class ChannelFactory : IAmAChannelFactory
 {
+    private readonly RmqMessageConsumerFactory _messageConsumerFactory;
+
     /// <summary>
-    /// Class RMQInputChannelFactory.
-    /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
+    /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
     /// </summary>
-    public class ChannelFactory : IAmAChannelFactory
+    /// <param name="messageConsumerFactory">The factory for creating RabbitMQ message consumers.</param>
+    public ChannelFactory(RmqMessageConsumerFactory messageConsumerFactory)
     {
-        private readonly RmqMessageConsumerFactory _messageConsumerFactory;
+        _messageConsumerFactory = messageConsumerFactory;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
-        /// </summary>
-        /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
-        public ChannelFactory(RmqMessageConsumerFactory messageConsumerFactory)
-        {
-            _messageConsumerFactory = messageConsumerFactory;
-        }
+    /// <summary>
+    /// Creates a synchronous RabbitMQ channel.
+    /// </summary>
+    /// <param name="subscription">The subscription details for the channel.</param>
+    /// <returns>A synchronous RabbitMQ channel instance.</returns>
+    /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    public IAmAChannelSync CreateSyncChannel(Subscription subscription)
+    {
+        RmqSubscription? rmqSubscription = subscription as RmqSubscription;
+        if (rmqSubscription == null)
+            throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
-        /// <summary>
-        /// Creates the input channel.
-        /// </summary>
-        /// <param name="subscription">An RmqSubscription with parameters to create the queue with</param>
-        /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Subscription subscription)
-        {
-            RmqSubscription rmqSubscription = subscription as RmqSubscription;  
-            if (rmqSubscription == null)
-                throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
+        var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
 
-            var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
-            
-            return new Channel(
-                channelName: subscription.ChannelName, 
-                routingKey: subscription.RoutingKey, 
-                messageConsumer: messageConsumer, 
-                maxQueueLength: subscription.BufferSize
-                );
-        }
+        return new Channel(
+            channelName: subscription.ChannelName,
+            routingKey: subscription.RoutingKey,
+            messageConsumer: messageConsumer,
+            maxQueueLength: subscription.BufferSize
+        );
+    }
+
+    /// <summary>
+    /// Creates an asynchronous RabbitMQ channel.
+    /// </summary>
+    /// <param name="subscription">The subscription details for the channel.</param>
+    /// <returns>An asynchronous RabbitMQ channel instance.</returns>
+    /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
+    {
+        RmqSubscription? rmqSubscription = subscription as RmqSubscription;
+        if (rmqSubscription == null)
+            throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
+
+        var messageConsumer = _messageConsumerFactory.CreateAsync(rmqSubscription);
+
+        return new ChannelAsync(
+            channelName: subscription.ChannelName,
+            routingKey: subscription.RoutingKey,
+            messageConsumer: messageConsumer,
+            maxQueueLength: subscription.BufferSize
+        );
+    }
+
+    /// <summary>
+    /// Asynchronously creates an asynchronous RabbitMQ channel.
+    /// </summary>
+    /// <param name="subscription">The subscription details for the channel.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation, with an asynchronous RabbitMQ channel instance as the result.</returns>
+    /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
+    public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
+    {
+        RmqSubscription? rmqSubscription = subscription as RmqSubscription;
+        if (rmqSubscription == null)
+            throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
+
+        var messageConsumer = _messageConsumerFactory.CreateAsync(rmqSubscription);
+
+        var channel = new ChannelAsync(
+            channelName: subscription.ChannelName,
+            routingKey: subscription.RoutingKey,
+            messageConsumer: messageConsumer,
+            maxQueueLength: subscription.BufferSize
+        );
+
+        return Task.FromResult<IAmAChannelAsync>(channel);
     }
 }

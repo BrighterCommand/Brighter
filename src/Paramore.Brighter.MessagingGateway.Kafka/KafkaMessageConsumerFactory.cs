@@ -27,6 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// <summary>
     /// A factory for creating a Kafka message consumer from a <see cref="Subscription{T}"/>> 
     /// </summary>
+    
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="subscription">The <see cref="KafkaSubscription"/> to read</param>
         /// <returns>A consumer that can be used to read from the stream</returns>
-        public IAmAMessageConsumer Create(Subscription subscription)
+        public IAmAMessageConsumerSync Create(Subscription subscription)
         {
             KafkaSubscription kafkaSubscription = subscription as KafkaSubscription;  
             if (kafkaSubscription == null)
@@ -70,6 +71,31 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 topicFindTimeout: kafkaSubscription.TopicFindTimeout,
                 makeChannels: kafkaSubscription.MakeChannels
                 );
+        }
+
+        public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
+        {
+            KafkaSubscription kafkaSubscription = subscription as KafkaSubscription;  
+            if (kafkaSubscription == null)
+                throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
+            
+            return new KafkaMessageConsumer(
+                configuration: _configuration, 
+                routingKey:kafkaSubscription.RoutingKey, //topic
+                groupId: kafkaSubscription.GroupId, 
+                offsetDefault: kafkaSubscription.OffsetDefault,
+                sessionTimeout: kafkaSubscription.SessionTimeout,
+                maxPollInterval: kafkaSubscription.MaxPollInterval,
+                isolationLevel: kafkaSubscription.IsolationLevel,
+                commitBatchSize: kafkaSubscription.CommitBatchSize,
+                sweepUncommittedOffsetsInterval: kafkaSubscription.SweepUncommittedOffsetsInterval,
+                readCommittedOffsetsTimeout: kafkaSubscription.ReadCommittedOffsetsTimeOut,
+                numPartitions: kafkaSubscription.NumPartitions,
+                partitionAssignmentStrategy: kafkaSubscription.PartitionAssignmentStrategy,
+                replicationFactor: kafkaSubscription.ReplicationFactor,
+                topicFindTimeout: kafkaSubscription.TopicFindTimeout,
+                makeChannels: kafkaSubscription.MakeChannels
+            );
         }
     }
 }

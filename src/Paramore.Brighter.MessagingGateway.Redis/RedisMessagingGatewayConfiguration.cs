@@ -104,6 +104,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// How do we connect to Redis
         /// </summary>
-        public string RedisConnectionString { get; set; }
+        public string? RedisConnectionString { get; set; }
     }
 }

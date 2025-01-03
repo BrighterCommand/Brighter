@@ -28,94 +28,95 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageProducerDelayedMessageTests : IDisposable
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageProducerDelayedMessageTests : IDisposable
+    private readonly IAmAMessageProducerSync _messageProducer;
+    private readonly IAmAMessageConsumerSync _messageConsumer;
+    private readonly Message _message;
+
+    public RmqMessageProducerDelayedMessageTests()
     {
-        private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly Message _message;
-
-        public RmqMessageProducerDelayedMessageTests()
-        {
-            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+        var routingKey = new RoutingKey(Guid.NewGuid().ToString());
             
-            var header = new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND);
-            var originalMessage = new Message(header, new MessageBody("test3 content"));
+        var header = new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND);
+        var originalMessage = new Message(header, new MessageBody("test3 content"));
 
-            var mutatedHeader = new MessageHeader(header.MessageId, routingKey, MessageType.MT_COMMAND);
-            mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
-            _message = new Message(mutatedHeader, originalMessage.Body);
+        var mutatedHeader = new MessageHeader(header.MessageId, routingKey, MessageType.MT_COMMAND);
+        mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
+        _message = new Message(mutatedHeader, originalMessage.Body);
 
-            var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.delay.brighter.exchange", supportDelay: true)
-            };
-
-            _messageProducer = new RmqMessageProducer(rmqConnection);
-            
-            var queueName = new ChannelName(Guid.NewGuid().ToString());
-            
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey, false);
-
-            new QueueFactory(rmqConnection, queueName, new RoutingKeys([routingKey]))
-                .Create(TimeSpan.FromMilliseconds(3000));
-        }
-
-        [Fact]
-        public void When_reading_a_delayed_message_via_the_messaging_gateway()
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            _messageProducer.SendWithDelay(_message, TimeSpan.FromMilliseconds(3000));
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.delay.brighter.exchange", supportDelay: true)
+        };
 
-            var immediateResult = _messageConsumer.Receive(TimeSpan.Zero).First();
-            var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
-            immediateResult.Header.HandledCount.Should().Be(0);
-            immediateResult.Header.Delayed.Should().Be(TimeSpan.Zero);
-
-            //_should_have_not_been_able_get_message_before_delay
-            deliveredWithoutWait.Should().BeTrue();
+        _messageProducer = new RmqMessageProducer(rmqConnection);
             
-            var delayedResult = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
+        var queueName = new ChannelName(Guid.NewGuid().ToString());
+            
+        _messageConsumer = new RmqMessageConsumer(rmqConnection, queueName, routingKey, false);
 
-           //_should_send_a_message_via_rmq_with_the_matching_body
-            delayedResult.Body.Value.Should().Be(_message.Body.Value);
-            delayedResult.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-            delayedResult.Header.HandledCount.Should().Be(0);
-            delayedResult.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(3000));
+        new QueueFactory(rmqConnection, queueName, new RoutingKeys([routingKey]))
+            .CreateAsync()
+            .GetAwaiter()
+            .GetResult();
+    }
 
-            _messageConsumer.Acknowledge(delayedResult);
-        }
+    [Fact]
+    public void When_reading_a_delayed_message_via_the_messaging_gateway()
+    {
+        _messageProducer.SendWithDelay(_message, TimeSpan.FromMilliseconds(3000));
 
-        [Fact]
-        public void When_requeing_a_failed_message_with_delay()
-        {
-            //send & receive a message
-            _messageProducer.Send(_message);
-            var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
-            message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-            message.Header.HandledCount.Should().Be(0);
-            message.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(0));
+        var immediateResult = _messageConsumer.Receive(TimeSpan.Zero).First();
+        var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
+        immediateResult.Header.HandledCount.Should().Be(0);
+        immediateResult.Header.Delayed.Should().Be(TimeSpan.Zero);
 
-            _messageConsumer.Acknowledge(message);
+        //_should_have_not_been_able_get_message_before_delay
+        deliveredWithoutWait.Should().BeTrue();
+            
+        var delayedResult = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
 
-            //now requeue with a delay
-            _message.Header.UpdateHandledCount();
-            _messageConsumer.Requeue(_message, TimeSpan.FromMilliseconds(1000));
+        //_should_send_a_message_via_rmq_with_the_matching_body
+        delayedResult.Body.Value.Should().Be(_message.Body.Value);
+        delayedResult.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+        delayedResult.Header.HandledCount.Should().Be(0);
+        delayedResult.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(3000));
 
-            //receive and assert
-            var message2 = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
-            message2.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-            message2.Header.HandledCount.Should().Be(1);
+        _messageConsumer.Acknowledge(delayedResult);
+    }
 
-            _messageConsumer.Acknowledge(message2);
-        }
+    [Fact]
+    public void When_requeing_a_failed_message_with_delay()
+    {
+        //send & receive a message
+        _messageProducer.Send(_message);
+        var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
+        message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+        message.Header.HandledCount.Should().Be(0);
+        message.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(0));
 
-        public void Dispose()
-        {
-            _messageConsumer.Dispose();
-            _messageProducer.Dispose();
-        }
+        _messageConsumer.Acknowledge(message);
+
+        //now requeue with a delay
+        _message.Header.UpdateHandledCount();
+        _messageConsumer.Requeue(_message, TimeSpan.FromMilliseconds(1000));
+
+        //receive and assert
+        var message2 = _messageConsumer.Receive(TimeSpan.FromMilliseconds(5000)).Single();
+        message2.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+        message2.Header.HandledCount.Should().Be(1);
+
+        _messageConsumer.Acknowledge(message2);
+    }
+
+    public void Dispose()
+    {
+        _messageConsumer.Dispose();
+        _messageProducer.Dispose();
     }
 }

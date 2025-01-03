@@ -47,6 +47,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         private readonly Message _messageTwo;
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _internalBus = new();
+        private readonly IAmAnOutboxProducerMediator _mediator;
 
         public CommandProcessorPostBoxBulkClearAsyncTests()
         {
@@ -101,7 +102,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var tracer = new BrighterTracer();
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
-            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 
                 messageMapperRegistry,
@@ -115,7 +116,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                bus
+                _mediator
             );
         }
 
@@ -127,7 +128,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             await _outbox.AddAsync(_messageOne, context);
             await _outbox.AddAsync(_messageTwo, context);
 
-            _commandProcessor.ClearOutstandingFromOutbox(2, TimeSpan.FromMilliseconds(1));
+            await _mediator.ClearOutstandingFromOutboxAsync(2, TimeSpan.FromMilliseconds(1), true, context);
 
             await Task.Delay(3000);
 

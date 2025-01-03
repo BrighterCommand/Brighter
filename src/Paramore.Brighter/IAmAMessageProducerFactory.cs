@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
@@ -36,5 +37,11 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
         Dictionary<RoutingKey, IAmAMessageProducer> Create();
+        
+        /// <summary>
+        /// Creates message producers.
+        /// </summary>
+        /// <returns>A dictionary of middleware clients by topic/routing key, for sending messages to the middleware</returns>
+        Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync();
     }
 }

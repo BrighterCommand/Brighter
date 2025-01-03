@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -54,10 +55,17 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
             foreach (var publication in _publications)
             {
+                if (publication.Topic is null) throw new ConfigurationException("MS SQL Message Producer Factory: Topic is missing from the publication");
                 producers[publication.Topic] = new MsSqlMessageProducer(_msSqlConfiguration, publication);
             }
 
             return producers;
+        }
+
+        /// <inheritdoc />
+        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        {
+           return Task.FromResult(Create()); 
         }
     }
 }
