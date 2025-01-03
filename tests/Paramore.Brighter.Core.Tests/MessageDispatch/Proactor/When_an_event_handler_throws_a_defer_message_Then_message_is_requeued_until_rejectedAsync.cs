@@ -46,7 +46,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public MessagePumpEventProcessingDeferMessageActionTestsAsync()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
-            var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 
             _bus = new InternalBus();
             _channel = new ChannelAsync(new (Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
              
-            _messagePump = new Proactor<MyEvent>(commandProcessorProvider, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel) 
+            _messagePump = new Proactor<MyEvent>(commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel) 
                 { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount };
 
             var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)

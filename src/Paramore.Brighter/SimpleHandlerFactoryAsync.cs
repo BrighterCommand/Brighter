@@ -36,8 +36,9 @@ namespace Paramore.Brighter
         /// Create a handler for a given request type
         /// </summary>
         /// <param name="handlerType">The type of request</param>
+        /// <param name="lifetime">The Brighter Handler Lifetime</param>
         /// <returns></returns>
-        public IHandleRequestsAsync Create(Type handlerType)
+        public IHandleRequestsAsync Create(Type handlerType, IAmALifetime lifetime)
         {
             return factoryMethod(handlerType);
         }
@@ -46,7 +47,8 @@ namespace Paramore.Brighter
         /// Dispose of the handler
         /// </summary>
         /// <param name="handler">The handler to dispose</param>
-        public void Release(IHandleRequestsAsync? handler)
+        /// <param name="lifetime">The Brighter Handler Lifetime</param>
+        public void Release(IHandleRequestsAsync? handler, IAmALifetime lifetime)
         {
             if (handler is IDisposable disposable)
             {

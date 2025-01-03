@@ -39,11 +39,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
         private Exception _exception;
+        private SubscriberRegistry _subscriberRegistry;
 
         public PipelineMixedHandlersTests()
         {
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyMixedImplicitHandler>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyMixedImplicitHandler>();
 
             var container = new ServiceCollection();
             container.AddTransient<MyMixedImplicitHandler>();
@@ -52,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
  
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);            
+            _pipelineBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactorySync)handlerFactory);            
             PipelineBuilder<MyCommand>.ClearPipelineCache();
  
         }
@@ -60,7 +61,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         [Fact]
         public void When_Building_A_Sync_Pipeline_That_Has_Async_Handlers()
         {
-            _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new RequestContext()).First());
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(observers.First(), new RequestContext()));
 
             _exception.Should().NotBeNull();
             _exception.Should().BeOfType<ConfigurationException>();

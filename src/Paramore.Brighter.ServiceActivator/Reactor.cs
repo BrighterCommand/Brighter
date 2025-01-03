@@ -48,7 +48,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
-        /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
+        /// <param name="commandProcessor">Provides a way to grab a command processor correctly scoped</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         /// <param name="requestContextFactory">A factory to create instances of request synchronizationHelper, used to add synchronizationHelper to a pipeline</param>
@@ -56,14 +56,14 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         public Reactor(
-            IAmACommandProcessorProvider commandProcessorProvider,
+            IAmACommandProcessor commandProcessor,
             IAmAMessageMapperRegistry messageMapperRegistry, 
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmARequestContextFactory requestContextFactory,
             IAmAChannelSync channel,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All) 
-            : base(commandProcessorProvider, requestContextFactory, tracer,  instrumentationOptions)
+            : base(commandProcessor, requestContextFactory, tracer,  instrumentationOptions)
         {
             var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
@@ -177,8 +177,6 @@ namespace Paramore.Brighter.ServiceActivator
 
                     var request = TranslateMessage(message, context);
                     
-                    CommandProcessorProvider.CreateScope();
-                    
                     DispatchRequest(message.Header, request, context);
 
                     span?.SetStatus(ActivityStatusCode.Ok);
@@ -259,7 +257,6 @@ namespace Paramore.Brighter.ServiceActivator
                 finally
                 {
                     Tracer?.EndSpan(span);
-                    CommandProcessorProvider.ReleaseScope();
                 }
 
                 AcknowledgeMessage(message);
@@ -295,13 +292,13 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    CommandProcessorProvider.Get().Send(request, requestContext);
+                    CommandProcessor.Send(request, requestContext);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    CommandProcessorProvider.Get().Publish(request, requestContext);
+                    CommandProcessor.Publish(request, requestContext);
                     break;
                 }
             }

@@ -49,7 +49,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public MessagePumpEventProcessingExceptionTests()
         {
             SpyExceptionCommandProcessor commandProcessor = new();
-            var provider = new CommandProcessorProvider(commandProcessor);
 
             _bus = new InternalBus();
             
@@ -63,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var requestContextFactory = new InMemoryRequestContextFactory();
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, null, requestContextFactory, _channel)
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, requestContextFactory, _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = _requeueCount
             };

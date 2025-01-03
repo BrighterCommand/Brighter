@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -10,24 +11,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private readonly RequestContext _requestContext;
+        private SubscriberRegistry _subscriberRegistry;
 
         public BuildPipelineFaults()
         {
-               var registry = new SubscriberRegistry();
-               registry.Register<MyCommand, MyCommandHandler>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyCommandHandler>();
                
                //We'll simulate an IoC error
                var handlerFactory = new SimpleHandlerFactorySync(_ => throw new InvalidOperationException("Could no create handler"));
                _requestContext = new RequestContext();
    
-               _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+               _chainBuilder = new PipelineBuilder<MyCommand>(handlerFactory);
                PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
         public void When_Building_A_Pipeline_Failures_Should_Be_ConfigurationErrors()
         {
-            var exception = Catch.Exception(() => _chainBuilder.Build(_requestContext));
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            var exception = Catch.Exception(() => _chainBuilder.Build(observers.First(), _requestContext));
             exception.Should().NotBeNull();
             exception.Should().BeOfType<ConfigurationException>();
             exception.InnerException.Should().BeOfType<InvalidOperationException>();

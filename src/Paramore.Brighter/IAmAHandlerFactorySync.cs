@@ -39,12 +39,16 @@ namespace Paramore.Brighter
         /// Creates the specified handler type.
         /// </summary>
         /// <param name="handlerType">Type of the handler.</param>
+        /// <param name="lifetime">The Brighter handler Lifetime</param>
         /// <returns>IHandleRequests.</returns>
-        IHandleRequests Create(Type handlerType);
+        IHandleRequests Create(Type handlerType, IAmALifetime lifetime);
+
         /// <summary>
         /// Releases the specified handler.
         /// </summary>
         /// <param name="handler">The handler.</param>
-        void Release(IHandleRequests handler);
+        /// <param name="lifetime">The Brighter handler Lifetime</param>
+        void Release(IHandleRequests handler, IAmALifetime lifetime);
+        
     }
 }

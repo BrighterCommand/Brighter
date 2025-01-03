@@ -76,14 +76,14 @@ namespace Paramore.Brighter
             _trackedObjects.Each((trackedItem) =>
             {
                 //free disposable items
-                _handlerFactorySync?.Release(trackedItem);
+                _handlerFactorySync?.Release(trackedItem, this);
                 s_logger.LogDebug("Releasing handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             _trackedAsyncObjects.Each(trackedItem =>
             {
                 //free disposable items
-                _asyncHandlerFactory?.Release(trackedItem);
+                _asyncHandlerFactory?.Release(trackedItem, this);
                 s_logger.LogDebug("Releasing async handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 

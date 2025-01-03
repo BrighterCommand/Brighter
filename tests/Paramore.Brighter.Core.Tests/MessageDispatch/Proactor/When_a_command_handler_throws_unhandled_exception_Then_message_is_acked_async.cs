@@ -46,7 +46,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public MessagePumpCommandProcessingExceptionTestsAsync()
         {
             SpyExceptionCommandProcessor commandProcessor = new();
-            var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
 
             InternalBus bus = new();
             
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
              
-            _messagePump = new Proactor<MyCommand>(commandProcessorProvider, messageMapperRegistry, 
+            _messagePump = new Proactor<MyCommand>(commandProcessor, messageMapperRegistry, 
                 null, new InMemoryRequestContextFactory(), _channel
                 )
             {

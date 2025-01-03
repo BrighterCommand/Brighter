@@ -58,8 +58,6 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
                 new PolicyRegistry(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
-
-            var provider = new CommandProcessorProvider(commandProcessor);
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
@@ -70,7 +68,7 @@ public class MessagePumpUnacceptableMessageOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), _channel, tracer, instrumentationOptions)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)

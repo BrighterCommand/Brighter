@@ -37,11 +37,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
+        private SubscriberRegistry _subscriberRegistry;
 
         public PipelineOrderingTests()
         {
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyDoubleDecoratedHandler>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyDoubleDecoratedHandler>();
 
             var container = new ServiceCollection();
             container.AddTransient<MyDoubleDecoratedHandler>();
@@ -51,13 +52,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
  
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactorySync)handlerFactory);
         }
 
         [Fact]
         public void When_Building_A_Pipeline_Preserve_The_Order()
         {
-            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _pipeline = _pipelineBuilder.Build(observers.First(), new RequestContext());
 
             PipelineTracer().ToString().Should().Be("MyLoggingHandler`1|MyValidationHandler`1|MyDoubleDecoratedHandler|");
         }

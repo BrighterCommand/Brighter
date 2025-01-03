@@ -37,11 +37,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
+        private SubscriberRegistry _subscriberRegistry;
 
         public PipelineForeignAttributesTests()
         {
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyObsoleteCommandHandler>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyObsoleteCommandHandler>();
 
             var container = new ServiceCollection();
             container.AddTransient<MyObsoleteCommandHandler>();
@@ -51,14 +52,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
  
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactorySync)handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
         public void When_Building_A_Pipeline_Allow_ForeignAttributes()
         {
-            _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _pipeline = _pipelineBuilder.Build(observers.First(), new RequestContext());
 
             TraceFilters().ToString().Should().Be("MyValidationHandler`1|MyObsoleteCommandHandler|MyLoggingHandler`1|");
         }

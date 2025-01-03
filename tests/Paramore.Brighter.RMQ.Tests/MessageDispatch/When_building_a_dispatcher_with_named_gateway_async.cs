@@ -61,8 +61,7 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
             .Build();
 
         _builder = DispatchBuilder.StartNew()
-            .CommandProcessorFactory(() =>
-                    new CommandProcessorProvider(commandProcessor),
+            .CommandProcessor(commandProcessor,
                 new InMemoryRequestContextFactory()
             )
             .MessageMappers(messageMapperRegistry, null, null, null)

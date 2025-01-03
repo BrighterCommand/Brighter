@@ -197,8 +197,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             if (_channelFactory is null) throw new ArgumentException("Channel Factory must not be null");
             
             return DispatchBuilder.StartNew()
-                .CommandProcessorFactory(() => 
-                    new CommandProcessorProvider(commandProcessor), new InMemoryRequestContextFactory()
+                .CommandProcessor(commandProcessor, new InMemoryRequestContextFactory()
                 )
                 .MessageMappers(incomingMessageMapperRegistry, null, null, null)
                 .ChannelFactory(_channelFactory)                                        

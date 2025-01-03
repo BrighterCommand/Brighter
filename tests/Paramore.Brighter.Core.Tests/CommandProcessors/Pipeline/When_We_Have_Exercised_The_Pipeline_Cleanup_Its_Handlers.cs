@@ -11,21 +11,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private static string s_released;
+        private SubscriberRegistry _subscriberRegistry;
 
         public PipelineCleanupTests()
         {
             s_released = string.Empty;
 
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
-            registry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
+            _subscriberRegistry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
 
             var handlerFactory = new CheapHandlerFactorySync();
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
             
-            _pipelineBuilder.Build(new RequestContext()).Any();
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            foreach (var observer in observers)
+            {
+                _pipelineBuilder.Build(observer, new RequestContext());
+            }
         }
     
         [Fact]
@@ -48,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         
         internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
-            public IHandleRequests Create(Type handlerType)
+            public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
             {
                 if (handlerType == typeof(MyPreAndPostDecoratedHandler))
                 {
@@ -65,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 return null;
             }
 
-            public void Release(IHandleRequests handler)
+            public void Release(IHandleRequests handler, IAmALifetime lifetime)
             {
                 var disposable = handler as IDisposable;
                 disposable?.Dispose();

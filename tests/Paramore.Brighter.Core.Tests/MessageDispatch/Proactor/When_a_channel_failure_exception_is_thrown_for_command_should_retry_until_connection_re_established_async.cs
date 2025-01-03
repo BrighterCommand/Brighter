@@ -46,7 +46,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public MessagePumpRetryCommandOnConnectionFailureTestsAsync()
         {
             _commandProcessor = new SpyCommandProcessor();
-            var provider = new CommandProcessorProvider(_commandProcessor);
             var channel = new FailingChannelAsync(
                 new ChannelName(ChannelName), _routingKey, 
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 
@@ -58,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 null,
                 new SimpleMessageMapperFactoryAsync(_ => new MyCommandMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
-            _messagePump = new Proactor<MyCommand>(provider, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel)
+            _messagePump = new Proactor<MyCommand>(_commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(500), RequeueCount = -1
             };

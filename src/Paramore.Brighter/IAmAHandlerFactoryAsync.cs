@@ -39,12 +39,15 @@ namespace Paramore.Brighter
         /// Creates the specified async handler type.
         /// </summary>
         /// <param name="handlerType">Type of the handler.</param>
+        /// <param name="lifetime">The brighter Handler lifetime</param>
         /// <returns>IHandleRequestsAsync.</returns>
-        IHandleRequestsAsync Create(Type handlerType);
+        IHandleRequestsAsync Create(Type handlerType, IAmALifetime lifetime);
+
         /// <summary>
         /// Releases the specified async handler.
         /// </summary>
         /// <param name="handler">The handler.</param>
-        void Release(IHandleRequestsAsync? handler);
+        /// <param name="lifetime">The brighter Handler lifetime.</param>
+        void Release(IHandleRequestsAsync? handler, IAmALifetime lifetime);
     }
 }

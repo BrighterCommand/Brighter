@@ -45,7 +45,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public PerformerCanStopTestsAsync()
         {
             SpyCommandProcessor commandProcessor = new();
-            var provider = new CommandProcessorProvider(commandProcessor);
             ChannelAsync channel = new(
                 new(Channel), _routingKey, 
                 new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000))
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-            var messagePump = new Proactor<MyEvent>(provider, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel);
+            var messagePump = new Proactor<MyEvent>(commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), channel);
             messagePump.Channel = channel;
             messagePump.TimeOut = TimeSpan.FromMilliseconds(5000);
 

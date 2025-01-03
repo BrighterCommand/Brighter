@@ -38,11 +38,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
     private readonly PipelineBuilder<MyCommand> _pipeline_Builder;
     private IHandleRequestsAsync<MyCommand> _pipeline;
+    private SubscriberRegistry _subscriberRegistry;
 
     public PipelineOrderingAsyncTests()
     {
-        var registry = new SubscriberRegistry();
-        registry.RegisterAsync<MyCommand, MyDoubleDecoratedHandlerAsync>();
+        _subscriberRegistry = new SubscriberRegistry();
+        _subscriberRegistry.RegisterAsync<MyCommand, MyDoubleDecoratedHandlerAsync>();
 
         var container = new ServiceCollection();
         container.AddTransient<MyDoubleDecoratedHandlerAsync>();
@@ -52,14 +53,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
  
         var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-        _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
+        _pipeline_Builder = new PipelineBuilder<MyCommand>((IAmAHandlerFactoryAsync)handlerFactory);
         PipelineBuilder<MyCommand>.ClearPipelineCache();
     }
 
     [Fact]
     public void When_Building_An_Async_Pipeline_Preserve_The_Order()
     {
-        _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
+        var observers = _subscriberRegistry.Get<MyCommand>();
+        _pipeline = _pipeline_Builder.BuildAsync(observers.First(), new RequestContext(), false);
 
         PipelineTracer().ToString().Should().Be("MyLoggingHandlerAsync`1|MyValidationHandlerAsync`1|MyDoubleDecoratedHandlerAsync|");
     }

@@ -37,12 +37,9 @@ public class HeartbeatHostedService : IHostedService
     {
         _logger.LogInformation("Sending Heartbeat");
 
-        var factory = ((Dispatcher)_dispatcher).CommandProcessorFactory.Invoke();
+        var commandProcessor = ((Dispatcher)_dispatcher).CommandProcessor;
         
-        factory.CreateScope();
-
-        HeartBeatSender.Send(factory.Get(), _dispatcher);
+        HeartBeatSender.Send(commandProcessor, _dispatcher);
         
-        factory.ReleaseScope();
     }
 }

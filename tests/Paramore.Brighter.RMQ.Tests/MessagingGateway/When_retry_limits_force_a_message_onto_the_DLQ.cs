@@ -89,7 +89,6 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry()
         );
-        var provider = new CommandProcessorProvider(commandProcessor);
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -99,7 +98,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
             
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
-        _messagePump = new Reactor<MyDeferredCommand>(provider, messageMapperRegistry, 
+        _messagePump = new Reactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry, 
             new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 0

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,17 +16,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private const string CONTEXT_KEY = "TestHandlerNameOverride";
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
-        private Pipelines<MyCommand> _chainOfResponsibility;
+        private IEnumerable<IHandleRequests<MyCommand>> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
         private readonly IAmAnInboxSync _inbox;
+        private SubscriberRegistry _subscriberRegistry;
 
 
         public PipelineGlobalInboxContextTests()
         {
             _inbox = new InMemoryInbox(new FakeTimeProvider());
             
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyGlobalInboxCommandHandler>();
+            _subscriberRegistry = new SubscriberRegistry();
+            _subscriberRegistry.Register<MyCommand, MyGlobalInboxCommandHandler>();
             
             var container = new ServiceCollection();
             container.AddTransient<MyGlobalInboxCommandHandler>();
@@ -41,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 scope: InboxScope.All, 
                 context: (handlerType) => CONTEXT_KEY);
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
             
         }
@@ -50,7 +52,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public void When_Building_A_Pipeline_With_Global_inbox()
         {
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
+            var observers = _subscriberRegistry.Get<MyCommand>();
+            _chainOfResponsibility = observers.Select(o => _chainBuilder.Build(o, _requestContext));
             
             var firstHandler = _chainOfResponsibility.First();
             var myCommmand = new MyCommand();

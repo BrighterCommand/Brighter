@@ -42,7 +42,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         public MessagePumpUnacceptableMessageLimitBreachedAsyncTests()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
-            var provider = new CommandProcessorProvider(commandProcessor);
 
             var channel = new ChannelAsync(new("MyChannel"), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 3);
             
@@ -51,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
             messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-            _messagePump = new Proactor<MyEvent>(provider, messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
+            _messagePump = new Proactor<MyEvent>(commandProcessor, messageMapperRegistry, null, new InMemoryRequestContextFactory(), channel)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3, UnacceptableMessageLimit = 3
             };
