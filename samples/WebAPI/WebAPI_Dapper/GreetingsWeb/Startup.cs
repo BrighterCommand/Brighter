@@ -18,6 +18,8 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Diagnostics;
+using Paramore.Brighter.Extensions.Diagnostics.obj;
+using Paramore.Brighter.Observability;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -47,6 +49,8 @@ public class Startup
         app.UseRouting();
 
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+
+        app.UseOpenTelemetryPrometheusScrapingEndpoint();
     }
 
 
@@ -153,12 +157,13 @@ public class Startup
                     serviceName: "GreetingsWeb",
                     serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown",
                     serviceInstanceId: Environment.MachineName);
-            }).WithTracing(builder =>
+            })
+            .WithTracing(builder =>
             {
                 builder
                     .AddBrighterInstrumentation()
                     .AddSource("RabbitMQ.Client.*")
-                    .SetSampler(new AlwaysOnSampler())
+                    .SetTailSampler<AlwaysOnSampler>()
                     .AddAspNetCoreInstrumentation()
                     .AddConsoleExporter()
                     .AddOtlpExporter(options =>
@@ -169,7 +174,9 @@ public class Startup
             .WithMetrics(builder => builder
                 .AddAspNetCoreInstrumentation()
                 .AddConsoleExporter()
+                .AddPrometheusExporter()
                 .AddOtlpExporter()
+                .AddBrighterInstrumentation()
             ); 
     }
 

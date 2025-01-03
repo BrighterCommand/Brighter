@@ -167,7 +167,7 @@ static void ConfigureObservability(IServiceCollection services)
             builder
                 .AddBrighterInstrumentation()
                 .AddSource("RabbitMQ.Client.*")
-                .SetSampler(new AlwaysOnSampler())
+                .SetTailSampler<AlwaysOffSampler>()
                 .AddAspNetCoreInstrumentation()
                 .AddConsoleExporter()
                 .AddOtlpExporter(options =>
