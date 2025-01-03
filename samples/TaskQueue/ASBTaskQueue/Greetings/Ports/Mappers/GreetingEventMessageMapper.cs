@@ -1,12 +1,22 @@
 ﻿using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Greetings.Ports.Events;
 using Paramore.Brighter;
 
 namespace Greetings.Ports.Mappers
 {
-    public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
+    public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>, IAmAMessageMapperAsync<GreetingEvent>
     {
         public IRequestContext Context { get; set; }
+        
+        public Task<Message> MapToMessageAsync(GreetingEvent request, Publication publication,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(MapToMessage(request,publication));
+
+        public Task<GreetingEvent> MapToRequestAsync(Message message,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(MapToRequest(message));
 
         public Message MapToMessage(GreetingEvent request, Publication publication)
         {
