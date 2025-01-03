@@ -143,7 +143,8 @@ Brighter contributors (sorted alphabeticaly)
  * New ASB Transport
 
 **[Tim Salva](https://github.com/jtsalva)
- * AWS fixes 
+ * AWS fixes
+ * Metrics
   
 **[Tim Seaward](https://github.com/Drawaes)**
  * Fix unecessary allocations
