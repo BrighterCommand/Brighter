@@ -23,14 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Actions;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
-using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -52,7 +47,7 @@ namespace Paramore.Brighter.ServiceActivator
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
 
-        protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
+        protected readonly IAmACommandProcessor CommandProcessor;
         protected readonly IAmARequestContextFactory RequestContextFactory;
         protected readonly IAmABrighterTracer? Tracer;
         protected readonly InstrumentationOptions InstrumentationOptions;
@@ -101,18 +96,18 @@ namespace Paramore.Brighter.ServiceActivator
         ///  - Dispatches the message to waiting handlers
         ///  The message pump is a classic event loop and is intended to be run on a single-thread 
         /// </summary>
-        /// <param name="commandProcessorProvider">Provides a correctly scoped command processor </param>
+        /// <param name="commandProcessor">Provides a correctly scoped command processor </param>
         /// <param name="requestContextFactory">Provides a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="channel"></param>
-        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="Brighter.CommandProcessor"/> operations how noisy should the attributes be</param>
         protected MessagePump(
-            IAmACommandProcessorProvider commandProcessorProvider, 
+            IAmACommandProcessor commandProcessor, 
             IAmARequestContextFactory requestContextFactory,
             IAmABrighterTracer? tracer,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
-            CommandProcessorProvider = commandProcessorProvider;
+            CommandProcessor = commandProcessor;
             RequestContextFactory = requestContextFactory;
             Tracer = tracer;
             InstrumentationOptions = instrumentationOptions;

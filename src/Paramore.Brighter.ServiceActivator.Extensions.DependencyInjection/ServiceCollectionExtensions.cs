@@ -54,23 +54,13 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             var options = serviceProvider.GetService<IServiceActivatorOptions>();
 
-            Func<IAmACommandProcessorProvider> providerFactory;
-
-            if (options.UseScoped)
-            {
-                providerFactory = () =>  new ScopedCommandProcessorProvider(serviceProvider);
-            }
-            else
-            {
-                var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-                providerFactory = () => new CommandProcessorProvider(commandProcessor);
-            }
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             var requestContextFactory = serviceProvider.GetService<IAmARequestContextFactory>();
             
             var dispatcherBuilder = DispatchBuilder
                 .StartNew()
-                .CommandProcessorFactory(providerFactory, requestContextFactory);
+                .CommandProcessor(commandProcessor, requestContextFactory);
 
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             var messageTransformFactory = ServiceCollectionExtensions.TransformFactory(serviceProvider);
