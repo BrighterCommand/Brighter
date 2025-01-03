@@ -97,7 +97,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             new SubscriptionName("paramore.sample.salutationanalytics"),
             new ChannelName("SalutationAnalytics"),
             new RoutingKey("GreetingMade"),
-            runAsync: true,
+            messagePumpType: MessagePumpType.Proactor,
             timeOut: TimeSpan.FromMilliseconds(200),
             isDurable: true,
             makeChannels: OnMissingChannel

@@ -62,16 +62,32 @@ namespace Paramore.Brighter
         public event Action<bool, string>? OnMessagePublished;
 
         /// <summary>
-        /// Dispsose of the producer; a no-op for the in-memory producer
+        /// Dispose of the producer
+        /// Clears the associated timer 
         /// </summary>
-        public void Dispose() { }
+        public void Dispose()
+        {
+            if (_requeueTimer != null)_requeueTimer.Dispose();
+            GC.SuppressFinalize(this);
+        }
+        
+        /// <summary>
+        /// Dispose of the producer
+        /// Clears the associated timer 
+        /// </summary> 
+        public async ValueTask DisposeAsync()
+        {
+            if (_requeueTimer != null) await _requeueTimer.DisposeAsync();
+            GC.SuppressFinalize(this);
+        }
 
         /// <summary>
         /// Send a message to a broker; in this case an <see cref="InternalBus"/>
         /// </summary>
         /// <param name="message">The message to send</param>
+        /// <param name="cancellationToken">Cancel the Send operation</param>
         /// <returns></returns>
-        public Task SendAsync(Message message)
+        public Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, message);
 
@@ -99,7 +115,7 @@ namespace Paramore.Brighter
                 BrighterTracer.WriteProducerEvent(Span, MessagingSystem.InternalBus, msg);
                 bus.Enqueue(msg);
                 OnMessagePublished?.Invoke(true, msg.Id);
-                yield return new[] { msg.Id };
+                yield return [msg.Id];
             }
         }
 
@@ -132,6 +148,29 @@ namespace Paramore.Brighter
                 TimeSpan.Zero
             );
         }
+  
+        /// <summary>
+        /// Send a message to a broker; in this case an <see cref="InternalBus"/> with a delay
+        /// The delay is simulated by the <see cref="TimeProvider"/>
+        /// </summary>
+        /// <param name="message">The message to send</param>
+        /// <param name="delay">The delay of the send</param>
+        /// <param name="cancellationToken">A cancellation token for send operation</param>
+        public Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        {
+            delay ??= TimeSpan.FromMilliseconds(0);
+
+            //we don't want to block, so we use a timer to invoke the requeue after a delay
+            _requeueTimer = timeProvider.CreateTimer(
+                msg => SendAsync((Message)msg!, cancellationToken),
+                message,
+                delay.Value,
+                TimeSpan.Zero
+            );
+            
+            return Task.CompletedTask;
+        }
+
 
         private void SendNoDelay(Message message)
         {
@@ -144,5 +183,7 @@ namespace Paramore.Brighter
                 _requeueTimer?.Dispose();
             }
         }
+
+ 
     }
 }

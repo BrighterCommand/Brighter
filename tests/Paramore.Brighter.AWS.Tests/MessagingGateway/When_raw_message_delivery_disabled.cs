@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
@@ -12,11 +13,11 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")] 
     [Trait("Fragile", "CI")]
-    public class SqsRawMessageDeliveryTests : IDisposable
+    public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
     {
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly RoutingKey _routingKey;
 
         public SqsRawMessageDeliveryTests()
@@ -31,12 +32,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var bufferSize = 10;
 
             //Set rawMessageDelivery to false
-            _channel = _channelFactory.CreateChannel(new SqsSubscription<MyCommand>(
+            _channel = _channelFactory.CreateSyncChannel(new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName:new ChannelName(channelName),
                 routingKey:_routingKey,
                 bufferSize: bufferSize,
                 makeChannels: OnMissingChannel.Create,
+                messagePumpType: MessagePumpType.Reactor,
                 rawMessageDelivery: false));
 
             _messageProducer = new SqsMessageProducer(awsConnection, 
@@ -83,8 +85,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _channelFactory.DeleteTopic();
-            _channelFactory.DeleteQueue();
+            _channelFactory.DeleteTopicAsync().Wait(); 
+            _channelFactory.DeleteQueueAsync().Wait();
+        }
+        
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync(); 
+            await _channelFactory.DeleteQueueAsync();
         }
     }
 }

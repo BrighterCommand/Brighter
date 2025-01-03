@@ -2,7 +2,8 @@
   <PropertyGroup>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using Redis&lt;</Description>
     <Authors>Ian Cooper</Authors>
-    <TargetFrameworks>netstandard2.0;net6.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net8.0;net9.0</TargetFrameworks>
+    <Nullable>enable</Nullable>
     <PackageTags>Redis;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
@@ -11,8 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ServiceStack.Redis.Core" />
+    <PackageReference Include="System.Net.Http" />
+    <PackageReference Include="System.Text.RegularExpressions" />
     <PackageReference Include="System.Reflection.TypeExtensions" />
-    
-
   </ItemGroup>
 </Project>

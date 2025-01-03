@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="result">The result.</param>
         /// <param name="success">if set to <c>true</c> [success].</param>
-        public HeaderResult(TResult result, bool success)
+        public HeaderResult(TResult? result, bool success)
         {
             Success = success;
             Result = result;
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>HeaderResult&lt;TNew&gt;.</returns>
         public HeaderResult<TNew> Map<TNew>(Func<TResult, HeaderResult<TNew>> map)
         {
-            if (Success)
+            if (Success && Result is not null)
                 return map(Result);
             return HeaderResult<TNew>.Empty();
         }
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Gets the result.
         /// </summary>
         /// <value>The result.</value>
-        public TResult Result { get; }
+        public TResult? Result { get; }
 
         /// <summary>
         /// Empties this instance.

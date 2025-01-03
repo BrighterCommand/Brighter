@@ -28,55 +28,60 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageConsumerChannelFailureTests : IDisposable
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageConsumerChannelFailureTests : IDisposable
+    private readonly IAmAMessageProducerSync _sender;
+    private readonly IAmAMessageConsumerSync _receiver;
+    private readonly IAmAMessageConsumerSync _badReceiver;
+    private Exception _firstException;
+
+    public RmqMessageConsumerChannelFailureTests()
     {
-        private readonly IAmAMessageProducerSync _sender;
-        private readonly IAmAMessageConsumer _receiver;
-        private readonly IAmAMessageConsumer _badReceiver;
-        private Exception _firstException;
+        var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), 
+            new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
 
-        public RmqMessageConsumerChannelFailureTests()
+        messageHeader.UpdateHandledCount();
+        Message sentMessage = new(messageHeader, new MessageBody("test content"));
+
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid().ToString(), 
-                new RoutingKey(Guid.NewGuid().ToString()), MessageType.MT_COMMAND);
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange")
+        };
 
-            messageHeader.UpdateHandledCount();
-            Message sentMessage = new(messageHeader, new MessageBody("test content"));
-
-            var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange")
-            };
-
-            _sender = new RmqMessageProducer(rmqConnection);
-            var queueName = new ChannelName(Guid.NewGuid().ToString());
+        _sender = new RmqMessageProducer(rmqConnection);
+        var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-            _receiver = new RmqMessageConsumer(rmqConnection, queueName, sentMessage.Header.Topic, false, false);
-            _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection,queueName, sentMessage.Header.Topic, false, 1, false);
+        _receiver = new RmqMessageConsumer(rmqConnection, queueName, sentMessage.Header.Topic, false, false);
+        _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection,queueName, sentMessage.Header.Topic, false, 1, false);
 
-            _sender.Send(sentMessage);
-        }
+        _sender.Send(sentMessage);
+    }
 
-        [Fact]
-        public void When_a_message_consumer_throws_an_not_supported_exception_when_connecting()
+    [Fact]
+    public void When_a_message_consumer_throws_an_not_supported_exception_when_connecting()
+    {
+        bool exceptionHappened = false;
+        try
         {
-            _firstException = Catch.Exception(() => _badReceiver.Receive(TimeSpan.FromMilliseconds(2000)));
-
-            //_should_return_a_channel_failure_exception
-            _firstException.Should().BeOfType<ChannelFailureException>();
-            //_should_return_an_explaining_inner_exception
-            _firstException.InnerException.Should().BeOfType<NotSupportedException>();
+            _receiver.Receive(TimeSpan.FromMilliseconds(2000));
         }
-
-        [Fact]
-        public void Dispose()
+        catch (ChannelFailureException cfe)
         {
-            _sender.Dispose();
-            _receiver.Dispose();
+            exceptionHappened = true;
+            cfe.InnerException.Should().BeOfType<NotSupportedException>();
         }
+            
+        exceptionHappened.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Dispose()
+    {
+        _sender.Dispose();
+        _receiver.Dispose();
     }
 }

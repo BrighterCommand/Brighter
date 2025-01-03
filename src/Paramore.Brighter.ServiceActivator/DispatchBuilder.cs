@@ -63,7 +63,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
         /// <param name="commandProcessorFactory">The command processor Factory.</param>
-        /// <param name="requestContextFactory">The factory used to create a request context for a pipeline</param>
+        /// <param name="requestContextFactory">The factory used to create a request synchronizationHelper for a pipeline</param>
         /// <returns>INeedAMessageMapper.</returns>
         public INeedAMessageMapper CommandProcessorFactory(
             Func<IAmACommandProcessorProvider> commandProcessorFactory,
@@ -180,7 +180,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
         /// <param name="commandProcessorFactory">The command processor provider Factory.</param>
-        /// <param name="requestContextFactory">The factory used to create a request context for a pipeline</param>
+        /// <param name="requestContextFactory">The factory used to create a request synchronizationHelper for a pipeline</param>
         /// <returns>INeedAMessageMapper.</returns>
         INeedAMessageMapper CommandProcessorFactory(
             Func<IAmACommandProcessorProvider> commandProcessorFactory,
@@ -244,7 +244,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// InstrumentationOptions.None - no telemetry
         /// InstrumentationOptions.RequestInformation - id  and type of request
         /// InstrumentationOptions.RequestBody -  body of the request
-        /// InstrumentationOptions.RequestContext - what is the context of the request
+        /// InstrumentationOptions.RequestContext - what is the synchronizationHelper of the request
         /// InstrumentationOptions.All - all of the above
         /// </param>
         /// <returns>IAmADispatchBuilder</returns>

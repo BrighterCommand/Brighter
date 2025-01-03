@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -38,12 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private const string BEGINNING_OF_BODY = "<BODY";
         private const string END_OF_BODY = "BODY/>";
         
-        private StringWriter _writer;
-
-        public RedisMessagePublisher()
-        {
-            _writer = new StringWriter(new StringBuilder());
-        }
+        private readonly StringWriter _writer = new(new StringBuilder());
 
         public string Create(Message message)
         {
@@ -100,17 +96,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteContentType(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.CONTENT_TYPE, messageHeader.ContentType.ToString());
+            headers.Add(HeaderNames.CONTENT_TYPE, messageHeader.ContentType ?? "text/plain");
         }
 
         private void WriteCorrelationId(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.CORRELATION_ID, messageHeader.CorrelationId.ToString());
+            headers.Add(HeaderNames.CORRELATION_ID, messageHeader.CorrelationId);
         }
 
         private void WriteDelayedMilliseconds(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.DELAYED_MILLISECONDS, messageHeader.Delayed.TotalMilliseconds.ToString());
+            headers.Add(HeaderNames.DELAYED_MILLISECONDS, messageHeader.Delayed.TotalMilliseconds.ToString(CultureInfo.InvariantCulture));
         }
         
         private void WriteHandledCount(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -126,7 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteMessageId(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.MESSAGE_ID, messageHeader.MessageId.ToString());
+            headers.Add(HeaderNames.MESSAGE_ID, messageHeader.MessageId);
         }
         
         private void WriteMessageType(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -136,7 +132,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private void WrtiteReplyTo(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.REPLY_TO, messageHeader.ReplyTo);
+            headers.Add(HeaderNames.REPLY_TO, messageHeader.ReplyTo ?? string.Empty);
         }
 
         private void WriteTopic(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -152,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         public void Dispose()
         {
-            _writer?.Dispose();
+            _writer.Dispose();
         }
     }
 }

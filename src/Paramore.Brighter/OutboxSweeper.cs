@@ -25,13 +25,14 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
     public class OutboxSweeper
     {
         private readonly TimeSpan _timeSinceSent;
-        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IAmAnOutboxProducerMediator _outboxProducerMediator;
         private readonly int _batchSize;
         private readonly bool _useBulk;
         private readonly IAmARequestContextFactory _requestContextFactory;
@@ -43,21 +44,21 @@ namespace Paramore.Brighter
         /// This sweeper clears an outbox of any outstanding messages within the time interval
         /// </summary>
         /// <param name="timeSinceSent">How long can a message sit in the box before we attempt to resend</param>
-        /// <param name="commandProcessor">Who should post the messages</param>
+        /// <param name="outboxProducerMediator">Outbox Producer Mediator</param>
         /// <param name="requestContextFactory">Allows us to create a request context to pass down the pipeline when clearing the Outbox</param>
         /// <param name="batchSize">The maximum number of messages to dispatch.</param>
         /// <param name="useBulk">Use the producers bulk dispatch functionality.</param>
         /// <param name="args">Optional bag of parameters to pass to the Outbox</param>
         public OutboxSweeper(
             TimeSpan timeSinceSent, 
-            IAmACommandProcessor commandProcessor, 
+            IAmAnOutboxProducerMediator outboxProducerMediator, 
             IAmARequestContextFactory requestContextFactory,
             int batchSize = 100,
             bool useBulk = false,
             Dictionary<string, object>? args = null)
         {
             _timeSinceSent = timeSinceSent;
-            _commandProcessor = commandProcessor;
+            _outboxProducerMediator = outboxProducerMediator;
             _batchSize = batchSize;
             _useBulk = useBulk;
             _requestContextFactory = requestContextFactory;
@@ -67,7 +68,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Dispatches the oldest un-dispatched messages from the outbox in a background thread.
         /// </summary>
-        public void Sweep()
+        public async Task SweepAsync()
         {
 #pragma warning disable CS0618 // Type or member is obsolete
             var span = ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
@@ -75,21 +76,7 @@ namespace Paramore.Brighter
             var context = _requestContextFactory.Create();
             context.Span = span;
             
-            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _timeSinceSent, _useBulk, context, _args);
-        }
-
-        /// <summary>
-        /// Dispatches the oldest un-dispatched messages from the asynchronous outbox in a background thread.
-        /// </summary>
-        public void SweepAsyncOutbox()
-        {
-#pragma warning disable CS0618 // Type or member is obsolete
-            var span = ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
-#pragma warning restore CS0618 // Type or member is obsolete
-            var context = _requestContextFactory.Create();
-            context.Span = span;
-            
-            _commandProcessor.ClearOutstandingFromOutbox(_batchSize, _timeSinceSent, _useBulk, context, _args);
+            await _outboxProducerMediator.ClearOutstandingFromOutboxAsync(_batchSize, _timeSinceSent, _useBulk, context, _args);
         }
     }
 }

@@ -31,18 +31,12 @@ namespace Paramore.Brighter
     /// This class allows you to return a simple function that finds a transformer. Intended for lightweight transformer pipelines.
     /// We recommend you wrap your IoC container for heavyweight mapping.
     /// </summary>
-    public class SimpleMessageTransformerFactory : IAmAMessageTransformerFactory
+    public class SimpleMessageTransformerFactory(Func<Type, IAmAMessageTransform> factoryMethod)
+        : IAmAMessageTransformerFactory
     {
-        private readonly Func<Type, IAmAMessageTransform> _factoryMethod;
-
-        public SimpleMessageTransformerFactory(Func<Type, IAmAMessageTransform> factoryMethod)
-        {
-            _factoryMethod = factoryMethod;
-        }
-
         public IAmAMessageTransform Create(Type transformerType)
         {
-            return _factoryMethod(transformerType);
+            return factoryMethod(transformerType);
         }
 
         public void Release(IAmAMessageTransform transformer)

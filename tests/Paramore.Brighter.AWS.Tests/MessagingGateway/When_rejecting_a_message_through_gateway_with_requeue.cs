@@ -16,7 +16,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
     public class SqsMessageConsumerRequeueTests : IDisposable
     {
         private readonly Message _message;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
@@ -34,6 +34,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
+                messagePumpType: MessagePumpType.Reactor,
                 routingKey: routingKey
             );
             
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            _channel = _channelFactory.CreateSyncChannel(subscription);
             
             _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
         }
@@ -77,9 +78,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            //Clean up resources that we have created
-            _channelFactory.DeleteTopic();
-            _channelFactory.DeleteQueue();
+            _channelFactory.DeleteTopicAsync().Wait(); 
+            _channelFactory.DeleteQueueAsync().Wait();
+        }
+        
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync(); 
+            await _channelFactory.DeleteQueueAsync();
         }
     }
 }

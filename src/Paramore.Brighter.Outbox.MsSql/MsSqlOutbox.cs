@@ -345,11 +345,17 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var ordinal = dr.GetOrdinal("Body");
             if (dr.IsDBNull(ordinal)) return null;
-            
+
             var body = dr.GetStream(ordinal);
             long bodyLength = body.Length;
             var buffer = new byte[bodyLength];
-            body.Read(buffer, 0, (int)bodyLength);
+            var bytesRemaining = bodyLength;
+            while (bytesRemaining > 0)
+            {
+                var bytesRead = body.Read(buffer, 0, (int)bodyLength);
+                bytesRemaining -= bytesRead;
+            }
+            
             return buffer;
         }
         

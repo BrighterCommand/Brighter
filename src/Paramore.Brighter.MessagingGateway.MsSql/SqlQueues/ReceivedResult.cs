@@ -25,15 +25,16 @@
     ///     Typed received result
     /// </summary>
     /// <typeparam name="T">The type of the message</typeparam>
-    public class ReceivedResult<T> : ReceivedResult
+    public class ReceivedResult<T>(
+        bool isDataValid,
+        string jsonContent,
+        string topic,
+        string messageType,
+        long id,
+        T? message)
+        : ReceivedResult(isDataValid, jsonContent, topic, messageType, id)
     {
-        public ReceivedResult(bool isDataValid, string jsonContent, string topic, string messageType, long id, T message)
-            : base(isDataValid, jsonContent, topic, messageType, id)
-        {
-            Message = message;
-        }
-
-        public T Message { get; }
+        public T? Message { get; } = message;
 
         public new static ReceivedResult<T> Empty => new ReceivedResult<T>(false, string.Empty, string.Empty, string.Empty, 0, default(T));
     }

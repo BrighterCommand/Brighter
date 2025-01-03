@@ -56,7 +56,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         }
 
         /// <summary>
-        ///     Adds a command to the store
+        ///  Adds a command to the store
+        ///  Will block, and consume another thread for callback on threadpool; use within sync pipeline only 
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command to be stored</param>
@@ -71,7 +72,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         }
 
         /// <summary>
-        ///     Finds a command with the specified identifier.
+        ///  Finds a command with the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>

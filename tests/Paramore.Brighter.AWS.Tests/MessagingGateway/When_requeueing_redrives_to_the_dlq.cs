@@ -17,10 +17,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class SqsMessageProducerDlqTests : IDisposable
+    public class SqsMessageProducerDlqTests : IDisposable, IAsyncDisposable
     {
         private readonly SqsMessageProducer _sender;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
         private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            _channel = _channelFactory.CreateSyncChannel(subscription);
         }
 
         [Fact]
@@ -83,12 +83,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             GetDLQCount(_dlqChannelName).Should().Be(1);
         }
 
-        public void Dispose()
-        {
-            _channelFactory.DeleteTopic();
-            _channelFactory.DeleteQueue();
-        }
-
         public int GetDLQCount(string queueName)
         {
             using var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
@@ -106,6 +100,18 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             }
                 
             return response.Messages.Count;
+        }
+        
+        public void Dispose()
+        {
+            _channelFactory.DeleteTopicAsync().Wait(); 
+            _channelFactory.DeleteQueueAsync().Wait();
+        }
+        
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync(); 
+            await _channelFactory.DeleteQueueAsync();
         }
 
     }

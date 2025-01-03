@@ -14,7 +14,7 @@ public class InMemoryChannelFactoryTests
         var inMemoryChannelFactory = new InMemoryChannelFactory(internalBus, TimeProvider.System);
         
         //act
-        var channel = inMemoryChannelFactory.CreateChannel(new Subscription(typeof(MyEvent)));
+        var channel = inMemoryChannelFactory.CreateSyncChannel(new Subscription(typeof(MyEvent)));
         
         //assert
         Assert.NotNull(channel);

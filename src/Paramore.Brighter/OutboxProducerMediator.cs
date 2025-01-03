@@ -1,4 +1,27 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -248,10 +271,9 @@ namespace Paramore.Brighter
             where T : class, ICall where TResponse : class, IResponse
         {
             //We assume that this only occurs over a blocking producer
-            var producer = _producerRegistry.LookupBy(outMessage.Header.Topic);
-            if (producer is IAmAMessageProducerSync producerSync)
+            var producer = _producerRegistry.LookupSyncBy(outMessage.Header.Topic);
                 Retry(
-                    () => producerSync.Send(outMessage),
+                    () => producer.Send(outMessage),
                     requestContext
                 );
         }
@@ -373,34 +395,24 @@ namespace Paramore.Brighter
         /// This method returns whilst that thread runs, so it is non-blocking but also does not indicate the clear has
         /// happened by returning control - that happens in parallel. 
         /// </summary>
+        /// <remarks>Only works for Async Outboxes</remarks>
         /// <param name="amountToClear">Maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age of messages to be cleared.</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         /// <param name="requestContext">The request context for the pipeline</param>
         /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
-        public void ClearOutstandingFromOutbox(int amountToClear,
+        /// <param name="cancellationToken">Cancellation Token</param>
+        public async Task ClearOutstandingFromOutboxAsync(int amountToClear,
             TimeSpan minimumAge,
             bool useBulk,
             RequestContext requestContext,
-            Dictionary<string, object>? args = null)
+            Dictionary<string, object>? args = null,
+            CancellationToken cancellationToken = default)
         {
             if (HasAsyncOutbox())
-            {
-                Task.Run(() =>
-                        BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args),
-                    CancellationToken.None
-                );
-            }
-            else if (HasOutbox())
-            {
-                Task.Run(() =>
-                    BackgroundDispatchUsingSync(amountToClear, minimumAge, requestContext, args)
-                );
-            }
+                await BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, requestContext, args, cancellationToken);
             else
-            {
-                throw new InvalidOperationException("No outbox defined.");
-            }
+                throw new InvalidOperationException("No Async outbox defined.");
         }
 
         /// <summary>
@@ -437,6 +449,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Intended for usage with the CommandProcessor's Call method, this method will create a request from a message
+        /// Sync over async as we block on Call
         /// </summary>
         /// <param name="message">The message that forms a reply to a call</param>
         /// <param name="request">The request constructed from that message</param>
@@ -551,79 +564,13 @@ namespace Paramore.Brighter
             return _outBox != null;
         }
 
-        private Task BackgroundDispatchUsingSync(
-            int amountToClear,
-            TimeSpan timeSinceSent,
-            RequestContext requestContext,
-            Dictionary<string, object>? args
-        )
-        {
-            WaitHandle[] clearTokens = new WaitHandle[2];
-            clearTokens[0] = s_backgroundClearSemaphoreToken.AvailableWaitHandle;
-            clearTokens[1] = s_clearSemaphoreToken.AvailableWaitHandle;
-            if (WaitHandle.WaitAll(clearTokens, TimeSpan.Zero))
-            {
-                //NOTE: The wait handle only signals availability, still need to increment the counter:
-                // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
-                s_backgroundClearSemaphoreToken.Wait();
-                s_clearSemaphoreToken.Wait();
-                
-                var parentSpan = requestContext.Span;
-                var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
-                    _instrumentationOptions);
-
-                try
-                {
-                    requestContext.Span = span;
-
-                    if (_outBox is null) throw new ArgumentException(NoSyncOutboxError);
-                    
-                    var messages = _outBox.OutstandingMessages(timeSinceSent,
-                        requestContext, amountToClear, args: args
-                    ).ToArray();
-
-                    requestContext.Span = parentSpan;
-
-                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
-                        messages.Count(), amountToClear);
-
-                    BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, false,
-                        _instrumentationOptions);
-
-                    Dispatch(messages, requestContext, args);
-
-                    s_logger.LogInformation("Messages have been cleared");
-                }
-                catch (Exception e)
-                {
-                    requestContext.Span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
-                    s_logger.LogError(e, "Error while dispatching from outbox");
-                    return Task.FromException(e);
-                }
-                finally
-                {
-                    _tracer.EndSpan(span);
-                    s_clearSemaphoreToken.Release();
-                    s_backgroundClearSemaphoreToken.Release();
-                }
-
-                CheckOutstandingMessages(requestContext);
-            }
-            else
-            {
-                requestContext.Span?.SetStatus(ActivityStatusCode.Error);
-                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
-            }
-
-            return Task.CompletedTask;
-        }
-
         private async Task BackgroundDispatchUsingAsync(
             int amountToClear,
             TimeSpan timeSinceSent,
             bool useBulk,
             RequestContext requestContext,
-            Dictionary<string, object>? args
+            Dictionary<string, object>? args,
+            CancellationToken cancellationToken
         )
         {
             WaitHandle[] clearTokens = new WaitHandle[2];
@@ -633,8 +580,8 @@ namespace Paramore.Brighter
             {
                 //NOTE: The wait handle only signals availability, still need to increment the counter:
                 // see https://learn.microsoft.com/en-us/dotnet/api/System.Threading.SemaphoreSlim.AvailableWaitHandle
-                await s_backgroundClearSemaphoreToken.WaitAsync();
-                await s_clearSemaphoreToken.WaitAsync();
+                await s_backgroundClearSemaphoreToken.WaitAsync(cancellationToken);
+                await s_clearSemaphoreToken.WaitAsync(cancellationToken);
                 
                 var parentSpan = requestContext.Span;
                 var span = _tracer.CreateClearSpan(CommandProcessorSpanOperation.Clear, requestContext.Span, null,
@@ -646,7 +593,7 @@ namespace Paramore.Brighter
                     if (_asyncOutbox is null) throw new ArgumentException(NoAsyncOutboxError);
                     var messages =
                         (await _asyncOutbox.OutstandingMessagesAsync(timeSinceSent, requestContext,
-                            pageSize: amountToClear, args: args)).ToArray();
+                            pageSize: amountToClear, args: args, cancellationToken: cancellationToken)).ToArray();
 
                     BrighterTracer.WriteOutboxEvent(OutboxDbOperation.OutStandingMessages, messages, span, false, true,
                         _instrumentationOptions);
@@ -658,11 +605,11 @@ namespace Paramore.Brighter
 
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, requestContext, CancellationToken.None);
+                        await BulkDispatchAsync(messages, requestContext, cancellationToken);
                     }
                     else
                     {
-                        await DispatchAsync(messages, requestContext, false, CancellationToken.None);
+                        await DispatchAsync(messages, requestContext, false, cancellationToken);
                     }
 
                     s_logger.LogInformation("Messages have been cleared");

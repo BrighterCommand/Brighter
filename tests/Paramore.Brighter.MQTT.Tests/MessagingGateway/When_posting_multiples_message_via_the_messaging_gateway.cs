@@ -33,12 +33,12 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
 {
     [Trait("Category", "MQTT")]
     [Collection("MQTT")]
-    public class MqttMessageProducerSendMessageTests : IDisposable
+    public class MqttMessageProducerSendMessageTests : IDisposable, IAsyncDisposable
     {
         private const string MqttHost = "localhost";
         private const string ClientId = "BrighterIntegrationTests-Produce";
         private readonly IAmAMessageProducerAsync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageConsumerSync _messageConsumer;
         private readonly string _topicPrefix = "BrighterIntegrationTests/ProducerTests";
 
         public MqttMessageProducerSendMessageTests()
@@ -95,8 +95,14 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _messageProducer.Dispose();
+            ((IAmAMessageProducerSync)_messageProducer).Dispose();
             _messageConsumer.Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _messageProducer.DisposeAsync();
+            await ((IAmAMessageConsumerAsync)_messageConsumer).DisposeAsync();
         }
     }
 }

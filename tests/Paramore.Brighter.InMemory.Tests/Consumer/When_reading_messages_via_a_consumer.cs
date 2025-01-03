@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
 
-public class InMemoryConsumerRecieveTests
+public class InMemoryConsumerReceiveTests
 {
     private readonly InMemoryConsumerRequeueTests _inMemoryConsumerRequeueTests = new InMemoryConsumerRequeueTests();
     private readonly InMemoryConsumerAcknowledgeTests _inMemoryConsumerAcknowledgeTests = new InMemoryConsumerAcknowledgeTests();
