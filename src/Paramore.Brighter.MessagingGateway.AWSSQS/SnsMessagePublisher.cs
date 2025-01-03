@@ -32,14 +32,14 @@ using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-public class SqsMessagePublisher
+public class SnsMessagePublisher
 {
     private readonly string _topicArn;
     private readonly AmazonSimpleNotificationServiceClient _client;
     private readonly SnsSqsType _snsSqsType;
     private readonly bool _deduplication;
 
-    public SqsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, SnsSqsType snsSqsType,
+    public SnsMessagePublisher(string topicArn, AmazonSimpleNotificationServiceClient client, SnsSqsType snsSqsType,
         bool deduplication)
     {
         _topicArn = topicArn;

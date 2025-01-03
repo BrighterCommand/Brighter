@@ -125,7 +125,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
                 $"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body} as the topic does not exist");
 
         using var client = _clientFactory.CreateSnsClient();
-        var publisher = new SqsMessagePublisher(ChannelTopicArn!, client, _publication.SnsType, _publication.Deduplication);
+        var publisher = new SnsMessagePublisher(ChannelTopicArn!, client, _publication.SnsType, _publication.Deduplication);
         var messageId = await publisher.PublishAsync(message);
 
         if (messageId == null)

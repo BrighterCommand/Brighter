@@ -36,63 +36,43 @@ public static class AWSNameExtensions
 
         //SQS only allows 80 characters alphanumeric, hyphens, and underscores, but we might use a period in a 
         //default typename strategy
-        var name = channelName.Value;
+        var queue = channelName.Value;
+        var maxLength = isFifo ? 75 : 80;
+
+        queue = queue.Replace('.', '_');
+        if (queue.Length > maxLength)
+        {
+            queue = queue.Substring(0, maxLength);
+        }
+
         if (isFifo)
         {
-            if (name.EndsWith(".fifo"))
-            {
-                name = name.Substring(0, name.Length - 5);
-            }
-
-            name = name.Replace(".", "_");
-            if (name.Length > 75)
-            {
-                name = name.Substring(0, 75);
-            }
-
-            name += ".fifo";
-        }
-        else
-        {
-            name = name.Replace(".", "_");
-            if (name.Length > 80)
-            {
-                name = name.Substring(0, 80);
-            }
+            queue += ".fifo";
         }
 
-        return new ChannelName(name);
+        return new ChannelName(queue);
     }
 
     public static RoutingKey ToValidSNSTopicName(this RoutingKey routingKey, bool isFifo = false)
+        => new(routingKey.Value.ToValidSNSTopicName(isFifo));
+
+    public static string ToValidSNSTopicName(this string topic, bool isFifo = false)
     {
         //SNS only topic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
         //underscores (_) are allowed. Topic names must be unique within an AWS account.
-        var topic = routingKey.Value;
+        var maxLength = isFifo ? 251 : 256;
+
+        topic = topic.Replace('.', '_');
+        if (topic.Length > maxLength)
+        {
+            topic = topic.Substring(0, maxLength);
+        }
+
         if (isFifo)
         {
-            if (topic.EndsWith(".fifo"))
-            {
-                topic = topic.Substring(0, topic.Length - 5);
-            }
-
-            topic = topic.Replace(".", "_");
-            if(topic.Length > 251)
-            {
-                topic = topic.Substring(0, 251);
-            }
-            
             topic += ".fifo";
         }
-        else
-        {
-            topic = topic.Replace(".", "_");
-            if (topic.Length > 256)
-            {
-                topic = topic.Substring(0, 256);
-            }
-        }
 
-        return new RoutingKey(topic);
+        return topic;
     }
 }
