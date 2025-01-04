@@ -87,10 +87,13 @@ namespace Paramore.Brighter
                 
                 observers.Each(observer =>
                 {
+                    var context = observers.Count() == 1 ? requestContext : requestContext.CreateCopy();
                     var instanceScope = GetSyncInstanceScope();
                     var handler = (RequestHandler<TRequest>)_handlerFactorySync.Create(observer, instanceScope);
-                    var pipeline = BuildPipeline(handler, requestContext.CreateCopy(), instanceScope);
+                    var pipeline = BuildPipeline(handler, context, instanceScope);
                     pipeline.AddToLifetime(instanceScope);
+                    
+                    pipelines.Add(pipeline);
                 });
 
                 return pipelines;
@@ -174,11 +177,14 @@ namespace Paramore.Brighter
                 
                 observers.Each(observer =>
                 {
+                    var context = observers.Count() == 1 ? requestContext : requestContext.CreateCopy();
                     var instanceScope = GetAsyncInstanceScope();
                     var handler = (RequestHandlerAsync<TRequest>)_asyncHandlerFactory.Create(observer, instanceScope);
-                    var pipeline = BuildAsyncPipeline(handler, requestContext.CreateCopy(), instanceScope,
+                    var pipeline = BuildAsyncPipeline(handler, context, instanceScope,
                         continueOnCapturedContext);
                     pipeline.AddToLifetime(instanceScope);
+                    
+                    pipelines.Add(pipeline);
                 });
 
                 return pipelines;

@@ -86,7 +86,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
 
         //act
-        commandProcessor.Send(myEvent);
+        commandProcessor.Publish(myEvent);
        
         //assert
         _requestContextFactory.CreateWasCalled.Should().BeTrue();
@@ -108,7 +108,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
 
         //act
-        await commandProcessor.SendAsync(myEvent);
+        await commandProcessor.PublishAsync(myEvent);
        
         //assert
         _requestContextFactory.CreateWasCalled.Should().BeTrue();

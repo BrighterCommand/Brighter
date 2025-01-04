@@ -41,6 +41,13 @@ namespace Paramore.Brighter
     {
         private readonly ConcurrentDictionary<int, Activity> _spans = new();
 
+        public RequestContext() { }
+        
+        private RequestContext(ConcurrentDictionary<string, object> bag)
+        {
+            Bag = bag;
+        }
+        
         /// <summary>
         /// Gets the bag.
         /// </summary>
@@ -57,7 +64,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>New Instance of the message</returns>
         public IRequestContext CreateCopy()
-            => new RequestContext
+            => new RequestContext(Bag)
             {
                 Span = Span,
                 Policies = Policies,

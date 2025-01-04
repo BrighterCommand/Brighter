@@ -292,7 +292,7 @@ namespace Paramore.Brighter
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
-
+                
                 await handlerChain.First().HandleAsync(command, cancellationToken)
                     .ConfigureAwait(continueOnCapturedContext);
             }
@@ -348,9 +348,11 @@ namespace Paramore.Brighter
                     {
                         var handlerName = handleRequests.Name.ToString();
                         handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
-                        context.Span = handlerSpans[handlerName];
+                        if(handleRequests.Context is not null)
+                            handleRequests.Context.Span = handlerSpans[handlerName];
                         handleRequests.Handle(@event);
-                        context.Span = span;
+                        if(handleRequests.Context is not null)
+                            handleRequests.Context.Span = span;
                     }
                     catch (Exception e)
                     {
@@ -426,9 +428,11 @@ namespace Paramore.Brighter
                     foreach (var handleRequests in handlerChain)
                     {
                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
-                        context.Span =handlerSpans[handleRequests.Name.ToString()];
+                        if(handleRequests.Context is not null)
+                            handleRequests.Context.Span = handlerSpans[handleRequests.Name.ToString()];
                         tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
-                        context.Span = span;
+                        if(handleRequests.Context is not null)
+                            handleRequests.Context.Span = span;
                     }
                     
                     await Task.WhenAll(tasks).ConfigureAwait(continueOnCapturedContext);
