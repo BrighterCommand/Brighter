@@ -23,19 +23,20 @@ public class SqsMessageProducerRequeueTestsAsync : IDisposable, IAsyncDisposable
     public SqsMessageProducerRequeueTestsAsync()
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        var correlationId = Guid.NewGuid().ToString();
         var channelName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(topicName);
+        var queueName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
 
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
             channelName: new ChannelName(channelName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            routingKeyType: RoutingKeyType.PointToPoint
         );
 
         _message = new Message(

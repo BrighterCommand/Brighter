@@ -23,26 +23,28 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
     private readonly Message _message;
     private readonly string _dlqChannelName;
     private readonly IAmAChannelSync _channel;
-    private readonly SnsMessageProducer _sender;
+    private readonly SqsMessageProducer _sender;
     private readonly AWSMessagingGatewayConnection _awsConnection;
     private readonly SqsSubscription<MyCommand> _subscription;
     private readonly ChannelFactory _channelFactory;
 
     public SnsReDrivePolicySDlqTests()
     {
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        
         _dlqChannelName = $"Redrive-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(topicName);
+        var correlationId = Guid.NewGuid().ToString();
+        var subscriptionName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Redrive-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
 
         //how are we consuming
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            name: new SubscriptionName(subscriptionName),
+            channelName: new ChannelName(queueName),
             routingKey: routingKey,
+            routingKeyType: RoutingKeyType.PointToPoint,
             //don't block the redrive policy from owning retry management
             requeueCount: -1,
             //delay before requeuing
@@ -67,9 +69,9 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
         _awsConnection = GatewayFactory.CreateFactory();
 
         //how do we send to the queue
-        _sender = new SnsMessageProducer(
+        _sender = new SqsMessageProducer(
             _awsConnection,
-            new SnsPublication
+            new SqsPublication
             {
                 Topic = routingKey, RequestType = typeof(MyDeferredCommand), MakeChannels = OnMissingChannel.Create
             }

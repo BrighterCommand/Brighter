@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Amazon.SQS.Model;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
@@ -14,8 +15,8 @@ public class AWSValidateMissingTopicTestsAsync
 
     public AWSValidateMissingTopicTestsAsync()
     {
-        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        _routingKey = new RoutingKey(topicName);
+         var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        _routingKey = new RoutingKey(queueName);
 
         _awsConnection = GatewayFactory.CreateFactory();
 
@@ -26,14 +27,14 @@ public class AWSValidateMissingTopicTestsAsync
     public async Task When_topic_missing_verify_throws_async()
     {
         // arrange
-        var producer = new SnsMessageProducer(_awsConnection,
-            new SnsPublication
+        var producer = new SqsMessageProducer(_awsConnection,
+            new SqsPublication
             {
                 MakeChannels = OnMissingChannel.Validate
             });
 
         // act & assert
-        await Assert.ThrowsAsync<BrokerUnreachableException>(async () => 
+        await Assert.ThrowsAsync<QueueDoesNotExistException>(async () => 
             await producer.SendAsync(new Message(
                 new MessageHeader("", _routingKey, MessageType.MT_EVENT, type: "plain/text"),
                 new MessageBody("Test"))));

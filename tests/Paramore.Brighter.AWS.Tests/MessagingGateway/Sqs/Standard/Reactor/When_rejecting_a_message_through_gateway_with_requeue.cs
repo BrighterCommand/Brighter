@@ -15,41 +15,43 @@ public class SqsMessageConsumerRequeueTests : IDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
-    private readonly SnsMessageProducer _messageProducer;
+    private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
     public SqsMessageConsumerRequeueTests()
     {
-        _myCommand = new MyCommand{Value = "Test"};
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(topicName);
-            
-        SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+        _myCommand = new MyCommand { Value = "Test" };
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        var correlationId = Guid.NewGuid().ToString();
+        var subscriptionName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
+
+        var subscription = new SqsSubscription<MyCommand>(
+            name: new SubscriptionName(subscriptionName),
+            channelName: new ChannelName(queueName),
             messagePumpType: MessagePumpType.Reactor,
-            routingKey: routingKey
+            routingKey: routingKey,
+            routingKeyType: RoutingKeyType.PointToPoint
         );
-            
+
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
                 replyTo: new RoutingKey(replyTo), contentType: contentType),
-            new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
+            new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
-            
+
         //Must have credentials stored in the SDK Credentials store or shared credentials file
         var awsConnection = GatewayFactory.CreateFactory();
-            
+
         //We need to do this manually in a test - will create the channel from subscriber parameters
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
-            
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
+
+        _messageProducer =
+            new SqsMessageProducer(awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
     }
 
     [Fact]
@@ -58,7 +60,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
         _messageProducer.Send(_message);
 
         var message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            
+
         _channel.Reject(message);
 
         //Let the timeout change
@@ -66,7 +68,7 @@ public class SqsMessageConsumerRequeueTests : IDisposable
 
         //should requeue_the_message
         message = _channel.Receive(TimeSpan.FromMilliseconds(5000));
-            
+
         //clear the queue
         _channel.Acknowledge(message);
 
@@ -75,13 +77,13 @@ public class SqsMessageConsumerRequeueTests : IDisposable
 
     public void Dispose()
     {
-        _channelFactory.DeleteTopicAsync().Wait(); 
+        _channelFactory.DeleteTopicAsync().Wait();
         _channelFactory.DeleteQueueAsync().Wait();
     }
-        
+
     public async ValueTask DisposeAsync()
     {
-        await _channelFactory.DeleteTopicAsync(); 
+        await _channelFactory.DeleteTopicAsync();
         await _channelFactory.DeleteQueueAsync();
     }
 }

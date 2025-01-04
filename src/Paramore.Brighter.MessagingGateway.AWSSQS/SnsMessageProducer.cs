@@ -99,7 +99,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
             routingKey = _publication.Topic;
         }
 
-        if (routingKey is null)
+        if (RoutingKey.IsNullOrEmpty(routingKey))
         {
             throw new ConfigurationException("No topic specified for producer");
         }

@@ -115,7 +115,7 @@ public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync,
             routingKey = _publication.Topic;
         }
 
-        if (routingKey is null)
+        if (RoutingKey.IsNullOrEmpty(routingKey))
         {
             throw new ConfigurationException("No topic specified for producer");
         }

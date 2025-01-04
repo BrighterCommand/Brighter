@@ -14,7 +14,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
-    private readonly SnsMessageProducer _messageProducer;
+    private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
 
     public CustomisingAwsClientConfigTests()
@@ -23,15 +23,16 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         const string contentType = "text\\plain";
         MyCommand myCommand = new() { Value = "Test" };
         var correlationId = Guid.NewGuid().ToString();
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(topicName);
+        var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
 
         var subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            name: new SubscriptionName(subscriptionName),
+            channelName: new ChannelName(queueName),
             messagePumpType: MessagePumpType.Reactor,
-            routingKey: routingKey
+            routingKey: routingKey,
+            routingKeyType: RoutingKeyType.PointToPoint
         );
 
         _message = new Message(
@@ -42,7 +43,7 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
 
         var subscribeAwsConnection = GatewayFactory.CreateFactory(config =>
         {
-            config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sync_sub"));
+            config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sqs_sync_sub"));
         });
 
         _channelFactory = new ChannelFactory(subscribeAwsConnection);
@@ -50,11 +51,11 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
 
         var publishAwsConnection = GatewayFactory.CreateFactory(config =>
         {
-            config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sync_pub"));
+            config.HttpClientFactory = new InterceptingHttpClientFactory(new InterceptingDelegatingHandler("sqs_sync_pub"));
         });
 
-        _messageProducer = new SnsMessageProducer(publishAwsConnection,
-            new SnsPublication { Topic = new RoutingKey(topicName), MakeChannels = OnMissingChannel.Create });
+        _messageProducer = new SqsMessageProducer(publishAwsConnection,
+            new SqsPublication { Topic = new RoutingKey(queueName), MakeChannels = OnMissingChannel.Create });
     }
 
     [Fact]
@@ -71,11 +72,11 @@ public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
         _channel.Acknowledge(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
-        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("sync_sub");
-        InterceptingDelegatingHandler.RequestCount["sync_sub"].Should().BeGreaterThan(0);
+        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("sqs_sync_sub");
+        InterceptingDelegatingHandler.RequestCount["sqs_sync_sub"].Should().BeGreaterThan(0);
         
-        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("sync_pub");
-        InterceptingDelegatingHandler.RequestCount["sync_pub"].Should().BeGreaterThan(0);
+        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("sqs_sync_pub");
+        InterceptingDelegatingHandler.RequestCount["sqs_sync_pub"].Should().BeGreaterThan(0);
     }
 
     public void Dispose()

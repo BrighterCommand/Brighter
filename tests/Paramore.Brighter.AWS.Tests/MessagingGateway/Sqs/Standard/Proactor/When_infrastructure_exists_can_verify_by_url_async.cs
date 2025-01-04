@@ -2,8 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Runtime;
 using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
@@ -14,29 +12,31 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 
 [Trait("Category", "AWS")]
 [Trait("Fragile", "CI")]
-public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDisposable
+public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerAsync _consumer;
-    private readonly SnsMessageProducer _messageProducer;
+    private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
-    public AWSValidateInfrastructureByArnTestsAsync()
+    public AWSValidateInfrastructureByUrlTestsAsync()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey($"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45));
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        var correlationId = Guid.NewGuid().ToString();
+        var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
 
-        SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+        var subscription = new SqsSubscription<MyCommand>(
+            name: new SubscriptionName(subscriptionName),
+            channelName: new ChannelName(queueName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            routingKeyType: RoutingKeyType.PointToPoint
         );
 
         _message = new Message(
@@ -45,30 +45,28 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
             new MessageBody(JsonSerializer.Serialize((object)_myCommand, JsonSerialisationOptions.Options))
         );
 
-        (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
-        var awsConnection = GatewayFactory.CreateFactory(credentials, region);
+        var awsConnection = GatewayFactory.CreateFactory();
 
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);
 
-        var topicArn = FindTopicArn(awsConnection, routingKey.Value).Result;
-        var routingKeyArn = new RoutingKey(topicArn);
+        var queueUrl = FindQueueUrl(awsConnection, routingKey.Value).Result;
 
         subscription = new(
-            name: new SubscriptionName(channelName),
+            name: new SubscriptionName(subscriptionName),
             channelName: channel.Name,
-            routingKey: routingKeyArn,
+            routingKey: routingKey,
             findTopicBy: TopicFindBy.Arn,
             makeChannels: OnMissingChannel.Validate
         );
 
-        _messageProducer = new SnsMessageProducer(
+        _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SnsPublication
+            new SqsPublication
             {
                 Topic = routingKey,
-                TopicArn = topicArn,
-                FindTopicBy = TopicFindBy.Arn,
+                QueueUrl = queueUrl,
+                FindQueueBy = QueueFindBy.Url,
                 MakeChannels = OnMissingChannel.Validate
             });
 
@@ -90,11 +88,11 @@ public class AWSValidateInfrastructureByArnTestsAsync : IAsyncDisposable, IDispo
         await _consumer.AcknowledgeAsync(message);
     }
 
-    private static async Task<string> FindTopicArn(AWSMessagingGatewayConnection connection, string topicName)
+    private static async Task<string> FindQueueUrl(AWSMessagingGatewayConnection connection, string queueName)
     {
-        using var snsClient = new AWSClientFactory(connection).CreateSnsClient();
-        var topicResponse = await snsClient.FindTopicAsync(topicName);
-        return topicResponse.TopicArn;
+        using var snsClient = new AWSClientFactory(connection).CreateSqsClient();
+        var response = await snsClient.GetQueueUrlAsync(queueName);
+        return response.QueueUrl;
     }
 
     public void Dispose()

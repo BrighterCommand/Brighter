@@ -57,7 +57,7 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
             name: new SubscriptionName(queueName),
             channelName: channel.Name,
             routingKey: routingKey,
-            queueFindBy: QueueFindBy.Url,
+            findQueueBy: QueueFindBy.Url,
             makeChannels: OnMissingChannel.Validate,
             sqsType: SnsSqsType.Fifo,
             routingKeyType: RoutingKeyType.PointToPoint

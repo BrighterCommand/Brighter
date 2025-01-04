@@ -14,13 +14,13 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAChannelSync _channel;
-    private readonly SnsMessageProducer _messageProducer;
+    private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
     private readonly string _correlationId;
     private readonly string _replyTo;
     private readonly string _contentType;
-    private readonly string _topicName;
+    private readonly string _queueName;
 
     public SqsMessageProducerSendTests()
     {
@@ -28,16 +28,17 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         _correlationId = Guid.NewGuid().ToString();
         _replyTo = "http:\\queueUrl";
         _contentType = "text\\plain";
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(_topicName);
+        _queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        
+        var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(_queueName);
             
-        SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+        var subscription = new SqsSubscription<MyCommand>(
+            name: new SubscriptionName(subscriptionName),
+            channelName: new ChannelName(_queueName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            rawMessageDelivery: false
+            routingKeyType: RoutingKeyType.PointToPoint
         );
             
         _message = new Message(
@@ -51,7 +52,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         _channelFactory = new ChannelFactory(awsConnection);
         _channel = _channelFactory.CreateSyncChannel(subscription);
             
-        _messageProducer = new SnsMessageProducer(awsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
+        _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{Topic = new RoutingKey(_queueName), MakeChannels = OnMissingChannel.Create});
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         message.Id.Should().Be(_myCommand.Id);
         message.Redelivered.Should().BeFalse();
         message.Header.MessageId.Should().Be(_myCommand.Id);
-        message.Header.Topic.Value.Should().Contain(_topicName);
+        message.Header.Topic.Value.Should().Contain(_queueName);
         message.Header.CorrelationId.Should().Be(_correlationId);
         message.Header.ReplyTo.Should().Be(_replyTo);
         message.Header.ContentType.Should().Be(_contentType);

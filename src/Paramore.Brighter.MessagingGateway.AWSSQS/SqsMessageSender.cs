@@ -85,7 +85,7 @@ public class SqsMessageSender
         request.MessageAttributes = messageAttributes;
 
         var response = await _client.SendMessageAsync(request, cancellationToken);
-        if (response.HttpStatusCode is System.Net.HttpStatusCode.OK or HttpStatusCode.Created
+        if (response.HttpStatusCode is HttpStatusCode.OK or HttpStatusCode.Created
             or HttpStatusCode.Accepted)
         {
             return response.MessageId;

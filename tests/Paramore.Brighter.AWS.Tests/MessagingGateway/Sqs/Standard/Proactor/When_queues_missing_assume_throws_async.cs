@@ -17,15 +17,16 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
     public AWSAssumeQueuesTestsAsync()
     {
         var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(topicName);
+        var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
 
         var subscription = new SqsSubscription<MyCommand>(
             name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            channelName: new ChannelName(queueName),
             routingKey: routingKey,
             makeChannels: OnMissingChannel.Assume,
-            messagePumpType: MessagePumpType.Proactor
+            messagePumpType: MessagePumpType.Proactor,
+            routingKeyType: RoutingKeyType.PointToPoint
         );
 
         var awsConnection = GatewayFactory.CreateFactory();
@@ -38,7 +39,7 @@ public class AWSAssumeQueuesTestsAsync : IAsyncDisposable, IDisposable
                 MakeChannels = OnMissingChannel.Create
             });
 
-        producer.ConfirmTopicExistsAsync(topicName).Wait();
+        producer.ConfirmTopicExistsAsync(queueName).Wait();
 
         _channelFactory = new ChannelFactory(awsConnection);
         var channel = _channelFactory.CreateAsyncChannel(subscription);

@@ -16,26 +16,28 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
 {
     private readonly Message _message;
     private readonly IAmAMessageConsumerSync _consumer;
-    private readonly SnsMessageProducer _messageProducer;
+    private readonly SqsMessageProducer _messageProducer;
     private readonly ChannelFactory _channelFactory;
     private readonly MyCommand _myCommand;
 
     public AWSValidateInfrastructureTests()
     {
         _myCommand = new MyCommand { Value = "Test" };
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(topicName);
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        
+        var correlationId = Guid.NewGuid().ToString();
+        var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
 
-        SqsSubscription<MyCommand> subscription = new(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+        var subscription = new SqsSubscription<MyCommand>(
+            name: new SubscriptionName(subscriptionName),
+            channelName: new ChannelName(queueName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Create
+            makeChannels: OnMissingChannel.Create,
+            routingKeyType: RoutingKeyType.PointToPoint
         );
 
         _message = new Message(
@@ -54,21 +56,22 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
 
         //Now change the subscription to validate, just check what we made
         subscription = new(
-            name: new SubscriptionName(channelName),
+            name: new SubscriptionName(subscriptionName),
             channelName: channel.Name,
             routingKey: routingKey,
             findTopicBy: TopicFindBy.Name,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate
+            makeChannels: OnMissingChannel.Validate,
+            routingKeyType: RoutingKeyType.PointToPoint
         );
 
-        _messageProducer = new SnsMessageProducer(
+        _messageProducer = new SqsMessageProducer(
             awsConnection,
-            new SnsPublication
+            new SqsPublication
             {
-                FindTopicBy = TopicFindBy.Name,
+                FindQueueBy = QueueFindBy.Name,
                 MakeChannels = OnMissingChannel.Validate,
-                Topic = new RoutingKey(topicName)
+                Topic = new RoutingKey(queueName)
             }
         );
 

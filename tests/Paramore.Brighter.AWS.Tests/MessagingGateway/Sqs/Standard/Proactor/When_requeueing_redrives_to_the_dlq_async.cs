@@ -17,7 +17,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor;
 [Trait("Fragile", "CI")]
 public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 {
-    private readonly SnsMessageProducer _sender;
+    private readonly SqsMessageProducer _sender;
     private readonly IAmAChannelAsync _channel;
     private readonly ChannelFactory _channelFactory;
     private readonly Message _message;
@@ -27,20 +27,22 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
     public SqsMessageProducerDlqTestsAsync()
     {
         MyCommand myCommand = new MyCommand { Value = "Test" };
-        string correlationId = Guid.NewGuid().ToString();
-        string replyTo = "http:\\queueUrl";
-        string contentType = "text\\plain";
-        var channelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        const string replyTo = "http:\\queueUrl";
+        const string contentType = "text\\plain";
+        
         _dlqChannelName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(topicName);
+        var correlationId = Guid.NewGuid().ToString();
+        var subscriptionName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
 
-        SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+        var subscription = new SqsSubscription<MyCommand>(
+            name: new SubscriptionName(subscriptionName),
+            channelName: new ChannelName(queueName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
-            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
+            redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
+            routingKeyType: RoutingKeyType.PointToPoint
         );
 
         _message = new Message(
@@ -51,10 +53,8 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
 
         _awsConnection = GatewayFactory.CreateFactory();
 
-        _sender = new SnsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
-
-        _sender.ConfirmTopicExistsAsync(topicName).Wait();
-
+        _sender = new SqsMessageProducer(_awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+        
         _channelFactory = new ChannelFactory(_awsConnection);
         _channel = _channelFactory.CreateAsyncChannel(subscription);
     }
@@ -86,7 +86,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         {
             QueueUrl = queueUrlResponse.QueueUrl,
             WaitTimeSeconds = 5,
-            MessageAttributeNames = new List<string> { "All", "ApproximateReceiveCount" }
+            MessageAttributeNames = ["All", "ApproximateReceiveCount"]
         });
 
         if (response.HttpStatusCode != HttpStatusCode.OK)

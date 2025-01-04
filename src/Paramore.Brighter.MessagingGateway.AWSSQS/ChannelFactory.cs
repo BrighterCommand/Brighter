@@ -122,7 +122,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
             await EnsureQueueAsync(
                 _subscription.ChannelName.Value,
-                _subscription.QueueFindBy,
+                _subscription.FindQueueBy,
                 SqsAttributes.From(_subscription),
                 _subscription.MakeChannels,
                 ct);
@@ -219,7 +219,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
             await EnsureQueueAsync(
                 _subscription.ChannelName.Value,
-                _subscription.QueueFindBy,
+                _subscription.FindQueueBy,
                 SqsAttributes.From(_subscription),
                 _subscription.MakeChannels);
 

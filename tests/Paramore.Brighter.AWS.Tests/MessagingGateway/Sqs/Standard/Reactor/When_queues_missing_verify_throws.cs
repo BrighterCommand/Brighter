@@ -17,28 +17,20 @@ public class AWSValidateQueuesTests  : IDisposable, IAsyncDisposable
 
     public AWSValidateQueuesTests()
     {
-        var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var routingKey = new RoutingKey(topicName);
+        var subscriptionName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var queueName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var routingKey = new RoutingKey(queueName);
             
         _subscription = new SqsSubscription<MyCommand>(
-            name: new SubscriptionName(channelName),
-            channelName: new ChannelName(channelName),
+            name: new SubscriptionName(subscriptionName),
+            channelName: new ChannelName(queueName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            makeChannels: OnMissingChannel.Validate
+            makeChannels: OnMissingChannel.Validate,
+            routingKeyType: RoutingKeyType.PointToPoint
         );
             
         _awsConnection = GatewayFactory.CreateFactory();
-            
-        //We need to create the topic at least, to check the queues
-        var producer = new SnsMessageProducer(_awsConnection, 
-            new SnsPublication
-            {
-                MakeChannels = OnMissingChannel.Create 
-            });
-        producer.ConfirmTopicExistsAsync(topicName).Wait(); 
-            
     }
 
     [Fact]
