@@ -16,4 +16,4 @@ When the Handler Factories are configured to not be a singleton Scopes will be c
 
 ## Consequences
 
-We will no longer require a `Command processor provider` as this was only created for scoping, and Handler factories will require the lifetime scope to be passed in to all methods.
+We will no longer require a `Command processor provider` as this was only created for scoping, and Handler factories will require the lifetime scope to be passed in to all methods so it can use this for managing scopes.
