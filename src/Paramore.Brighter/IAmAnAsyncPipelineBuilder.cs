@@ -39,10 +39,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Builds the specified request context.
         /// </summary>
-        /// <param name="type">The Handler Type</param>
         /// <param name="requestContext">The request context.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns><see cref="AsyncPipelines{TRequest}"/></returns>
-        IHandleRequestsAsync<TRequest> BuildAsync(Type type, IRequestContext requestContext, bool continueOnCapturedContext);
+        AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext);
     }
 }

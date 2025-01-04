@@ -11,26 +11,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private static string s_released;
-        private SubscriberRegistry _subscriberRegistry;
 
         public PipelineCleanupTests()
         {
             s_released = string.Empty;
 
-            _subscriberRegistry = new SubscriberRegistry();
-            _subscriberRegistry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
-            _subscriberRegistry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
+            registry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
 
             var handlerFactory = new CheapHandlerFactorySync();
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
             
-            var observers = _subscriberRegistry.Get<MyCommand>();
-            foreach (var observer in observers)
-            {
-                _pipelineBuilder.Build(observer, new RequestContext());
-            }
+            _pipelineBuilder.Build(new RequestContext()).Any();
         }
     
         [Fact]

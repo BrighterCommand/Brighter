@@ -19,9 +19,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     public class PipelineGlobalInboxTestsAsync : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
-        private IEnumerable<IHandleRequestsAsync<MyCommand>> _chainOfResponsibility;
+        private AsyncPipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
-        private SubscriberRegistry _subscriberRegistry;
 
 
         public PipelineGlobalInboxTestsAsync()
@@ -29,8 +28,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             IAmAnInboxAsync inbox = new InMemoryInbox(new FakeTimeProvider());
             var handler = new MyCommandHandlerAsync(new Dictionary<string, string>());
            
-            _subscriberRegistry = new SubscriberRegistry();
-            _subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
+            var registry = new SubscriberRegistry();
+            registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
             
             var container = new ServiceCollection();
             container.AddSingleton(handler);
@@ -45,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             
             InboxConfiguration inboxConfiguration = new();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactoryAsync)handlerFactory, inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, inboxConfiguration);
             
         }
 
@@ -53,8 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         public void When_Building_A_Pipeline_With_Global_Inbox()
         {
            //act
-           var observers = _subscriberRegistry.Get<MyCommand>();
-            _chainOfResponsibility = observers.Select(o => _chainBuilder.BuildAsync(o, _requestContext, false));
+            _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false);
             
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());

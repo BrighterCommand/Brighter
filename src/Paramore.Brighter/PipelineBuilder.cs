@@ -28,7 +28,6 @@ using System.Linq;
 using System.Collections.Generic;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
-using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Attributes;
 
@@ -39,10 +38,11 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
 
+        private readonly IAmASubscriberRegistry _subscriberRegistry;
         private readonly IAmAHandlerFactorySync? _handlerFactorySync;
         private readonly InboxConfiguration? _inboxConfiguration;
-        private readonly IAmALifetime _instanceScope;
         private readonly IAmAHandlerFactoryAsync? _asyncHandlerFactory;
+        private readonly List<IAmALifetime> _instanceScopes = new List<IAmALifetime>();
         //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> s_preAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> s_postAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
@@ -51,37 +51,49 @@ namespace Paramore.Brighter
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
         /// target handler which represent other filter steps in the pipeline
         /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry</param>
         /// <param name="handlerFactorySync">Callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
+            IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactorySync handlerFactorySync,
             InboxConfiguration? inboxConfiguration = null) 
         {
+            _subscriberRegistry = subscriberRegistry;
             _handlerFactorySync = handlerFactorySync;
             _inboxConfiguration = inboxConfiguration;
-            _instanceScope = new HandlerLifetimeScope(handlerFactorySync);
         }
 
         public PipelineBuilder(
+            IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             InboxConfiguration? inboxConfiguration = null)
         {
+            _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
-            _instanceScope = new HandlerLifetimeScope(asyncHandlerFactory);
         }
-
-        public IHandleRequests<TRequest> Build(Type type, IRequestContext requestContext)
+        
+        public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
             if(_handlerFactorySync is null)
                 throw new NullReferenceException("HandlerFactorySync is null");
             
             try
             {
-                var handler = (RequestHandler<TRequest>)_handlerFactorySync.Create(type, _instanceScope);
-                var pipeline = BuildPipeline(handler, requestContext);
-                pipeline.AddToLifetime(_instanceScope);
-                return pipeline;
+                var observers = _subscriberRegistry.Get<TRequest>();
+                
+                var pipelines = new Pipelines<TRequest>();
+                
+                observers.Each(observer =>
+                {
+                    var instanceScope = GetSyncInstanceScope();
+                    var handler = (RequestHandler<TRequest>)_handlerFactorySync.Create(observer, instanceScope);
+                    var pipeline = BuildPipeline(handler, requestContext.CreateCopy(), instanceScope);
+                    pipeline.AddToLifetime(instanceScope);
+                });
+
+                return pipelines;
             }
             catch (Exception e) when (e is not ConfigurationException)
             {
@@ -102,11 +114,10 @@ namespace Paramore.Brighter
         }
 
         public void Dispose()
-        {
-            _instanceScope.Dispose();
-        }
+            => _instanceScopes.Each(s => s.Dispose());
 
-        private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
+        private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler,
+            IRequestContext requestContext, IAmALifetime instanceScope)
         {
             if (implicitHandler is null)
             {
@@ -115,7 +126,8 @@ namespace Paramore.Brighter
 
             implicitHandler.Context = requestContext;
 
-            if (!s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute>? preAttributes))
+            if (!s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(),
+                    out IOrderedEnumerable<RequestHandlerAttribute>? preAttributes))
             {
                 preAttributes =
                     implicitHandler.FindHandlerMethod()
@@ -129,10 +141,11 @@ namespace Paramore.Brighter
 
             }
 
-            var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext);
+            var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext, instanceScope);
 
 
-            if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))
+            if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(),
+                    out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))
             {
                 postAttributes =
                     implicitHandler.FindHandlerMethod()
@@ -141,24 +154,34 @@ namespace Paramore.Brighter
                         .OrderByDescending(attribute => attribute.Step);
             }
 
-            AppendToPipeline(postAttributes, implicitHandler, requestContext);
+            AppendToPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
             s_logger.LogDebug("New handler pipeline created: {HandlerName}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 
 
-        public IHandleRequestsAsync<TRequest> BuildAsync(Type type, IRequestContext requestContext, bool continueOnCapturedContext)
+        public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
         {
             if(_asyncHandlerFactory is null)
                 throw new NullReferenceException("AsyncHandlerFactory is null");
             
             try
             {
-                var handler = (RequestHandlerAsync<TRequest>)_asyncHandlerFactory.Create(type, _instanceScope);
-                var pipeline = BuildAsyncPipeline(handler, requestContext, continueOnCapturedContext);
-                pipeline.AddToLifetime(_instanceScope);
                 
-                return pipeline;
+                var observers = _subscriberRegistry.Get<TRequest>();
+
+                var pipelines = new AsyncPipelines<TRequest>();
+                
+                observers.Each(observer =>
+                {
+                    var instanceScope = GetAsyncInstanceScope();
+                    var handler = (RequestHandlerAsync<TRequest>)_asyncHandlerFactory.Create(observer, instanceScope);
+                    var pipeline = BuildAsyncPipeline(handler, requestContext.CreateCopy(), instanceScope,
+                        continueOnCapturedContext);
+                    pipeline.AddToLifetime(instanceScope);
+                });
+
+                return pipelines;
             }
             catch (Exception e) when(!(e is ConfigurationException))
             {
@@ -166,7 +189,7 @@ namespace Paramore.Brighter
             }
         }
 
-        private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(RequestHandlerAsync<TRequest> implicitHandler, IRequestContext requestContext, bool continueOnCapturedContext)
+        private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(RequestHandlerAsync<TRequest> implicitHandler, IRequestContext requestContext, IAmALifetime instanceScope, bool continueOnCapturedContext)
         {
             if (implicitHandler is null)
             {
@@ -193,7 +216,7 @@ namespace Paramore.Brighter
 
             AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
             
-            var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, continueOnCapturedContext);
+            var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, instanceScope, continueOnCapturedContext);
 
             if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute>? postAttributes))
             {
@@ -204,7 +227,7 @@ namespace Paramore.Brighter
                         .OrderByDescending(attribute => attribute.Step);
             }
 
-            AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext);
+            AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext, instanceScope);
             s_logger.LogDebug("New async handler pipeline created: {HandlerName}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
@@ -256,7 +279,7 @@ namespace Paramore.Brighter
              PushOntoAttributeList(ref preAttributes, useInboxAttribute);
         }
 
-        private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
+        private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext, IAmALifetime instanceScope)
         {
             IHandleRequests<TRequest> lastInPipeline = implicitHandler;
             attributes.Each(attribute =>
@@ -265,7 +288,7 @@ namespace Paramore.Brighter
                 if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
-                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync!, requestContext).CreateRequestHandler(_instanceScope);
+                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync!, requestContext).CreateRequestHandler(instanceScope);
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
                 }
@@ -277,7 +300,8 @@ namespace Paramore.Brighter
             });
         }
 
-        private void AppendToAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> implicitHandler, IRequestContext requestContext)
+        private void AppendToAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes,
+            IHandleRequestsAsync<TRequest> implicitHandler, IRequestContext requestContext, IAmALifetime instanceScope)
         {
             IHandleRequestsAsync<TRequest> lastInPipeline = implicitHandler;
             attributes.Each(attribute =>
@@ -285,18 +309,23 @@ namespace Paramore.Brighter
                 var handlerType = attribute.GetHandlerType();
                 if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
-                    var decorator = _asyncHandlerFactory!.CreateAsyncRequestHandler<TRequest>(attribute, requestContext, _instanceScope);
+                    var decorator =
+                        _asyncHandlerFactory!.CreateAsyncRequestHandler<TRequest>(attribute, requestContext,
+                            instanceScope);
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
                 }
                 else
                 {
-                    var message = string.Format("All handlers in an async pipeline must derive from IHandleRequestsAsync. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    var message =
+                        string.Format(
+                            "All handlers in an async pipeline must derive from IHandleRequestsAsync. You cannot have a mixed pipeline by including handler {0}",
+                            handlerType.Name);
                     throw new ConfigurationException(message);
                 }
             });
         }
-        
+
         private static void PushOntoAttributeList(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAttribute requestHandlerAttribute)
         {
             var attributeList = new List<RequestHandlerAttribute>();
@@ -311,8 +340,9 @@ namespace Paramore.Brighter
 
             preAttributes = attributeList.OrderByDescending(handler => handler.Step);
         }
-     
-        private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
+
+        private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes,
+            IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext, IAmALifetime instanceScope)
         {
             attributes.Each(attribute =>
             {
@@ -320,34 +350,45 @@ namespace Paramore.Brighter
                 if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
-                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync!, requestContext).CreateRequestHandler(_instanceScope);
+                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync!, requestContext)
+                            .CreateRequestHandler(instanceScope);
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
                 }
                 else
                 {
-                    var message = string.Format("All handlers in a pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    var message =
+                        string.Format(
+                            "All handlers in a pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}",
+                            handlerType.Name);
                     throw new ConfigurationException(message);
                 }
             });
             return lastInPipeline;
         }
 
-        private IHandleRequestsAsync<TRequest> PushOntoAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> lastInPipeline, IRequestContext requestContext, bool continueOnCapturedContext)
+        private IHandleRequestsAsync<TRequest> PushOntoAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes,
+            IHandleRequestsAsync<TRequest> lastInPipeline, IRequestContext requestContext, IAmALifetime instanceScope,
+            bool continueOnCapturedContext)
         {
             attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
                 if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
-                    var decorator = _asyncHandlerFactory!.CreateAsyncRequestHandler<TRequest>(attribute, requestContext, _instanceScope);
+                    var decorator =
+                        _asyncHandlerFactory!.CreateAsyncRequestHandler<TRequest>(attribute, requestContext,
+                            instanceScope);
                     decorator.ContinueOnCapturedContext = continueOnCapturedContext;
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
                 }
                 else
                 {
-                    var message = string.Format("All handlers in an async pipeline must derive from IHandleRequestsAsync. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    var message =
+                        string.Format(
+                            "All handlers in an async pipeline must derive from IHandleRequestsAsync. You cannot have a mixed pipeline by including handler {0}",
+                            handlerType.Name);
                     throw new ConfigurationException(message);
                 }
             });
@@ -366,6 +407,28 @@ namespace Paramore.Brighter
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
+        }
+
+        private IAmALifetime GetSyncInstanceScope()
+        {
+            if(_handlerFactorySync is null)
+                throw new NullReferenceException("HandlerFactorySync is null");
+
+            var scope = new HandlerLifetimeScope(_handlerFactorySync);
+            _instanceScopes.Add(scope);
+            
+            return scope;
+        }
+
+        private IAmALifetime GetAsyncInstanceScope()
+        {
+            if(_asyncHandlerFactory is null)
+                throw new NullReferenceException("AsyncHandlerFactory is null");
+            
+            var scope = new HandlerLifetimeScope(_asyncHandlerFactory);
+            _instanceScopes.Add(scope);
+            
+            return scope;
         }
     }
 }

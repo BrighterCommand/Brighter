@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -18,16 +17,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
     public class PipelineGlobalInboxWhenUseInboxAsyncTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
-        private IEnumerable<IHandleRequestsAsync<MyCommand>> _chainOfResponsibility;
+        private AsyncPipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
-        private SubscriberRegistry _subscriberRegistry;
+
 
         public PipelineGlobalInboxWhenUseInboxAsyncTests()
         {
             IAmAnInboxSync inbox = new InMemoryInbox(new FakeTimeProvider());
             
-            _subscriberRegistry = new SubscriberRegistry();
-            _subscriberRegistry.RegisterAsync<MyCommand, MyCommandInboxedHandlerAsync>();
+            var registry = new SubscriberRegistry();
+            registry.RegisterAsync<MyCommand, MyCommandInboxedHandlerAsync>();
             
             var container = new ServiceCollection();
             container.AddTransient<MyCommandInboxedHandlerAsync>();
@@ -46,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
                 onceOnly: true, 
                 actionOnExists: OnceOnlyAction.Throw);
 
-            _chainBuilder = new PipelineBuilder<MyCommand>((IAmAHandlerFactoryAsync)handlerFactory, inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, inboxConfiguration);
             
         }
 
@@ -61,8 +60,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             
             //act
-            var observers = _subscriberRegistry.Get<MyCommand>();
-            _chainOfResponsibility = observers.Select(o => _chainBuilder.BuildAsync(o, _requestContext, false));
+            _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false);
 
             var chain = _chainOfResponsibility.First();
             var myCommand = new MyCommand();

@@ -51,7 +51,20 @@ namespace Paramore.Brighter
         /// Gets the Feature Switches
         /// </summary>
         public IAmAFeatureSwitchRegistry? FeatureSwitches { get; set; }
-        
+
+        /// <summary>
+        /// Create a new instance of the Request Context
+        /// </summary>
+        /// <returns>New Instance of the message</returns>
+        public IRequestContext CreateCopy()
+            => new RequestContext
+            {
+                Span = Span,
+                Policies = Policies,
+                FeatureSwitches = FeatureSwitches,
+                OriginatingMessage = OriginatingMessage
+            };
+
         /// <summary>
         /// When we pass a requestContext through a receiver pipeline, we may want to pass the original message that started the pipeline.
         /// This is primarily useful for debugging - how did we get to this request?. But it is also useful for some request metadata that we
