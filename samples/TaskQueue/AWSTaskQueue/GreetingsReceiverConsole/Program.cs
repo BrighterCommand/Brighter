@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -58,21 +59,36 @@ namespace GreetingsReceiverConsole
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             bufferSize: 10,
-                            timeOut: TimeSpan.FromMilliseconds(20), 
+                            timeOut: TimeSpan.FromMilliseconds(20),
+                            lockTimeout: 30),
+                        new SqsSubscription<FarewellEvent>(new SubscriptionName("paramore.example.farewell"),
+                            new ChannelName(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                            new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                            bufferSize: 10,
+                            timeOut: TimeSpan.FromMilliseconds(20),
                             lockTimeout: 30)
                     };
 
                     //create the gateway
                     if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                     {
-                        var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                        var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                        var region = !string.IsNullOrWhiteSpace(serviceURL) ? RegionEndpoint.USEast1 : RegionEndpoint.USEast2;
+                        var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
+                            cfg =>
+                            {
+                                if (!string.IsNullOrWhiteSpace(serviceURL))
+                                {
+                                    cfg.ServiceURL = serviceURL;
+                                }
+                            });
 
                         services.AddServiceActivator(options =>
-                        {
-                            options.Subscriptions = subscriptions;
-                            options.DefaultChannelFactory = new ChannelFactory(awsConnection);
-                        })
-                        .AutoFromAssemblies();
+                            {
+                                options.Subscriptions = subscriptions;
+                                options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+                            })
+                            .AutoFromAssemblies();
                     }
 
                     services.AddHostedService<ServiceActivatorHostedService>();
@@ -82,11 +98,6 @@ namespace GreetingsReceiverConsole
                 .Build();
 
             await host.RunAsync();
-
-
-
-
         }
     }
 }
-

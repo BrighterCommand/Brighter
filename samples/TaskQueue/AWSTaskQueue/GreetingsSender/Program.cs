@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2017 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
@@ -48,10 +50,18 @@ namespace GreetingsSender
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
-            
+
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                var region = !string.IsNullOrWhiteSpace(serviceURL) ? RegionEndpoint.USEast1 : RegionEndpoint.USEast2;
+                var awsConnection = new AWSMessagingGatewayConnection(credentials, region, cfg =>
+                {
+                    if (!string.IsNullOrWhiteSpace(serviceURL))
+                    {
+                        cfg.ServiceURL = serviceURL;
+                    }
+                });
 
                 var producerRegistry = new SnsProducerRegistryFactory(
                     awsConnection,
@@ -64,7 +74,7 @@ namespace GreetingsSender
                         }
                     }
                 ).Create();
-                
+
                 serviceCollection.AddBrighter()
                     .UseExternalBus((configure) =>
                     {
@@ -76,7 +86,8 @@ namespace GreetingsSender
 
                 var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
-                commandProcessor.Post(new GreetingEvent("Ian"));
+                commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
+                commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
             }
         }
     }
