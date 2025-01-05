@@ -16,7 +16,7 @@
     <PackageVersion Include="Confluent.Kafka" Version="2.6.1" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.6.1" />
     <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.6.1" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.2">
+    <PackageVersion Include="coverlet.collector" Version="6.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
