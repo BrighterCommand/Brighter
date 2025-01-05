@@ -73,7 +73,7 @@ namespace GreetingsReceiverConsole
                     if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                     {
                         var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
-                        var region = !string.IsNullOrWhiteSpace(serviceURL) ? RegionEndpoint.USEast1 : RegionEndpoint.USEast2;
+                        var region = string.IsNullOrWhiteSpace(serviceURL) ? RegionEndpoint.EUWest1 : RegionEndpoint.USEast1;
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
                             cfg =>
                             {

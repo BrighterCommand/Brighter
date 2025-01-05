@@ -241,19 +241,18 @@ internal class SqsInlineMessageCreator : SqsMessageCreatorBase, ISqsMessageCreat
         if (_messageAttributes.TryGetValue(HeaderNames.Topic, out var topicArn))
         {
             var topic = topicArn.GetValueInString() ?? string.Empty;
+
             if (Arn.TryParse(topic, out var arn))
             {
-                topic = arn.Resource;
-            }
-            else
-            {
-                var indexOf = topic.LastIndexOf('/');
-                if (indexOf != -1)
-                {
-                    topic = topic.Substring(indexOf + 1);
-                }
+                return new HeaderResult<RoutingKey>(new RoutingKey(arn.Resource), true);
             }
 
+            var indexOf = topic.LastIndexOf('/');
+            if (indexOf != -1)
+            {
+                return new HeaderResult<RoutingKey>(new RoutingKey(topic.Substring(indexOf + 1)), true);
+            }
+            
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }
 

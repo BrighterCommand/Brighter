@@ -237,18 +237,16 @@ internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
         if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue? value))
         {
             //we have an arn, and we want the topic
-            var topic = value.StringValue;
-            if (Arn.TryParse(value.StringValue, out var arn))
+            var topic = value.StringValue ?? string.Empty;
+            if (Arn.TryParse(topic, out var arn))
             {
-                topic = arn.Resource;
+                return new HeaderResult<RoutingKey>(new RoutingKey(arn.Resource), true);
             }
-            else
+
+            var indexOf = topic.LastIndexOf('/');
+            if (indexOf != -1)
             {
-                var indexOf = value.StringValue.LastIndexOf('/');
-                if (indexOf != -1)
-                {
-                    topic = value.StringValue.Substring(indexOf + 1);
-                }
+                return new HeaderResult<RoutingKey>(new RoutingKey(topic.Substring(indexOf + 1)), true);
             }
 
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
