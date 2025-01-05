@@ -35,9 +35,9 @@ namespace Paramore.Brighter.ServiceActivator
     /// progressive interfaces to manage the requirements for a complete Dispatcher via Intellisense in the IDE. The intent is to make it easier to
     /// recognize those dependencies that you need to configure
     /// </summary>
-    public class DispatchBuilder : INeedACommandProcessorFactory, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfSubcriptions, INeedObservability, IAmADispatchBuilder
+    public class DispatchBuilder : INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfSubcriptions, INeedObservability, IAmADispatchBuilder
     {
-        private Func<IAmACommandProcessorProvider>? _commandProcessorFactory;
+        private IAmACommandProcessor? _commandProcessor;
         private IAmAMessageMapperRegistry? _messageMapperRegistry;
         private IAmAMessageMapperRegistryAsync? _messageMapperRegistryAsync;
         private IAmAChannelFactory? _defaultChannelFactory;
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Begins the fluent interface 
         /// </summary>
         /// <returns>INeedALogger.</returns>
-        public static INeedACommandProcessorFactory StartNew()
+        public static INeedACommandProcessor StartNew()
         {
             return new DispatchBuilder();
         }
@@ -62,15 +62,15 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
-        /// <param name="commandProcessorFactory">The command processor Factory.</param>
+        /// <param name="commandProcessor">The command processor.</param>
         /// <param name="requestContextFactory">The factory used to create a request synchronizationHelper for a pipeline</param>
         /// <returns>INeedAMessageMapper.</returns>
-        public INeedAMessageMapper CommandProcessorFactory(
-            Func<IAmACommandProcessorProvider> commandProcessorFactory,
+        public INeedAMessageMapper CommandProcessor(
+            IAmACommandProcessor commandProcessor,
             IAmARequestContextFactory requestContextFactory
             )
         {
-            _commandProcessorFactory = commandProcessorFactory;
+            _commandProcessor = commandProcessor;
             _requestContextFactory = requestContextFactory;
             return this;
         }
@@ -157,10 +157,10 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            if (_commandProcessorFactory is null || _subscriptions is null)
+            if (_commandProcessor is null || _subscriptions is null)
                 throw new ArgumentException("Command Processor Factory and Subscription are required.");
             
-            return new Dispatcher(_commandProcessorFactory, _subscriptions, _messageMapperRegistry, 
+            return new Dispatcher(_commandProcessor, _subscriptions, _messageMapperRegistry, 
                 _messageMapperRegistryAsync, _messageTransformerFactory, _messageTransformerFactoryAsync, 
                 _requestContextFactory, _tracer, _instrumentationOptions
             );
@@ -174,16 +174,16 @@ namespace Paramore.Brighter.ServiceActivator
     /// <summary>
     /// Interface INeedACommandProcessor
     /// </summary>
-    public interface INeedACommandProcessorFactory
+    public interface INeedACommandProcessor
     {
         /// <summary>
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
-        /// <param name="commandProcessorFactory">The command processor provider Factory.</param>
+        /// <param name="commandProcessor">The command processor.</param>
         /// <param name="requestContextFactory">The factory used to create a request synchronizationHelper for a pipeline</param>
         /// <returns>INeedAMessageMapper.</returns>
-        INeedAMessageMapper CommandProcessorFactory(
-            Func<IAmACommandProcessorProvider> commandProcessorFactory,
+        INeedAMessageMapper CommandProcessor(
+            IAmACommandProcessor commandProcessor,
             IAmARequestContextFactory requestContextFactory
             );
     }

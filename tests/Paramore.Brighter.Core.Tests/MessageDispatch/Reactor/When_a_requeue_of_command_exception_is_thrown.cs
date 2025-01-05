@@ -47,13 +47,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public MessagePumpCommandRequeueTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
-            var provider = new CommandProcessorProvider(_commandProcessor);
             Channel channel = new(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)), 2);
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
                 null);
              messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-             _messagePump = new Reactor<MyCommand>(provider, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
+             _messagePump = new Reactor<MyCommand>(_commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = -1 };
 
             var message1 = new Message(

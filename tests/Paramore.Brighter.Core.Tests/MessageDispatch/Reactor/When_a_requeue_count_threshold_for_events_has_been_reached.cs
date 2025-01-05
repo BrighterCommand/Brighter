@@ -47,14 +47,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         public MessagePumpEventRequeueCountThresholdTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
-            var provider = new CommandProcessorProvider(_commandProcessor);
             _channel = new Channel(new(Channel), _routingKey, new InMemoryMessageConsumer(_routingKey, _bus, _timeProvider, TimeSpan.FromMilliseconds(1000)));
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
-            _messagePump = new Reactor<MyEvent>(provider, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel) 
+            _messagePump = new Reactor<MyEvent>(_commandProcessor, messageMapperRegistry, new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), _channel) 
                 { Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3 };
 
             var message1 = new Message(
