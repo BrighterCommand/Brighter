@@ -26,7 +26,8 @@ public class KafkaProducerAssumeTests : IDisposable
                 Name = "Kafka Producer Send Test", 
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new KafkaPublication[] {new KafkaPublication
+            [
+                new KafkaPublication
             {
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
@@ -35,8 +36,9 @@ public class KafkaProducerAssumeTests : IDisposable
                 //your production values ought to be lower
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).Create(); 
+                MakeChannels = OnMissingChannel.Assume
+            }
+            ]).Create(); 
             
     }
 
@@ -69,8 +71,7 @@ public class KafkaProducerAssumeTests : IDisposable
             
         ((IAmAMessageProducerSync)producer).Send(message);
 
-        //Give this a chance to succeed - will fail
-        await Task.Delay(5000);
+        ((KafkaMessageProducer)producer).Flush();
 
         messagePublished.Should().BeFalse();
     }

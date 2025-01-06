@@ -17,7 +17,7 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
 {
     private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
-    private readonly string _topic = Guid.NewGuid().ToString();
+    private readonly RoutingKey _topic = new(Guid.NewGuid().ToString());
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
     private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
@@ -94,11 +94,9 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
     {
         var messageId = Guid.NewGuid().ToString();
 
-        var routingKey = new RoutingKey(_topic);
-            
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(
+        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(
             new Message(
-                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND)
+                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
@@ -139,7 +137,7 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
-                    BootStrapServers = new[] { "localhost:9092" }
+                    BootStrapServers = ["localhost:9092"]
                 })
             .Create(new KafkaSubscription<MyCommand>(
                 name: new SubscriptionName("Paramore.Brighter.Tests"),
