@@ -40,6 +40,8 @@ public class KafkaProducerAssumeTests : IDisposable
             
     }
 
+    //Watch your local Docker container when checking failures for this test, should be 
+    //KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     //[Fact(Skip = "Does not fail on docker container as has topic creation set to true")]
     [Fact]
     public async Task When_a_consumer_declares_topics()
