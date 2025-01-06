@@ -4,19 +4,19 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.404.11" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.404.13" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.410.12" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.19" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.70" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.70" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.411" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.21" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.72" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.72" />
     <PackageVersion Include="Azure.Identity" Version="1.13.1" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.6.1" />
     <PackageVersion Include="Confluent.SchemaRegistry" Version="2.6.1" />
     <PackageVersion Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.6.1" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.2">
+    <PackageVersion Include="coverlet.collector" Version="6.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
@@ -79,9 +79,9 @@
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.0.0" />
-    <PackageVersion Include="Serilog" Version="4.1.0" />
-    <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
-    <PackageVersion Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageVersion Include="Serilog" Version="4.2.0" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.5.2" />
