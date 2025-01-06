@@ -148,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TimeSpan? maxPollInterval = null, 
             TimeSpan? sweepUncommittedOffsetsInterval = null,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            MessagePumpType messagePumpType = MessagePumpType.Proactor, 
+            MessagePumpType messagePumpType = MessagePumpType.Unknown, 
             int numOfPartitions = 1,
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 

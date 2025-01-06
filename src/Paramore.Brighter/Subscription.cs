@@ -153,12 +153,15 @@ namespace Paramore.Brighter
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            MessagePumpType messagePumpType = MessagePumpType.Proactor,
+            MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,
             TimeSpan? channelFailureDelay = null)
         {
+            if (messagePumpType == MessagePumpType.Unknown)
+                throw new ConfigurationException("You must set a message pump type: use Reactor for sync pipelines; use Proactor for async pipelines");
+            
             DataType = dataType;
             Name = name ?? new SubscriptionName(dataType.FullName!);
             ChannelName = channelName ?? new ChannelName(dataType.FullName!);

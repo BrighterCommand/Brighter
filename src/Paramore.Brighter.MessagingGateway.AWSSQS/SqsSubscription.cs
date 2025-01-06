@@ -125,7 +125,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            MessagePumpType messagePumpType = MessagePumpType.Proactor,
+            MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null,
             int lockTimeout = 10,
             int delaySeconds = 0,
