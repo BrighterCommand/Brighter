@@ -36,7 +36,7 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _message = new Message(

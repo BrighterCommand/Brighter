@@ -270,7 +270,7 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
             throw new InvalidOperationException($"Could not create Queue queue: {queueName} on {AwsConnection.Region}");
         }
 
-        if (sqsAttributes == null || sqsAttributes.RoutingKeyType == RoutingKeyType.PubSub)
+        if (sqsAttributes == null || sqsAttributes.ChannelType == ChannelType.PubSub)
         {
             using var snsClient = _awsClientFactory.CreateSnsClient();
             await CheckSubscriptionAsync(makeChannel, ChannelTopicArn!, queueUrl, sqsAttributes, sqsClient, snsClient);

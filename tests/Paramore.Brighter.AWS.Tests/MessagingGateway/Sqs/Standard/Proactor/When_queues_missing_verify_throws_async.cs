@@ -26,7 +26,7 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
             channelName: new ChannelName(queueName),
             routingKey: routingKey,
             makeChannels: OnMissingChannel.Validate,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _awsConnection = GatewayFactory.CreateFactory();

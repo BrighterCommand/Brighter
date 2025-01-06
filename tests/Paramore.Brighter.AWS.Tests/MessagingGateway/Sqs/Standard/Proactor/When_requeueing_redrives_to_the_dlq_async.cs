@@ -42,7 +42,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Proactor,
             redrivePolicy: new RedrivePolicy(_dlqChannelName, 2),
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _message = new Message(

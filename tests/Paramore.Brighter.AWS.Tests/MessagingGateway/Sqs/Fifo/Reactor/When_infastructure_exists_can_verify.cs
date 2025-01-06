@@ -38,7 +38,7 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create,
             sqsType: SnsSqsType.Fifo,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _message = new Message(

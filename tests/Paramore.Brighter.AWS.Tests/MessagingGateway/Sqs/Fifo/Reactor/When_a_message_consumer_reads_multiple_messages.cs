@@ -43,7 +43,7 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             contentBasedDeduplication: true,
             deduplicationScope: DeduplicationScope.MessageGroup,
             fifoThroughputLimit: 1,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         ));
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel

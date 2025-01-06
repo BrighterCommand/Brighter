@@ -39,7 +39,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             routingKey: routingKey,
             bufferSize: BufferSize,
             makeChannels: OnMissingChannel.Create,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         )).GetAwaiter().GetResult();
 
         //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel

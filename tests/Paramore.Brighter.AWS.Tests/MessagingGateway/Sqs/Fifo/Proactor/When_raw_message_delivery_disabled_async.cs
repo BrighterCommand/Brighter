@@ -37,7 +37,7 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
             makeChannels: OnMissingChannel.Create,
             rawMessageDelivery: true,
             sqsType: SnsSqsType.Fifo,
-            routingKeyType: RoutingKeyType.PointToPoint));
+            channelType: ChannelType.PointToPoint));
 
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SqsPublication

@@ -103,7 +103,7 @@ public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync,
         _publication.SqsAttributes ??= new SqsAttributes();
 
         // For SQS Publish, it should be always Point-to-Point
-        _publication.SqsAttributes.RoutingKeyType = RoutingKeyType.PointToPoint;
+        _publication.SqsAttributes.ChannelType = ChannelType.PointToPoint;
 
         RoutingKey? routingKey = null;
         if (queue is not null)

@@ -36,7 +36,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
                 routingKey: routingKey,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create,
-                routingKeyType: RoutingKeyType.PointToPoint
+                channelType: ChannelType.PointToPoint
             );
 
             _message = new Message(
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sqs.Standard.Proactor
                 findTopicBy: TopicFindBy.Name,
                 messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Validate,
-                routingKeyType: RoutingKeyType.PointToPoint
+                channelType: ChannelType.PointToPoint
             );
 
             _messageProducer = new SqsMessageProducer(

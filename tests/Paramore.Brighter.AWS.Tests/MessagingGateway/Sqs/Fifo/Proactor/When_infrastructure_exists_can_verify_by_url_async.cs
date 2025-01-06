@@ -37,7 +37,7 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create,
             sqsType: SnsSqsType.Fifo,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _message = new Message(
@@ -60,7 +60,7 @@ public class AWSValidateInfrastructureByUrlTestsAsync : IAsyncDisposable, IDispo
             findQueueBy: QueueFindBy.Url,
             makeChannels: OnMissingChannel.Validate,
             sqsType: SnsSqsType.Fifo,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _messageProducer = new SqsMessageProducer(

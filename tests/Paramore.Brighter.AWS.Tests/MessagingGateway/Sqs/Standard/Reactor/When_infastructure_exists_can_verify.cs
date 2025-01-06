@@ -37,7 +37,7 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Create,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _message = new Message(
@@ -62,7 +62,7 @@ public class AWSValidateInfrastructureTests : IDisposable, IAsyncDisposable
             findTopicBy: TopicFindBy.Name,
             messagePumpType: MessagePumpType.Reactor,
             makeChannels: OnMissingChannel.Validate,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _messageProducer = new SqsMessageProducer(

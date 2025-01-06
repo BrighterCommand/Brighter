@@ -44,7 +44,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             name: new SubscriptionName(subscriptionName),
             channelName: new ChannelName(queueName),
             routingKey: routingKey,
-            routingKeyType: RoutingKeyType.PointToPoint,
+            channelType: ChannelType.PointToPoint,
             //don't block the redrive policy from owning retry management
             requeueCount: -1,
             //delay before requeuing

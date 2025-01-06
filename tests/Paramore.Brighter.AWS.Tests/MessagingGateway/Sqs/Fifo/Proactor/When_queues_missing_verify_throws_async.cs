@@ -27,7 +27,7 @@ public class AWSValidateQueuesTestsAsync : IAsyncDisposable
             routingKey: routingKey,
             makeChannels: OnMissingChannel.Validate,
             sqsType: SnsSqsType.Fifo,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _awsConnection = GatewayFactory.CreateFactory();

@@ -106,7 +106,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
 
             var isFifo = _subscription.SqsType == SnsSqsType.Fifo;
             var routingKey = _subscription.ChannelName.Value.ToValidSQSQueueName(isFifo);
-            if (_subscription.RoutingKeyType == RoutingKeyType.PubSub)
+            if (_subscription.ChannelType == ChannelType.PubSub)
             {
                 var snsAttributes = _subscription.SnsAttributes ?? new SnsAttributes();
                 snsAttributes.Type = _subscription.SqsType;
@@ -155,9 +155,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         {
             try
             {
-                sqsClient.DeleteQueueAsync(queueExists.queueUrl)
-                    .GetAwaiter()
-                    .GetResult();
+                await sqsClient.DeleteQueueAsync(queueExists.queueUrl);
             }
             catch (Exception)
             {
@@ -204,7 +202,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
             var routingKey = _subscription.ChannelName.Value;
 
             var isFifo = _subscription.SqsType == SnsSqsType.Fifo;
-            if (_subscription.RoutingKeyType == RoutingKeyType.PubSub)
+            if (_subscription.ChannelType == ChannelType.PubSub)
             {
                 var snsAttributes = _subscription.SnsAttributes ?? new SnsAttributes();
                 snsAttributes.Type = _subscription.SqsType;

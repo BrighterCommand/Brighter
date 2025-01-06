@@ -32,7 +32,7 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
             channelName: new ChannelName(queueName),
             messagePumpType: MessagePumpType.Proactor,
             routingKey: routingKey,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _message = new Message(

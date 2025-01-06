@@ -37,7 +37,7 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Create,
             sqsType: SnsSqsType.Fifo,
-            routingKeyType: RoutingKeyType.PointToPoint);
+            channelType: ChannelType.PointToPoint);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND, correlationId: correlationId,
@@ -61,7 +61,7 @@ public class AWSAssumeInfrastructureTestsAsync : IDisposable, IAsyncDisposable
             messagePumpType: MessagePumpType.Proactor,
             makeChannels: OnMissingChannel.Assume,
             sqsType: SnsSqsType.Fifo,
-            routingKeyType: RoutingKeyType.PointToPoint);
+            channelType: ChannelType.PointToPoint);
 
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SqsPublication

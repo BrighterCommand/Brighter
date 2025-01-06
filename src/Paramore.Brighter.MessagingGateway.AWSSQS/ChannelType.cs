@@ -1,9 +1,9 @@
 ﻿namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
 /// <summary>
-/// The routing key type
+/// The Channel type
 /// </summary>
-public enum RoutingKeyType
+public enum ChannelType
 {
     /// <summary>
     /// Use the Pub/Sub for routing key, aka SNS

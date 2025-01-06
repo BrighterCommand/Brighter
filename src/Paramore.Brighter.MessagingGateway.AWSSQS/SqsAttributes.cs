@@ -11,7 +11,7 @@ public class SqsAttributes
     /// <summary>
     /// The routing key type.
     /// </summary>
-    public RoutingKeyType RoutingKeyType { get; set; }
+    public ChannelType ChannelType { get; set; }
     
     /// <summary>
     /// This governs how long, in seconds, a 'lock' is held on a message for one consumer
@@ -82,7 +82,7 @@ public class SqsAttributes
     {
         return new SqsAttributes
         {
-            RoutingKeyType = subscription.RoutingKeyType,
+            ChannelType = subscription.ChannelType,
             LockTimeout = subscription.LockTimeout,
             DelaySeconds = subscription.DelaySeconds,
             MessageRetentionPeriod = subscription.MessageRetentionPeriod,

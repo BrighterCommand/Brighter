@@ -47,7 +47,7 @@ public class SnsReDrivePolicySDlqTests : IDisposable, IAsyncDisposable
             requeueDelay: TimeSpan.FromMilliseconds(50),
             messagePumpType: MessagePumpType.Proactor,
             redrivePolicy: new RedrivePolicy(new ChannelName(_dlqChannelName), 2),
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         var myCommand = new MyDeferredCommand { Value = "Hello Redrive" };

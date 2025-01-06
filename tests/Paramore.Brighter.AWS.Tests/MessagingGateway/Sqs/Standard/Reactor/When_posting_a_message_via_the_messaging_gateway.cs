@@ -38,7 +38,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
             channelName: new ChannelName(_queueName),
             routingKey: routingKey,
             messagePumpType: MessagePumpType.Reactor,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
             
         _message = new Message(

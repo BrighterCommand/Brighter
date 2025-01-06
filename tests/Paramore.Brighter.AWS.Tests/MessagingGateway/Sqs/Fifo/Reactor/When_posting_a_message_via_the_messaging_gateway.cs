@@ -42,7 +42,7 @@ public class SqsMessageProducerSendAsyncTests : IAsyncDisposable, IDisposable
             messagePumpType: MessagePumpType.Proactor,
             rawMessageDelivery: true,
             sqsType: SnsSqsType.Fifo,
-            routingKeyType: RoutingKeyType.PointToPoint
+            channelType: ChannelType.PointToPoint
         );
 
         _message = new Message(
