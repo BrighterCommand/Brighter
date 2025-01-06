@@ -96,8 +96,8 @@ public class KafkaMessageProducerSendTests : IDisposable
         receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
         receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
         receivedMessage.Body.Value.Should().Be(message.Body.Value);
-        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mmZ")
-            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mmZ"));
+        receivedMessage.Header.TimeStamp.ToString("u")
+            .Should().Be(message.Header.TimeStamp.ToString("u"));
         receivedCommand.Id.Should().Be(command.Id);
         receivedCommand.Value.Should().Be(command.Value);
     }
