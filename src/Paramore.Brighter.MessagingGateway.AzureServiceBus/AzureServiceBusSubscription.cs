@@ -65,7 +65,7 @@ public class AzureServiceBusSubscription : Subscription
         int requeueCount = -1,
         TimeSpan? requeueDelay = null,
         int unacceptableMessageLimit = 0,
-        MessagePumpType messagePumpType = MessagePumpType.Proactor,
+        MessagePumpType messagePumpType = MessagePumpType.Unknown,
         IAmAChannelFactory? channelFactory = null,
         OnMissingChannel makeChannels = OnMissingChannel.Create,
         AzureServiceBusSubscriptionConfiguration? subscriptionConfiguration = null,

@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             int requeueCount = -1, 
             TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
-            MessagePumpType messagePumpType = MessagePumpType.Proactor, 
+            MessagePumpType messagePumpType = MessagePumpType.Unknown, 
             IAmAChannelFactory? channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             TimeSpan? emptyChannelDelay = null,

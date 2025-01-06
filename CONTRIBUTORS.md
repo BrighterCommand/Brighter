@@ -22,11 +22,10 @@ Brighter contributors (sorted alphabeticaly)
  * New ASB Transport
  
 **[Ian Cooper](https://github.com/iancooper)**
-  * Wrote first version of Command Processor, Policy, RavenDb Outbox, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
+  * Wrote first version of Command Processor, Policy, RavenDb Outbox, Redis Messaging Gateway, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
   * Various fixes
-  * Project Technical Lead
+  * Project Owner
   * Committer
-  * Redis Messaging Gateway
   
 **[Derek Comartin](https://github.com/dcomartin)**
  * MySQL outbox and inbox
@@ -34,7 +33,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Jamie Clayton](https://github.com/mit-jamie-clayton)**
 * Documentation fixes
 
-**[ACraven](https://github.com/acraven)**
+**[A Craven](https://github.com/acraven)**
   * Various fixes
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
@@ -42,9 +41,6 @@ Brighter contributors (sorted alphabeticaly)
   * Work on Postel's Law (Tolerant Reader) messaging approach
   
 **[Scott Hanselman](https://github.com/shanselman)**
-  * Various fixes 
-
-**[Thijmen Stavenuiter](https://github.com/Thijmen)**
   * Various fixes 
 
 **[Toby Henderson](https://github.com/holytshirt)**
@@ -143,7 +139,8 @@ Brighter contributors (sorted alphabeticaly)
  * New ASB Transport
 
 **[Tim Salva](https://github.com/jtsalva)
- * AWS fixes 
+ * AWS fixes
+ * Metrics
   
 **[Tim Seaward](https://github.com/Drawaes)**
  * Fix unecessary allocations
@@ -163,6 +160,9 @@ Brighter contributors (sorted alphabeticaly)
   * Various fixes
   * Command Sourcing Once-Only improvements
   * Inbox improvements
+
+**[Thijmen Stavenuiter](https://github.com/Thijmen)**
+  * Various fixes 
 
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes

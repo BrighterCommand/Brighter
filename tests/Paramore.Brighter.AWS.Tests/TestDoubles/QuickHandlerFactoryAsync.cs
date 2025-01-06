@@ -10,12 +10,12 @@ public class QuickHandlerFactoryAsync : IAmAHandlerFactoryAsync
         _handlerFactory = handlerFactory;
     }
 
-    public IHandleRequestsAsync Create(Type handlerType)
+    public IHandleRequestsAsync Create(Type handlerType, IAmALifetime lifetime)
     {
         return _handlerFactory();
     }
 
-    public void Release(IHandleRequestsAsync handler)
+    public void Release(IHandleRequestsAsync handler, IAmALifetime lifetime)
     {
         // Implement any necessary cleanup logic here
     }

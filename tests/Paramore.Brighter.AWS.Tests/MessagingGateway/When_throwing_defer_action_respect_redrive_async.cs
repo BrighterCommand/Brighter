@@ -84,7 +84,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
-            var provider = new CommandProcessorProvider(commandProcessor);
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
@@ -92,7 +91,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
 
-            _messagePump = new Proactor<MyDeferredCommand>(provider, messageMapperRegistry,
+            _messagePump = new Proactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry,
                 new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3

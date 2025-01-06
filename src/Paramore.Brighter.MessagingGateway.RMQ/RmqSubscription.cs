@@ -100,7 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             TimeSpan? requeueDelay = null, 
             int unacceptableMessageLimit = 0, 
             bool isDurable = false, 
-            MessagePumpType messagePumpType = MessagePumpType.Proactor, 
+            MessagePumpType messagePumpType = MessagePumpType.Unknown, 
             IAmAChannelFactory? channelFactory = null, 
             bool highAvailability = false, 
             ChannelName? deadLetterChannelName = null, 
