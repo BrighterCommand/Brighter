@@ -115,10 +115,12 @@ public class BrighterTracer : IAmABrighterTracer
 
         var tags = new ActivityTagsCollection
         {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
+            { BrighterSemanticConventions.Operation, operation.ToSpanName() },
             { BrighterSemanticConventions.RequestId, request.Id },
             { BrighterSemanticConventions.RequestType, request.GetType().Name },
-            { BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request) },
-            { BrighterSemanticConventions.Operation, operation.ToSpanName() }
+            { BrighterSemanticConventions.RequestBody, JsonSerializer.Serialize(request) }
         };
 
         var activity = ActivitySource.StartActivity(
@@ -156,6 +158,7 @@ public class BrighterTracer : IAmABrighterTracer
 
         var tags = new ActivityTagsCollection()
         {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
             { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.MessagingDestination, message.Header.Topic },
             { BrighterSemanticConventions.MessagingDestinationPartitionId, message.Header.PartitionKey },
@@ -173,7 +176,6 @@ public class BrighterTracer : IAmABrighterTracer
             { BrighterSemanticConventions.CeType, message.Header.Type},
             { BrighterSemanticConventions.ReplyTo, message.Header.ReplyTo },
             { BrighterSemanticConventions.HandledCount, message.Header.HandledCount }
-            
         };
         
         var activity = ActivitySource.StartActivity(
@@ -214,6 +216,8 @@ public class BrighterTracer : IAmABrighterTracer
 
         var tags = new ActivityTagsCollection
         {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.RequestType, requestType.Name },
             { BrighterSemanticConventions.Operation, operation.ToSpanName() }
         };
@@ -254,6 +258,8 @@ public class BrighterTracer : IAmABrighterTracer
 
         var tags = new ActivityTagsCollection()
         {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
             { BrighterSemanticConventions.MessagingDestination, topic },
             { BrighterSemanticConventions.Operation, operation.ToSpanName() }
@@ -290,6 +296,7 @@ public class BrighterTracer : IAmABrighterTracer
 
         var tags = new ActivityTagsCollection()
         {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
             { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.MessagingSystem, messagingSystem.ToMessagingSystemName() },
             { BrighterSemanticConventions.MessagingDestination, topic },
@@ -332,6 +339,8 @@ public class BrighterTracer : IAmABrighterTracer
         var tags = new ActivityTagsCollection()
         
         {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.Operation, operation.ToSpanName() },
             { BrighterSemanticConventions.ArchiveAge, dispatchedSince.TotalMilliseconds }
         };
@@ -369,6 +378,8 @@ public class BrighterTracer : IAmABrighterTracer
         
         var tags = new ActivityTagsCollection
         {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+            { BrighterSemanticConventions.MessagingOperationType, operation.ToSpanName() },
             { BrighterSemanticConventions.Operation, CommandProcessorSpanOperation.Clear.ToSpanName() }
         };
         
@@ -405,8 +416,9 @@ public class BrighterTracer : IAmABrighterTracer
 
         var tags = new ActivityTagsCollection
         {
-            { BrighterSemanticConventions.DbName, info.dbName },
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.DbInstrumentationDomain },
             { BrighterSemanticConventions.DbOperation, info.dbOperation.ToSpanName() },
+            { BrighterSemanticConventions.DbName, info.dbName },
             { BrighterSemanticConventions.DbTable, info.dbTable },
             { BrighterSemanticConventions.DbSystem, info.dbSystem.ToDbName() }
         };
@@ -458,6 +470,8 @@ public class BrighterTracer : IAmABrighterTracer
 
         var tags = new ActivityTagsCollection
         {
+            { BrighterSemanticConventions.InstrumentationDomain, BrighterSemanticConventions.MessagingInstrumentationDomain },
+
             //OTel specification attributes
             { BrighterSemanticConventions.MessagingOperationType, CommandProcessorSpanOperation.Publish.ToSpanName() },
             

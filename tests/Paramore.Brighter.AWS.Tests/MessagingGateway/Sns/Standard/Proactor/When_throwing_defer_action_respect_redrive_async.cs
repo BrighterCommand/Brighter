@@ -81,7 +81,6 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             requestContextFactory: new InMemoryRequestContextFactory(),
             policyRegistry: new PolicyRegistry()
         );
-        var provider = new CommandProcessorProvider(commandProcessor);
 
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
@@ -89,7 +88,7 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
         );
         messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
 
-        _messagePump = new Proactor<MyDeferredCommand>(provider, messageMapperRegistry,
+        _messagePump = new Proactor<MyDeferredCommand>(commandProcessor , messageMapperRegistry,
             new EmptyMessageTransformerFactoryAsync(), new InMemoryRequestContextFactory(), _channel)
         {
             Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
