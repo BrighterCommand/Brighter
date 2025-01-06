@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
@@ -14,6 +16,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 /// </summary>
 public class SqsMessageSender
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqsMessageSender>();
+    private static readonly TimeSpan s_maxDelay = TimeSpan.FromSeconds(900);
+    
     private readonly string _queueUrl;
     private readonly SnsSqsType _queueType;
     private readonly AmazonSQSClient _client;
@@ -30,13 +35,32 @@ public class SqsMessageSender
         _queueType = queueType;
         _client = client;
     }
-
+    
+    /// <summary>
+    /// Sending message via SQS
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="delay">The delay in ms. 0 is no delay. Defaults to 0</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> that cancels the Publish operation</param>
+    /// <returns>The message id.</returns>
     public async Task<string?> SendAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken)
     {
-        var request = new SendMessageRequest { QueueUrl = _queueUrl, MessageBody = message.Body.Value, };
-
-        if (delay != null)
+        var request = new SendMessageRequest
         {
+            QueueUrl = _queueUrl, 
+            MessageBody = message.Body.Value
+        };
+
+        delay ??= TimeSpan.Zero;
+        if (delay > TimeSpan.Zero)
+        {
+            // SQS has a hard limit of 15min for Delay in Seconds
+            if (delay.Value > s_maxDelay)
+            {
+                delay = s_maxDelay;
+                s_logger.LogWarning("Set delay from {CurrentDelay} to 15min (SQS support up to 15min)", delay);
+            }
+
             request.DelaySeconds = (int)delay.Value.TotalSeconds;
         }
 
@@ -52,11 +76,11 @@ public class SqsMessageSender
         var messageAttributes = new Dictionary<string, MessageAttributeValue>
         {
             [HeaderNames.Id] =
-                new() { StringValue = Convert.ToString(message.Header.MessageId), DataType = "String" },
+                new() { StringValue = message.Header.MessageId, DataType = "String" },
             [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
             [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
             [HeaderNames.CorrelationId] =
-                new() { StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String" },
+                new() { StringValue = message.Header.CorrelationId, DataType = "String" },
             [HeaderNames.HandledCount] =
                 new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
             [HeaderNames.MessageType] =
@@ -81,7 +105,7 @@ public class SqsMessageSender
 
         // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-        messageAttributes[HeaderNames.Bag] = new() { StringValue = Convert.ToString(bagJson), DataType = "String" };
+        messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };
         request.MessageAttributes = messageAttributes;
 
         var response = await _client.SendMessageAsync(request, cancellationToken);
