@@ -125,7 +125,9 @@ namespace Paramore.Brighter.ServiceActivator
                 if (message == null)
                 {
                     Channel.Dispose();
-                    throw new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
+                    var exception =  new Exception("Could not receive message. Note that should return an MT_NONE from an empty queue on timeout");
+                    s_logger.LogCritical(exception, "MessagePump: Could not receive message");
+                    throw exception;
                 }
 
                 // empty queue

@@ -283,9 +283,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         public void Dispose()
         {
-            s_logger.LogInformation("Disposing the consumer...");
+            s_logger.LogInformation("Disposing the consumer for Channel {ChannelName}", _topicName);
             _serviceBusReceiver?.Close();
-            s_logger.LogInformation("Consumer disposed.");
+            s_logger.LogInformation("Consumer disposed for Channel {ChannelName}", _topicName);
         }
 
         private void GetMessageReceiverProvider()
