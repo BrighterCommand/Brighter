@@ -46,17 +46,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// </summary>
     public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
-        private IConsumer<string, byte[]> _consumer;
+        private readonly IConsumer<string, byte[]> _consumer;
         private readonly KafkaMessageCreator _creator;
         private readonly ConsumerConfig _consumerConfig;
-        private List<TopicPartition> _partitions = new List<TopicPartition>();
-        private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = new();
+        private List<TopicPartition> _partitions = [];
+        private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = [];
         private readonly long _maxBatchSize;
         private readonly TimeSpan _readCommittedOffsetsTimeout;
         private DateTime _lastFlushAt = DateTime.UtcNow;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new(1, 1);
         private bool _hasFatalError;
+        private bool _isClosed;
 
         /// <summary>
         /// Constructs a KafkaMessageConsumer using Confluent's Consumer Builder. We set up callbacks to handle assigned, revoked or lost partitions as
@@ -220,6 +221,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
+        /// Destroys the consumer
+        /// </summary>
+        ~KafkaMessageConsumer()
+        {
+            Dispose(false);
+        }
+
+        /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <remarks>
@@ -284,6 +293,35 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             Acknowledge(message);
             return Task.CompletedTask;
+        }
+        
+        /// <summary>
+        /// Close the consumer
+        /// - Commit any outstanding offsets
+        /// - Surrender any assignments
+        /// </summary>
+        /// <remarks>Use this before disposing of the consumer, to ensure an orderly shutdown</remarks>
+        public void Close()
+        {
+            //we will be called twice if explicitly disposed as well as closed, so just skip in that case
+            if (_isClosed) return;
+            
+            try
+            {
+                _flushToken.Wait(TimeSpan.Zero);
+                //this will release the semaphore
+               CommitAllOffsets(DateTime.UtcNow); 
+            }
+            catch (Exception ex)
+            {
+                //Close anyway, we just will get replay of those messages
+                s_logger.LogDebug("Error committing the current offset to Kafka before closing: {ErrorMessage}", ex.Message);
+            }
+            finally
+            {
+                _consumer.Close();
+                _isClosed = true;
+            }
         }
 
        /// <summary>
@@ -683,37 +721,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
-        private void Close()
-        {
-            try
-            {
-                _consumer.Commit();
-                
-                var committedOffsets = _consumer.Committed(_partitions, _readCommittedOffsetsTimeout);
-                foreach (var committedOffset in committedOffsets)
-                    s_logger.LogInformation("Committed offset: {Offset} on partition: {ChannelName} for topic: {Topic}", committedOffset.Offset.Value.ToString(), committedOffset.Partition.Value.ToString(), committedOffset.Topic);
-
-            }
-            catch (Exception ex)
-            {
-                //this may happen if the offset is already committed
-                s_logger.LogDebug("Error committing the current offset to Kafka before closing: {ErrorMessage}", ex.Message);
-            }
-        }
-
         private void Dispose(bool disposing)
         {
             if (disposing)
             {
+                Close();
                 _consumer?.Dispose();
                 _flushToken?.Dispose();
             }
-        }
-
-
-        ~KafkaMessageConsumer()
-        {
-            Dispose(false);
         }
 
         public void Dispose()
