@@ -66,7 +66,7 @@ public class BrighterTracerSpanTests : IDisposable
         tagDictionary.Should().ContainKey(BrighterSemanticConventions.RequestType);
         tagDictionary[BrighterSemanticConventions.RequestType].Should().Be(command.GetType().Name);
         tagDictionary.Should().ContainKey(BrighterSemanticConventions.RequestBody);
-        tagDictionary[BrighterSemanticConventions.RequestBody].Should().Be(System.Text.Json.JsonSerializer.Serialize(command));
+        tagDictionary[BrighterSemanticConventions.RequestBody].Should().Be(System.Text.Json.JsonSerializer.Serialize(command, JsonSerialisationOptions.Options));
         tagDictionary.Should().ContainKey(BrighterSemanticConventions.Operation);
         tagDictionary[BrighterSemanticConventions.Operation].Should().Be(CommandProcessorSpanOperation.Send.ToSpanName());
 
@@ -79,7 +79,7 @@ public class BrighterTracerSpanTests : IDisposable
         childSpan.ParentId.Should().Be(_parentActivity.Id);
         childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && (string)t.Value == command.Id.ToString()).Should().BeTrue();
         childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestType && (string)t.Value == command.GetType().Name).Should().BeTrue();
-        childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && (string)t.Value == System.Text.Json.JsonSerializer.Serialize(command)).Should().BeTrue();
+        childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && (string)t.Value == System.Text.Json.JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)).Should().BeTrue();
         childSpan.Tags.Any(t => t.Key == BrighterSemanticConventions.Operation && (string)t.Value == CommandProcessorSpanOperation.Send.ToSpanName()).Should().BeTrue();
     }
 
