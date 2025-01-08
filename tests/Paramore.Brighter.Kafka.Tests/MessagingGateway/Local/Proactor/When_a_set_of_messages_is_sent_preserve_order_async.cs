@@ -47,14 +47,24 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
     [Fact]
     public async Task When_a_message_is_sent_keep_order()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(500); 
+        
         IAmAMessageConsumerAsync consumer = null;
+        
+        var routingKey = new RoutingKey(_topic);
+
+        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey));
         try
         {
             //Send a sequence of messages to Kafka
-            var msgId = await SendMessageAsync();
-            var msgId2 = await SendMessageAsync();
-            var msgId3 = await SendMessageAsync();
-            var msgId4 = await SendMessageAsync();
+            var msgId = await SendMessageAsync(producerAsync, routingKey);
+            var msgId2 = await SendMessageAsync(producerAsync, routingKey);
+            var msgId3 = await SendMessageAsync(producerAsync, routingKey);
+            var msgId4 = await SendMessageAsync(producerAsync, routingKey);
+            
+            //We should not need to flush, as the async does not queue work  - but in case this changes
+            ((KafkaMessageProducer)producerAsync).Flush();
 
             consumer = CreateConsumer();
 
@@ -90,13 +100,11 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
         }
     }
 
-    private async Task<string> SendMessageAsync()
+    private async Task<string> SendMessageAsync(IAmAMessageProducerAsync producerAsync, RoutingKey routingKey)
     {
         var messageId = Guid.NewGuid().ToString();
 
-        var routingKey = new RoutingKey(_topic);
-
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey)).SendAsync(
+       await producerAsync.SendAsync(
             new Message(
                 new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND)
                 {
@@ -118,8 +126,6 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
             try
             {
                 maxTries++;
-                //Let topic propagate in the broker
-                await Task.Delay(500); 
                 //use TimeSpan.Zero to avoid blocking
                 messages = await consumer.ReceiveAsync(TimeSpan.Zero);
 

@@ -45,6 +45,9 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
     [Fact]
     public async Task When_a_consumer_declares_topics()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(500); 
+        
         var routingKey = new RoutingKey(_topic);
 
         var message = new Message(
@@ -64,9 +67,9 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
         };
 
         await ((IAmAMessageProducerAsync)producer).SendAsync(message);
-
-        //Give this a chance to succeed - will fail
-        await Task.Delay(5000);
+        
+        //We should not need to flush, as the async does not queue work  - but in case this changes
+        ((KafkaMessageProducer)producer).Flush();
 
         messagePublished.Should().BeFalse();
     }

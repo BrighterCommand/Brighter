@@ -63,8 +63,11 @@ public class KafkaMessageProducerSendTests : IDisposable
     }
 
     [Fact]
-    public void When_posting_a_message()
+    public async Task When_posting_a_message()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(500); 
+        
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
@@ -86,7 +89,11 @@ public class KafkaMessageProducerSendTests : IDisposable
             },
             new MessageBody(body));
 
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
+        var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+        producer.Send(message);
+        
+        //ensure that the messages have flushed
+        ((KafkaMessageProducer)producer).Flush();
 
         var receivedMessage = GetMessage();
 
@@ -111,7 +118,6 @@ public class KafkaMessageProducerSendTests : IDisposable
             try
             {
                 maxTries++;
-                Task.Delay(500).Wait(); //Let topic propagate in the broker
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)

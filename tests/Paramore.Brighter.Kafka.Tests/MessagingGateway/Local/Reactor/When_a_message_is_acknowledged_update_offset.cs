@@ -46,16 +46,29 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
     [Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
     public async Task When_a_message_is_acknowldgede_update_offset()
     {
+        // let topic propogate in the broker
+        await Task.Delay(500);
+        
         var groupId = Guid.NewGuid().ToString();
+        
+        var routingKey = new RoutingKey(_topic);
+        var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
             
         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
         {
             var msgId = Guid.NewGuid().ToString();
-            SendMessage(msgId);
+            producer.Send(
+                new Message(
+                    new MessageHeader(msgId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
+                    new MessageBody($"test content [{_queueName}]")
+                ));
             sentMessages[i] = msgId;
         }
+        
+        //ensure the messages are actually sent
+        ((KafkaMessageProducer)producer).Flush();
 
         //This will create, then delete the consumer
         Message[] messages = await ConsumeMessages(groupId: groupId, batchLimit: 5);
@@ -78,27 +91,11 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         }
     }
 
-    private void SendMessage(string messageId)
-    {
-        var routingKey = new RoutingKey(_topic);
-            
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(
-            new Message(
-                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
-                new MessageBody($"test content [{_queueName}]")
-            )
-        );
-    }
-
     private async Task<Message[]> ConsumeMessages(string groupId, int batchLimit)
     {
         var consumedMessages = new List<Message>();
         using (IAmAMessageConsumerSync consumer = CreateConsumer(groupId))
         {
-            //Let topic propagate in the broker
-            await Task.Delay(1000);
-             
-            
             for (int i = 0; i < batchLimit; i++)
             {
                 consumedMessages.Add(ConsumeMessage(consumer));

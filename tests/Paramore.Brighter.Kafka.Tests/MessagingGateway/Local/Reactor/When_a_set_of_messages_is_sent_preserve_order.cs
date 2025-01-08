@@ -55,10 +55,15 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
         try
         {
             //Send a sequence of messages to Kafka
-            var msgId = SendMessage();
-            var msgId2 = SendMessage();
-            var msgId3 = SendMessage();
-            var msgId4 = SendMessage();
+            var routingKey = new RoutingKey(_topic);
+            var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+            var msgId = SendMessage(producer);
+            var msgId2 = SendMessage(producer);
+            var msgId3 = SendMessage(producer);
+            var msgId4 = SendMessage(producer);
+            
+            //ensure the messages are sent
+            ((KafkaMessageProducer)producer).Flush();
                   
             consumer = CreateConsumer();
             
@@ -90,11 +95,11 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
         }
     }
 
-    private string SendMessage()
+    private string SendMessage(IAmAMessageProducerSync producer)
     {
         var messageId = Guid.NewGuid().ToString();
 
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(
+        producer.Send(
             new Message(
                 new MessageHeader(messageId, _topic, MessageType.MT_COMMAND)
                 {

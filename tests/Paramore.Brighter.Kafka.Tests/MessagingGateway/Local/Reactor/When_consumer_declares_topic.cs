@@ -29,7 +29,8 @@ public class KafkaConsumerDeclareTests : IDisposable
                 Name = "Kafka Producer Send Test", 
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
+            [
+                new KafkaPublication
             {
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
@@ -38,8 +39,9 @@ public class KafkaConsumerDeclareTests : IDisposable
                 //your production values ought to be lower
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).Create();
+                MakeChannels = OnMissingChannel.Assume
+            }
+            ]).Create();
  
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -75,8 +77,12 @@ public class KafkaConsumerDeclareTests : IDisposable
             },
             new MessageBody($"test content [{_queueName}]")
         );
-            
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
+
+        var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+        producer.Send(message);
+        
+        //ensure the messages are sent
+        ((KafkaMessageProducer)producer).Flush();
 
         Message messages = ConsumeMessage();
 

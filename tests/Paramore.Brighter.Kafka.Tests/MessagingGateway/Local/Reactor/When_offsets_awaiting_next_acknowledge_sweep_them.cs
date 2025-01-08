@@ -65,14 +65,26 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
     [Fact]
     public async Task When_a_message_is_acknowldeged_but_no_batch_sent_sweep_offsets()
     {
+        //allow topic to propogate on the broker
+        await Task.Delay(500);
+        
+        var routingKey = new RoutingKey(_topic);
+
+        var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+        
         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
         {
             var msgId = Guid.NewGuid().ToString();
-            SendMessage(msgId);
+           producer.Send(new Message(
+                new MessageHeader(msgId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
+                new MessageBody($"test content [{_queueName}]")));
             sentMessages[i] = msgId;
         }
+       
+        //ensure messages are sent
+        ((KafkaMessageProducer)producer).Flush();
 
         var consumedMessages = new List<Message>();
         for (int j = 0; j < 9; j++)
@@ -105,7 +117,6 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
                 try
                 {
                     maxTries++;
-                    await Task.Delay(500); //Let topic propagate in the broker
                     messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
@@ -124,15 +135,6 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
 
             return messages[0];
         }
-    }
-
-    private void SendMessage(string messageId)
-    {
-        var routingKey = new RoutingKey(_topic);
-            
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(new Message(
-            new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
-            new MessageBody($"test content [{_queueName}]")));
     }
 
 

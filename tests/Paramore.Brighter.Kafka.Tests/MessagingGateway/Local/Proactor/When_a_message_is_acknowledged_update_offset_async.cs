@@ -46,16 +46,31 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
     [Fact]
     public async Task When_a_message_is_acknowldgede_update_offset()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(500); 
+        
         var groupId = Guid.NewGuid().ToString();
 
-        //send x messages to Kafka
+        var routingKey = new RoutingKey(_topic);
+        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey));
+            
+         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
         {
             var msgId = Guid.NewGuid().ToString();
-            await SendMessageAsync(msgId);
+           
+            await producerAsync.SendAsync(
+                new Message(
+                    new MessageHeader(msgId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
+                    new MessageBody($"test content [{_queueName}]")
+                )
+            );
             sentMessages[i] = msgId;
         }
+        
+        //We should not need to flush, as the async does not queue work  - but in case this changes
+        ((KafkaMessageProducer)producerAsync).Flush();
 
         //This will create, then delete the consumer
         Message[] messages = await ConsumeMessagesAsync(groupId: groupId, batchLimit: 5);
@@ -80,18 +95,6 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         }
     }
 
-    private async Task SendMessageAsync(string messageId)
-    {
-        var routingKey = new RoutingKey(_topic);
-
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey)).SendAsync(
-            new Message(
-                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
-                new MessageBody($"test content [{_queueName}]")
-            )
-        );
-    }
-
     private async Task<Message[]> ConsumeMessagesAsync(string groupId, int batchLimit)
     {
         var consumedMessages = new List<Message>();
@@ -114,9 +117,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                 try
                 {
                     maxTries++;
-                    //Let topic propagate in the broker
-                    await Task.Delay(500); 
-                    //use TimeSpan.Zero to avoid blocking
+                   //use TimeSpan.Zero to avoid blocking
                     messages = await consumer.ReceiveAsync(TimeSpan.Zero);
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)

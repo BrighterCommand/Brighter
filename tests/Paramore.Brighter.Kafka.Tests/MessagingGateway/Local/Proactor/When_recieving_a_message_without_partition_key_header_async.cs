@@ -73,6 +73,8 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
     [Fact]
     public async Task When_recieving_a_message_without_partition_key_header()
     {
+        await Task.Delay(500); //Let topic propagate in the broker
+        
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
@@ -85,6 +87,10 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         };
 
         await _producer.ProduceAsync(_topic, kafkaMessage);
+        
+        //We should not need to flush, as the async does not queue work  - but in case this changes
+        ((KafkaMessageProducer)_producer).Flush();
+        
 
         var receivedMessage = await GetMessageAsync();
 
@@ -102,7 +108,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
+                
                 messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)

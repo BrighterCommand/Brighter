@@ -65,6 +65,9 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
     [Fact]
     public async Task When_posting_a_message()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(500); 
+        
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
@@ -86,7 +89,11 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             },
             new MessageBody(body));
 
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey)).SendAsync(message);
+        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey));
+        await producerAsync.SendAsync(message);
+        
+        //We should not need to flush, as the async does not queue work  - but in case this changes
+        ((KafkaMessageProducer)producerAsync).Flush();
 
         var receivedMessage = await GetMessageAsync();
 
@@ -111,8 +118,7 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             try
             {
                 maxTries++;
-                //Let topic propagate in the broker
-                await Task.Delay(500); 
+ 
                 //set timespan to zero so that we will not block
                 messages = await _consumer.ReceiveAsync(TimeSpan.Zero);
 

@@ -61,7 +61,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
                     groupId: groupId,
                     numOfPartitions: 1,
                     replicationFactor: 1,
-                    messagePumpType: MessagePumpType.Reactor,
+                    messagePumpType: MessagePumpType.Proactor,
                     makeChannels: OnMissingChannel.Create
                 ));
 
@@ -77,6 +77,9 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
     [Fact]
     public async Task When_posting_a_message_via_the_messaging_gateway()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(500); 
+        
         //arrange
 
         var myCommand = new MyKafkaCommand{ Value = "Hello World"};
@@ -98,7 +101,11 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
 
         //act
 
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey)).SendAsync(sent);
+        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey));
+        await producerAsync.SendAsync(sent);
+        
+        //We should not need to flush, as the async does not queue work  - but in case this changes
+        ((KafkaMessageProducer)producerAsync).Flush();
 
         var received = await GetMessageAsync();
 
@@ -127,7 +134,6 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
                 messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)

@@ -64,14 +64,23 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
     [Fact]
     public async Task When_a_message_is_acknowledged_but_no_batch_sent_sweep_offsets()
     {
+        var routingKey = new RoutingKey(_topic);
+        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey));
+            
         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
         {
             var msgId = Guid.NewGuid().ToString();
-            await SendMessageAsync(msgId);
+
+            await producerAsync.SendAsync(new Message(
+                new MessageHeader(msgId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
+                new MessageBody($"test content [{_queueName}]")));
             sentMessages[i] = msgId;
         }
+        
+        //We should not need to flush, as the async does not queue work  - but in case this changes
+        ((KafkaMessageProducer)producerAsync).Flush();
 
         var consumedMessages = new List<Message>();
         for (int j = 0; j < 9; j++)
@@ -85,7 +94,7 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
         //Let time elapse with no activity
         await Task.Delay(10000);
 
-        //This should trigger a sweeper run (can be fragile when non scheduled in containers etc)
+        //This should trigger a sweeper run (can be fragile when non-scheduled in containers etc)
         consumedMessages.Add(await ReadMessageAsync());
 
         //Let the sweeper run, can be slow in CI environments to run the thread
@@ -124,15 +133,6 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
         }
     }
 
-    private async Task SendMessageAsync(string messageId)
-    {
-        var routingKey = new RoutingKey(_topic);
-
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey)).SendAsync(new Message(
-            new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
-            new MessageBody($"test content [{_queueName}]")));
-    }
-    
     public void Dispose()
     {
         _producerRegistry?.Dispose();

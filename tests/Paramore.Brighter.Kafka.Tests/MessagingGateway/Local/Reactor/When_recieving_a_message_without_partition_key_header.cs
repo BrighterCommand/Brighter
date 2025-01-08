@@ -73,8 +73,10 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
     }
 
     [Fact]
-    public void When_recieving_a_message_without_partition_key_header()
+    public async Task When_recieving_a_message_without_partition_key_header()
     {
+        await Task.Delay(500); //Let topic propagate in the broker
+        
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
@@ -87,6 +89,9 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
         };
 
        _producer.Produce(_topic, kafkaMessage, report => _output.WriteLine(report.ToString()) );
+       
+       //ensure any messages are flushed
+       _producer.Flush();
 
         var receivedMessage = GetMessage();
 
@@ -104,7 +109,6 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
             try
             {
                 maxTries++;
-                Task.Delay(500).Wait(); //Let topic propagate in the broker
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
