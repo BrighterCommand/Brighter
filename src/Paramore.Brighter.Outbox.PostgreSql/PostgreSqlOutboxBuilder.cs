@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     /// <summary>
     /// Provide SQL statement helpers for creation of an Outbox
     /// </summary>
-    public class PostgreSqlOutboxBulder
+    public class PostgreSqlOutboxBuilder
     {
         const string TextOutboxDdl = @"
        CREATE TABLE {0}
