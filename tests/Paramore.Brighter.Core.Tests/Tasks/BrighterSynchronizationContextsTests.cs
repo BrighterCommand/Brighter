@@ -157,6 +157,50 @@ public class BrighterSynchronizationContextsTests
     }
 
     [Fact]
+    public async Task Run_Delegate_Via_Run_Thread_Runs()
+    {
+        var runner = new EventRunner();
+        runner.OnMessagePublished += MessagePublishedHandler;
+
+        s_runnerCalled = false;
+        BrighterAsyncContext.Run(async () =>
+        {
+            await runner.PublishAsync(runner.Report);
+        });
+
+        //let callback run on thread pool
+        await Task.Delay(1000);
+
+        s_runnerCalled.Should().BeTrue();
+
+        runner.OnMessagePublished -= MessagePublishedHandler;
+    }
+
+    private static bool s_runnerCalled = false;
+    
+    static void MessagePublishedHandler(bool called, int value)
+    {
+        value.Should().Be(17);
+        s_runnerCalled = true;
+    }
+
+    internal class EventRunner
+    {
+        public event Action<bool, int> OnMessagePublished;
+
+        public async Task PublishAsync(Action<int> callBack)
+        {
+            await Task.Yield();
+            callBack(17);
+        }
+
+        public void Report(int value)
+        {
+             Task.Run(() => OnMessagePublished?.Invoke(true, value));
+        }
+    }
+    
+    [Fact]
     public void Current_WithoutAsyncContext_IsNull()
     {
         BrighterAsyncContext.Current.Should().BeNull();
