@@ -72,6 +72,9 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
+        //let messages propgate to the broker
+        await Task.Delay(2500);
+
         //This will create, then delete the consumer
         Message[] messages = await ConsumeMessagesAsync(groupId: groupId, batchLimit: 5);
 
@@ -83,7 +86,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         }
 
         //yield to broker to catch up
-        await Task.Delay(TimeSpan.FromMilliseconds(500));
+        await Task.Delay(2500);
 
         //This will create a new consumer
         Message[] newMessages = await ConsumeMessagesAsync(groupId, batchLimit: 5);
@@ -125,6 +128,9 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                         await consumer.AcknowledgeAsync(messages[0]);
                         return messages[0];
                     }
+                    
+                    //wait before retry
+                    await Task.Delay(1000);
 
                 }
                 catch (ChannelFailureException cfx)

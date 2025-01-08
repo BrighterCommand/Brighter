@@ -26,10 +26,7 @@ public class KafkaMessageProducerSendTests : IDisposable
         const string groupId = "Kafka Message Producer Send Test";
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
-            new KafkaMessagingGatewayConfiguration
-            {
-                Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" }
-            },
+            new KafkaMessagingGatewayConfiguration { Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" } },
             new[]
             {
                 new KafkaPublication
@@ -46,10 +43,7 @@ public class KafkaMessageProducerSendTests : IDisposable
             }).Create();
 
         _consumer = new KafkaMessageConsumerFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
-                })
+                new KafkaMessagingGatewayConfiguration { Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" } })
             .Create(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
@@ -66,34 +60,45 @@ public class KafkaMessageProducerSendTests : IDisposable
     public async Task When_posting_a_message()
     {
         //Let topic propagate in the broker
-        await Task.Delay(500); 
-        
+        await Task.Delay(500);
+
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
         var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
         var routingKey = new RoutingKey(_topic);
-            
+
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
             {
                 PartitionKey = _partitionKey,
                 ContentType = "application/json",
-                Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
+                Bag = new Dictionary<string, object> { { "Test Header", "Test Value" }, },
                 ReplyTo = "com.brightercommand.replyto",
                 CorrelationId = Guid.NewGuid().ToString(),
                 Delayed = TimeSpan.FromMilliseconds(10),
                 HandledCount = 2,
                 TimeStamp = DateTime.UtcNow
-            },
+            }, 
             new MessageBody(body));
 
+        bool messagePublished = false;
         var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
         producer.Send(message);
-        
+        var producerConfirm = producer as ISupportPublishConfirmation;
+        producerConfirm.OnMessagePublished += delegate(bool success, string id)
+        {
+            if (success) messagePublished = true;
+        };
+
         //ensure that the messages have flushed
         ((KafkaMessageProducer)producer).Flush();
+
+        //allow propogation of callback        
+        await Task.Delay(1000);
+
+        messagePublished.Should().BeTrue();
 
         var receivedMessage = GetMessage();
 

@@ -131,6 +131,9 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     break;
+                
+                //wait before retry
+                await Task.Delay(1000);
             }
             catch (ChannelFailureException cfx)
             {

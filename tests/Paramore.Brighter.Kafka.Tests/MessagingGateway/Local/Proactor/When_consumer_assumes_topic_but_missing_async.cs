@@ -36,7 +36,7 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
                 //your production values ought to be lower
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
+                MakeChannels = OnMissingChannel.Assume
             }
             ]).Create();
     }
@@ -70,6 +70,9 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
         
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producer).Flush();
+        
+        //allow callback to run
+        await Task.Delay(1000);
 
         messagePublished.Should().BeFalse();
     }

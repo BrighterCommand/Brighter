@@ -134,13 +134,16 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
             try
             {
                 maxTries++;
-                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                messages = await _consumer.ReceiveAsync(TimeSpan.Zero);
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
                     await _consumer.AcknowledgeAsync(messages[0]);
                     break;
                 }
+                
+                //wait before retry
+                await Task.Delay(1000);
 
             }
             catch (ChannelFailureException cfx)

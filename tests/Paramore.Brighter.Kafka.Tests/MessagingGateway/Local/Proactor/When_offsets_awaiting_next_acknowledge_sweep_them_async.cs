@@ -113,13 +113,16 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                 {
                     maxTries++;
                     await Task.Delay(500); //Let topic propagate in the broker
-                    messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                    messages = await _consumer.ReceiveAsync(TimeSpan.Zero);
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     {
                         await _consumer.AcknowledgeAsync(messages[0]);
                         return messages[0];
                     }
+                    
+                    //wait before retry
+                    await Task.Delay(1000);
 
                 }
                 catch (ChannelFailureException cfx)

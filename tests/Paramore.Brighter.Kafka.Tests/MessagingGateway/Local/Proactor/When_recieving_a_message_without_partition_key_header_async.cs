@@ -89,9 +89,11 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         await _producer.ProduceAsync(_topic, kafkaMessage);
         
         //We should not need to flush, as the async does not queue work  - but in case this changes
-        ((KafkaMessageProducer)_producer).Flush();
-        
+        _producer.Flush();
 
+        //let the message propagate on the broker
+        await Task.Delay(2500);
+        
         var receivedMessage = await GetMessageAsync();
 
         //Where we lack a partition key header, assume non-Brighter header and set to message key
@@ -109,13 +111,16 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
             {
                 maxTries++;
                 
-                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                messages = await _consumer.ReceiveAsync(TimeSpan.Zero);
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {
                     await _consumer.AcknowledgeAsync(messages[0]);
                     break;
                 }
+                
+                //wait before retry
+                await Task.Delay(1000);
             }
             catch (ChannelFailureException cfx)
             {

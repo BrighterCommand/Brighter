@@ -89,11 +89,22 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             },
             new MessageBody(body));
 
+        bool messagePublished = false;
         var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey));
         await producerAsync.SendAsync(message);
+        var producerConfirm = producerAsync as ISupportPublishConfirmation;
+        producerConfirm.OnMessagePublished += delegate(bool success, string id)
+        {
+            if (success) messagePublished = true;
+        };
         
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
+
+        //allow the message publication callback to run
+        await Task.Delay(1000);
+
+        messagePublished.Should().BeTrue();
 
         var receivedMessage = await GetMessageAsync();
 
@@ -127,6 +138,9 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
                     await _consumer.AcknowledgeAsync(messages[0]);
                     break;
                 }
+
+                //wait before retry
+                await Task.Delay(1000);
             }
             catch (ChannelFailureException cfx)
             {

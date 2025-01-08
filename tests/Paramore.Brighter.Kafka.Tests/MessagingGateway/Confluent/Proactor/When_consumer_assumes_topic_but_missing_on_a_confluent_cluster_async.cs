@@ -57,7 +57,7 @@ public class KafkaConfluentProducerAssumeTestsAsync : IDisposable
                     //your production values ought to be lower
                     MessageTimeoutMs = 10000,
                     RequestTimeoutMs = 10000,
-                    MakeChannels = OnMissingChannel.Create //This will not make the topic
+                    MakeChannels = OnMissingChannel.Assume //This will not make the topic
                 }
             ]).Create(); 
   
