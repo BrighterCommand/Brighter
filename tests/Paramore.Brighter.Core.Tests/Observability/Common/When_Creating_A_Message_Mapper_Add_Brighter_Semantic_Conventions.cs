@@ -69,6 +69,6 @@ public class BrighterSemanticConventionsMessageMapperTests
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingDestinationPartitionId && (string)t.Value == paritionKey).Should().BeTrue();
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBody && (string)t.Value == message.Body.Value).Should().BeTrue();
         childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBodySize && (int)t.Value == message.Body.Value.Length).Should().BeTrue();
-        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && (string)t.Value == JsonSerializer.Serialize(message.Header)).Should().BeTrue();
+        childEvent.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && (string)t.Value == JsonSerializer.Serialize(message.Header, JsonSerialisationOptions.Options)).Should().BeTrue();
     }
 }

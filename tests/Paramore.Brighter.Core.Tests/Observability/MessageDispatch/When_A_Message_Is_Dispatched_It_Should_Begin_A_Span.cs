@@ -145,7 +145,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageType && t.Value == _message.Header.MessageType.ToString()).Should().BeTrue();
             createActivity.TagObjects.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.MessageBodySize && Convert.ToInt32(t.Value) == _message.Body.Bytes.Length).Should().BeTrue();
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageBody && t.Value == _message.Body.Value).Should().BeTrue();
-            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && t.Value == JsonSerializer.Serialize(_message.Header)).Should().BeTrue();
+            createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessageHeaders && t.Value == JsonSerializer.Serialize(_message.Header, JsonSerialisationOptions.Options)).Should().BeTrue();
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.ConversationId && t.Value == _message.Header.CorrelationId).Should().BeTrue();
             createActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.MessagingSystem && t.Value == MessagingSystem.InternalBus.ToMessagingSystemName()).Should().BeTrue();
             createActivity.TagObjects.Any(t => t.Value != null && t.Key == BrighterSemanticConventions.CeSource && ((Uri)(t.Value)) == _message.Header.Source).Should().BeTrue();

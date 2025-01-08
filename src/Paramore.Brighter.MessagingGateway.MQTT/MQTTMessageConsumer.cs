@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             {
                 s_logger.LogInformation("MQTTMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
                 string message = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
-                _messageQueue.Enqueue(JsonSerializer.Deserialize<Message>(message));
+                _messageQueue.Enqueue(JsonSerializer.Deserialize<Message>(message, JsonSerialisationOptions.Options));
             });
 
             Task connectTask = Connect(configuration.ConnectionAttempts);
