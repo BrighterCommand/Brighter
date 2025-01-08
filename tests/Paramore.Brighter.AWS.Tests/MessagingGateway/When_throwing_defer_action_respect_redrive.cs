@@ -24,10 +24,11 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;
         private readonly string _dlqChannelName;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly SqsMessageProducer _sender;
         private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly SqsSubscription<MyCommand> _subscription;
+        private readonly ChannelFactory _channelFactory;
 
         public SnsReDrivePolicySDlqTests()
         {
@@ -48,6 +49,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 requeueCount: -1,
                 //delay before requeuing
                 requeueDelay: TimeSpan.FromMilliseconds(50),
+                messagePumpType: MessagePumpType.Reactor,
                 //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
                 redrivePolicy: new RedrivePolicy
                 (
@@ -79,8 +81,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 );
 
             //We need to do this manually in a test - will create the channel from subscriber parameters
-            ChannelFactory channelFactory = new(_awsConnection);
-            _channel = channelFactory.CreateChannel(_subscription);
+            _channelFactory = new ChannelFactory(_awsConnection);
+            _channel = _channelFactory.CreateSyncChannel(_subscription);
 
             //how do we handle a command
             IHandleRequests<MyDeferredCommand> handler = new MyDeferredCommandHandler();
@@ -96,7 +98,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
-            var provider = new CommandProcessorProvider(commandProcessor);
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper()),
@@ -105,7 +106,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, 
+            _messagePump = new Reactor<MyDeferredCommand>(commandProcessor, messageMapperRegistry, 
                 null,  new InMemoryRequestContextFactory(), _channel)
             {
                 Channel = _channel, TimeOut = TimeSpan.FromMilliseconds(5000), RequeueCount = 3
@@ -154,6 +155,18 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             //inspect the dlq
             GetDLQCount(_dlqChannelName).Should().Be(1);
+        }
+        
+        public void Dispose()
+        {
+            _channelFactory.DeleteTopicAsync().Wait();
+            _channelFactory.DeleteQueueAsync().Wait();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync();
+            await _channelFactory.DeleteQueueAsync();
         }
     }
 }

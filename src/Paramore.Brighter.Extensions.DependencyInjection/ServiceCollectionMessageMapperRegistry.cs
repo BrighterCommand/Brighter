@@ -28,6 +28,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Paramore.Brighter.MessageMappers;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -35,20 +36,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// When parsing for message mappers in assemblies, stores any found message mappers. A later step will add these to the message mapper registry
     /// Not used directly
     /// </summary>
-    public class ServiceCollectionMessageMapperRegistry
+    public class ServiceCollectionMessageMapperRegistry(
+        IServiceCollection serviceCollection,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
     {
-        private readonly IServiceCollection _serviceCollection;
-        private readonly ServiceLifetime _lifetime;
-
         public Dictionary<Type, Type> Mappers { get; } = new Dictionary<Type, Type>();
+        public Type DefaultMessageMapper { get; private set; } = typeof(JsonMessageMapper<>);
         public Dictionary<Type, Type> AsyncMappers { get; } = new Dictionary<Type, Type>();
-        
-        public ServiceCollectionMessageMapperRegistry(IServiceCollection serviceCollection, ServiceLifetime lifetime = ServiceLifetime.Singleton)
-        {
-            _serviceCollection = serviceCollection;
-            _lifetime = lifetime;
-        }
-        
+        public Type DefaultMessageMapperAsync { get; private set; } = typeof(JsonMessageMapper<>);
+
         /// <summary>
         /// Register a mapper with the collection (generic version)
         /// </summary>
@@ -76,7 +72,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="mapper">The type of the mapper</param>
         public void Add(Type message, Type mapper)
         {
-            _serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, _lifetime));
+            serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, lifetime));
             Mappers.Add(message, mapper);
         }
 
@@ -87,8 +83,40 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="mapper">The type of the mapper</param>
         public void AddAsync(Type message, Type mapper)
         {
-            _serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, _lifetime));
+            serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, lifetime));
             AsyncMappers.Add(message, mapper);
+        }
+
+        /// <summary>
+        /// Set the Default Message Mapper
+        /// </summary>
+        /// <param name="defaultMapper">Type of default Message Mapper</param>
+        public void SetDefaultMessageMapper(Type defaultMapper)
+        {
+            serviceCollection.TryAdd(new ServiceDescriptor(defaultMapper, defaultMapper, lifetime));
+            DefaultMessageMapper = defaultMapper;
+        }
+        
+        /// <summary>
+        /// Set the Default Async Message Mapper
+        /// </summary>
+        /// <param name="defaultMapper">Type of default async message mapper</param>
+        public void SetDefaultMessageMapperAsync(Type defaultMapper)
+        {
+            serviceCollection.TryAdd(new ServiceDescriptor(defaultMapper, defaultMapper, lifetime));
+            DefaultMessageMapperAsync = defaultMapper;
+        }
+
+        /// <summary>
+        /// Ensure that the default mappers are registered with Dependency Injection
+        /// </summary>
+        public void EnsureDefaultMessageMapperIsRegistered()
+        {
+            if(DefaultMessageMapper != null)
+                serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapper, DefaultMessageMapper, lifetime));
+            if (DefaultMessageMapperAsync != null)
+                serviceCollection.TryAdd(new ServiceDescriptor(DefaultMessageMapperAsync, DefaultMessageMapperAsync,
+                    lifetime));
         }
     }
 }

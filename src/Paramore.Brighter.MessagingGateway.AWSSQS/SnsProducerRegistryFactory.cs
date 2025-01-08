@@ -22,6 +22,8 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -51,6 +53,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
             return new ProducerRegistry(producerFactory.Create());
+        }
+
+        public async Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
+        {
+            var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
+            return new ProducerRegistry(await producerFactory.CreateAsync());
         }
     }
 }

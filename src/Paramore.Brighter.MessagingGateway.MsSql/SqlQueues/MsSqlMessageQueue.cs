@@ -86,7 +86,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         }
 
         /// <summary>
-        ///     Try receiving a message
+        ///   Try receiving a message
+        ///    Sync over Async
         /// </summary>
         /// <param name="topic">The topic name</param>
         /// <param name="timeOut">Timeout for reading a message of the queue; -1 or null for default timeout</param>
@@ -102,7 +103,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             var timeLeft = timeout.Value.TotalMilliseconds;
             while (!rc.IsDataValid && timeLeft > 0)
             {
-                Task.Delay(RetryDelay).Wait();
+                Task.Delay(RetryDelay)
+                    .GetAwaiter()
+                    .GetResult();
                 timeLeft -= RetryDelay;
                 rc = TryReceive(topic);
             }
@@ -170,7 +173,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             using var connection = _connectionProvider.GetConnection();
             var sqlCmd = connection.CreateCommand();
             sqlCmd.CommandText = sql;
-            return (int) sqlCmd.ExecuteScalar();
+            object? count = sqlCmd.ExecuteScalar();
+            
+            if (count is null) return 0;
+            
+            return (int) count;
         }
 
         /// <summary>
@@ -192,10 +199,14 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
         private static IDbDataParameter[] InitAddDbParameters(string topic, T message)
         {
+            string? fullName = typeof(T).FullName;
+            //not sure how we would ever get here.
+            if (fullName is null) throw new ArgumentNullException(nameof(fullName), "MsSQLMessageQueue: The type of the message must have a full name");
+           
             var parameters = new[]
             {
                 CreateDbDataParameter("topic", topic),
-                CreateDbDataParameter("messageType", typeof(T).FullName),
+                CreateDbDataParameter("messageType", fullName),
                 CreateDbDataParameter("payload", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options))
             };
             return parameters;

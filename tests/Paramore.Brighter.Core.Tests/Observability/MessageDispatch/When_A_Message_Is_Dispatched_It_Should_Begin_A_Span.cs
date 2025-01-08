@@ -82,8 +82,6 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 new PolicyRegistry(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
-
-            var provider = new CommandProcessorProvider(commandProcessor);
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
@@ -98,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.Observability.MessageDispatch
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
                 Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000)

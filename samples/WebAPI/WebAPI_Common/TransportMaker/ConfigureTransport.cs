@@ -177,7 +177,7 @@ public static class ConfigureTransport
                 new SubscriptionName(typeof(T).Name),
                 new ChannelName(typeof(T).Name),
                 new RoutingKey(typeof(T).Name),
-                runAsync: true,
+                messagePumpType: MessagePumpType.Proactor,
                 timeOut: TimeSpan.FromMilliseconds(200),
                 isDurable: true,
                 makeChannels: OnMissingChannel.Create)
@@ -198,7 +198,7 @@ public static class ConfigureTransport
                 offsetDefault: AutoOffsetReset.Earliest,
                 commitBatchSize: 5,
                 sweepUncommittedOffsetsInterval: TimeSpan.FromMilliseconds(10000),
-                runAsync: true,
+                messagePumpType: MessagePumpType.Proactor,
                 makeChannels: OnMissingChannel.Create)
         };
         return subscriptions;

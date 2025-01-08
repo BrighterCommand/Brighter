@@ -36,7 +36,7 @@ var subscriptions = new Subscription[]
         timeOut: TimeSpan.FromMilliseconds(400),
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
-        isAsync: true,
+        messagePumpType: MessagePumpType.Proactor,
         noOfPerformers: 2, unacceptableMessageLimit: 1),
     new AzureServiceBusSubscription<GreetingEvent>(
         new SubscriptionName("Greeting Async Event"),
@@ -45,7 +45,7 @@ var subscriptions = new Subscription[]
         timeOut: TimeSpan.FromMilliseconds(400),
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
-        isAsync: false,
+        messagePumpType: MessagePumpType.Reactor,
         noOfPerformers: 2),
     new AzureServiceBusSubscription<AddGreetingCommand>(
         new SubscriptionName("Greeting Command"),
@@ -54,7 +54,7 @@ var subscriptions = new Subscription[]
         timeOut: TimeSpan.FromMilliseconds(400),
         makeChannels: OnMissingChannel.Create,
         requeueCount: 3,
-        isAsync: true,
+        messagePumpType: MessagePumpType.Reactor,
         noOfPerformers: 2)
 };
 

@@ -22,35 +22,61 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class SnsMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly AWSMessagingGatewayConnection _connection;
-        private readonly IEnumerable<SnsPublication> _snsPublications;
+        private readonly IEnumerable<SnsPublication> _publications;
 
         /// <summary>
         /// Creates a collection of SNS message producers from the SNS publication information
         /// </summary>
         /// <param name="connection">The Connection to use to connect to AWS</param>
-        /// <param name="snsPublications">The publications describing the SNS topics that we want to use</param>
+        /// <param name="publications">The publications describing the SNS topics that we want to use</param>
         public SnsMessageProducerFactory(
             AWSMessagingGatewayConnection connection,
-            IEnumerable<SnsPublication> snsPublications)
+            IEnumerable<SnsPublication> publications)
         {
             _connection = connection;
-            _snsPublications = snsPublications;
+            _publications = publications;
         }
 
         /// <inheritdoc />
-        public Dictionary<RoutingKey,IAmAMessageProducer> Create()
+        /// <remarks>
+        ///  Sync over async used here, alright in the context of producer creation
+        /// </remarks>
+        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
         {
             var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
-            foreach (var p in _snsPublications)
+            foreach (var p in _publications)
             {
+                if (p.Topic is null)
+                    throw new ConfigurationException($"Missing topic on Publication"); 
+                
                 var producer = new SqsMessageProducer(_connection, p);
-                if (producer.ConfirmTopicExistsAsync().GetAwaiter().GetResult())
+                if (producer.ConfirmTopicExists())
+                    producers[p.Topic] = producer;
+                else
+                    throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
+            }
+
+            return producers; 
+        }
+        
+        public async Task<Dictionary<RoutingKey,IAmAMessageProducer>> CreateAsync()
+        {
+            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+            foreach (var p in _publications)
+            {
+                if (p.Topic is null)
+                    throw new ConfigurationException($"Missing topic on Publication"); 
+                
+                var producer = new SqsMessageProducer(_connection, p);
+                if (await producer.ConfirmTopicExistsAsync())
                     producers[p.Topic] = producer;
                 else
                     throw new ConfigurationException($"Missing SNS topic: {p.Topic}");

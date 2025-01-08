@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -64,6 +66,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             producerFactory.SetConfigHook(_configHook);
 
             return new ProducerRegistry(producerFactory.Create());
+        }
+
+        /// <summary>
+        /// Create a producer registry from the <see cref="KafkaMessagingGatewayConfiguration"/> and <see cref="KafkaPublication"/> instances supplied
+        /// to the constructor
+        /// </summary>
+        /// <returns>An <see cref="IAmAProducerRegistry"/> that represents a collection of Kafka Message Producers</returns>
+        public Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
+        {
+            return Task.FromResult(Create());    
         }
 
         /// <summary>

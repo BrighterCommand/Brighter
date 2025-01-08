@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
@@ -12,12 +13,12 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
-    public class SqsMessageProducerRequeueTests : IDisposable
+    public class SqsMessageProducerRequeueTests : IDisposable, IAsyncDisposable
     {
         private readonly IAmAMessageProducerSync _sender;
         private Message _requeuedMessage;
         private Message _receivedMessage;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
 
@@ -53,7 +54,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            _channel = _channelFactory.CreateSyncChannel(subscription);
         }
 
         [Fact]
@@ -73,8 +74,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _channelFactory.DeleteTopic();
-            _channelFactory.DeleteQueue();
+            _channelFactory.DeleteTopicAsync().Wait(); 
+            _channelFactory.DeleteQueueAsync().Wait();
+        }
+        
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync(); 
+            await _channelFactory.DeleteQueueAsync();
         }
     }
 }

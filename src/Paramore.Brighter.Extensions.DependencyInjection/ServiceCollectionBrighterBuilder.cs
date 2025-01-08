@@ -126,6 +126,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (registerMappers == null) throw new ArgumentNullException(nameof(registerMappers));
 
             registerMappers(_mapperRegistry);
+            _mapperRegistry.EnsureDefaultMessageMapperIsRegistered();
 
             return this;
         }

@@ -57,7 +57,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// How long to pause when there is a channel failure in milliseconds
         /// </summary>
-        public int ChannelFailureDelay { get; set; }
+        public TimeSpan ChannelFailureDelay { get; set; }
 
         /// <summary>
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
@@ -68,7 +68,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// How long to pause when a channel is empty in milliseconds
         /// </summary>
-        public int EmptyChannelDelay { get; set; }
+        public TimeSpan EmptyChannelDelay { get; set; }
 
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
@@ -110,7 +110,7 @@ namespace Paramore.Brighter
         /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
         /// </summary>
         /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
-        public bool RunAsync { get; }
+        public MessagePumpType MessagePumpType { get; }
 
         /// <summary>
         /// Gets the timeout that we use to infer that nothing could be read from the channel i.e. is empty
@@ -137,7 +137,7 @@ namespace Paramore.Brighter
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="runAsync">Is this channel read asynchronously</param>
+        /// <param name="messagePumpType">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
@@ -153,12 +153,15 @@ namespace Paramore.Brighter
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            bool runAsync = false,
+            MessagePumpType messagePumpType = MessagePumpType.Unknown,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000)
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null)
         {
+            if (messagePumpType == MessagePumpType.Unknown)
+                throw new ConfigurationException("You must set a message pump type: use Reactor for sync pipelines; use Proactor for async pipelines");
+            
             DataType = dataType;
             Name = name ?? new SubscriptionName(dataType.FullName!);
             ChannelName = channelName ?? new ChannelName(dataType.FullName!);
@@ -171,11 +174,11 @@ namespace Paramore.Brighter
             requeueDelay ??= TimeSpan.Zero;
             RequeueDelay = requeueDelay.Value;
             UnacceptableMessageLimit = unacceptableMessageLimit;
-            RunAsync = runAsync;
+            MessagePumpType = messagePumpType;
             ChannelFactory = channelFactory;
             MakeChannels = makeChannels;
-            EmptyChannelDelay = emptyChannelDelay;
-            ChannelFailureDelay = channelFailureDelay;
+            EmptyChannelDelay = emptyChannelDelay ?? TimeSpan.FromMilliseconds(500);
+            ChannelFailureDelay = channelFailureDelay ?? TimeSpan.FromMilliseconds(1000);
         }
 
         public void SetNumberOfPerformers(int numberOfPerformers)
@@ -199,7 +202,7 @@ namespace Paramore.Brighter
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelay">The delay the delivery of a requeue message; defaults to 0ms</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="runAsync"></param>
+        /// <param name="messagePumpType"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
@@ -214,11 +217,11 @@ namespace Paramore.Brighter
             int requeueCount = -1,
             TimeSpan? requeueDelay = null,
             int unacceptableMessageLimit = 0,
-            bool runAsync = false,
+            MessagePumpType messagePumpType = MessagePumpType.Proactor,
             IAmAChannelFactory? channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000)
+            TimeSpan? emptyChannelDelay = null,
+            TimeSpan? channelFailureDelay = null)
             : base(
                 typeof(T),
                 name,
@@ -230,7 +233,7 @@ namespace Paramore.Brighter
                 requeueCount,
                 requeueDelay,
                 unacceptableMessageLimit,
-                runAsync,
+                messagePumpType,
                 channelFactory,
                 makeChannels,
                 emptyChannelDelay,

@@ -26,8 +26,8 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAMessageConsumerFactory
-    /// We do not know how to create a <see cref="IAmAMessageConsumer"/> implementation, as this knowledge belongs to the specific library for that broker.
-    /// Implementors need to provide a concrete class to create instances of <see cref="IAmAMessageConsumer"/> for this library to use when building a <see cref="Channel"/>
+    /// We do not know how to create a <see cref="IAmAMessageConsumerSync"/> implementation, as this knowledge belongs to the specific library for that broker.
+    /// Implementors need to provide a concrete class to create instances of <see cref="IAmAMessageConsumerSync"/> for this library to use when building a <see cref="Channel"/>
     /// </summary>
     public interface IAmAMessageConsumerFactory
     {
@@ -35,7 +35,15 @@ namespace Paramore.Brighter
         /// Creates a consumer for the specified queue.
         /// </summary>
         /// <param name="subscription">The queue to connect to</param>
-        /// <returns>IAmAMessageConsumer</returns>
-        IAmAMessageConsumer Create(Subscription subscription);
+        /// <returns>IAmAMessageConsumerSync</returns>
+        IAmAMessageConsumerSync Create(Subscription subscription);
+        
+        /// <summary>
+        /// Creates a consumer for the specified queue.
+        /// </summary>
+        /// <param name="subscription">The queue to connect to</param>
+        /// <returns>IAmAMessageConsumerSync</returns>
+        IAmAMessageConsumerAsync CreateAsync(Subscription subscription);
+        
     }
 }

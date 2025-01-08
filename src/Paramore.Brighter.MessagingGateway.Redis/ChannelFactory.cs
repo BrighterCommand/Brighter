@@ -22,11 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     /// <summary>
     /// Class RMQInputChannelFactory.
-    /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
+    /// Creates instances of <see cref="IAmAChannelSync"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
     public class ChannelFactory : IAmAChannelFactory
     {
@@ -45,10 +48,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Creates the input channel.
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
-        /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Subscription subscription)
+        /// <returns>An <see cref="IAmAChannel"/> that provides access to a stream or queue</returns>
+        public IAmAChannelSync CreateSyncChannel(Subscription subscription)
         {
-            RedisSubscription rmqSubscription = subscription as RedisSubscription;  
+            RedisSubscription? rmqSubscription = subscription as RedisSubscription;  
             if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
             
@@ -58,6 +61,41 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 _messageConsumerFactory.Create(subscription),
                 subscription.BufferSize
                 );
+        }
+
+        /// <summary>
+        /// Creates the input channel.
+        /// </summary>
+        /// <param name="subscription">The subscription parameters with which to create the channel</param>
+        /// <returns>An <see cref="IAmAChannelAsync"/> that provides access to a stream or queue</returns>
+         public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
+        {
+            RedisSubscription? rmqSubscription = subscription as RedisSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
+            
+            return new ChannelAsync(
+                subscription.ChannelName, 
+                subscription.RoutingKey, 
+                _messageConsumerFactory.CreateAsync(subscription),
+                subscription.BufferSize
+                );
+        }
+
+        public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription, CancellationToken ct = default)
+        {
+            RedisSubscription? rmqSubscription = subscription as RedisSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
+            
+            IAmAChannelAsync channel =  new ChannelAsync(
+                subscription.ChannelName, 
+                subscription.RoutingKey, 
+                _messageConsumerFactory.CreateAsync(subscription),
+                subscription.BufferSize
+            );
+            
+            return Task.FromResult(channel);
         }
     }
 }

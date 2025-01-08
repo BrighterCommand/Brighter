@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -34,5 +37,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
         IAmAProducerRegistry Create();
+        
+        /// <summary>
+        /// Creates a message producer registry.
+        /// </summary>
+        /// <remarks>
+        /// Mainly useful where the producer creation is asynchronous, such as when connecting to a remote service to create or validate infrastructure
+        /// </remarks>
+        /// <param name="ct">A cancellation token to cancel the operation</param>
+        /// <returns>A registry of middleware clients by topic, for sending messages to the middleware</returns>
+        Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default);
     }
 }

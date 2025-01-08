@@ -62,7 +62,7 @@ var host = Host.CreateDefaultBuilder(args)
                 offsetDefault: AutoOffsetReset.Earliest,
                 commitBatchSize: 5,
                 sweepUncommittedOffsetsInterval: TimeSpan.FromMilliseconds(10000),
-                runAsync:true)
+                messagePumpType: MessagePumpType.Proactor)
         };
 
         //create the gateway

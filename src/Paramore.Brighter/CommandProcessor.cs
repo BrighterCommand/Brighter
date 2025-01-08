@@ -101,7 +101,7 @@ namespace Paramore.Brighter
         /// Bus: We want to hold a reference to the bus; use double lock to let us pass parameters to the constructor from the first instance
         /// MethodCache: Used to reduce the cost of reflection for bulk calls
         /// </summary>
-        private static IAmAnOutboxProducerMediator? s_outboxProducerMediator;
+        private static IAmAnOutboxProducerMediator? s_mediator;
         private static readonly object s_padlock = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new(); 
 
@@ -190,7 +190,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="bus">The external service bus that we want to send messages over</param>
+        /// <param name="mediator">The external service bus that we want to send messages over</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
@@ -199,7 +199,7 @@ namespace Paramore.Brighter
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
-            IAmAnOutboxProducerMediator bus,
+            IAmAnOutboxProducerMediator mediator,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
             IEnumerable<Subscription>? replySubscriptions = null,
@@ -214,7 +214,7 @@ namespace Paramore.Brighter
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
 
-            InitExtServiceBus(bus); 
+            InitExtServiceBus(mediator); 
         }
 
         /// <summary>
@@ -292,7 +292,7 @@ namespace Paramore.Brighter
                 var handlerChain = builder.BuildAsync(context, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
-
+                
                 await handlerChain.First().HandleAsync(command, cancellationToken)
                     .ConfigureAwait(continueOnCapturedContext);
             }
@@ -348,9 +348,11 @@ namespace Paramore.Brighter
                     {
                         var handlerName = handleRequests.Name.ToString();
                         handlerSpans[handlerName] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
-                        context.Span = handlerSpans[handlerName];
+                        if(handleRequests.Context is not null)
+                            handleRequests.Context.Span = handlerSpans[handlerName];
                         handleRequests.Handle(@event);
-                        context.Span = span;
+                        if(handleRequests.Context is not null)
+                            handleRequests.Context.Span = span;
                     }
                     catch (Exception e)
                     {
@@ -426,9 +428,11 @@ namespace Paramore.Brighter
                     foreach (var handleRequests in handlerChain)
                     {
                         handlerSpans[handleRequests.Name.ToString()] = _tracer?.CreateSpan(CommandProcessorSpanOperation.Publish, @event, span, options: _instrumentationOptions)!;
-                        context.Span =handlerSpans[handleRequests.Name.ToString()];
+                        if(handleRequests.Context is not null)
+                            handleRequests.Context.Span = handlerSpans[handleRequests.Name.ToString()];
                         tasks.Add(handleRequests.HandleAsync(@event, cancellationToken));
-                        context.Span = span;
+                        if(handleRequests.Context is not null)
+                            handleRequests.Context.Span = span;
                     }
                     
                     await Task.WhenAll(tasks).ConfigureAwait(continueOnCapturedContext);
@@ -562,14 +566,14 @@ namespace Paramore.Brighter
 
             try
             {
-                Message message = s_outboxProducerMediator!.CreateMessageFromRequest(request, context);
+                Message message = s_mediator!.CreateMessageFromRequest(request, context);
                 
-                var bus = ((IAmAnOutboxProducerMediator<Message, TTransaction>)s_outboxProducerMediator);
+                var mediator = ((IAmAnOutboxProducerMediator<Message, TTransaction>)s_mediator);
 
-                if (!bus.HasOutbox())
+                if (!mediator.HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
 
-                bus.AddToOutbox(message, context, transactionProvider, batchId);
+                mediator.AddToOutbox(message, context, transactionProvider, batchId);
 
                 return message.Id;
             }
@@ -632,7 +636,7 @@ namespace Paramore.Brighter
             {
                 var successfullySentMessage = new List<string>();
                 
-                var mediator = (IAmAnOutboxProducerMediator<Message, TTransaction>)s_outboxProducerMediator!;
+                var mediator = (IAmAnOutboxProducerMediator<Message, TTransaction>)s_mediator!;
                 
                 var batchId = mediator.StartBatchAddToOutbox();
 
@@ -758,14 +762,14 @@ namespace Paramore.Brighter
 
             try
             {
-                Message message = await s_outboxProducerMediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
+                Message message = await s_mediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
                 
-                var bus = ((IAmAnOutboxProducerMediator<Message, TTransaction>)s_outboxProducerMediator);
+                var mediator = ((IAmAnOutboxProducerMediator<Message, TTransaction>)s_mediator);
                 
-                if (!bus.HasAsyncOutbox())
+                if (!mediator.HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
 
-                await bus.AddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext,
+                await mediator.AddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext,
                     cancellationToken, batchId);
 
                 return message.Id;
@@ -843,9 +847,9 @@ namespace Paramore.Brighter
             {
                 var successfullySentMessage = new List<string>();
 
-                var bus = (IAmAnOutboxProducerMediator<Message, TTransaction>)s_outboxProducerMediator!;
+                var mediator = (IAmAnOutboxProducerMediator<Message, TTransaction>)s_mediator!;
                 
-                var batchId = bus.StartBatchAddToOutbox();
+                var batchId = mediator.StartBatchAddToOutbox();
 
                 foreach (var request in requests)
                 {
@@ -856,7 +860,7 @@ namespace Paramore.Brighter
                     successfullySentMessage.Add(messageId); 
                     context.Span = createSpan;
                 }
-                await bus.EndBatchAddToOutboxAsync(batchId, transactionProvider, context, cancellationToken);
+                await mediator.EndBatchAddToOutboxAsync(batchId, transactionProvider, context, cancellationToken);
 
                 return successfullySentMessage.ToArray();
             }
@@ -919,7 +923,7 @@ namespace Paramore.Brighter
             
             try
             {
-                s_outboxProducerMediator!.ClearOutbox(ids, context, args);
+                s_mediator!.ClearOutbox(ids, context, args);
             }
             catch (Exception e)
             {
@@ -953,7 +957,7 @@ namespace Paramore.Brighter
             
             try
             {
-                await s_outboxProducerMediator!.ClearOutboxAsync(posts, context, continueOnCapturedContext, args, cancellationToken);
+                await s_mediator!.ClearOutboxAsync(posts, context, continueOnCapturedContext, args, cancellationToken);
             }
             catch (Exception e)
             {
@@ -965,44 +969,7 @@ namespace Paramore.Brighter
                 _tracer?.EndSpan(span);
             }
         }
-
-        /// <summary>
-        /// Flushes any outstanding message box message to the broker.
-        /// This will be run on a background task.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostAsync{TRequest}(TRequest,Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object},bool,System.Threading.CancellationToken)"/>
-        /// </summary>
-        /// <param name="amountToClear">The maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age to clear (Default 5 second).</param>
-        /// <param name="useBulk">Use the bulk send on the producer.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        public void ClearOutstandingFromOutbox(
-            int amountToClear = 100,
-            TimeSpan? minimumAge = null,
-            bool useBulk = false,
-            RequestContext? requestContext = null,
-            Dictionary<string, object>? args = null
-        )
-        {
-            var span = _tracer?.CreateClearSpan(CommandProcessorSpanOperation.Create, requestContext?.Span, options: _instrumentationOptions);
-            var context = InitRequestContext(span, requestContext);
-
-            try
-            {
-                var minAge = minimumAge ?? TimeSpan.FromMilliseconds(5000);
-                s_outboxProducerMediator!.ClearOutstandingFromOutbox(amountToClear, minAge, useBulk, context, args);
-            }
-            catch (Exception e)
-            {
-                _tracer?.AddExceptionToSpan(span, [e]);
-                throw;
-            }
-            finally
-            {
-                _tracer?.EndSpan(span);
-            }
-        }
-
+        
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
         /// The message is placed into a message queue but not into the outbox.
@@ -1040,7 +1007,7 @@ namespace Paramore.Brighter
             subscription.ChannelName = new ChannelName(channelName.ToString());
             subscription.RoutingKey = new RoutingKey(routingKey);
 
-            using var responseChannel = _responseChannelFactory.CreateChannel(subscription);
+            using var responseChannel = _responseChannelFactory.CreateSyncChannel(subscription);
             s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
             request.ReplyAddress.Topic = subscription.RoutingKey;
             request.ReplyAddress.CorrelationId = channelName.ToString();
@@ -1055,11 +1022,11 @@ namespace Paramore.Brighter
 
             try
             {
-                var outMessage = s_outboxProducerMediator!.CreateMessageFromRequest(request, context);
+                var outMessage = s_mediator!.CreateMessageFromRequest(request, context);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
-                s_outboxProducerMediator.CallViaExternalBus<T, TResponse>(outMessage, requestContext);
+                s_mediator.CallViaExternalBus<T, TResponse>(outMessage, requestContext);
 
                 Message? responseMessage = null;
 
@@ -1071,7 +1038,7 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogDebug("Reply received from {ChannelName}", channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                    s_outboxProducerMediator.CreateRequestFromMessage(responseMessage, context, out TResponse response);
+                    s_mediator.CreateRequestFromMessage(responseMessage, context, out TResponse response);
                     Send(response);
 
                     return response;
@@ -1099,12 +1066,12 @@ namespace Paramore.Brighter
         /// </summary>
         public static void ClearServiceBus()
         {
-            if (s_outboxProducerMediator != null)
+            if (s_mediator != null)
             {
                 lock (s_padlock)
                 {
-                    s_outboxProducerMediator.Dispose();
-                    s_outboxProducerMediator = null;
+                    s_mediator.Dispose();
+                    s_mediator = null;
                 }
             }
             s_boundDepositCalls.Clear();
@@ -1145,11 +1112,11 @@ namespace Paramore.Brighter
         // if needed as a "get out of gaol" card.
         private static void InitExtServiceBus(IAmAnOutboxProducerMediator bus)
         {
-            if (s_outboxProducerMediator == null)
+            if (s_mediator == null)
             {
                 lock (s_padlock)
                 {
-                    s_outboxProducerMediator ??= bus;
+                    s_mediator ??= bus;
                 }
             }
         }

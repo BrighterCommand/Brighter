@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -47,6 +48,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
         private readonly Message _message2;
         private readonly InMemoryOutbox _outbox;
         private readonly InternalBus _bus = new();
+        private readonly IAmAnOutboxProducerMediator _mediator;
 
         public CommandProcessorPostBoxImplicitClearTests()
         {
@@ -95,7 +97,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             var tracer = new BrighterTracer();
             _outbox = new InMemoryOutbox(timeProvider){Tracer = tracer};
             
-            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            _mediator = new OutboxProducerMediator<Message, CommittableTransaction>(
                 producerRegistry, 
                 policyRegistry, 
                 messageMapperRegistry,
@@ -109,18 +111,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                bus
+                _mediator
             );
         }
 
         [Fact(Skip = "Erratic due to timing")]
-        public void When_Implicit_Clearing_The_PostBox_On_The_Command_Processor()
+        public async Task When_Implicit_Clearing_The_PostBox_On_The_Command_Processor()
         {
             var context = new RequestContext();
             _outbox.Add(_message, context);
             _outbox.Add(_message2, context);
 
-            _commandProcessor.ClearOutstandingFromOutbox(1,TimeSpan.Zero);
+            await _mediator.ClearOutstandingFromOutboxAsync(1,TimeSpan.Zero, true, context);
             
             var topic = new RoutingKey(Topic);
             for (var i = 1; i <= 10; i++)
@@ -136,7 +138,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
                 if (_bus.Stream(topic).Count() == 2)
                     break;
                 Thread.Sleep(i * 100);
-                _commandProcessor.ClearOutstandingFromOutbox(1, TimeSpan.Zero);
+                await _mediator.ClearOutstandingFromOutboxAsync(1, TimeSpan.Zero, true, context);
             }
 
             //_should_send_a_message_via_the_messaging_gateway

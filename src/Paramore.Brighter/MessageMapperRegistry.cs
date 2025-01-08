@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Paramore.Brighter.MessageMappers;
 
 namespace Paramore.Brighter
 {
@@ -40,16 +41,24 @@ namespace Paramore.Brighter
         private readonly IAmAMessageMapperFactoryAsync? _messageMapperFactoryAsync;
         private readonly Dictionary<Type, Type> _messageMappers = new Dictionary<Type, Type>();
         private readonly Dictionary<Type, Type> _asyncMessageMappers = new Dictionary<Type, Type>();
+        private readonly Type? _defaultMessageMapper;
+        private readonly Type? _defaultMessageMapperAsync;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageMapperRegistry"/> class.
         /// </summary>
         /// <param name="messageMapperFactory">The message mapper factory.</param>
         /// <param name="messageMapperFactoryAsync">The async message mapper factory</param>
-        public MessageMapperRegistry(IAmAMessageMapperFactory? messageMapperFactory, IAmAMessageMapperFactoryAsync? messageMapperFactoryAsync)
+        /// <param name="defaultMessageMapper">The default message Mapper</param>
+        /// <param name="defaultMessageMapperAsync">The default Async Message Mapper</param>
+        public MessageMapperRegistry(IAmAMessageMapperFactory? messageMapperFactory,
+            IAmAMessageMapperFactoryAsync? messageMapperFactoryAsync, Type? defaultMessageMapper = null,
+            Type? defaultMessageMapperAsync = null)
         {
             _messageMapperFactory = messageMapperFactory;
             _messageMapperFactoryAsync = messageMapperFactoryAsync;
+            _defaultMessageMapper = defaultMessageMapper;
+            _defaultMessageMapperAsync = defaultMessageMapperAsync;
 
             if (messageMapperFactory == null && messageMapperFactoryAsync == null)
                 throw new ConfigurationException("Should have at least one factory");
@@ -62,17 +71,18 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapper&lt;TRequest&gt;.</returns>
         public IAmAMessageMapper<TRequest>? Get<TRequest>() where TRequest : class, IRequest
         {
-            if ( _messageMapperFactory is not null && _messageMappers.ContainsKey(typeof(TRequest)))
-            {
-                var messageMapperType = _messageMappers[typeof(TRequest)];
-                return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);
-            }
-            else
-            {
+            if (_messageMapperFactory is null)
                 return null;
-            }
+
+            var messageMapperType = _messageMappers.ContainsKey(typeof(TRequest))
+                ? _messageMappers[typeof(TRequest)]
+                : _defaultMessageMapper;
+
+            if (messageMapperType is null) return null;
+
+            return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);
         }
-        
+
         /// <summary>
         /// Gets this instance.
         /// </summary>
@@ -80,15 +90,16 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapperAsync&lt;TRequest&gt;.</returns>
         public IAmAMessageMapperAsync<TRequest>? GetAsync<TRequest>() where TRequest : class, IRequest
         {
-            if (_messageMapperFactoryAsync is not null && _asyncMessageMappers.ContainsKey(typeof(TRequest)))
-            {
-                var messageMapperType = _asyncMessageMappers[typeof(TRequest)];
-                return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
-            }
-            else
-            {
+            if (_messageMapperFactoryAsync is null)
                 return null;
-            }
+
+            var messageMapperType = _asyncMessageMappers.ContainsKey(typeof(TRequest))
+                ? _asyncMessageMappers[typeof(TRequest)]
+                : _defaultMessageMapperAsync;
+
+            if (messageMapperType is null) return null;
+
+            return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
         }
 
         /// <summary>

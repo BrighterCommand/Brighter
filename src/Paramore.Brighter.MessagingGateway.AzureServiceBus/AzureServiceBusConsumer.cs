@@ -1,320 +1,410 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.Tasks;
 
-namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
+namespace Paramore.Brighter.MessagingGateway.AzureServiceBus;
+
+/// <summary>
+/// Implementation of <see cref="IAmAMessageConsumerSync"/> using Azure Service Bus for Transport.
+/// </summary>
+public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMessageConsumerAsync
 {
-    /// <summary>
-    /// Implementation of <see cref="IAmAMessageConsumer"/> using Azure Service Bus for Transport.
-    /// </summary>
-    public abstract class AzureServiceBusConsumer : IAmAMessageConsumer
-    {
-        protected abstract string SubscriptionName { get; }
-        protected abstract ILogger Logger { get; }
+    protected abstract string SubscriptionName { get; }
+    protected abstract ILogger Logger { get; }
 
-        protected readonly AzureServiceBusSubscription Subscription;
-        protected readonly string Topic;
-        private readonly IAmAMessageProducerSync _messageProducerSync;
-        protected readonly IAdministrationClientWrapper AdministrationClientWrapper;
-        private readonly int _batchSize;
-        protected IServiceBusReceiverWrapper? ServiceBusReceiver;
-        protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
+    protected readonly AzureServiceBusSubscription Subscription;
+    protected readonly string Topic;
+    private readonly IAmAMessageProducer _messageProducer;
+    protected readonly IAdministrationClientWrapper AdministrationClientWrapper;
+    private readonly int _batchSize;
+    protected IServiceBusReceiverWrapper? ServiceBusReceiver;
+    protected readonly AzureServiceBusSubscriptionConfiguration SubscriptionConfiguration;
         
-        protected AzureServiceBusConsumer(AzureServiceBusSubscription subscription, IAmAMessageProducerSync messageProducerSync,
-            IAdministrationClientWrapper administrationClientWrapper)
+    /// <summary>
+    /// Constructor for the Azure Service Bus Consumer
+    /// </summary>
+    /// <param name="subscription">The ASB subscription details</param>
+    /// <param name="messageProducer">The producer we want to send via</param>
+    /// <param name="administrationClientWrapper">The admin client for ASB</param>
+    /// <param name="isAsync">Whether the consumer is async</param>
+    protected AzureServiceBusConsumer(
+        AzureServiceBusSubscription subscription, 
+        IAmAMessageProducer messageProducer,
+        IAdministrationClientWrapper administrationClientWrapper,
+        bool isAsync = false
+    )
+    {
+        Subscription = subscription;
+        Topic = subscription.RoutingKey;
+        _batchSize = subscription.BufferSize;
+        SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
+        _messageProducer = messageProducer;
+        AdministrationClientWrapper = administrationClientWrapper;
+    }
+        
+    /// <summary>
+    /// Dispose of the Consumer.
+    /// </summary>
+    public void Dispose()
+    {
+        ServiceBusReceiver?.Close();
+        GC.SuppressFinalize(this);
+    }
+        
+    public async ValueTask DisposeAsync()
+    {
+        if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Acknowledges the specified message.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    public void Acknowledge(Message message) => BrighterAsyncContext.Run(async() => await AcknowledgeAsync(message));
+
+    /// <summary>
+    /// Acknowledges the specified message.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancels the acknowledge operation</param>
+    public async Task AcknowledgeAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        try
         {
-            Subscription = subscription;
-            Topic = subscription.RoutingKey;
-            _batchSize = subscription.BufferSize;
-            SubscriptionConfiguration = subscription.Configuration ?? new AzureServiceBusSubscriptionConfiguration();
-            _messageProducerSync = messageProducerSync;
-            AdministrationClientWrapper = administrationClientWrapper;
-        }
+            await EnsureChannelAsync();
+            var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
 
-        /// <summary>
-        /// Receives the specified queue name.
-        /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
-        /// the processing of those messages or requeue them.
-        /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
-        /// </summary>
-        /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
-        /// <returns>Message.</returns>
-        public Message[] Receive(TimeSpan? timeOut = null)
-        {
-            Logger.LogDebug(
-                "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}",
-                Topic, SubscriptionName, timeOut, _batchSize);
-
-            IEnumerable<IBrokeredMessageWrapper> messages;
-            EnsureChannel();
-
-            var messagesToReturn = new List<Message>();
-
-            try
-            {
-                if (SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
-                {
-                    GetMessageReceiverProvider();
-                    if (ServiceBusReceiver == null)
-                    {
-                        Logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}",
-                            Topic);
-                        return messagesToReturn.ToArray();   
-                    }
-                }
-
-                timeOut ??= TimeSpan.FromMilliseconds(300);
+            if (string.IsNullOrEmpty(lockToken))
+                throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+            Logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
+                lockToken);
                 
-                messages = ServiceBusReceiver.Receive(_batchSize, timeOut.Value)
-                    .GetAwaiter().GetResult();
-            }
-            catch (Exception e)
-            {
-                if (ServiceBusReceiver is {IsClosedOrClosing: true} && !SubscriptionConfiguration.RequireSession)
-                {
-                    Logger.LogDebug("Message Receiver is closing...");
-                    var message = new Message(
-                        new MessageHeader(string.Empty, new RoutingKey(Topic), MessageType.MT_QUIT), 
-                        new MessageBody(string.Empty));
-                    messagesToReturn.Add(message);
-                    return messagesToReturn.ToArray();
-                }
+            if(ServiceBusReceiver == null)
+                await GetMessageReceiverProviderAsync();
 
-                Logger.LogError(e, "Failing to receive messages");
-
-                //The connection to Azure Service bus may have failed so we re-establish the connection.
-                if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
-
-                throw new ChannelFailureException("Failing to receive messages.", e);
-            }
-
-            foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
-            {
-                Message message = MapToBrighterMessage(azureServiceBusMessage);
-                messagesToReturn.Add(message);
-            }
-
-            return messagesToReturn.ToArray();
+            await ServiceBusReceiver!.CompleteAsync(lockToken);
+                
+            if (SubscriptionConfiguration.RequireSession)
+                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
         }
-
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
-        /// <returns>True if the message should be acked, false otherwise</returns>
-        public bool Requeue(Message message, TimeSpan? delay = null)
+        catch (AggregateException ex)
         {
-            var topic = message.Header.Topic;
-            delay ??= TimeSpan.Zero;
-
-            Logger.LogInformation("Requeuing message with topic {Topic} and id {Id}", topic, message.Id);
-
-            if (delay.Value > TimeSpan.Zero)
-            {
-                _messageProducerSync.SendWithDelay(message, delay.Value);
-            }
+            if (ex.InnerException is ServiceBusException asbException)
+                HandleAsbException(asbException, message.Id);
             else
-            {
-                _messageProducerSync.Send(message);
-            }
-            Acknowledge(message);
-
-            return true;
-        }
-
-        /// <summary>
-        /// Acknowledges the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Acknowledge(Message message)
-        {
-            try
-            {
-                EnsureChannel();
-                var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
-
-                if (string.IsNullOrEmpty(lockToken))
-                    throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                Logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
-                    lockToken);
-                
-                if(ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
-
-                ServiceBusReceiver?.Complete(lockToken).Wait();
-                if (SubscriptionConfiguration.RequireSession)
-                    ServiceBusReceiver?.Close();
-            }
-            catch (AggregateException ex)
-            {
-                if (ex.InnerException is ServiceBusException asbException)
-                    HandleAsbException(asbException, message.Id);
-                else
-                {
-                    Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
-                    throw;
-                }
-            }
-            catch (ServiceBusException ex)
-            {
-                HandleAsbException(ex, message.Id);
-            }
-            catch (Exception ex)
             {
                 Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
                 throw;
             }
         }
-
-        /// <summary>
-        /// Rejects the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        public void Reject(Message message)
+        catch (ServiceBusException ex)
         {
-            try
-            {
-                EnsureChannel();
-                var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
+            HandleAsbException(ex, message.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+            throw;
+        }
+    }
+        
+    /// <summary>
+    /// Purges the specified queue name.
+    /// </summary>
+    public abstract void Purge();
+        
+    /// <summary>
+    /// Purges the specified queue name.
+    /// </summary>
+    public abstract Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken));
+        
+    /// <summary>
+    /// Receives the specified queue name.
+    /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
+    /// the processing of those messages or requeue them.
+    /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
+    /// Sync over async
+    /// </summary>
+    /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
+    /// <returns>Message.</returns>
+    public Message[] Receive(TimeSpan? timeOut = null) => BrighterAsyncContext.Run(async () => await ReceiveAsync(timeOut));
+        
+    /// <summary>
+    /// Receives the specified queue name.
+    /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge
+    /// the processing of those messages or requeue them.
+    /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
+    /// </summary>
+    /// <param name="timeOut">The timeout for a message being available. Defaults to 300ms.</param>
+    /// <param name="cancellationToken">Cancel the receive</param>
+    /// <returns>Message.</returns>
+    public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        Logger.LogDebug(
+            "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}",
+            Topic, SubscriptionName, timeOut, _batchSize);
 
-                if (string.IsNullOrEmpty(lockToken))
-                    throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+        IEnumerable<IBrokeredMessageWrapper> messages;
+        await EnsureChannelAsync();
 
-                if(ServiceBusReceiver == null)
-                    GetMessageReceiverProvider();
-                
-                ServiceBusReceiver?.DeadLetter(lockToken).Wait();
-                if (SubscriptionConfiguration.RequireSession)
-                    ServiceBusReceiver?.Close();
-            }
-            catch (Exception ex)
+        var messagesToReturn = new List<Message>();
+
+        try
+        {
+            if (SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
             {
-                Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
-                throw;
+                await GetMessageReceiverProviderAsync();
+                if (ServiceBusReceiver == null)
+                {
+                    Logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}", Topic);
+                    return messagesToReturn.ToArray();   
+                }
             }
+
+            timeOut ??= TimeSpan.FromMilliseconds(300);
+
+            messages = await ServiceBusReceiver.ReceiveAsync(_batchSize, timeOut.Value);
+        }
+        catch (Exception e)
+        {
+            if (ServiceBusReceiver is {IsClosedOrClosing: true} && !SubscriptionConfiguration.RequireSession)
+            {
+                Logger.LogDebug("Message Receiver is closing...");
+                var message = new Message(
+                    new MessageHeader(string.Empty, new RoutingKey(Topic), MessageType.MT_QUIT), 
+                    new MessageBody(string.Empty));
+                messagesToReturn.Add(message);
+                return messagesToReturn.ToArray();
+            }
+
+            Logger.LogError(e, "Failing to receive messages");
+
+            //The connection to Azure Service bus may have failed so we re-establish the connection.
+            if(!SubscriptionConfiguration.RequireSession || ServiceBusReceiver == null)
+                await GetMessageReceiverProviderAsync();
+
+            throw new ChannelFailureException("Failing to receive messages.", e);
         }
 
-        /// <summary>
-        /// Purges the specified queue name.
-        /// </summary>
-        public abstract void Purge();
-
-        /// <summary>
-        /// Dispose of the Consumer.
-        /// </summary>
-        public void Dispose()
+        foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
         {
-            Logger.LogInformation("Disposing the consumer...");
-            ServiceBusReceiver?.Close();
-            Logger.LogInformation("Consumer disposed");
+            Message message = MapToBrighterMessage(azureServiceBusMessage);
+            messagesToReturn.Add(message);
         }
 
-        protected abstract void GetMessageReceiverProvider();
+        return messagesToReturn.ToArray();
+    }
+               
+    /// <summary>
+    /// Rejects the specified message.
+    /// Sync over Async
+    /// </summary>
+    /// <param name="message">The message.</param>
+    public void Reject(Message message) => BrighterAsyncContext.Run(async () => await RejectAsync(message));
 
-        private Message MapToBrighterMessage(IBrokeredMessageWrapper azureServiceBusMessage)
+    /// <summary>
+    /// Rejects the specified message.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancel the rejection</param>
+    public async Task RejectAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        try
         {
-            if (azureServiceBusMessage.MessageBodyValue == null)
-            {
-                Logger.LogWarning(
-                    "Null message body received from topic {Topic} via subscription {ChannelName}",
-                    Topic, SubscriptionName);
-            }
+            await EnsureChannelAsync();
+            var lockToken = message.Header.Bag[ASBConstants.LockTokenHeaderBagKey].ToString();
 
-            var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
-            
-            Logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}",
-                Topic, SubscriptionName, messageBody);
-            
-            MessageType messageType = GetMessageType(azureServiceBusMessage);
-            var replyAddress = GetReplyAddress(azureServiceBusMessage);
-            var handledCount = GetHandledCount(azureServiceBusMessage);
-            
-            //TODO:CLOUD_EVENTS parse from headers
-            
-            var headers = new MessageHeader(
-                messageId: azureServiceBusMessage.Id, 
-                topic: new RoutingKey(Topic), 
-                messageType: messageType, 
-                source: null,
-                type: "",
-                timeStamp: DateTime.UtcNow,
-                correlationId: azureServiceBusMessage.CorrelationId,
-                replyTo: new RoutingKey(replyAddress),
-                contentType: azureServiceBusMessage.ContentType,
-                handledCount:handledCount, 
-                dataSchema: null,
-                subject: null,
-                delayed: TimeSpan.Zero
-                );
+            if (string.IsNullOrEmpty(lockToken))
+                throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+            Logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
-            headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
+            if(ServiceBusReceiver == null)
+                await GetMessageReceiverProviderAsync();
+
+            await ServiceBusReceiver!.DeadLetterAsync(lockToken);
+            if (SubscriptionConfiguration.RequireSession)
+                if (ServiceBusReceiver is not null) await ServiceBusReceiver.CloseAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Requeues the specified message.
+    /// </summary>
+    /// <param name="message"></param>
+    /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
+    /// <returns>True if the message should be acked, false otherwise</returns>
+    public bool Requeue(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await RequeueAsync(message, delay));
+
+    /// <summary>
+    /// Requeues the specified message.
+    /// </summary>
+    /// <param name="message"></param>
+    /// <param name="delay">Delay to the delivery of the message. 0 is no delay. Defaults to 0.</param>
+    /// <param name="cancellationToken">Cancel the requeue ioperation</param>
+    /// <returns>True if the message should be acked, false otherwise</returns>
+    public async Task<bool> RequeueAsync(Message message, TimeSpan? delay = null, CancellationToken cancellationToken = default(CancellationToken))
+    {
+        var topic = message.Header.Topic;
+        delay ??= TimeSpan.Zero;
+
+        Logger.LogInformation("Requeuing message with topic {Topic} and id {Id}", topic, message.Id);
+
+        var messageProducerAsync = _messageProducer as IAmAMessageProducerAsync;
             
-            foreach (var property in azureServiceBusMessage.ApplicationProperties)
-            {
-                headers.Bag.Add(property.Key, property.Value);
-            }
+        if (messageProducerAsync  is null)
+        {
+            throw new ChannelFailureException("Message Producer is not of type IAmAMessageProducerSync");    
+        }
             
-            var message = new Message(headers, new MessageBody(messageBody));
-            return message;
+        if (delay.Value > TimeSpan.Zero)
+        {
+            await messageProducerAsync.SendWithDelayAsync(message, delay.Value, cancellationToken);
+        }
+        else
+        {
+            await messageProducerAsync.SendAsync(message, cancellationToken);
+        }
+            
+        await AcknowledgeAsync(message, cancellationToken);
+
+        return true;
+    }
+
+    protected abstract Task GetMessageReceiverProviderAsync();
+
+    private Message MapToBrighterMessage(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (azureServiceBusMessage.MessageBodyValue == null)
+        {
+            Logger.LogWarning(
+                "Null message body received from topic {Topic} via subscription {ChannelName}",
+                Topic, SubscriptionName);
         }
 
-        private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
+        var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
+            
+        Logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}",
+            Topic, SubscriptionName, messageBody);
+            
+        MessageType messageType = GetMessageType(azureServiceBusMessage);
+        var replyAddress = GetReplyAddress(azureServiceBusMessage);
+        var handledCount = GetHandledCount(azureServiceBusMessage);
+            
+        //TODO:CLOUD_EVENTS parse from headers
+            
+        var headers = new MessageHeader(
+            messageId: azureServiceBusMessage.Id, 
+            topic: new RoutingKey(Topic), 
+            messageType: messageType, 
+            source: null,
+            type: "",
+            timeStamp: DateTime.UtcNow,
+            correlationId: azureServiceBusMessage.CorrelationId,
+            replyTo: new RoutingKey(replyAddress),
+            contentType: azureServiceBusMessage.ContentType,
+            handledCount:handledCount, 
+            dataSchema: null,
+            subject: null,
+            delayed: TimeSpan.Zero
+        );
+
+        headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
+            
+        foreach (var property in azureServiceBusMessage.ApplicationProperties)
         {
-            if (azureServiceBusMessage.ApplicationProperties == null ||
-                !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey,
-                    out object? property))
-                return MessageType.MT_EVENT;
+            headers.Bag.Add(property.Key, property.Value);
+        }
+            
+        var message = new Message(headers, new MessageBody(messageBody));
+        return message;
+    }
 
-            if (Enum.TryParse(property.ToString(), true, out MessageType messageType))
-                return messageType;
-
+    private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (azureServiceBusMessage.ApplicationProperties == null ||
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey,
+                out object? property))
             return MessageType.MT_EVENT;
+
+        if (Enum.TryParse(property.ToString(), true, out MessageType messageType))
+            return messageType;
+
+        return MessageType.MT_EVENT;
+    }
+
+    private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        if (azureServiceBusMessage.ApplicationProperties is null ||
+            !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey,
+                out object? property))
+        {
+            return string.Empty;
         }
 
-        private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
+        var replyAddress = property.ToString();
+
+        return replyAddress ?? string.Empty;
+    }
+
+    private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
+    {
+        var count = 0;
+        if (azureServiceBusMessage.ApplicationProperties != null &&
+            azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
+                out object? property))
         {
-            if (azureServiceBusMessage.ApplicationProperties is null ||
-                !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey,
-                    out object? property))
-            {
-                return string.Empty;
-            }
-
-            var replyAddress = property.ToString();
-
-            return replyAddress ?? string.Empty;
+            int.TryParse(property.ToString(), out count);
         }
 
-        private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
+        return count;
+    }
+
+    protected abstract Task EnsureChannelAsync();
+
+    private void HandleAsbException(ServiceBusException ex, string messageId)
+    {
+        if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
+            Logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId);
+        else
         {
-            var count = 0;
-            if (azureServiceBusMessage.ApplicationProperties != null &&
-                azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
-                    out object? property))
-            {
-                int.TryParse(property.ToString(), out count);
-            }
-
-            return count;
-        }
-
-        protected abstract void EnsureChannel();
-
-        private void HandleAsbException(ServiceBusException ex, string messageId)
-        {
-            if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
-                Logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId);
-            else
-            {
-                Logger.LogError(ex,
-                    "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
-                    messageId, ex.Reason);
-            }
+            Logger.LogError(ex,
+                "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
+                messageId, ex.Reason);
         }
     }
 }

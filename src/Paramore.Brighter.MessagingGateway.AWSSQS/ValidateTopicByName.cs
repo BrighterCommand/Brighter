@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
@@ -29,25 +30,46 @@ using Amazon.SimpleNotificationService;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
+    /// <summary>
+    /// The <see cref="ValidateTopicByName"/> class is responsible for validating an AWS SNS topic by its name.
+    /// </summary>
     internal class ValidateTopicByName : IValidateTopic
     {
         private readonly AmazonSimpleNotificationServiceClient _snsClient;
 
-        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ValidateTopicByName"/> class.
+        /// </summary>
+        /// <param name="credentials">The AWS credentials.</param>
+        /// <param name="region">The AWS region.</param>
+        /// <param name="clientConfigAction">An optional action to configure the client.</param>
+        public ValidateTopicByName(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null)
         {
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _snsClient = clientFactory.CreateSnsClient();
         }
-        
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ValidateTopicByName"/> class.
+        /// </summary>
+        /// <param name="snsClient">The SNS client.</param>
         public ValidateTopicByName(AmazonSimpleNotificationServiceClient snsClient)
         {
             _snsClient = snsClient;
         }
-        
-        //Note that we assume here that topic names are globally unique, if not provide the topic ARN directly in the SNSAttributes of the subscription
-        //This approach can have be rate throttled at scale. AWS limits to 30 ListTopics calls per second, so it you have a lot of clients starting
-        //you may run into issues
-        public async Task<(bool, string TopicArn)> ValidateAsync(string topicName)
+
+        /// <summary>
+        /// Validates the specified topic name asynchronously.
+        /// </summary>
+        /// <param name="topicName">The name of the topic to validate.</param>
+        /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
+        /// <returns>A tuple indicating whether the topic is valid and its ARN.</returns>
+        /// <remarks>
+        /// Note that we assume here that topic names are globally unique, if not provide the topic ARN directly in the SNSAttributes of the subscription.
+        /// This approach can be rate throttled at scale. AWS limits to 30 ListTopics calls per second, so if you have a lot of clients starting,
+        /// you may run into issues.
+        /// </remarks>
+        public async Task<(bool, string? TopicArn)> ValidateAsync(string topicName, CancellationToken cancellationToken = default)
         {
             var topic = await _snsClient.FindTopicAsync(topicName);
             return (topic != null, topic?.TopicArn);

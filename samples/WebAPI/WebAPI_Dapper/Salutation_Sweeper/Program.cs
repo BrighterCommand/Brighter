@@ -10,7 +10,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Extensions.Hosting;
+using Paramore.Brighter.Outbox.Hosting;
 using Paramore.Brighter.Observability;
 using TransportMaker;
 

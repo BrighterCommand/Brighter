@@ -301,23 +301,6 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default);
-        
-        /// <summary>
-        /// Flushes any outstanding message box message to the broker.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
-        /// </summary>
-        /// <param name="amountToClear">The maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age to clear (Default 5 second).</param>
-        /// <param name="useBulk">Use the bulk send on the producer.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        void ClearOutstandingFromOutbox(
-            int amountToClear = 100, 
-            TimeSpan? minimumAge = null, 
-            bool useBulk = false, 
-            RequestContext? requestContext = null,
-            Dictionary<string, object>? args = null
-            );
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
