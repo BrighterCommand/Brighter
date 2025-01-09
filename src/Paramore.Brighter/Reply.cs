@@ -12,15 +12,11 @@ namespace Paramore.Brighter
     public class Reply : Command, IResponse
     {
         /// <summary>
-        /// Use this correlation id so that sender knows what we are replying to
-        /// </summary>
-        public Guid CorrelationId { get; }
-        /// <summary>
         /// The channel that we should reply to the sender on.
         /// </summary>
         public ReplyAddress SendersAddress { get; private set; }
 
-        public Reply(ReplyAddress sendersAddress)
+        protected Reply(ReplyAddress sendersAddress)
             : base(Guid.NewGuid())
         {
             SendersAddress = sendersAddress;

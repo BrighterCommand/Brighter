@@ -8,9 +8,5 @@ namespace Paramore.Brighter
     /// </summary>
     public interface IResponse : IRequest
     {
-        /// <summary>
-        /// Allow us to correlate request and response
-        /// </summary>
-        Guid CorrelationId { get; }
-  }
+    }
 }

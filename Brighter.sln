@@ -104,6 +104,12 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.AzureServiceBus.Tests", "tests\Paramore.Brighter.AzureServiceBus.Tests\Paramore.Brighter.AzureServiceBus.Tests.csproj", "{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ASBTaskQueue", "ASBTaskQueue", "{48D0EECA-B928-4B80-BE46-2C08CF3A946B}"
+	ProjectSection(SolutionItems) = preProject
+		samples\TaskQueue\ASBTaskQueue\Config.Json = samples\TaskQueue\ASBTaskQueue\Config.Json
+		samples\TaskQueue\ASBTaskQueue\.env = samples\TaskQueue\ASBTaskQueue\.env
+		samples\TaskQueue\ASBTaskQueue\Docker-Compose.yml = samples\TaskQueue\ASBTaskQueue\Docker-Compose.yml
+		samples\TaskQueue\ASBTaskQueue\Readme.md = samples\TaskQueue\ASBTaskQueue\Readme.md
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MsSql", "src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj", "{36CADB1E-3777-4A7E-86E3-BF650A951AC9}"
 EndProject
@@ -314,6 +320,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutation_Sweeper", "samples\WebAPI\WebAPI_Dapper\Salutation_Sweeper\Salutation_Sweeper.csproj", "{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.MsSql", "src\Paramore.Brighter.Locking.MsSql\Paramore.Brighter.Locking.MsSql.csproj", "{758EE237-C722-4A0A-908C-2D08C1E59025}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Mediator", "src\Paramore.Brighter.Mediator\Paramore.Brighter.Mediator.csproj", "{F00B137A-C187-4C33-A37B-22AD40B71600}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1765,6 +1773,18 @@ Global
 		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|x86.ActiveCfg = Release|Any CPU
 		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|x86.Build.0 = Release|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Debug|x86.Build.0 = Debug|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Release|x86.ActiveCfg = Release|Any CPU
+		{F00B137A-C187-4C33-A37B-22AD40B71600}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

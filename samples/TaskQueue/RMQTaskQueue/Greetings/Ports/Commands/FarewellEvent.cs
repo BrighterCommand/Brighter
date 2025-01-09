@@ -5,17 +5,8 @@ using Paramore.Brighter;
 namespace Greetings.Ports.Commands
 {
     [MessagePackObject(keyAsPropertyName: true)]
-    public class FarewellEvent : Event
+    public class FarewellEvent(string farewell) : Event(Guid.NewGuid().ToString())
     {
-        public FarewellEvent() : base(Guid.NewGuid())
-        {
-        }
-
-        public FarewellEvent(string farewell) : base(Guid.NewGuid())
-        {
-            Farewell = farewell;
-        }
-
-        public string Farewell { get; set; }
+        public string Farewell { get; set; } = farewell;
     }
 }

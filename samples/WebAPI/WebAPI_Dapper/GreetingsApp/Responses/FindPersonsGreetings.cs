@@ -4,8 +4,8 @@ namespace GreetingsApp.Responses;
 
 public class FindPersonsGreetings
 {
-    public string Name { get; set; }
-    public IEnumerable<Salutation> Greetings { get; set; }
+    public string? Name { get; set; }
+    public IEnumerable<Salutation>? Greetings { get; set; }
 }
 
 public class Salutation

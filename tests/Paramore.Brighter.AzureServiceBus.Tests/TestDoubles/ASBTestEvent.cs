@@ -4,7 +4,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.TestDoubles
 {
     public class ASBTestEvent : Event
     {
-        public ASBTestEvent() : base(Guid.NewGuid())
+        public ASBTestEvent() : base(Guid.NewGuid().ToString())
         {
         }
 

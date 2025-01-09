@@ -1,6 +1,6 @@
 # 20. Reduce External Service Bus Complexity
 
-Date: 2019-08-01
+Date: 2024-08-01
 
 ## Status
 
