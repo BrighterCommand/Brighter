@@ -53,7 +53,6 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-
         public PostgreSqlOutbox(
             IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider) : base(
@@ -74,7 +73,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             IAmARelationalDatabaseConfiguration configuration,
             NpgsqlDataSource dataSource = null)
             : this(configuration, new PostgreSqlConnectionProvider(configuration, dataSource))
-        { }
+        {
+        }
 
         protected override void WriteToStore(
             IAmABoxTransactionProvider<DbTransaction> transactionProvider,
@@ -112,8 +112,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             CancellationToken cancellationToken)
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
-            await connection.OpenAsync(cancellationToken);
-            using var command = commandFunc.Invoke(connection);
+            await using var command = commandFunc.Invoke(connection);
             try
             {
                 if (transactionProvider is { HasOpenTransaction: true })
@@ -140,7 +139,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         protected override T ReadFromStore<T>(
             Func<DbConnection, DbCommand> commandFunc,
             Func<DbDataReader, T> resultFunc
-            )
+        )
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -159,9 +158,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         protected override async Task<T> ReadFromStoreAsync<T>(
             Func<DbConnection, DbCommand> commandFunc,
-            Func<DbDataReader, Task<T>> resultFunc, 
+            Func<DbDataReader, Task<T>> resultFunc,
             CancellationToken cancellationToken
-            )
+        )
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
@@ -193,15 +192,33 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return command;
         }
 
-        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
-            double milliSecondsSinceAdded,
-            int pageSize, 
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
             int pageNumber)
         {
             var parameters = new IDbDataParameter[3];
-            parameters[0] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
-            parameters[1] = CreateSqlParameter("PageSize", pageSize);
-            parameters[2] = CreateSqlParameter("PageNumber", pageNumber);
+            parameters[0] = CreateSqlParameter("TimestampSince", DateTimeOffset.UtcNow.Subtract(since));
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[2] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+
+            return parameters;
+        }
+
+        protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize,
+            int pageNumber)
+        {
+            var parameters = new IDbDataParameter[3];
+            parameters[0] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(dispatchedSince));
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[2] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+
+            return parameters;
+        }
+
+        protected override IDbDataParameter[] CreatePagedReadParameters(int pageSize, int pageNumber)
+        {
+            var parameters = new IDbDataParameter[2];
+            parameters[0] = CreateSqlParameter("Take", pageSize);
+            parameters[1] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
 
             return parameters;
         }
@@ -267,18 +284,19 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 {
                     ParameterName = $"{prefix}HeaderBag", NpgsqlDbType = NpgsqlDbType.Text, Value = bagjson
                 },
-                _configuration.BinaryMessagePayload ? new NpgsqlParameter
-                {
-                    ParameterName = $"{prefix}Body",
-                    NpgsqlDbType = NpgsqlDbType.Bytea,
-                    Value = message.Body.Bytes
-                } 
-                : new NpgsqlParameter
-                {
-                    ParameterName = $"{prefix}Body",
-                    NpgsqlDbType = NpgsqlDbType.Text,
-                    Value = message.Body.Value
-                }
+                _configuration.BinaryMessagePayload
+                    ? new NpgsqlParameter
+                    {
+                        ParameterName = $"{prefix}Body",
+                        NpgsqlDbType = NpgsqlDbType.Bytea,
+                        Value = message.Body.Bytes
+                    }
+                    : new NpgsqlParameter
+                    {
+                        ParameterName = $"{prefix}Body",
+                        NpgsqlDbType = NpgsqlDbType.Text,
+                        Value = message.Body.Value
+                    }
             };
         }
 
@@ -318,7 +336,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         protected override async Task<IEnumerable<Message>> MapListFunctionAsync(
             DbDataReader dr,
             CancellationToken cancellationToken
-            )
+        )
         {
             var messages = new List<Message>();
             while (await dr.ReadAsync(cancellationToken))
@@ -331,19 +349,34 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return messages;
         }
 
-        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken)
+        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr,
+            CancellationToken cancellationToken)
         {
             int outstandingMessages = -1;
             if (await dr.ReadAsync(cancellationToken))
             {
                 outstandingMessages = dr.GetInt32(0);
             }
+
+            await dr.CloseAsync();
+
+            return outstandingMessages;
+        }
+
+        protected override int MapOutstandingCount(DbDataReader dr)
+        {
+            int outstandingMessages = -1;
+            if (dr.Read())
+            {
+                outstandingMessages = dr.GetInt32(0);
+            }
+
             dr.Close();
 
             return outstandingMessages;
         }
 
-        public Message MapAMessage(DbDataReader dr)
+        private Message MapAMessage(DbDataReader dr)
         {
             var id = GetMessageId(dr);
             var messageType = GetMessageType(dr);
@@ -378,7 +411,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             var body = _configuration.BinaryMessagePayload
                 ? new MessageBody(((NpgsqlDataReader)dr).GetFieldValue<byte[]>(dr.GetOrdinal("Body")))
-                :new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
             return new Message(header, body);
         }
