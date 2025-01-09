@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             CancellationToken cancellationToken)
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
-            using var command = commandFunc.Invoke(connection);
+            await using var command = commandFunc.Invoke(connection);
             try
             {
                 if (transactionProvider != null && transactionProvider.HasOpenTransaction)
@@ -339,7 +339,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 messages.Add(MapAMessage(dr));
             }
 
-            dr.Close();
+            await dr.CloseAsync();
 
             return messages;
         }
@@ -423,7 +423,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
 
-        private byte[] GetBodyAsBytes(DbDataReader dr)
+        private static byte[] GetBodyAsBytes(DbDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
             var body = dr.GetStream(i);
@@ -450,7 +450,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return contentType;
         }
 
-        private string GetCorrelationId(IDataReader dr)
+        private static string GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
@@ -469,7 +469,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
-        private string GetPartitionKey(IDataReader dr)
+        private static string GetPartitionKey(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
@@ -479,7 +479,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
 
-        private string GetReplyTo(IDataReader dr)
+        private static string GetReplyTo(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
             if (dr.IsDBNull(ordinal)) return null;

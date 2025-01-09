@@ -159,14 +159,14 @@ namespace Paramore.Brighter.Outbox.MySql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using var command = commandFunc.Invoke(connection);
+            await using var command = commandFunc.Invoke(connection);
             try
             {
                 return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
             }
             finally
             {
-                connection.Close();
+                await connection.CloseAsync();
             }
         }
 
@@ -408,7 +408,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return new Message(header, body);
         }
 
-        private byte[] GetBodyAsBytes(MySqlDataReader dr)
+        private static byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
             using var ms = new MemoryStream();
@@ -441,7 +441,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return dictionaryBag;
         }
 
-        private string GetContentType(IDataReader dr)
+        private static string GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null;
@@ -450,7 +450,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return contentType;
         }
 
-        private string GetCorrelationId(IDataReader dr)
+        private static string GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null;
@@ -469,7 +469,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
-        private string GetPartitionKey(IDataReader dr)
+        private static string GetPartitionKey(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
@@ -478,7 +478,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return partitionKey;
         }
 
-        private string GetReplyTo(IDataReader dr)
+        private static string GetReplyTo(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
             if (dr.IsDBNull(ordinal)) return null;

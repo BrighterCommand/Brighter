@@ -166,14 +166,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            using var command = commandFunc.Invoke(connection);
+            await using var command = commandFunc.Invoke(connection);
             try
             {
                 return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
             }
             finally
             {
-                connection.Close();
+                await connection.CloseAsync();
             }
         }
 
@@ -416,7 +416,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return new Message(header, body);
         }
 
-        private string GetContentType(DbDataReader dr)
+        private static string GetContentType(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal))
@@ -435,7 +435,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return dictionaryBag;
         }
 
-        private string GetCorrelationId(DbDataReader dr)
+        private static string GetCorrelationId(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal))
@@ -460,7 +460,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return dr.GetString(dr.GetOrdinal("MessageId"));
         }
 
-        private string GetPartitionKey(DbDataReader dr)
+        private static string GetPartitionKey(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
@@ -469,7 +469,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return partitionKey;
         }
 
-        private string GetReplyTo(DbDataReader dr)
+        private static string GetReplyTo(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
             if (dr.IsDBNull(ordinal))
