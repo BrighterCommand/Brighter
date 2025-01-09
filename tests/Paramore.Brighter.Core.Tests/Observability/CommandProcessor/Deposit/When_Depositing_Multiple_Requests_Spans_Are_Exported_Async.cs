@@ -131,7 +131,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
             depositActivity.ParentId.Should().Be(createActivity.Id);
             
             depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == events[i].Id).Should().BeTrue();
-            depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(events[i])).Should().BeTrue();
+            depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(events[i], JsonSerialisationOptions.Options)).Should().BeTrue();
         }
         
         //TODO: When we deposit multiple we do a bulk write to the Outbox, so we should expect to see a bulk operation at the Db level
