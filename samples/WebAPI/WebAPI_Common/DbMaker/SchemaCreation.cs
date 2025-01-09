@@ -388,14 +388,14 @@ public static class SchemaCreation
         sqlConnection.Open();
 
         using NpgsqlCommand existsQuery = sqlConnection.CreateCommand();
-        existsQuery.CommandText = PostgreSqlOutboxBulder.GetExistsQuery(OUTBOX_TABLE_NAME);
+        existsQuery.CommandText = PostgreSqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
         object? findOutbox = existsQuery.ExecuteScalar();
         bool exists = findOutbox is long and > 0;
 
         if (exists) return;
 
         using NpgsqlCommand command = sqlConnection.CreateCommand();
-        command.CommandText = PostgreSqlOutboxBulder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+        command.CommandText = PostgreSqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
         command.ExecuteScalar();
     }
 
