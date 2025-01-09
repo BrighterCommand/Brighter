@@ -2,26 +2,26 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Outbox.PostgreSql;
+using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
-namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
+namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
-[Trait("Category", "PostgresSql")]
-public class PostgresSqlArchiveFetchAsyncTests : IDisposable
+[Trait("Category", "Sqlite")]
+public class SqliteArchiveFetchAsyncTests : IAsyncDisposable
 {
-    private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
+    private readonly SqliteTestHelper _sqliteTestHelper;
     private readonly Message _messageEarliest;
     private readonly Message _messageDispatched;
     private readonly Message _messageUnDispatched;
-    private readonly PostgreSqlOutbox _sqlOutbox;
+    private readonly SqliteOutbox _sqlOutbox;
 
-    public PostgresSqlArchiveFetchAsyncTests()
+    public SqliteArchiveFetchAsyncTests()
     {
-        _postgresSqlTestHelper = new PostgresSqlTestHelper();
-        _postgresSqlTestHelper.SetupMessageDb();
+        _sqliteTestHelper = new();
+        _sqliteTestHelper.SetupMessageDb();
 
-        _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
+        _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
@@ -65,11 +65,14 @@ public class PostgresSqlArchiveFetchAsyncTests : IDisposable
         await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id, context);
 
         var allDispatched =
-            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 100, cancellationToken: CancellationToken.None);
+            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 100,
+                cancellationToken: CancellationToken.None);
         var messagesOverAnHour =
-            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.FromHours(2), context, 100, cancellationToken: CancellationToken.None);
+            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.FromHours(2), context, 100,
+                cancellationToken: CancellationToken.None);
         var messagesOver4Hours =
-            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.FromHours(4), context, 100, cancellationToken: CancellationToken.None);
+            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.FromHours(4), context, 100,
+                cancellationToken: CancellationToken.None);
 
         //Assert
         allDispatched.Should().HaveCount(2);
@@ -77,8 +80,8 @@ public class PostgresSqlArchiveFetchAsyncTests : IDisposable
         messagesOver4Hours.Should().BeEmpty();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _postgresSqlTestHelper.CleanUpDb();
+        await _sqliteTestHelper.CleanUpDbAsync();
     }
 }

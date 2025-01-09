@@ -1,25 +1,26 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Outbox.PostgreSql;
+using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
-namespace Paramore.Brighter.PostgresSQL.Tests.Outbox;
+namespace Paramore.Brighter.Sqlite.Tests.Outbox;
 
-[Trait("Category", "PostgresSql")]
-public class PostgresSqlFetchOutStandingMessageTests : IDisposable
+[Trait("Category", "Sqlite")]
+public class SqliteFetchOutStandingMessageTests : IAsyncDisposable
 {
-    private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
+    private readonly SqliteTestHelper _sqliteTestHelper;
     private readonly Message _messageEarliest;
     private readonly Message _messageDispatched;
     private readonly Message _messageUnDispatched;
-    private readonly PostgreSqlOutbox  _sqlOutbox;
+    private readonly SqliteOutbox _sqlOutbox;
 
-    public PostgresSqlFetchOutStandingMessageTests()
+    public SqliteFetchOutStandingMessageTests()
     {
-        _postgresSqlTestHelper = new PostgresSqlTestHelper();
-        _postgresSqlTestHelper.SetupMessageDb();
+        _sqliteTestHelper = new SqliteTestHelper();
+        _sqliteTestHelper.SetupMessageDb();
 
-        _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
+        _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
@@ -42,7 +43,7 @@ public class PostgresSqlFetchOutStandingMessageTests : IDisposable
         var context = new RequestContext();
         _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
         _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
-        
+
         var total = _sqlOutbox.GetNumberOfOutstandingMessages();
 
         var allUnDispatched = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
@@ -56,8 +57,8 @@ public class PostgresSqlFetchOutStandingMessageTests : IDisposable
         messagesOver4Hours.Should().BeEmpty();
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _postgresSqlTestHelper.CleanUpDb();
+        await _sqliteTestHelper.CleanUpDbAsync();
     }
 }
