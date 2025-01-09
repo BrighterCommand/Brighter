@@ -47,14 +47,15 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private const int MySqlDuplicateKeyError = 1062;
         private readonly IAmARelationalDatabaseConfiguration _configuration;
-        private readonly IAmARelationalDbConnectionProvider  _connectionProvider;
+        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MySqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
+        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration,
+            IAmARelationalDbConnectionProvider connectionProvider)
             : base(configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
         {
             _configuration = configuration;
@@ -66,7 +67,7 @@ namespace Paramore.Brighter.Outbox.MySql
         /// Initializes a new instance of the <see cref="MySqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
-        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration) 
+        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration)
             : this(configuration, new MySqlConnectionProvider(configuration))
         {
         }
@@ -75,7 +76,7 @@ namespace Paramore.Brighter.Outbox.MySql
             IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction
-            )
+        )
         {
             var connection = GetOpenConnection(_connectionProvider, transactionProvider);
             using var command = commandFunc.Invoke(connection);
@@ -90,7 +91,6 @@ namespace Paramore.Brighter.Outbox.MySql
                 if (!IsExceptionUnqiueOrDuplicateIssue(sqlException)) throw;
                 s_logger.LogWarning(
                     "MsSqlOutbox: A duplicate was detected in the batch");
-
             }
             finally
             {
@@ -101,9 +101,9 @@ namespace Paramore.Brighter.Outbox.MySql
         protected override async Task WriteToStoreAsync(
             IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
-            Action loggingAction, 
+            Action loggingAction,
             CancellationToken cancellationToken
-            )
+        )
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
             using var command = commandFunc.Invoke(connection);
@@ -133,7 +133,7 @@ namespace Paramore.Brighter.Outbox.MySql
         protected override T ReadFromStore<T>(
             Func<DbConnection, DbCommand> commandFunc,
             Func<DbDataReader, T> resultFunc
-            )
+        )
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -152,7 +152,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
         protected override async Task<T> ReadFromStoreAsync<T>(
             Func<DbConnection, DbCommand> commandFunc,
-            Func<DbDataReader, Task<T>> resultFunc, 
+            Func<DbDataReader, Task<T>> resultFunc,
             CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
@@ -171,8 +171,8 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override DbCommand CreateCommand(
-            DbConnection connection, 
-            string sqlText, 
+            DbConnection connection,
+            string sqlText,
             int outBoxTimeout,
             params IDbDataParameter[] parameters)
         {
@@ -183,6 +183,26 @@ namespace Paramore.Brighter.Outbox.MySql
             command.Parameters.AddRange(parameters);
 
             return command;
+        }
+
+        protected override IDbDataParameter[] CreatePagedDispatchedParameters(TimeSpan dispatchedSince, int pageSize,
+            int pageNumber)
+        {
+            var parameters = new IDbDataParameter[3];
+            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[2] = CreateSqlParameter("DispatchedSince", DateTimeOffset.UtcNow.Subtract(dispatchedSince));
+
+            return parameters;
+        }
+
+        protected override IDbDataParameter[] CreatePagedReadParameters(int pageSize, int pageNumber)
+        {
+            var parameters = new IDbDataParameter[2];
+            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+
+            return parameters;
         }
 
         protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
@@ -252,17 +272,13 @@ namespace Paramore.Brighter.Outbox.MySql
             };
         }
 
-        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
-            double milliSecondsSinceAdded,
-            int pageSize, 
-            int pageNumber
-            )
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(TimeSpan since, int pageSize,
+            int pageNumber)
         {
-            var offset = (pageNumber - 1) * pageSize;
             var parameters = new IDbDataParameter[3];
-            parameters[0] = CreateSqlParameter("OffsetValue", offset);
-            parameters[1] = CreateSqlParameter("PageSize", pageSize);
-            parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
+            parameters[0] = CreateSqlParameter("Skip", Math.Max(pageNumber - 1, 0) * pageSize);
+            parameters[1] = CreateSqlParameter("Take", pageSize);
+            parameters[2] = CreateSqlParameter("TimestampSince", DateTimeOffset.UtcNow.Subtract(since));
 
             return parameters;
         }
@@ -316,13 +332,27 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
 
-        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken)
+        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr,
+            CancellationToken cancellationToken)
         {
             int outstandingMessages = -1;
             if (await dr.ReadAsync(cancellationToken))
             {
                 outstandingMessages = dr.GetInt32(0);
             }
+
+            await dr.CloseAsync();
+            return outstandingMessages;
+        }
+
+        protected override int MapOutstandingCount(DbDataReader dr)
+        {
+            int outstandingMessages = -1;
+            if (dr.Read())
+            {
+                outstandingMessages = dr.GetInt32(0);
+            }
+
             dr.Close();
             return outstandingMessages;
         }
@@ -371,13 +401,14 @@ namespace Paramore.Brighter.Outbox.MySql
             }
 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream",
+                    CharacterEncoding.Raw)
                 : new MessageBody(GetBodyAsString(dr), "application/json", CharacterEncoding.UTF8);
 
             return new Message(header, body);
         }
 
-       private byte[] GetBodyAsBytes(MySqlDataReader dr)
+        private byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
             using var ms = new MemoryStream();
@@ -401,7 +432,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return dr.GetString(dr.GetOrdinal("Body"));
         }
 
-         private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        private static Dictionary<string, object> GetContextBag(IDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);

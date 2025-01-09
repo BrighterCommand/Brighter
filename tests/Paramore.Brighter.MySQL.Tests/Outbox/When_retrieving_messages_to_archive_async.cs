@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -9,7 +8,7 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.Outbox;
 
 [Trait("Category", "MySql")]
-public class MySqlArchiveFetchTests : IDisposable
+public class MySqlArchiveFetchAsyncTests : IDisposable
 {
     private readonly MySqlTestHelper _mySqlTestHelper;
     private readonly Message _messageEarliest;
@@ -17,7 +16,7 @@ public class MySqlArchiveFetchTests : IDisposable
     private readonly Message _messageUnDispatched;
     private readonly MySqlOutbox _sqlOutbox;
 
-    public MySqlArchiveFetchTests()
+    public MySqlArchiveFetchAsyncTests()
     {
         _mySqlTestHelper = new MySqlTestHelper();
         _mySqlTestHelper.SetupMessageDb();
@@ -37,16 +36,19 @@ public class MySqlArchiveFetchTests : IDisposable
     }
 
     [Fact]
-    public void When_Retrieving_Messages_To_Archive()
+    public async Task When_Retrieving_Messages_To_Archive_Async()
     {
         var context = new RequestContext();
-        _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTimeOffset.UtcNow.AddHours(-3));
-        _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
+        await _sqlOutbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        await _sqlOutbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id, context);
 
-        var allDispatched = _sqlOutbox.DispatchedMessages(0, context);
-        var messagesOverAnHour = _sqlOutbox.DispatchedMessages(1, context);
-        var messagesOver4Hours = _sqlOutbox.DispatchedMessages(4, context);
+        var allDispatched =
+            await _sqlOutbox.DispatchedMessagesAsync(0, context, cancellationToken: CancellationToken.None);
+        var messagesOverAnHour =
+            await _sqlOutbox.DispatchedMessagesAsync(1, context, cancellationToken: CancellationToken.None);
+        var messagesOver4Hours =
+            await _sqlOutbox.DispatchedMessagesAsync(4, context, cancellationToken: CancellationToken.None);
 
         //Assert
         allDispatched.Should().HaveCount(2);
@@ -55,16 +57,19 @@ public class MySqlArchiveFetchTests : IDisposable
     }
 
     [Fact]
-    public void When_Retrieving_Messages_To_Archive_UsingTimeSpan()
+    public async Task When_Retrieving_Messages_To_Archive_UsingTimeSpan_Async()
     {
         var context = new RequestContext();
-        _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
+        await _sqlOutbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        await _sqlOutbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id, context);
 
-        var allDispatched = _sqlOutbox.DispatchedMessages(TimeSpan.Zero, context);
-        var messagesOverAnHour = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(2), context);
-        var messagesOver4Hours = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(4), context);
+        var allDispatched =
+            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.Zero, context, 100, cancellationToken: CancellationToken.None);
+        var messagesOverAnHour =
+            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.FromHours(2), context, 100, cancellationToken: CancellationToken.None);
+        var messagesOver4Hours =
+            await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.FromHours(4), context, 100, cancellationToken: CancellationToken.None);
 
         //Assert
         allDispatched.Should().HaveCount(2);

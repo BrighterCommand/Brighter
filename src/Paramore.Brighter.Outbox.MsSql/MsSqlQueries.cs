@@ -12,8 +12,6 @@
         public string GetMessageCommand { get; } = "SELECT * FROM {0} WHERE MessageId = @MessageId";
         public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE MessageId IN ( {1} )";
         public string DeleteMessagesCommand { get; } = "DELETE FROM {0} WHERE MessageId IN ( {1} )";
-        public string DispatchedCommand { get; } = "Select top(@PageSize) * FROM {0} WHERE Dispatched is not NULL and Dispatched < DATEADD(hour, @DispatchedSince, getutcdate()) Order BY Dispatched";
-
         public string GetNumberOfOutstandingMessagesCommand { get; } = "Select count(1) FROM {0} where Dispatched is NULL";
     }
 }

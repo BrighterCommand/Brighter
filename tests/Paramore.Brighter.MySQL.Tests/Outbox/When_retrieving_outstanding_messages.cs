@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
-using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
@@ -9,7 +8,7 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.Outbox;
 
 [Trait("Category", "MySql")]
-public class MySqlArchiveFetchTests : IDisposable
+public class MySqlFetchOutStandingMessageTests : IDisposable
 {
     private readonly MySqlTestHelper _mySqlTestHelper;
     private readonly Message _messageEarliest;
@@ -17,7 +16,7 @@ public class MySqlArchiveFetchTests : IDisposable
     private readonly Message _messageUnDispatched;
     private readonly MySqlOutbox _sqlOutbox;
 
-    public MySqlArchiveFetchTests()
+    public MySqlFetchOutStandingMessageTests()
     {
         _mySqlTestHelper = new MySqlTestHelper();
         _mySqlTestHelper.SetupMessageDb();
@@ -26,7 +25,10 @@ public class MySqlArchiveFetchTests : IDisposable
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT)
+            {
+                TimeStamp = DateTimeOffset.UtcNow.AddHours(-3)
+            },
             new MessageBody("message body"));
         _messageDispatched = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
@@ -37,37 +39,21 @@ public class MySqlArchiveFetchTests : IDisposable
     }
 
     [Fact]
-    public void When_Retrieving_Messages_To_Archive()
+    public void When_Retrieving_Not_Dispatched_Messages()
     {
         var context = new RequestContext();
         _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTimeOffset.UtcNow.AddHours(-3));
         _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
+        
+        var total = _sqlOutbox.GetNumberOfOutstandingMessages();
 
-        var allDispatched = _sqlOutbox.DispatchedMessages(0, context);
-        var messagesOverAnHour = _sqlOutbox.DispatchedMessages(1, context);
-        var messagesOver4Hours = _sqlOutbox.DispatchedMessages(4, context);
+        var allUnDispatched = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
+        var messagesOverAnHour = _sqlOutbox.OutstandingMessages(TimeSpan.FromHours(1), context);
+        var messagesOver4Hours = _sqlOutbox.OutstandingMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        allDispatched.Should().HaveCount(2);
-        messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void When_Retrieving_Messages_To_Archive_UsingTimeSpan()
-    {
-        var context = new RequestContext();
-        _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
-
-        var allDispatched = _sqlOutbox.DispatchedMessages(TimeSpan.Zero, context);
-        var messagesOverAnHour = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(2), context);
-        var messagesOver4Hours = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(4), context);
-
-        //Assert
-        allDispatched.Should().HaveCount(2);
+        total.Should().Be(2);
+        allUnDispatched.Should().HaveCount(2);
         messagesOverAnHour.Should().ContainSingle();
         messagesOver4Hours.Should().BeEmpty();
     }

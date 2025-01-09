@@ -70,7 +70,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
         /// <param name="pageSize">The number of messages to fetch.</param>
         /// <param name="pageNumber">The page number.</param>
-        /// <param name="outboxTimeout">Timeout of sql call.</param>
+        /// <param name="outBoxTimeout">Timeout of sql call.</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>List of messages that need to be dispatched.</returns>
         IEnumerable<Message> DispatchedMessages(
@@ -78,7 +78,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             int pageSize = 100, 
             int pageNumber = 1, 
-            int outboxTimeout = -1,
+            int outBoxTimeout = -1,
             Dictionary<string, object>? args = null);
 
         /// <summary>

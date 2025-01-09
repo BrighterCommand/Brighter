@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
-using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
@@ -9,7 +8,7 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.Outbox;
 
 [Trait("Category", "MySql")]
-public class MySqlArchiveFetchTests : IDisposable
+public class MySqlFetchMessageTests : IDisposable
 {
     private readonly MySqlTestHelper _mySqlTestHelper;
     private readonly Message _messageEarliest;
@@ -17,7 +16,7 @@ public class MySqlArchiveFetchTests : IDisposable
     private readonly Message _messageUnDispatched;
     private readonly MySqlOutbox _sqlOutbox;
 
-    public MySqlArchiveFetchTests()
+    public MySqlFetchMessageTests()
     {
         _mySqlTestHelper = new MySqlTestHelper();
         _mySqlTestHelper.SetupMessageDb();
@@ -37,40 +36,53 @@ public class MySqlArchiveFetchTests : IDisposable
     }
 
     [Fact]
-    public void When_Retrieving_Messages_To_Archive()
-    {
-        var context = new RequestContext();
-        _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTimeOffset.UtcNow.AddHours(-3));
-        _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
-
-        var allDispatched = _sqlOutbox.DispatchedMessages(0, context);
-        var messagesOverAnHour = _sqlOutbox.DispatchedMessages(1, context);
-        var messagesOver4Hours = _sqlOutbox.DispatchedMessages(4, context);
-
-        //Assert
-        allDispatched.Should().HaveCount(2);
-        messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void When_Retrieving_Messages_To_Archive_UsingTimeSpan()
+    public void When_Retrieving_Messages()
     {
         var context = new RequestContext();
         _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
         _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
         _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
 
-        var allDispatched = _sqlOutbox.DispatchedMessages(TimeSpan.Zero, context);
-        var messagesOverAnHour = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(2), context);
-        var messagesOver4Hours = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(4), context);
+        var messages = _sqlOutbox.Get();
 
         //Assert
-        allDispatched.Should().HaveCount(2);
-        messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
+        messages.Should().HaveCount(3);
     }
+
+    [Fact]
+    public void When_Retrieving_Messages_By_Id()
+    {
+        var context = new RequestContext();
+        _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
+
+        var messages = _sqlOutbox.Get(
+            [_messageEarliest.Id, _messageUnDispatched.Id],
+            context);
+
+        //Assert
+        messages = messages.ToList();
+        messages.Should().HaveCount(2);
+        messages.Should().Contain(x => x.Id == _messageEarliest.Id);
+        messages.Should().Contain(x => x.Id == _messageUnDispatched.Id);
+        messages.Should().NotContain(x => x.Id == _messageDispatched.Id);
+    }
+
+    [Fact]
+    public void When_Retrieving_Message_By_Id()
+    {
+        var context = new RequestContext();
+        _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
+
+        var messages = _sqlOutbox.Get(_messageDispatched.Id, context);
+
+        //Assert
+        messages.Id.Should().Be(_messageDispatched.Id);
+    }
+
 
     public void Dispose()
     {
