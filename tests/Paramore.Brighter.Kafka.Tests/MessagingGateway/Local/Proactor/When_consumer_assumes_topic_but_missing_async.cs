@@ -72,7 +72,7 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
         ((KafkaMessageProducer)producer).Flush();
         
         //allow callback to run
-        await Task.Delay(1000);
+        await Task.Delay(3000);
 
         messagePublished.Should().BeFalse();
     }

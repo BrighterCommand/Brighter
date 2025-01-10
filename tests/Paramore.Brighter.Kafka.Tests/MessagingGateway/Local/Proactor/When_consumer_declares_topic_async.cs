@@ -61,6 +61,7 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
 
     }
 
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
     [Fact]
     public async Task When_a_consumer_declares_topics()
     {
@@ -83,6 +84,9 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
+        //allow broker time to propogate
+        await Task.Delay(3000);
+
         Message[] messages = [];
         int maxTries = 0;
         do
@@ -91,7 +95,7 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
             {
                 maxTries++;
                 //use TimeSpan.Zero to avoid blocking
-                messages = await _consumer.ReceiveAsync(TimeSpan.Zero);
+                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
                 await _consumer.AcknowledgeAsync(messages[0]);
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)

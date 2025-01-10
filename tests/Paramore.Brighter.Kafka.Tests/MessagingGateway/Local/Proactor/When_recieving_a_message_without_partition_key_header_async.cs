@@ -70,6 +70,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
                 ));
     }
 
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
     [Fact]
     public async Task When_recieving_a_message_without_partition_key_header()
     {
@@ -92,7 +93,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
         _producer.Flush();
 
         //let the message propagate on the broker
-        await Task.Delay(2500);
+        await Task.Delay(3000);
         
         var receivedMessage = await GetMessageAsync();
 
@@ -111,7 +112,7 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
             {
                 maxTries++;
                 
-                messages = await _consumer.ReceiveAsync(TimeSpan.Zero);
+                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {

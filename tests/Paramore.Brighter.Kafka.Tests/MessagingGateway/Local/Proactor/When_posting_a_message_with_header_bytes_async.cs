@@ -74,6 +74,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
         _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
     }
 
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
     [Fact]
     public async Task When_posting_a_message_via_the_messaging_gateway()
     {
@@ -107,6 +108,9 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
         //We should not need to flush, as the async does not queue work  - but in case this changes
         ((KafkaMessageProducer)producerAsync).Flush();
 
+        //let messages propogate on the broker
+        await Task.Delay(3000);
+
         var received = await GetMessageAsync();
 
         received.Body.Bytes.Length.Should().BeGreaterThan(5);
@@ -134,7 +138,7 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
             try
             {
                 maxTries++;
-                messages = await _consumer.ReceiveAsync(TimeSpan.Zero);
+                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                 {

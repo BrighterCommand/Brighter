@@ -353,9 +353,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// in production code
         /// </remarks>
        /// <param name="cancellationToken"></param>
-        public Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.Run(this.Purge, cancellationToken);
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var purgeTask = Task.Run(() => 
+            {
+                try
+                {
+                    Purge();
+                    tcs.SetResult(null);
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
+            }, cancellationToken);
+            
+            await tcs.Task;
+            await purgeTask;
         }
 
         /// <summary>
@@ -437,16 +453,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
         /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
         /// Kafka does not support an async consumer, and probably never will. See <a href="https://github.com/confluentinc/confluent-kafka-dotnet/issues/487">Confluent Kafka</a>
-        /// As a result we use Task.Run to encapsulate the call. This will cost a thread, and be slower than the sync version. However, given our pump characeristics this would not result
-        /// in thread pool exhaustion.
+        /// As a result we use TimeSpan.Zero to run the recieve loop, which will stop it blocking
         /// </remarks>
-        /// <param name="timeOut">The timeout for receiving a message. Defaults to 300ms</param>
+        /// <param name="timeOut">The timeout for receiving a message. For async always treated as zero</param>
         /// <param name="cancellationToken">The cancellation token - not used as this is async over sync</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
         /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
         public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await Task.Run(() => Receive(timeOut), cancellationToken);
+            var tcs = new TaskCompletionSource<Message[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var recieveTask = Task.Run(() => 
+            {
+                try
+                {
+                    var messages = Receive(TimeSpan.Zero);
+                    tcs.SetResult(messages);
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
+            }, cancellationToken);
+            
+            var messages = await tcs.Task;
+            await recieveTask;
+            
+            return messages;
         }
 
         /// <summary>
