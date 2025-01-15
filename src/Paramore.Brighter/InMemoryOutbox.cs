@@ -272,7 +272,7 @@ namespace Paramore.Brighter
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>       
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
-        /// <param name="outboxTimeout"></param>
+        /// <param name="outBoxTimeout"></param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
@@ -280,7 +280,7 @@ namespace Paramore.Brighter
             RequestContext requestContext,
             int pageSize = 100,
             int pageNumber = 1,
-            int outboxTimeout = -1,
+            int outBoxTimeout = -1,
             Dictionary<string, object>? args = null)
         {
             ClearExpiredMessages();
