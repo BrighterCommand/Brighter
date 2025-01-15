@@ -8,7 +8,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")] //Kafka doesn't like multiple consumers of a partition
@@ -26,10 +26,7 @@ public class KafkaMessageProducerSendTests : IDisposable
         const string groupId = "Kafka Message Producer Send Test";
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
-            new KafkaMessagingGatewayConfiguration
-            {
-                Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" }
-            },
+            new KafkaMessagingGatewayConfiguration { Name = "Kafka Producer Send Test", BootStrapServers = new[] { "localhost:9092" } },
             new[]
             {
                 new KafkaPublication
@@ -46,10 +43,7 @@ public class KafkaMessageProducerSendTests : IDisposable
             }).Create();
 
         _consumer = new KafkaMessageConsumerFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" }
-                })
+                new KafkaMessagingGatewayConfiguration { Name = "Kafka Consumer Test", BootStrapServers = new[] { "localhost:9092" } })
             .Create(new KafkaSubscription<MyCommand>(
                     channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
@@ -63,30 +57,48 @@ public class KafkaMessageProducerSendTests : IDisposable
     }
 
     [Fact]
-    public void When_posting_a_message()
+    public async Task When_posting_a_message()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(500);
+
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
         var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
         var routingKey = new RoutingKey(_topic);
-            
+
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND)
             {
                 PartitionKey = _partitionKey,
                 ContentType = "application/json",
-                Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
+                Bag = new Dictionary<string, object> { { "Test Header", "Test Value" }, },
                 ReplyTo = "com.brightercommand.replyto",
                 CorrelationId = Guid.NewGuid().ToString(),
                 Delayed = TimeSpan.FromMilliseconds(10),
                 HandledCount = 2,
                 TimeStamp = DateTime.UtcNow
-            },
+            }, 
             new MessageBody(body));
 
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
+        bool messagePublished = false;
+        var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+        producer.Send(message);
+        var producerConfirm = producer as ISupportPublishConfirmation;
+        producerConfirm.OnMessagePublished += delegate(bool success, string id)
+        {
+            if (success) messagePublished = true;
+        };
+
+        //ensure that the messages have flushed
+        ((KafkaMessageProducer)producer).Flush();
+
+        //allow propogation of callback        
+        await Task.Delay(1000);
+
+        messagePublished.Should().BeTrue();
 
         var receivedMessage = GetMessage();
 
@@ -96,8 +108,8 @@ public class KafkaMessageProducerSendTests : IDisposable
         receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
         receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
         receivedMessage.Body.Value.Should().Be(message.Body.Value);
-        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ")
-            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+        receivedMessage.Header.TimeStamp.ToString("u")
+            .Should().Be(message.Header.TimeStamp.ToString("u"));
         receivedCommand.Id.Should().Be(command.Id);
         receivedCommand.Value.Should().Be(command.Value);
     }
@@ -111,7 +123,6 @@ public class KafkaMessageProducerSendTests : IDisposable
             try
             {
                 maxTries++;
-                Task.Delay(500).Wait(); //Let topic propagate in the broker
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)

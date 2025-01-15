@@ -10,8 +10,10 @@ using Xunit;
 using Xunit.Abstractions;
 using Acks = Confluent.Kafka.Acks;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
+[Trait("Category", "Kafka")]
+[Collection("Kafka")]   //
 public class KafkaMessageProducerMissingHeaderTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
@@ -41,7 +43,7 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
             LingerMs = 5,
             MessageTimeoutMs = 5000,
             MessageSendMaxRetries = 3,
-            Partitioner = Confluent.Kafka.Partitioner.ConsistentRandom,
+            Partitioner = global::Confluent.Kafka.Partitioner.ConsistentRandom,
             QueueBufferingMaxMessages = 10,
             QueueBufferingMaxKbytes =  1048576,
             RequestTimeoutMs = 500,
@@ -73,8 +75,10 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
     }
 
     [Fact]
-    public void When_recieving_a_message_without_partition_key_header()
+    public async Task When_recieving_a_message_without_partition_key_header()
     {
+        await Task.Delay(500); //Let topic propagate in the broker
+        
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
@@ -87,6 +91,12 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
         };
 
        _producer.Produce(_topic, kafkaMessage, report => _output.WriteLine(report.ToString()) );
+       
+       //ensure any messages are flushed
+       _producer.Flush();
+
+       //let this propogate to the Broker
+       await Task.Delay(3000);
 
         var receivedMessage = GetMessage();
 
@@ -104,7 +114,6 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
             try
             {
                 maxTries++;
-                Task.Delay(500).Wait(); //Let topic propagate in the broker
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)

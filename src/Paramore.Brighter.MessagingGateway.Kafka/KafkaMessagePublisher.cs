@@ -52,9 +52,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public async Task PublishMessageAsync(Message message, Action<DeliveryResult<string, byte[]>> deliveryReport, CancellationToken cancellationToken = default)
         {
             var kafkaMessage = BuildMessage(message);
-            
-            var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage, cancellationToken);
-            deliveryReport(deliveryResult);
+
+            try
+            { 
+                var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage, cancellationToken);
+                deliveryReport(deliveryResult);
+            }
+            catch (ProduceException<string, byte[]>)
+            {
+                //unlike the sync path, async will throw if it can't write. We want to capture that exception and raise the event
+                //so that our flows match
+                DeliveryResult<string, byte[]> deliveryResult = new();
+                deliveryResult.Status = PersistenceStatus.NotPersisted;
+                deliveryResult.Message = new Message<string, byte[]>();
+                deliveryResult.Message.Headers = [];
+                deliveryResult.Headers.Add(HeaderNames.MESSAGE_ID, message.Id.ToByteArray());
+                deliveryReport(deliveryResult);
+            }
+
         }
 
         private Message<string, byte[]> BuildMessage(Message message)
