@@ -12,7 +12,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
@@ -76,9 +76,16 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
         _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
     }
 
+    /// <summary>
+    /// NOTE: This test needs the schema registry to be running, and has hardcoded it's port to 8081. Both of those
+    /// may cause this test to fail, so check them if in doubt
+    /// </summary>
     [Fact]
-    public void When_posting_a_message_via_the_messaging_gateway()
+    public async Task When_posting_a_message_via_the_messaging_gateway()
     {
+        
+        await Task.Delay(500); //Let topic propagate in the broker
+        
         //arrange
             
         var myCommand = new MyKafkaCommand{ Value = "Hello World"};
@@ -99,8 +106,12 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
             new MessageBody(body));
             
         //act
-            
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(sent);
+
+        var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+        producer.Send(sent);
+        
+        //ensure that the messages are all sent
+        ((KafkaMessageProducer) producer).Flush();
 
         var received = GetMessage();
 
@@ -129,7 +140,6 @@ public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
             try
             {
                 maxTries++;
-                Task.Delay(500).Wait(); //Let topic propagate in the broker
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
                     
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
