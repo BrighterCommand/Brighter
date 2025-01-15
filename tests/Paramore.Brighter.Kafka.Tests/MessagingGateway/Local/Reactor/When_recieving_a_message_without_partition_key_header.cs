@@ -93,6 +93,9 @@ public class KafkaMessageProducerMissingHeaderTests : IDisposable
        //ensure any messages are flushed
        _producer.Flush();
 
+       //let this propogate to the Broker
+       await Task.Delay(3000);
+
         var receivedMessage = GetMessage();
 
         //Where we lack a partition key header, assume non-Brighter header and set to message key
