@@ -157,7 +157,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
                 return ReceivedResult<T>.Empty;
             var json = (string) reader[0];
             var messageType = (string) reader[1];
-            var id = (int) reader[3];
+            var id = (long) reader[3];
             var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
             return new ReceivedResult<T>(true, json, topic, messageType, id, message);
         }
