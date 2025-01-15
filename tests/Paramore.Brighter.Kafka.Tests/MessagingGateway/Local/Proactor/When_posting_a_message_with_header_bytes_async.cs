@@ -75,8 +75,8 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
         _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
     }
 
-    [Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    //[Fact]
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
+    [Fact]
     public async Task When_posting_a_message_via_the_messaging_gateway()
     {
         //Let topic propagate in the broker

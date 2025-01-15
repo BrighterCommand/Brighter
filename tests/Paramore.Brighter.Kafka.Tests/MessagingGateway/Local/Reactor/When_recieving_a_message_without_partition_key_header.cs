@@ -12,6 +12,8 @@ using Acks = Confluent.Kafka.Acks;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
+[Trait("Category", "Kafka")]
+[Collection("Kafka")]   //
 public class KafkaMessageProducerMissingHeaderTests : IDisposable
 {
     private readonly ITestOutputHelper _output;

@@ -12,6 +12,9 @@ using Acks = Confluent.Kafka.Acks;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Proactor;
 
+[Trait("Category", "Kafka")]
+[Trait("Fragile", "CI")]
+[Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
 {
     private readonly ITestOutputHelper _output;
@@ -70,8 +73,8 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
                 ));
     }
 
-    [Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    //[Fact]
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
+    [Fact]
     public async Task When_recieving_a_message_without_partition_key_header()
     {
         await Task.Delay(500); //Let topic propagate in the broker

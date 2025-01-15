@@ -8,6 +8,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
 
+[Trait("Category", "Kafka")]
+[Collection("Kafka")]   //
 public class KafkaHeaderToBrighterTests  
 {
     [Fact]
