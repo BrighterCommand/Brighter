@@ -29,7 +29,6 @@ using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 using Xunit;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "RMQ")]
