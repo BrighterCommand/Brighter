@@ -27,32 +27,47 @@ namespace GreetingsPumper
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
 
-                {
-                    if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                     {
-                        var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
-
-                        var producerRegistry = new SnsProducerRegistryFactory(
-                            awsConnection,
-                            new SnsPublication[]
-                            {
-                                new SnsPublication
+                        if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+                        {
+                            var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.USEast1,
+                                cfg =>
                                 {
-                                    Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName())
-                                }
-                            }
-                        ).Create();
-                        
-                        services.AddBrighter()
-                            .UseExternalBus((configure) =>
-                            {
-                                configure.ProducerRegistry = producerRegistry;
-                            })
-                            .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
-                    }
+                                    var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                                    if (!string.IsNullOrWhiteSpace(serviceURL))
+                                    {
+                                        cfg.ServiceURL = serviceURL;
+                                    }
+                                });
 
-                    services.AddHostedService<RunCommandProcessor>();
-                }
+                            var producerRegistry = new SnsProducerRegistryFactory(
+                                awsConnection,
+                                new SnsPublication[]
+                                {
+                                    new SnsPublication
+                                    {
+                                        Topic = new RoutingKey(typeof(GreetingEvent).FullName
+                                            .ToValidSNSTopicName())
+                                    },
+                                    new SnsPublication
+                                    {
+                                        Topic = new RoutingKey(
+                                            typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                                        SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo }
+                                    }
+                                }
+                            ).Create();
+
+                            services.AddBrighter()
+                                .UseExternalBus((configure) =>
+                                {
+                                    configure.ProducerRegistry = producerRegistry;
+                                })
+                                .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                        }
+
+                        services.AddHostedService<RunCommandProcessor>();
+                    }
                 )
                 .UseConsoleLifetime()
                 .UseSerilog()

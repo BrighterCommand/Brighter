@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2024 Dominic Hickie <dominichickie@gmail.com>
 
@@ -19,70 +20,82 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Paramore.Brighter.Tasks;
 
-namespace Paramore.Brighter.MessagingGateway.AWSSQS
+namespace Paramore.Brighter.MessagingGateway.AWSSQS;
+
+public class SnsMessageProducerFactory : IAmAMessageProducerFactory
 {
-    public class SnsMessageProducerFactory : IAmAMessageProducerFactory
+    private readonly AWSMessagingGatewayConnection _connection;
+    private readonly IEnumerable<SnsPublication> _publications;
+
+    /// <summary>
+    /// Creates a collection of SNS message producers from the SNS publication information
+    /// </summary>
+    /// <param name="connection">The Connection to use to connect to AWS</param>
+    /// <param name="publications">The publications describing the SNS topics that we want to use</param>
+    public SnsMessageProducerFactory(
+        AWSMessagingGatewayConnection connection,
+        IEnumerable<SnsPublication> publications)
     {
-        private readonly AWSMessagingGatewayConnection _connection;
-        private readonly IEnumerable<SnsPublication> _publications;
+        _connection = connection;
+        _publications = publications;
+    }
 
-        /// <summary>
-        /// Creates a collection of SNS message producers from the SNS publication information
-        /// </summary>
-        /// <param name="connection">The Connection to use to connect to AWS</param>
-        /// <param name="publications">The publications describing the SNS topics that we want to use</param>
-        public SnsMessageProducerFactory(
-            AWSMessagingGatewayConnection connection,
-            IEnumerable<SnsPublication> publications)
+    /// <inheritdoc />
+    /// <remarks>
+    ///  Sync over async used here, alright in the context of producer creation
+    /// </remarks>
+    public Dictionary<RoutingKey, IAmAMessageProducer> Create()
+    {
+        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+        foreach (var p in _publications)
         {
-            _connection = connection;
-            _publications = publications;
-        }
-
-        /// <inheritdoc />
-        /// <remarks>
-        ///  Sync over async used here, alright in the context of producer creation
-        /// </remarks>
-        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
-        {
-            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
-            foreach (var p in _publications)
+            if (p.Topic is null)
             {
-                if (p.Topic is null)
-                    throw new ConfigurationException($"Missing topic on Publication"); 
-                
-                var producer = new SqsMessageProducer(_connection, p);
-                if (producer.ConfirmTopicExists())
-                    producers[p.Topic] = producer;
-                else
-                    throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
+                throw new ConfigurationException("Missing topic on Publication");
             }
 
-            return producers; 
-        }
-        
-        public async Task<Dictionary<RoutingKey,IAmAMessageProducer>> CreateAsync()
-        {
-            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
-            foreach (var p in _publications)
+            var producer = new SnsMessageProducer(_connection, p);
+            if (producer.ConfirmTopicExists())
             {
-                if (p.Topic is null)
-                    throw new ConfigurationException($"Missing topic on Publication"); 
-                
-                var producer = new SqsMessageProducer(_connection, p);
-                if (await producer.ConfirmTopicExistsAsync())
-                    producers[p.Topic] = producer;
-                else
-                    throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
+                producers[p.Topic] = producer;
+            }
+            else
+            {
+                throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
+            }
+        }
+
+        return producers;
+    }
+
+    /// <inheritdoc />
+    public async Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+    {
+        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+        foreach (var p in _publications)
+        {
+            if (p.Topic is null)
+            {
+                throw new ConfigurationException("Missing topic on Publication");
             }
 
-            return producers;
+            var producer = new SnsMessageProducer(_connection, p);
+            if (await producer.ConfirmTopicExistsAsync())
+            {
+                producers[p.Topic] = producer;
+            }
+            else
+            {
+                throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
+            }
         }
+
+        return producers;
     }
 }
