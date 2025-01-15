@@ -95,5 +95,10 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
                 Transaction = null;
             }
         }
+
+
+        public override bool HasOpenTransaction => _context.Database.CurrentTransaction != null;
+
+        public override bool IsSharedConnection => true;
     }
 }
