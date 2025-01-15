@@ -29,10 +29,8 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
-
-
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
 
 internal class QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys)
 {
