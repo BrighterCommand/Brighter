@@ -9,27 +9,27 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Proactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
-[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
+public class KafkaMessageConsumerPreservesOrder : IDisposable
 {
     private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
-    private readonly string _topic = Guid.NewGuid().ToString();
+    private readonly RoutingKey _topic = new(Guid.NewGuid().ToString());
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
     private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerPreservesOrderAsync(ITestOutputHelper output)
+
+    public KafkaMessageConsumerPreservesOrder (ITestOutputHelper output)
     {
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "Kafka Producer Send Test",
+                Name = "Kafka Producer Send Test", 
                 BootStrapServers = new[] {"localhost:9092"}
             },
             new[] {new KafkaPublication
@@ -37,7 +37,7 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
                 ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests,
+                //These timeouts support running on a container using the same host as the tests, 
                 //your production values ought to be lower
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
@@ -45,73 +45,63 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
             }}).Create();
     }
 
-    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
     [Fact]
     public async Task When_a_message_is_sent_keep_order()
     {
-        //Let topic propagate in the broker
-        await Task.Delay(500); 
-        
-        IAmAMessageConsumerAsync consumer = null;
-        
-        var routingKey = new RoutingKey(_topic);
-
-        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey));
+        //Let topic propogate
+        await Task.Delay(500);
+         
+        IAmAMessageConsumerSync consumer = null;
         try
         {
             //Send a sequence of messages to Kafka
-            var msgId = await SendMessageAsync(producerAsync, routingKey);
-            var msgId2 = await SendMessageAsync(producerAsync, routingKey);
-            var msgId3 = await SendMessageAsync(producerAsync, routingKey);
-            var msgId4 = await SendMessageAsync(producerAsync, routingKey);
+            var routingKey = new RoutingKey(_topic);
+            var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+            var msgId = SendMessage(producer);
+            var msgId2 = SendMessage(producer);
+            var msgId3 = SendMessage(producer);
+            var msgId4 = SendMessage(producer);
             
-            //We should not need to flush, as the async does not queue work  - but in case this changes
-            ((KafkaMessageProducer)producerAsync).Flush();
-
-            //allow messages time to propogate
-            await Task.Delay(3000);
-
+            //ensure the messages are sent
+            ((KafkaMessageProducer)producer).Flush();
+                  
             consumer = CreateConsumer();
-
-            //Now read those messages in order
-
-            var firstMessage = await ConsumeMessagesAsync(consumer);
+            
+            //Now read messages in order
+            var firstMessage = ConsumeMessages(consumer);
             var message = firstMessage.First();
             message.Id.Should().Be(msgId);
-            await consumer.AcknowledgeAsync(message);
+            consumer.Acknowledge(message);
 
-            var secondMessage = await ConsumeMessagesAsync(consumer);
+            var secondMessage = ConsumeMessages(consumer);
             message = secondMessage.First();
             message.Id.Should().Be(msgId2);
-            await consumer.AcknowledgeAsync(message);
-
-            var thirdMessages = await ConsumeMessagesAsync(consumer);
-            message = thirdMessages.First();
+            consumer.Acknowledge(message);               
+                
+            var thirdMessages = ConsumeMessages(consumer);
+            message = thirdMessages .First();
             message.Id.Should().Be(msgId3);
-            await consumer.AcknowledgeAsync(message);
-
-            var fourthMessage = await ConsumeMessagesAsync(consumer);
-            message = fourthMessage.First();
+            consumer.Acknowledge(message);               
+                
+            var fourthMessage = ConsumeMessages(consumer);
+            message = fourthMessage .First();
             message.Id.Should().Be(msgId4);
-            await consumer.AcknowledgeAsync(message);
-
+            consumer.Acknowledge(message);               
+ 
         }
         finally
         {
-            if (consumer != null)
-            {
-                await consumer.DisposeAsync();
-            }
+            consumer?.Dispose();
         }
     }
 
-    private async Task<string> SendMessageAsync(IAmAMessageProducerAsync producerAsync, RoutingKey routingKey)
+    private string SendMessage(IAmAMessageProducerSync producer)
     {
         var messageId = Guid.NewGuid().ToString();
 
-       await producerAsync.SendAsync(
+        producer.Send(
             new Message(
-                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND)
+                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
@@ -122,7 +112,7 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
         return messageId;
     }
 
-    private async Task<IEnumerable<Message>> ConsumeMessagesAsync(IAmAMessageConsumerAsync consumer)
+    private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
     {
         var messages = Array.Empty<Message>();
         int maxTries = 0;
@@ -131,14 +121,10 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
             try
             {
                 maxTries++;
-                //use TimeSpan.Zero to avoid blocking
-                messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     break;
-                
-                //wait before retry
-                await Task.Delay(1000);
             }
             catch (ChannelFailureException cfx)
             {
@@ -150,15 +136,15 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
         return messages;
     }
 
-    private IAmAMessageConsumerAsync CreateConsumer()
+    private IAmAMessageConsumerSync CreateConsumer()
     {
         return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
-                    BootStrapServers = new[] { "localhost:9092" }
+                    BootStrapServers = ["localhost:9092"]
                 })
-            .CreateAsync(new KafkaSubscription<MyCommand>(
+            .Create(new KafkaSubscription<MyCommand>(
                 name: new SubscriptionName("Paramore.Brighter.Tests"),
                 channelName: new ChannelName(_queueName),
                 routingKey: new RoutingKey(_topic),
@@ -167,13 +153,13 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
                 commitBatchSize:1,
                 numOfPartitions: 1,
                 replicationFactor: 1,
-                messagePumpType: MessagePumpType.Proactor,
+                messagePumpType: MessagePumpType.Reactor,
                 makeChannels: OnMissingChannel.Create
             ));
     }
 
     public void Dispose()
     {
-        _producerRegistry.Dispose();
+        _producerRegistry?.Dispose();
     }
 }

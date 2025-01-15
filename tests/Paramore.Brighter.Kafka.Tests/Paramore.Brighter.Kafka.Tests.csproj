@@ -25,8 +25,4 @@
       <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="MessagingGateway\Local\" />
-    </ItemGroup>
-
 </Project>

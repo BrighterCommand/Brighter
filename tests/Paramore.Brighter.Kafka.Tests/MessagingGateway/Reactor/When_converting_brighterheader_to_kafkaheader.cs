@@ -6,7 +6,7 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Reactor;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]   //
