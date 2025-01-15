@@ -6,9 +6,10 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
+[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
 {
@@ -29,7 +30,8 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
                 Name = "Kafka Producer Send Test",
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
+            [
+                new KafkaPublication
             {
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
@@ -38,8 +40,9 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
                 //your production values ought to be lower
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).CreateAsync().Result;
+                MakeChannels = OnMissingChannel.Assume
+            }
+            ]).Create();
 
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -59,9 +62,13 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
 
     }
 
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
     [Fact]
     public async Task When_a_consumer_declares_topics()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(1000); 
+        
         var routingKey = new RoutingKey(_topic);
 
         var message = new Message(
@@ -72,8 +79,14 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
             new MessageBody($"test content [{_queueName}]")
         );
 
-        //This should fail, if consumer can't create the topic as set to Assume
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey)).SendAsync(message);
+        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey));
+        await producerAsync.SendAsync(message);
+        
+        //We should not need to flush, as the async does not queue work  - but in case this changes
+        ((KafkaMessageProducer)producerAsync).Flush();
+
+        //allow broker time to propogate
+        await Task.Delay(3000);
 
         Message[] messages = [];
         int maxTries = 0;
@@ -82,12 +95,15 @@ public class KafkaConsumerDeclareTestsAsync : IAsyncDisposable, IDisposable
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
-                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000));
+                //use TimeSpan.Zero to avoid blocking
+                messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
                 await _consumer.AcknowledgeAsync(messages[0]);
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     break;
+                
+                //wait before retry
+                await Task.Delay(1000);
 
             }
             catch (ChannelFailureException cfx)

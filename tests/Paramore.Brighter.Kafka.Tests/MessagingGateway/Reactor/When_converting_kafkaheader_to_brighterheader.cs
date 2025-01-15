@@ -6,8 +6,10 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
+[Trait("Category", "Kafka")]
+[Collection("Kafka")]   //
 public class KafkaHeaderToBrighterTests  
 {
     [Fact]
@@ -20,7 +22,7 @@ public class KafkaHeaderToBrighterTests
                 messageId: Guid.NewGuid().ToString(),
                 topic: new RoutingKey("test"),
                 messageType: MessageType.MT_COMMAND,
-                timeStamp: DateTime.UtcNow,
+                timeStamp: DateTimeOffset.UtcNow,
                 correlationId: Guid.NewGuid().ToString(),
                 replyTo: new RoutingKey("test"),
                 contentType: "application/octet",
@@ -63,7 +65,7 @@ public class KafkaHeaderToBrighterTests
         readMessage.Header.Topic.Should().Be(message.Header.Topic);
         readMessage.Header.Delayed.Should().Be(message.Header.Delayed);
         readMessage.Header.HandledCount.Should().Be(message.Header.HandledCount);
-        readMessage.Header.TimeStamp.ToString("u").Should().Be(message.Header.TimeStamp.ToString("u"));            
+        readMessage.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture).Should().Be(message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture));            
         
         //NOTE: Because we can only coerce the byte[] to a string for a unknown bag key, coercing to a specific
         //type has to be done by the user of the bag.

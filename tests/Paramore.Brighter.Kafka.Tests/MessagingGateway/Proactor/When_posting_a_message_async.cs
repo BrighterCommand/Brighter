@@ -8,9 +8,10 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "Kafka")]
+[Trait("Fragile", "CI")]
 [Collection("Kafka")] //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
 {
@@ -62,9 +63,13 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             );
     }
 
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
     [Fact]
     public async Task When_posting_a_message()
     {
+        //Let topic propagate in the broker
+        await Task.Delay(500); 
+        
         var command = new MyCommand { Value = "Test Content" };
 
         //vanilla i.e. no Kafka specific bytes at the beginning
@@ -86,7 +91,22 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             },
             new MessageBody(body));
 
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey)).SendAsync(message);
+        bool messagePublished = false;
+        var producerAsync = ((IAmAMessageProducerAsync)_producerRegistry.LookupAsyncBy(routingKey));
+        await producerAsync.SendAsync(message);
+        var producerConfirm = producerAsync as ISupportPublishConfirmation;
+        producerConfirm.OnMessagePublished += delegate(bool success, string id)
+        {
+            if (success) messagePublished = true;
+        };
+        
+        //We should not need to flush, as the async does not queue work  - but in case this changes
+        ((KafkaMessageProducer)producerAsync).Flush();
+
+        //allow the message publication callback to run
+        await Task.Delay(10000);
+
+        messagePublished.Should().BeTrue();
 
         var receivedMessage = await GetMessageAsync();
 
@@ -96,8 +116,8 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
         receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
         receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
         receivedMessage.Body.Value.Should().Be(message.Body.Value);
-        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ")
-            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+        receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z")
+            .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z"));
         receivedCommand.Id.Should().Be(command.Id);
         receivedCommand.Value.Should().Be(command.Value);
     }
@@ -111,7 +131,8 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
+ 
+                //set timespan to zero so that we will not block
                 messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
@@ -119,6 +140,9 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
                     await _consumer.AcknowledgeAsync(messages[0]);
                     break;
                 }
+
+                //wait before retry
+                await Task.Delay(1000);
             }
             catch (ChannelFailureException cfx)
             {

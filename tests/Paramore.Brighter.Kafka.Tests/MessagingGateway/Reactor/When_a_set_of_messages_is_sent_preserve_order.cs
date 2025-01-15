@@ -9,7 +9,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
@@ -17,7 +17,7 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
 {
     private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
-    private readonly string _topic = Guid.NewGuid().ToString();
+    private readonly RoutingKey _topic = new(Guid.NewGuid().ToString());
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
     private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
@@ -46,21 +46,28 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
     }
 
     [Fact]
-    public void When_a_message_is_sent_keep_order()
+    public async Task When_a_message_is_sent_keep_order()
     {
+        //Let topic propogate
+        await Task.Delay(500);
+         
         IAmAMessageConsumerSync consumer = null;
         try
         {
             //Send a sequence of messages to Kafka
-            var msgId = SendMessage();
-            var msgId2 = SendMessage();
-            var msgId3 = SendMessage();
-            var msgId4 = SendMessage();
+            var routingKey = new RoutingKey(_topic);
+            var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+            var msgId = SendMessage(producer);
+            var msgId2 = SendMessage(producer);
+            var msgId3 = SendMessage(producer);
+            var msgId4 = SendMessage(producer);
+            
+            //ensure the messages are sent
+            ((KafkaMessageProducer)producer).Flush();
                   
             consumer = CreateConsumer();
-                
-            //Now read those messages in order
-                
+            
+            //Now read messages in order
             var firstMessage = ConsumeMessages(consumer);
             var message = firstMessage.First();
             message.Id.Should().Be(msgId);
@@ -88,15 +95,13 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
         }
     }
 
-    private string SendMessage()
+    private string SendMessage(IAmAMessageProducerSync producer)
     {
         var messageId = Guid.NewGuid().ToString();
 
-        var routingKey = new RoutingKey(_topic);
-            
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(
+        producer.Send(
             new Message(
-                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND)
+                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
@@ -109,14 +114,13 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
 
     private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
     {
-        var messages = new Message[0];
+        var messages = Array.Empty<Message>();
         int maxTries = 0;
         do
         {
             try
             {
                 maxTries++;
-                Task.Delay(500).Wait(); //Let topic propagate in the broker
                 messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                 if (messages[0].Header.MessageType != MessageType.MT_NONE)
@@ -138,7 +142,7 @@ public class KafkaMessageConsumerPreservesOrder : IDisposable
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Consumer Test",
-                    BootStrapServers = new[] { "localhost:9092" }
+                    BootStrapServers = ["localhost:9092"]
                 })
             .Create(new KafkaSubscription<MyCommand>(
                 name: new SubscriptionName("Paramore.Brighter.Tests"),

@@ -30,7 +30,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
+    public class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         /// <summary>
         /// Action taken when a message is published, following receipt of a confirmation from the broker
@@ -152,6 +152,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             configHook(_producerConfig);
         }
+        
+        /// <summary>
+        /// Flushes the producer to ensure all messages in the internal buffer have been sent
+        /// </summary>
+        /// <param name="cancellationToken">Used to timeout the flush operation</param>
+        public void Flush(CancellationToken cancellationToken = default)
+        {
+            _producer?.Flush(cancellationToken);
+        }
 
         /// <summary>
         /// Initialize the producer => two stage construction to allow for a hook if needed
@@ -240,8 +249,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);
             }
         }
-        
- 
 
         /// <summary>
         /// Sends the specified message.
@@ -336,6 +343,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (disposing)
             {
+                Flush();
                 _producer?.Dispose();
             }
         }
