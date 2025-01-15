@@ -43,7 +43,8 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
             }}).Create();
     }
 
-    [Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
+    //[Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
+    [Fact]
     public async Task When_a_message_is_acknowldgede_update_offset()
     {
         // let topic propogate in the broker

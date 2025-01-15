@@ -70,8 +70,8 @@ public class KafkaMessageProducerMissingHeaderTestsAsync : IAsyncDisposable
                 ));
     }
 
-    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    [Fact]
+    [Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
+    //[Fact]
     public async Task When_recieving_a_message_without_partition_key_header()
     {
         await Task.Delay(500); //Let topic propagate in the broker

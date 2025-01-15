@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Proactor;
 
 [Trait("Category", "Kafka")]
+[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposable
 {
@@ -61,8 +62,8 @@ public class KafkaMessageConsumerSweepOffsetsAsync : IAsyncDisposable, IDisposab
                 ));
     }
 
-    [Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    //[Fact]
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
+    [Fact]
     public async Task When_a_message_is_acknowledged_but_no_batch_sent_sweep_offsets()
     {
         //allow time for topic to propogate

@@ -12,6 +12,7 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Local.Proactor;
 
 [Trait("Category", "Kafka")]
+[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
 {
@@ -44,8 +45,8 @@ public class KafkaMessageConsumerPreservesOrderAsync : IDisposable
             }}).Create();
     }
 
-    [Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
-    //[Fact]
+    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
+    [Fact]
     public async Task When_a_message_is_sent_keep_order()
     {
         //Let topic propagate in the broker
