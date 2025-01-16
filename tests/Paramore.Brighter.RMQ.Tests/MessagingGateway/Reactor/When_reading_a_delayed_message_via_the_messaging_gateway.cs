@@ -42,11 +42,8 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
             
         var header = new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND);
-        var originalMessage = new Message(header, new MessageBody("test3 content"));
-
-        var mutatedHeader = new MessageHeader(header.MessageId, routingKey, MessageType.MT_COMMAND);
-        mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
-        _message = new Message(mutatedHeader, originalMessage.Body);
+        header.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
+        _message = new Message(header, new MessageBody("test3 content", "plain/text"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
         {

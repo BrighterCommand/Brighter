@@ -34,9 +34,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway.Reactor;
 public class RmqMessageConsumerChannelFailureTests : IDisposable
 {
     private readonly IAmAMessageProducerSync _sender;
-    private readonly IAmAMessageConsumerSync _receiver;
     private readonly IAmAMessageConsumerSync _badReceiver;
-    private Exception _firstException;
 
     public RmqMessageConsumerChannelFailureTests()
     {
@@ -55,7 +53,6 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
         _sender = new RmqMessageProducer(rmqConnection);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-        _receiver = new RmqMessageConsumer(rmqConnection, queueName, sentMessage.Header.Topic, false, false);
         _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection,queueName, sentMessage.Header.Topic, false, 1, false);
 
         _sender.Send(sentMessage);
@@ -67,7 +64,7 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
         bool exceptionHappened = false;
         try
         {
-            _receiver.Receive(TimeSpan.FromMilliseconds(2000));
+            _badReceiver.Receive(TimeSpan.FromMilliseconds(2000));
         }
         catch (ChannelFailureException cfe)
         {
@@ -82,6 +79,6 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
     public void Dispose()
     {
         _sender.Dispose();
-        _receiver.Dispose();
+        _badReceiver.Dispose();
     }
 }

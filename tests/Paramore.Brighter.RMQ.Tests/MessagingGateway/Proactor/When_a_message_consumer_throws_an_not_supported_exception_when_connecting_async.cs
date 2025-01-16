@@ -32,12 +32,11 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RMQ")]
+
 public class AsyncRmqMessageConsumerChannelFailureTests : IAsyncDisposable, IDisposable
 {
     private readonly IAmAMessageProducerAsync _sender;
-    private readonly IAmAMessageConsumerAsync _receiver;
     private readonly IAmAMessageConsumerAsync _badReceiver;
-    private Exception _firstException;
 
     public AsyncRmqMessageConsumerChannelFailureTests()
     {
@@ -56,7 +55,6 @@ public class AsyncRmqMessageConsumerChannelFailureTests : IAsyncDisposable, IDis
         _sender = new RmqMessageProducer(rmqConnection);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
             
-        _receiver = new RmqMessageConsumer(rmqConnection, queueName, sentMessage.Header.Topic, false, false);
         _badReceiver = new NotSupportedRmqMessageConsumer(rmqConnection,queueName, sentMessage.Header.Topic, false, 1, false);
 
         _sender.SendAsync(sentMessage).GetAwaiter().GetResult();
@@ -65,10 +63,13 @@ public class AsyncRmqMessageConsumerChannelFailureTests : IAsyncDisposable, IDis
     [Fact]
     public async Task When_a_message_consumer_throws_an_not_supported_exception_when_connecting()
     {
+        //let messages propogate
+        await Task.Delay(500);
+        
         bool exceptionHappened = false;
         try
         {
-            await _receiver.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
+            await _badReceiver.ReceiveAsync(TimeSpan.FromMilliseconds(2000));
         }
         catch (ChannelFailureException cfe)
         {
@@ -83,12 +84,12 @@ public class AsyncRmqMessageConsumerChannelFailureTests : IAsyncDisposable, IDis
     public void Dispose()
     {
         ((IAmAMessageProducerSync)_sender).Dispose();
-        ((IAmAMessageConsumerSync)_receiver).Dispose();
+        ((IAmAMessageConsumerSync)_badReceiver).Dispose();
     }
 
     public async ValueTask DisposeAsync()
     {
         await _sender.DisposeAsync();
-        await _receiver.DisposeAsync();
+        await _badReceiver.DisposeAsync();
     }
 }

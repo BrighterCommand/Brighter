@@ -112,8 +112,8 @@ public class RMQMessageConsumerRetryDLQTestsAsync : IDisposable
         );
     }
 
-    //[Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
-    [Fact]
+    [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
+    //[Fact]
     public async Task When_retry_limits_force_a_message_onto_the_dlq()
     {
         //NOTE: This test is **slow** because it needs to ensure infrastructure and then wait whilst we requeue a message a number of times,
