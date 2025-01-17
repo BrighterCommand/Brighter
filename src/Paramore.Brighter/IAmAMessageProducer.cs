@@ -28,7 +28,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter
 {
-    public interface IAmAMessageProducer : IDisposable
+    public interface IAmAMessageProducer 
     {
         /// <summary>
         /// The <see cref="Publication "/>that this Producer is for.

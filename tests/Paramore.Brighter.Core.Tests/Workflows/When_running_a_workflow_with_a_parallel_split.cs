@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ public class MediatorParallelSplitFlowTests
     private readonly Job<WorkflowTestData> _job;
     private bool _firstBranchFinished;
     private bool _secondBranchFinished;
+    private readonly InMemoryJobChannel<WorkflowTestData> _channel;
 
     public MediatorParallelSplitFlowTests(ITestOutputHelper testOutputHelper)
     {
@@ -36,51 +38,55 @@ public class MediatorParallelSplitFlowTests
         
         _job = new Job<WorkflowTestData>(workflowData) ;
         
-        var secondBranch = new Sequential<WorkflowTestData>(
-            "Test of Job Two",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyOtherValue"] as string)! }),
-            () => { _secondBranchFinished = true; },
-            null
-        );
-        
-        var firstBranch = new Sequential<WorkflowTestData>(
-            "Test of Job One",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
-            () => {  _firstBranchFinished = true;  }, 
-            null
-        );
-        
         var parallelSplit = new ParallelSplit<WorkflowTestData>(
             "Test of Job Parallel Split",
             (data) =>
-            {   data.Bag["MyValue"] = "TestOne";
-                data.Bag["MyOtherValue"] = "TestTwo";
-            },
-        firstBranch, secondBranch
+            {   
+                data.Bag.TryAdd("MyValue", "Test");
+                data.Bag.TryAdd("MyOtherValue", "TestTwo");
+                
+                var secondBranch = new Sequential<WorkflowTestData>(
+                    "Test of Job Two",
+                    new FireAndForgetAsync<MyCommand, WorkflowTestData>((d) => 
+                        new MyCommand { Value = (d.Bag["MyOtherValue"] as string)! }),
+                    () => { _secondBranchFinished = true; },
+                    null
+                );
+        
+                var firstBranch = new Sequential<WorkflowTestData>(
+                    "Test of Job One",
+                    new FireAndForgetAsync<MyCommand, WorkflowTestData>((d) => 
+                        new MyCommand { Value = (d.Bag["MyValue"] as string)! }),
+                    () => {  _firstBranchFinished = true;  }, 
+                    null
+                );
+                
+                return [firstBranch, secondBranch];
+            }
         );
         
         _job.InitSteps(parallelSplit);
         
         InMemoryStateStoreAsync store = new();
-        InMemoryJobChannel<WorkflowTestData> channel = new();
+        _channel = new InMemoryJobChannel<WorkflowTestData>();
         
         _scheduler = new Scheduler<WorkflowTestData>(
-            channel,
+            _channel,
             store
         );
         
-        _runner = new Runner<WorkflowTestData>(channel, store, commandProcessor, _scheduler);
+        _runner = new Runner<WorkflowTestData>(_channel, store, commandProcessor, _scheduler);
     }
     
-    //[Fact]
+    [Fact]
     public async  Task When_running_a_workflow_with_a_parallel_split()
     {
         MyCommandHandlerAsync.ReceivedCommands.Clear();
         
-        _scheduler.ScheduleAsync(_job);
+        await _scheduler.ScheduleAsync(_job);
         
         var ct = new CancellationTokenSource();
-        ct.CancelAfter( TimeSpan.FromSeconds(1) );
+        ct.CancelAfter( TimeSpan.FromSeconds(3) );
 
         try
         {

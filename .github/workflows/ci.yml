@@ -33,12 +33,12 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - name: Setup dotnet 8
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - run: dotnet --info
       - uses: actions/checkout@v4
         with:
@@ -88,12 +88,12 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -117,12 +117,12 @@ jobs:
       
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -142,11 +142,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
+            8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MQTT Transport Tests
@@ -171,12 +172,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Transport Tests
@@ -234,12 +235,12 @@ jobs:
       run: docker ps -a
     - name: Checkout code
       uses: actions/checkout@v4
-    - name: Setup dotnet 8
+    - name: Setup dotnet
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
-          6.0.x
           8.0.x
+          9.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
@@ -264,12 +265,12 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
@@ -290,12 +291,12 @@ jobs:
           SA_PASSWORD: Password123!
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -318,12 +319,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -349,12 +350,12 @@ jobs:
       
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -372,12 +373,12 @@ jobs:
       
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -399,12 +400,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
@@ -416,12 +417,12 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 8
+      - name: Setup dotnet 
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
+            9.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests

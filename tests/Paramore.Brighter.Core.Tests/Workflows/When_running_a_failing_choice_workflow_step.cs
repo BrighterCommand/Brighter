@@ -48,13 +48,15 @@ public class MediatorFailingChoiceFlowTests
         
         var stepThree = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Three",
-            new FireAndForgetAsync<MyOtherCommand, WorkflowTestData>(() => new MyOtherCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            new FireAndForgetAsync<MyOtherCommand, WorkflowTestData>((data) => 
+                new MyOtherCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { _stepCompletedThree = true; },
             null);
         
         var stepTwo = new Sequential<WorkflowTestData>(
             "Test of Job SequenceStep Two",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) => 
+                new MyCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { _stepCompletedTwo = true; },
             null);
 

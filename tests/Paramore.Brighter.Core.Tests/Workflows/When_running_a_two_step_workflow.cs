@@ -39,14 +39,16 @@ public class MediatorTwoStepFlowTests
         
         var secondStep = new Sequential<WorkflowTestData>(
             "Test of Job Two",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) => 
+                new MyCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { _stepsCompleted = true; },
             null
             );
         
         var firstStep = new Sequential<WorkflowTestData>(
             "Test of Job One",
-            new FireAndForgetAsync<MyCommand, WorkflowTestData>(() => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! }),
+            new FireAndForgetAsync<MyCommand, WorkflowTestData>((data) => 
+                new MyCommand { Value = (data.Bag["MyValue"] as string)! }),
             () => { workflowData.Bag["MyValue"] = "TestTwo"; }, 
             secondStep
             );

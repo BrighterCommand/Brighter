@@ -30,32 +30,27 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     public class RmqMessagingGatewayConnection : IAmGatewayConfiguration 
     {
-      public RmqMessagingGatewayConnection()
-      {
-        Name = Environment.MachineName;
-      }
-
-      /// <summary>
+        /// <summary>
       /// Sets Unique name for the subscription
       /// </summary>
-      public string Name { get; set; }
+      public string Name { get; set; } = Environment.MachineName;
 
       /// <summary>
       /// Gets or sets the ampq URI.
       /// </summary>
       /// <value>The ampq URI.</value>
-      public AmqpUriSpecification AmpqUri { get; set; }
+      public AmqpUriSpecification? AmpqUri { get; set; }
 
         /// <summary>
         /// Gets or sets the exchange.
         /// </summary>
         /// <value>The exchange.</value>
-        public Exchange Exchange { get; set; }
+        public Exchange? Exchange { get; set; }
 
         /// <summary>
         /// The exchange used for any dead letter queue
         /// </summary>
-        public Exchange DeadLetterExchange { get; set; }
+        public Exchange? DeadLetterExchange { get; set; }
         
         /// <summary>
         /// Gets or sets the Heartbeat in seconds. Defaults to 20.
@@ -77,38 +72,35 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// <summary>
     /// Class AMQPUriSpecification
     /// </summary>
-    public class AmqpUriSpecification
+    public class AmqpUriSpecification(
+        Uri uri,
+        int connectionRetryCount = 3,
+        int retryWaitInMilliseconds = 1000,
+        int circuitBreakTimeInMilliseconds = 60000)
     {
-        private string _sanitizedUri;
+        private string? _sanitizedUri;
 
-        public AmqpUriSpecification(Uri uri, int connectionRetryCount = 3, int retryWaitInMilliseconds = 1000, int circuitBreakTimeInMilliseconds = 60000)
-        {
-            Uri = uri;
-            ConnectionRetryCount = connectionRetryCount;
-            RetryWaitInMilliseconds = retryWaitInMilliseconds;
-            CircuitBreakTimeInMilliseconds = circuitBreakTimeInMilliseconds;
-        }
         /// <summary>
         /// Gets or sets the URI.
         /// </summary>
         /// <value>The URI.</value>
-        public Uri Uri { get; set; }
+        public Uri Uri { get; set; } = uri;
 
 
         /// <summary>
         /// Gets or sets the retry count for when a subscription fails
         /// </summary>
-        public int ConnectionRetryCount { get; set; }
+        public int ConnectionRetryCount { get; set; } = connectionRetryCount;
 
         /// <summary>
         /// The time in milliseconds to wait before retrying to connect again
         /// </summary>
-        public int RetryWaitInMilliseconds { get; set; }
+        public int RetryWaitInMilliseconds { get; set; } = retryWaitInMilliseconds;
 
         /// <summary>
         /// The time in milliseconds to wait before retrying to connect again. 
         /// </summary>
-        public int CircuitBreakTimeInMilliseconds { get; set; }
+        public int CircuitBreakTimeInMilliseconds { get; set; } = circuitBreakTimeInMilliseconds;
 
         public string GetSanitizedUri()
         {

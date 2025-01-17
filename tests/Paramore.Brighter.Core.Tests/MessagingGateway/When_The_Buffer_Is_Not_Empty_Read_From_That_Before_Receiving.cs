@@ -7,8 +7,8 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
     public class BufferedChannelTests
     {
-        private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _gateway;
+        private readonly IAmAChannelSync _channel;
+        private readonly IAmAMessageConsumerSync _gateway;
         private const int BufferLimit = 2;
         private readonly RoutingKey _routingKey = new("MyTopic");
         private const string Channel = "MyChannel";

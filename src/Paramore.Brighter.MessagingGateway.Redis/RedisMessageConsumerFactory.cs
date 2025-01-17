@@ -38,11 +38,33 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
 
         /// <summary>
-        /// Interface IAmAMessageProducerFactory
+        /// Create a consumer for the specified subscrciption
         /// </summary>
-        public IAmAMessageConsumer Create(Subscription subscription)
+        /// <param name="subscription">The subscription to create a consumer for</param>
+        /// <returns>IAmAMessageConsumerSync</returns>
+        public IAmAMessageConsumerSync Create(Subscription subscription)
         {
-            return new RedisMessageConsumer(_configuration, subscription.ChannelName, subscription.RoutingKey);
+            RequireQueueName(subscription);
+
+            return new RedisMessageConsumer(_configuration, subscription.ChannelName!, subscription.RoutingKey);
+        }
+
+        private static void RequireQueueName(Subscription subscription)
+        {
+            if (subscription.ChannelName is null)
+                throw new ConfigurationException("RedisMessageConsumer: ChannelName is missing from the Subscription");
+        }
+
+        /// <summary>
+        /// Create a consumer for the specified subscrciption
+        /// </summary>
+        /// <param name="subscription">The subscription to create a consumer for</param>
+        /// <returns>IAmAMessageConsumerAsync</returns>
+        public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
+        {
+            RequireQueueName(subscription);
+            
+            return new RedisMessageConsumer(_configuration, subscription.ChannelName!, subscription.RoutingKey);
         }
     }
 }

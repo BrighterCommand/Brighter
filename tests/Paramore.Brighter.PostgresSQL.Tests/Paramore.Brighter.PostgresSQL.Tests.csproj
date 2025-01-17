@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
@@ -26,11 +26,4 @@
       <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.PostgresSql\Paramore.Brighter.Locking.PostgresSql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.PostgreSql\Paramore.Brighter.Outbox.PostgreSql.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="Npgsql">
-        <HintPath>..\..\libs\Npgsql\net6.0\Npgsql.dll</HintPath>
-      </Reference>
-    </ItemGroup>
-
 </Project>

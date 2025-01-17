@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -86,7 +87,7 @@ public abstract class Step<TData>(
         IAmAStateStoreAsync stateStore, 
         IAmACommandProcessor? commandProcessor = null, 
         Scheduler<TData>? scheduler = null,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default(CancellationToken)
         );
     
     /// <summary>
@@ -132,7 +133,7 @@ public class ExclusiveChoice<TData>(
         IAmAStateStoreAsync stateStore, 
         IAmACommandProcessor? commandProcessor = null, 
         Scheduler<TData>? scheduler = null,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default(CancellationToken)
     )   
     {
         if (Job is null)
@@ -155,14 +156,10 @@ public class ExclusiveChoice<TData>(
 }
 
 public class ParallelSplit<TData>(
-    string name, 
-    Action<TData>? onBranch, 
-    params Step<TData>[] branches
-    ) 
+    string name,
+    Func<TData, IEnumerable<Step<TData>>>? onMap)
     : Step<TData>(name, null)
 {
-    public Step<TData>[] Branches { get; set; } = branches;
-    
     /// <summary>
     ///  The work of the step is done here. Note that this is an abstract method, so it must be implemented by the derived class.
     ///   Your application logic does not live in the step. Instead, you raise a command to a handler, which will do the work.
@@ -173,25 +170,43 @@ public class ParallelSplit<TData>(
     /// <param name="scheduler">The scheduler, used for queuing jobs that need to wait</param>
     /// <param name="cancellationToken">The cancellation token, to end this workflow</param>
     /// <returns></returns>
-    public override Task ExecuteAsync(
+    public override async Task ExecuteAsync(
         IAmAStateStoreAsync stateStore, 
         IAmACommandProcessor? commandProcessor = null, 
         Scheduler<TData>? scheduler = null,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default(CancellationToken)
     )   
     {
         if (Job is null)
             throw new InvalidOperationException("Job is null");
         
+        if (onMap is null)
+           throw new InvalidOperationException("onMap is null; a ParallelSplit Step must have a mapping function to map to multiple branches");
+           
+        if (scheduler is null)
+            throw new InvalidOperationException("Scheduler is null; a ParallelSplit Step must have a scheduler to schedule the next step");
+        
         State = StepState.Running;
         
-        // Parallel split doesn't directly execute its jobs. 
-        // Execution is handled by the Scheduler, which will handle running each branch concurrently. 
-        onBranch?.Invoke(Job.Data);
+        //Map to multiple branches
+        var branches = onMap?.Invoke(Job.Data);
+        
+        if (branches is null)
+            return;
+        
+        foreach (Step<TData> branch in branches)
+        {
+            var childJob = new Job<TData>(Job.Data);
+            childJob.AddChildJob(Job);
+            childJob.InitSteps(branch);
+            await scheduler.ScheduleAsync(childJob, cancellationToken);    
+        }
         
         State = StepState.Done;
         
-        return Task.CompletedTask;
+        //NOTE: parallel split is a final step - this might change when we bring in merge
+        Job.NextStep(null);
+        await stateStore.SaveJobAsync(Job, cancellationToken);
     }
 }
 
@@ -230,7 +245,7 @@ public class Sequential<TData>(
         IAmAStateStoreAsync stateStore, 
         IAmACommandProcessor? commandProcessor = null, 
         Scheduler<TData>? scheduler = null,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default(CancellationToken)
     )    
     {
         if (Job is null)
@@ -308,7 +323,7 @@ public class Wait<TData> : Step<TData>
         IAmAStateStoreAsync stateStore, 
         IAmACommandProcessor? commandProcessor = null, 
         Scheduler<TData>? scheduler = null,
-        CancellationToken cancellationToken = default
+        CancellationToken cancellationToken = default(CancellationToken)
     )   
     {
         if (Job is null)
@@ -318,9 +333,7 @@ public class Wait<TData> : Step<TData>
             throw new InvalidOperationException("Scheduler is null; a Wait Step must have a scheduler to schedule the next step");
 
         if (Next == null)
-        {
             throw new InvalidOperationException("Next step is empty; wait schedule the next step, so it cannot be empty");
-        }
         
         State = StepState.Running;
         

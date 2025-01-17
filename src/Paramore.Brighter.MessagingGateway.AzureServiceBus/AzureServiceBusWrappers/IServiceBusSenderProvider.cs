@@ -6,7 +6,7 @@
     public interface IServiceBusSenderProvider
     {
         /// <summary>
-        /// Get a ServiceBusSenderWrapper for a Topic.
+        /// GetAsync a ServiceBusSenderWrapper for a Topic.
         /// </summary>
         /// <param name="topicOrQueueName">The name of the Topic.</param>
         /// <returns>A ServiceBusSenderWrapper for the given Topic.</returns>

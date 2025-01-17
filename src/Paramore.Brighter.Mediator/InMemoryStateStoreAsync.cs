@@ -58,7 +58,7 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
     /// <param name="jobAge">A job is due now, less the jobAge span</param>
     /// <param name="cancellationToken">A cancellation token to end the ongoing operation</param>
     /// <returns></returns>
-    public Task<IEnumerable<Job>> GetDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken)
+    public Task<IEnumerable<Job>> GetDueJobsAsync(TimeSpan jobAge, CancellationToken cancellationToken = default(CancellationToken))
     {
         var dueJobs = _jobs.Values
             .Where(job =>
@@ -98,7 +98,7 @@ public class InMemoryStateStoreAsync : IAmAStateStoreAsync
     /// <param name="job">The job to save.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous save operation.</returns>
-    public Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken)
+    public Task SaveJobAsync<TData>(Job<TData>? job, CancellationToken cancellationToken = default(CancellationToken))
     {
         if (cancellationToken.IsCancellationRequested) return Task.FromCanceled(cancellationToken);
 

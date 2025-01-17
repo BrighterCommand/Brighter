@@ -22,10 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Mediator;
 
@@ -52,6 +55,8 @@ public enum FullChannelStrategy
 public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
 {
     private readonly Channel<Job<TData>> _channel;
+    
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<InMemoryJobChannel<TData>>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InMemoryJobChannel{TData}"/> class.
@@ -80,11 +85,11 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous dequeue operation. The task result contains the dequeued job.</returns>
-    public async Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken)
+    public async Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken = default(CancellationToken))
     {                              
         Job<TData>? item = null;
         while (await _channel.Reader.WaitToReadAsync(cancellationToken))
-            while (_channel.Reader.TryRead(out item))
+            while (_channel.Reader.TryRead(out item)) 
                 return item;
 
         return item;
@@ -96,7 +101,7 @@ public class InMemoryJobChannel<TData> : IAmAJobChannel<TData>
     /// <param name="job">The job to enqueue.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous enqueue operation.</returns>
-    public async Task EnqueueJobAsync(Job<TData> job, CancellationToken cancellationToken = default)
+    public async Task EnqueueJobAsync(Job<TData> job, CancellationToken cancellationToken = default(CancellationToken))
     {
         await _channel.Writer.WriteAsync(job, cancellationToken);
     }

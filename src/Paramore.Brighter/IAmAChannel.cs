@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,70 +24,31 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter;
+
+public interface IAmAChannel : IDisposable
 {
     /// <summary>
-    /// Interface IAmAChannel 
-    /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
-    /// and acknowledging receipt of those messages
+    /// Gets the name.
     /// </summary>
-    public interface IAmAChannel : IDisposable
-    {
-        /// <summary>
-        /// Gets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        ChannelName Name { get; }
+    /// <value>The name.</value>
+    ChannelName Name { get; }
 
-        /// <summary>
-        /// The topic that this channel is for (how a broker routes to it)
-        /// </summary>
-        /// <value>The topic on the broker</value>
-        RoutingKey RoutingKey { get; }
+    /// <summary>
+    /// The topic that this channel is for (how a broker routes to it)
+    /// </summary>
+    /// <value>The topic on the broker</value>
+    RoutingKey RoutingKey { get; }
 
-        /// <summary>
-        /// Acknowledges the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        void Acknowledge(Message message);
+    /// <summary>
+    /// Stops this instance.
+    /// <param name="topic">The topic to post the MT_QUIT message too</param>
+    /// </summary>
+    void Stop(RoutingKey topic);
 
-        /// <summary>
-        /// Clears the queue
-        /// </summary>
-        void Purge();
-        
-        /// <summary>
-        /// The timeout for the channel to receive a message.
-        /// </summary>
-        /// <param name="timeout">The <see cref="TimeSpan"/> timeout; if null default to 1 second</param>
-        /// <returns>Message.</returns>
-        Message Receive(TimeSpan? timeout);
-
-        /// <summary>
-        /// Rejects the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        void Reject(Message message);
-        
-        /// <summary>
-        /// Stops this instance.
-        /// <param name="topic">The topic to post the MT_QUIT message too</param>
-        /// </summary>
-        void Stop(RoutingKey topic);
-        
-        /// <summary>
-        /// Adds a message to the queue
-        /// </summary>
-        /// <param name="message"></param>
-        void Enqueue(params Message[] message);
-
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="timeOut">The delay to the delivery of the message.</param>
-        /// <returns>True if the message should be Acked, false otherwise</returns>
-        bool Requeue(Message message, TimeSpan? timeOut = null);
-
-   }
+    /// <summary>
+    /// Adds a message to the queue
+    /// </summary>
+    /// <param name="message"></param>
+    void Enqueue(params Message[] message);
 }

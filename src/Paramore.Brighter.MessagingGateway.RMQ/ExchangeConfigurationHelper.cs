@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,66 +25,81 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
-{
-    public static class ExchangeConfigurationHelper
-    {
-        public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection, OnMissingChannel onMissingChannel)
-        {
-            if (onMissingChannel == OnMissingChannel.Assume)
-                return;
+namespace Paramore.Brighter.MessagingGateway.RMQ;
 
-            if (onMissingChannel == OnMissingChannel.Create)
-            {
-                CreateExchange(channel, connection);
-            }
-            else if (onMissingChannel == OnMissingChannel.Validate)
-            {
-                ValidateExchange(channel, connection);
-            }
+public static class ExchangeConfigurationHelper
+{
+    public static async Task DeclareExchangeForConnection(this IChannel channel, RmqMessagingGatewayConnection connection,
+        OnMissingChannel onMissingChannel, 
+        CancellationToken cancellationToken = default)
+    {
+        if (onMissingChannel == OnMissingChannel.Assume)
+        {
+            return;
         }
 
-        private static void CreateExchange(IModel channel, RmqMessagingGatewayConnection connection)
+        if (onMissingChannel == OnMissingChannel.Create)
         {
-            var arguments = new Dictionary<string, object>();
-            if (connection.Exchange.SupportDelay)
-            {
-                arguments.Add("x-delayed-type", connection.Exchange.Type);
-                connection.Exchange.Type = "x-delayed-message";
-            }
+            await CreateExchange(channel, connection, cancellationToken);
+        }
+        else if (onMissingChannel == OnMissingChannel.Validate)
+        {
+            await ValidateExchange(channel, connection, cancellationToken);
+        }
+    }
 
-            channel.ExchangeDeclare(
-                connection.Exchange.Name, 
-                connection.Exchange.Type, 
-                connection.Exchange.Durable, 
+    private static async Task CreateExchange(IChannel channel, RmqMessagingGatewayConnection connection, CancellationToken cancellationToken)
+    {
+        if (connection.Exchange is null) throw new ConfigurationException("RabbitMQ Exchange is not set");
+        
+        var arguments = new Dictionary<string, object?>();
+        if (connection.Exchange.SupportDelay)
+        {
+            arguments.Add("x-delayed-type", connection.Exchange.Type);
+            connection.Exchange.Type = "x-delayed-message";
+        }
+
+        await channel.ExchangeDeclareAsync(
+            connection.Exchange.Name,
+            connection.Exchange.Type,
+            connection.Exchange.Durable,
+            autoDelete: false,
+            arguments: arguments,
+            cancellationToken: cancellationToken);
+
+
+        if (connection.DeadLetterExchange != null)
+        {
+            await channel.ExchangeDeclareAsync(
+                connection.DeadLetterExchange.Name,
+                connection.DeadLetterExchange.Type,
+                connection.DeadLetterExchange.Durable,
                 autoDelete: false,
-                arguments: arguments);
+                cancellationToken: cancellationToken);
+        }
+    }
+
+    private static async Task ValidateExchange(IChannel channel, RmqMessagingGatewayConnection connection, CancellationToken cancellationToken)
+    {
+        if (connection.Exchange is null) throw new ConfigurationException("RabbitMQ Exchange is not set");
+        
+        try
+        {
+            await channel.ExchangeDeclarePassiveAsync(connection.Exchange.Name, cancellationToken);
 
             if (connection.DeadLetterExchange != null)
             {
-                 channel.ExchangeDeclare(
-                     connection.DeadLetterExchange.Name, 
-                     connection.DeadLetterExchange.Type, 
-                     connection.DeadLetterExchange.Durable, 
-                     autoDelete: false);
+                await channel.ExchangeDeclarePassiveAsync(connection.DeadLetterExchange.Name, cancellationToken);
             }
         }
-        private static void ValidateExchange(IModel channel, RmqMessagingGatewayConnection connection)
-        
+        catch (Exception e)
         {
-            try
-            {
-                channel.ExchangeDeclarePassive(connection.Exchange.Name);
-                if (connection.DeadLetterExchange != null) channel.ExchangeDeclarePassive(connection.DeadLetterExchange.Name);
-            }
-            catch (Exception e)
-            {
-                throw new BrokerUnreachableException(e);
-            }
+            throw new BrokerUnreachableException(e);
         }
-
-     }
+    }
 }

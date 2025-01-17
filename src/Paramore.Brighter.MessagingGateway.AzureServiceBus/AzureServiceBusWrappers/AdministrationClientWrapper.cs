@@ -1,10 +1,34 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
@@ -35,89 +59,23 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             s_logger.LogWarning("Resetting management client wrapper...");
             Initialise();
         }
-        
-        /// <summary>
-        /// Check if a Topic exists
-        /// </summary>
-        /// <param name="topicName">The name of the Topic.</param>
-        /// <returns>True if the Topic exists.</returns>
-        public bool TopicExists(string topicName)
-        {
-            s_logger.LogDebug("Checking if topic {Topic} exists...", topicName);
-
-            bool result;
-
-            try
-            {
-                result = _administrationClient.TopicExistsAsync(topicName).GetAwaiter().GetResult();
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e,"Failed to check if topic {Topic} exists", topicName);
-                throw;
-            }
-
-            if (result)
-            {
-                s_logger.LogDebug("Topic {Topic} exists", topicName);
-            }
-            else
-            {
-                s_logger.LogWarning("Topic {Topic} does not exist", topicName);
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Check if a Queue exists
-        /// </summary>
-        /// <param name="queueName">The name of the Queue.</param>
-        /// <returns>True if the Queue exists.</returns>
-        public bool QueueExists(string queueName)
-        {
-            s_logger.LogDebug("Checking if queue {Queue} exists...", queueName);
-
-            bool result;
-
-            try
-            {
-                result = _administrationClient.QueueExistsAsync(queueName).GetAwaiter().GetResult();
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e,"Failed to check if queue {Queue} exists", queueName);
-                throw;
-            }
-
-            if (result)
-            {
-                s_logger.LogDebug("Queue {Queue} exists", queueName);
-            }
-            else
-            {
-                s_logger.LogWarning("Queue {Queue} does not exist", queueName);
-            }
-
-            return result;
-        }
-
+         
         /// <summary>
         /// Create a Queue
+        /// Sync over async but alright in the context of creating a queue
         /// </summary>
         /// <param name="queueName">The name of the Queue</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
-        public void CreateQueue(string queueName, TimeSpan? autoDeleteOnIdle = null)
+        public async Task CreateQueueAsync(string queueName, TimeSpan? autoDeleteOnIdle = null)
         {
             s_logger.LogInformation("Creating topic {Topic}...", queueName);
 
             try
             {
-                _administrationClient
-                    .CreateQueueAsync(new CreateQueueOptions(queueName)
-                    {
-                        AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
-                    }).GetAwaiter().GetResult();
+                await _administrationClient.CreateQueueAsync(new CreateQueueOptions(queueName)
+                {
+                    AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
+                });
             }
             catch (Exception e)
             {
@@ -129,20 +87,64 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         }
         
         /// <summary>
+        /// Create a Subscription.
+        /// Sync over Async but alright in the context of creating a subscription
+        /// </summary>
+        /// <param name="topicName">The name of the Topic.</param>
+        /// <param name="subscriptionName">The name of the Subscription.</param>
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
+        public async Task CreateSubscriptionAsync(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
+        {
+            s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
+
+            if (!await TopicExistsAsync(topicName))
+            {
+                await CreateTopicAsync(topicName, subscriptionConfiguration.QueueIdleBeforeDelete);
+            }
+
+            var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
+            {
+                MaxDeliveryCount = subscriptionConfiguration.MaxDeliveryCount,
+                DeadLetteringOnMessageExpiration = subscriptionConfiguration.DeadLetteringOnMessageExpiration,
+                LockDuration = subscriptionConfiguration.LockDuration,
+                DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive,
+                AutoDeleteOnIdle = subscriptionConfiguration.QueueIdleBeforeDelete,
+                RequiresSession = subscriptionConfiguration.RequireSession
+            };
+
+            var ruleOptions = string.IsNullOrEmpty(subscriptionConfiguration.SqlFilter)
+                ? new CreateRuleOptions() : new CreateRuleOptions("sqlFilter",new SqlRuleFilter(subscriptionConfiguration.SqlFilter));
+
+            try
+            {
+                await _administrationClient.CreateSubscriptionAsync(subscriptionOptions, ruleOptions);
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Failed to create subscription {ChannelName} for topic {Topic}.", subscriptionName, topicName);
+                throw;
+            }
+
+            s_logger.LogInformation("Subscription {ChannelName} for topic {Topic} created.", subscriptionName, topicName);
+        }
+
+        
+        /// <summary>
         /// Create a Topic
+        /// Sync over async but runs in the context of creating a topic
         /// </summary>
         /// <param name="topicName">The name of the Topic</param>
         /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
-        public void CreateTopic(string topicName, TimeSpan? autoDeleteOnIdle = null)
+        public async Task CreateTopicAsync(string topicName, TimeSpan? autoDeleteOnIdle = null)
         {
             s_logger.LogInformation("Creating topic {Topic}...", topicName);
 
             try
             {
-                _administrationClient.CreateTopicAsync(new CreateTopicOptions(topicName)
+                await _administrationClient.CreateTopicAsync(new CreateTopicOptions(topicName)
                 {
                     AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
-                }).GetAwaiter().GetResult();
+                });
             }
             catch (Exception e)
             {
@@ -152,6 +154,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             s_logger.LogInformation("Topic {Topic} created.", topicName);
         }
+
 
         /// <summary>
         /// Delete a Queue
@@ -188,6 +191,52 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 s_logger.LogError(e, "Failed to delete Topic {Topic}", topicName);
             }
         }
+        
+        /// <summary>
+        /// GetAsync a Subscription.
+        /// </summary>
+        /// <param name="topicName">The name of the Topic.</param>
+        /// <param name="subscriptionName">The name of the Subscription.</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        public async Task<SubscriptionProperties> GetSubscriptionAsync(string topicName, string subscriptionName,
+            CancellationToken cancellationToken = default)
+        {
+            return await _administrationClient.GetSubscriptionAsync(topicName, subscriptionName, cancellationToken);
+        }
+        
+        /// <summary>
+        /// Check if a Queue exists
+        /// Sync over async but runs in the context of checking queue existence
+        /// </summary>
+        /// <param name="queueName">The name of the Queue.</param>
+        /// <returns>True if the Queue exists.</returns>
+        public async Task<bool> QueueExistsAsync(string queueName)
+        {
+            s_logger.LogDebug("Checking if queue {Queue} exists...", queueName);
+
+            bool result;
+
+            try
+            {
+                result = await _administrationClient.QueueExistsAsync(queueName);
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e,"Failed to check if queue {Queue} exists", queueName);
+                throw;
+            }
+
+            if (result)
+            {
+                s_logger.LogDebug("Queue {Queue} exists", queueName);
+            }
+            else
+            {
+                s_logger.LogWarning("Queue {Queue} does not exist", queueName);
+            }
+
+            return result;
+        }
 
         /// <summary>
         /// Check if a Subscription Exists for a Topic.
@@ -195,7 +244,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription</param>
         /// <returns>True if the subscription exists on the specified Topic.</returns>
-        public bool SubscriptionExists(string topicName, string subscriptionName)
+        public async Task<bool> SubscriptionExistsAsync(string topicName, string subscriptionName)
         {
             s_logger.LogDebug("Checking if subscription {ChannelName} for topic {Topic} exists...", subscriptionName, topicName);
 
@@ -203,7 +252,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             try
             {
-                result =_administrationClient.SubscriptionExistsAsync(topicName, subscriptionName).Result;
+                result = await _administrationClient.SubscriptionExistsAsync(topicName, subscriptionName);
             }
             catch (Exception e)
             {
@@ -224,28 +273,39 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         }
 
         /// <summary>
-        /// Create a Subscription.
+        /// Check if a Topic exists
+        /// Sync over async but alright in the context of checking topic existence
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
-        /// <param name="subscriptionName">The name of the Subscription.</param>
-        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
-        public void CreateSubscription(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
+        /// <returns>True if the Topic exists.</returns>
+        public async Task<bool> TopicExistsAsync(string topicName)
         {
-            CreateSubscriptionAsync(topicName, subscriptionName, subscriptionConfiguration).Wait();
-        }
+            s_logger.LogDebug("Checking if topic {Topic} exists...", topicName);
 
-        /// <summary>
-        /// Get a Subscription.
-        /// </summary>
-        /// <param name="topicName">The name of the Topic.</param>
-        /// <param name="subscriptionName">The name of the Subscription.</param>
-        /// <param name="cancellationToken">The Cancellation Token.</param>
-        public async Task<SubscriptionProperties> GetSubscriptionAsync(string topicName, string subscriptionName,
-            CancellationToken cancellationToken = default)
-        {
-            return await _administrationClient.GetSubscriptionAsync(topicName, subscriptionName, cancellationToken);
-        }
+            bool result;
 
+            try
+            {
+                result = await _administrationClient.TopicExistsAsync(topicName);
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e,"Failed to check if topic {Topic} exists", topicName);
+                throw;
+            }
+
+            if (result)
+            {
+                s_logger.LogDebug("Topic {Topic} exists", topicName);
+            }
+            else
+            {
+                s_logger.LogWarning("Topic {Topic} does not exist", topicName);
+            }
+
+            return result;
+        }
+        
         private void Initialise()
         {
             s_logger.LogDebug("Initialising new management client wrapper...");
@@ -261,41 +321,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
 
             s_logger.LogDebug("New management client wrapper initialised.");
-        }
-
-        private async Task CreateSubscriptionAsync(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
-        {
-            s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
-
-            if (!TopicExists(topicName))
-            {
-                CreateTopic(topicName, subscriptionConfiguration.QueueIdleBeforeDelete);
-            }
-
-            var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
-            {
-                MaxDeliveryCount = subscriptionConfiguration.MaxDeliveryCount,
-                DeadLetteringOnMessageExpiration = subscriptionConfiguration.DeadLetteringOnMessageExpiration,
-                LockDuration = subscriptionConfiguration.LockDuration,
-                DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive,
-                AutoDeleteOnIdle = subscriptionConfiguration.QueueIdleBeforeDelete,
-                RequiresSession = subscriptionConfiguration.RequireSession
-            };
-
-            var ruleOptions = string.IsNullOrEmpty(subscriptionConfiguration.SqlFilter)
-                ? new CreateRuleOptions() : new CreateRuleOptions("sqlFilter",new SqlRuleFilter(subscriptionConfiguration.SqlFilter));
-
-            try
-            {
-                await _administrationClient.CreateSubscriptionAsync(subscriptionOptions, ruleOptions);
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e, "Failed to create subscription {ChannelName} for topic {Topic}.", subscriptionName, topicName);
-                throw;
-            }
-
-            s_logger.LogInformation("Subscription {ChannelName} for topic {Topic} created.", subscriptionName, topicName);
         }
     }
 }

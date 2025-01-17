@@ -50,9 +50,9 @@ public class MediatorRobustReplyFaultStepFlowTests
          var firstStep = new Sequential<WorkflowTestData>(
              "Test of Job",
             new RobustRequestAndReactionAsync<MyCommand, MyEvent, MyFault, WorkflowTestData>(
-                () => new MyCommand { Value = (workflowData.Bag["MyValue"] as string)! },
-                (reply) => { workflowData.Bag["MyReply"] = ((MyEvent)reply).Value; },
-            (fault) => { workflowData.Bag["MyFault"] = ((MyFault)fault).Value; }),
+                (data) => new MyCommand { Value = (data.Bag["MyValue"] as string)! },
+                (reply, data) => { data.Bag["MyReply"] = reply!.Value; },
+            (fault, data) => { data.Bag["MyFault"] = fault!.Value; }),
             () => { _stepCompleted = true; },
             null,
             () => { _stepFaulted = true; },

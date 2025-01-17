@@ -21,8 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     internal interface ISqsMessageCreator
@@ -41,11 +39,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return new HeaderResult<string>(string.Empty, true);
         }
 
-        protected Message FailureMessage(HeaderResult<RoutingKey> topic, HeaderResult<string> messageId)
+        protected Message FailureMessage(HeaderResult<RoutingKey> topic, HeaderResult<string?> messageId)
         {
+            var id = messageId.Success ? messageId.Result : string.Empty;
+            var routingKey = topic.Success ? topic.Result : RoutingKey.Empty;
+            
             var header = new MessageHeader(
-                messageId.Success ? messageId.Result : string.Empty,
-                topic.Success ? topic.Result : RoutingKey.Empty,
+                id!,
+                routingKey!,
                 MessageType.MT_UNACCEPTABLE);
             var message = new Message(header, new MessageBody(string.Empty));
             return message;

@@ -59,7 +59,7 @@ public class Waker<TData>
     /// </summary>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous run operation.</returns>
-    public void RunAsync(CancellationToken cancellationToken = default)
+    public void RunAsync(CancellationToken cancellationToken = default(CancellationToken))
     {
         s_logger.LogInformation("Starting waker {WakerName}", _wakerName);
         
@@ -79,7 +79,7 @@ public class Waker<TData>
         s_logger.LogInformation("Finished waker {WakerName}", _wakerName);
     }
 
-    private async Task Wake(CancellationToken cancellationToken)
+    private async Task Wake(CancellationToken cancellationToken = default(CancellationToken))
     {
         while (true)
         {

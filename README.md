@@ -63,6 +63,9 @@ We release the build artefacts (NuGet packages) to [NuGet](http://nuget.org) on 
        src="https://scan.coverity.com/projects/2900/badge.svg"/>
 </a>
 
+## Sources
+
+Portions of this code are based on Stephen Cleary's [AsyncEx's AsyncContext](https://github.com/StephenCleary/AsyncEx/blob/master/doc/AsyncContext.md)
 
 ![CodeScene Code Health](https://codescene.io/projects/32198/status-badges/code-health)
 

@@ -40,14 +40,14 @@ public interface IAmAJobChannel<TData>
     /// <param name="job">The job to enqueue.</param>
     /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A task that represents the asynchronous enqueue operation.</returns>
-    Task EnqueueJobAsync(Job<TData> job, CancellationToken cancellationToken = default);
+    Task EnqueueJobAsync(Job<TData> job, CancellationToken cancellationToken = default(CancellationToken));
 
     /// <summary>
     /// Dequeues a job from the channel.
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns>A task that represents the asynchronous dequeue operation. The task result contains the dequeued job.</returns>
-    Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken = default);
+    Task<Job<TData>?> DequeueJobAsync(CancellationToken cancellationToken = default(CancellationToken));
 
     /// <summary>
     /// Streams jobs from the channel.

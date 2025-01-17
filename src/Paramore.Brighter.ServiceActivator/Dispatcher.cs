@@ -103,7 +103,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
-        /// <param name="requestContextFactory">The factory used to make a request context</param>
+        /// <param name="requestContextFactory">The factory used to make a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>
@@ -131,6 +131,10 @@ namespace Paramore.Brighter.ServiceActivator
 
             if (messageMapperRegistry is null && messageMapperRegistryAsync is null)
                 throw new ConfigurationException("You must provide a message mapper registry or an async message mapper registry");
+                                       
+            //not all pipelines need a transformer factory
+            _messageTransformerFactory ??= new EmptyMessageTransformerFactory();
+            _messageTransformerFactoryAsync ??= new EmptyMessageTransformerFactoryAsync();
 
             State = DispatcherState.DS_NOTREADY;
 
@@ -149,7 +153,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="messageMapperRegistryAsync">Async message mapper registry.</param>
         /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         /// <param name="messageTransformerFactoryAsync">Creates instances of Transforms async</param>
-        /// <param name="requestContextFactory">The factory used to make a request context</param>
+        /// <param name="requestContextFactory">The factory used to make a request synchronizationHelper</param>
         /// <param name="tracer">What is the <see cref="BrighterTracer"/> we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
         /// throws <see cref="ConfigurationException">You must provide at least one type of message mapper registry</see>        
@@ -371,7 +375,9 @@ namespace Paramore.Brighter.ServiceActivator
 
             while (State != DispatcherState.DS_RUNNING)
             {
-                Task.Delay(100).Wait();
+                Task.Delay(100)
+                    .GetAwaiter()
+                    .GetResult(); //Block main Dispatcher thread whilst control plane starts
             }
         }
 
@@ -392,7 +398,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", consumerNumber, subscription.Name);
             var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
-            if (!subscription.RunAsync)
+            if (subscription.MessagePumpType == MessagePumpType.Reactor)
             {
                 var types = new[]
                 {
@@ -417,7 +423,6 @@ namespace Paramore.Brighter.ServiceActivator
             }
             else
             {
-               
                  var types = new[]
                  {
                      typeof(IAmACommandProcessorProvider),typeof(Subscription),  typeof(IAmAMessageMapperRegistryAsync), 

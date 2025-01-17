@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
@@ -31,34 +32,45 @@ using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    public class ValidateTopicByArn : IDisposable, IValidateTopic
+     public class ValidateTopicByArn : IDisposable, IValidateTopic
     {
         private AmazonSimpleNotificationServiceClient _snsClient;
 
-        public ValidateTopicByArn(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ValidateTopicByArn"/> class.
+        /// </summary>
+        /// <param name="credentials">The AWS credentials.</param>
+        /// <param name="region">The AWS region.</param>
+        /// <param name="clientConfigAction">An optional action to configure the client.</param>
+        public ValidateTopicByArn(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null)
         {
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _snsClient = clientFactory.CreateSnsClient();
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ValidateTopicByArn"/> class.
+        /// </summary>
+        /// <param name="snsClient">The SNS client.</param>
         public ValidateTopicByArn(AmazonSimpleNotificationServiceClient snsClient)
         {
             _snsClient = snsClient;
         }
 
-        public virtual async Task<(bool, string TopicArn)> ValidateAsync(string topicArn)
+        /// <summary>
+        /// Validates the specified topic ARN asynchronously.
+        /// </summary>
+        /// <param name="topicArn">The ARN of the topic to validate.</param>
+        /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
+        /// <returns>A tuple indicating whether the topic is valid and its ARN.</returns>
+        public virtual async Task<(bool, string? TopicArn)> ValidateAsync(string topicArn, CancellationToken cancellationToken = default)
         {
-            //List topics does not work across accounts - GetTopicAttributesRequest works within the region
-            //List Topics is rate limited to 30 ListTopic transactions per second, and can be rate limited
-            //So where we can, we validate a topic using GetTopicAttributesRequest
-            
             bool exists = false;
 
             try
             {
                 var topicAttributes = await _snsClient.GetTopicAttributesAsync(
-                    new GetTopicAttributesRequest(topicArn)
-                );
+                    new GetTopicAttributesRequest(topicArn), cancellationToken);
 
                 exists = ((topicAttributes.HttpStatusCode == HttpStatusCode.OK)  && (topicAttributes.Attributes["TopicArn"] == topicArn));
             }
@@ -78,6 +90,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return (exists, topicArn);
         }
 
+        /// <summary>
+        /// Disposes the SNS client.
+        /// </summary>
         public void Dispose()
         {
             _snsClient?.Dispose();

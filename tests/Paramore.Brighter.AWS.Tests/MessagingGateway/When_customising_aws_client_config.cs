@@ -12,10 +12,10 @@ using Xunit;
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
-    public class CustomisingAwsClientConfigTests : IDisposable
+    public class CustomisingAwsClientConfigTests : IDisposable, IAsyncDisposable
     {
         private readonly Message _message;
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
 
@@ -35,6 +35,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
+                messagePumpType: MessagePumpType.Reactor,
                 routingKey: routingKey
             );
             
@@ -51,7 +52,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             });
             
             _channelFactory = new ChannelFactory(subscribeAwsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            _channel = _channelFactory.CreateSyncChannel(subscription);
 
             var publishAwsConnection = new AWSMessagingGatewayConnection(credentials, region, config =>
             {
@@ -81,9 +82,15 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _channelFactory?.DeleteTopic();
-            _channelFactory?.DeleteQueue();
-            _messageProducer?.Dispose();
+            //Clean up resources that we have created
+            _channelFactory.DeleteTopicAsync().Wait();
+            _channelFactory.DeleteQueueAsync().Wait();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _channelFactory.DeleteTopicAsync();
+            await _channelFactory.DeleteQueueAsync();
         }
     }
 }

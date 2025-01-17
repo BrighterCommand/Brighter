@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,154 +25,181 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ;
+
+/// <summary>
+/// Class MessageGatewayConnectionPool.
+/// </summary>
+public class RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
 {
+    private static readonly Dictionary<string, PooledConnection> s_connectionPool = new();
+
+    private static readonly SemaphoreSlim s_lock = new SemaphoreSlim(1, 1);
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGatewayConnectionPool>();
+    private static readonly Random jitter = new Random();
+
     /// <summary>
-    /// Class MessageGatewayConnectionPool.
+    /// Return matching RabbitMQ subscription if exist (match by amqp scheme)
+    /// or create new subscription to RabbitMQ (thread-safe)
     /// </summary>
-    public class RmqMessageGatewayConnectionPool
+    /// <param name="connectionFactory"></param>
+    /// <returns></returns>
+    public IConnection GetConnection(ConnectionFactory connectionFactory) => BrighterSynchronizationHelper.Run(() => GetConnectionAsync(connectionFactory));
+
+    /// <summary>
+    /// Return matching RabbitMQ subscription if exist (match by amqp scheme)
+    /// or create new subscription to RabbitMQ (thread-safe)
+    /// </summary>
+    /// <param name="connectionFactory">A <see cref="ConnectionFactory"/> to create new connections</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> to cancel the operation</param>
+    /// <returns></returns>
+    public async Task<IConnection> GetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
     {
-        private readonly string _connectionName;
-        private readonly ushort _connectionHeartbeat;
-        private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
-        private static readonly object s_lock = new object();
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGatewayConnectionPool>();
-        private static readonly Random jitter = new Random();
+        var connectionId = GetConnectionId(connectionFactory);
 
-        public RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
-        {
-            _connectionName = connectionName;
-            _connectionHeartbeat = connectionHeartbeat;
-        }
-        
-        /// <summary>
-        /// Return matching RabbitMQ subscription if exist (match by amqp scheme)
-        /// or create new subscription to RabbitMQ (thread-safe)
-        /// </summary>
-        /// <param name="connectionFactory"></param>
-        /// <returns></returns>
-        public IConnection GetConnection(ConnectionFactory connectionFactory)
-        {
-            var connectionId = GetConnectionId(connectionFactory);
+        var connectionFound = s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection);
 
-            var connectionFound = s_connectionPool.TryGetValue(connectionId, out PooledConnection pooledConnection);
-
-            if (connectionFound && pooledConnection.Connection.IsOpen)
-                return pooledConnection.Connection;
-
-            lock (s_lock)
-            {
-                connectionFound = s_connectionPool.TryGetValue(connectionId, out pooledConnection);
-
-                if (connectionFound == false || pooledConnection.Connection.IsOpen == false)
-                {
-                    pooledConnection = CreateConnection(connectionFactory);
-                }
-            }
-
+        if (connectionFound && pooledConnection!.Connection.IsOpen)
             return pooledConnection.Connection;
-        }
 
-        public void ResetConnection(ConnectionFactory connectionFactory)
+        await s_lock.WaitAsync(cancellationToken);
+        
+        try
         {
-            lock (s_lock)
-            {
-                DelayReconnecting();
+            connectionFound = s_connectionPool.TryGetValue(connectionId, out pooledConnection);
 
-                try
-                {
-                    CreateConnection(connectionFactory);
-                }
-                catch (BrokerUnreachableException exception)
-                {
-                    s_logger.LogError(exception,
-                        "RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {URL}",
-                        connectionFactory.Endpoint);
-                }
+            if (connectionFound == false || pooledConnection!.Connection.IsOpen == false)
+            {
+                pooledConnection = await CreateConnectionAsync(connectionFactory, cancellationToken);
             }
         }
-
-        private PooledConnection CreateConnection(ConnectionFactory connectionFactory)
+        finally
         {
-            var connectionId = GetConnectionId(connectionFactory);
+            s_lock.Release();
+        }
 
-            TryRemoveConnection(connectionId);
+        return pooledConnection.Connection;
+    }
 
-            s_logger.LogDebug("RmqMessageGatewayConnectionPool: Creating subscription to Rabbit MQ endpoint {URL}", connectionFactory.Endpoint);
+      public async Task ResetConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+      {
+          await s_lock.WaitAsync(cancellationToken);
 
-            connectionFactory.RequestedHeartbeat = TimeSpan.FromSeconds(_connectionHeartbeat);
-            connectionFactory.RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000);
-            connectionFactory.SocketReadTimeout = TimeSpan.FromMilliseconds(5000);
-            connectionFactory.SocketWriteTimeout = TimeSpan.FromMilliseconds(5000);
+          try
+          {
+              await DelayReconnectingAsync();
 
-            var connection = connectionFactory.CreateConnection(_connectionName);
+              try
+              {
+                  await CreateConnectionAsync(connectionFactory, cancellationToken);
+              }
+              catch (BrokerUnreachableException exception)
+              {
+                  s_logger.LogError(exception,
+                      "RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {URL}",
+                      connectionFactory.Endpoint);
+              }
+          }
+          finally
+          {
+              s_lock.Release();
+          }
+      }
+    
+    /// <summary>
+    /// Remove the connection from the pool
+    /// </summary>
+    /// <param name="connectionFactory">The factory that creates broker connections</param>
+    public async Task RemoveConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+    {
+        var connectionId = GetConnectionId(connectionFactory);
 
-            s_logger.LogDebug("RmqMessageGatewayConnectionPool: new connected to {URL} added to pool named {ProviderName}", connection.Endpoint, connection.ClientProvidedName);
-
-
-            void ShutdownHandler(object sender, ShutdownEventArgs e)
+        if (s_connectionPool.ContainsKey(connectionId))
+        {
+            await s_lock.WaitAsync(cancellationToken);
+            try
             {
-                s_logger.LogWarning("RmqMessageGatewayConnectionPool: The subscription {URL} has been shutdown due to {ErrorMessage}", connection.Endpoint, e.ToString());
-
-                lock (s_lock)
-                {
-                    TryRemoveConnection(connectionId);
-                }
+                await TryRemoveConnectionAsync(connectionId);
             }
-
-            connection.ConnectionShutdown += ShutdownHandler;
-
-            var pooledConnection = new PooledConnection{Connection = connection, ShutdownHandler = ShutdownHandler};
-
-            s_connectionPool.Add(connectionId, pooledConnection);
-
-            return pooledConnection;
-        }
-
-        private void TryRemoveConnection(string connectionId)
-        {
-            if (s_connectionPool.TryGetValue(connectionId, out PooledConnection pooledConnection))
+            finally
             {
-                    pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler;
-                pooledConnection.Connection.Dispose();
-                s_connectionPool.Remove(connectionId);
-            }
-        }
-
-        private string GetConnectionId(ConnectionFactory connectionFactory)
-        {
-            return $"{connectionFactory.UserName}.{connectionFactory.Password}.{connectionFactory.HostName}.{connectionFactory.Port}.{connectionFactory.VirtualHost}".ToLowerInvariant();
-        }
-
-        private static void DelayReconnecting()
-        {
-            Task.Delay(jitter.Next(5, 100)).Wait();
-        }
-
-
-        class PooledConnection
-        {
-            public IConnection Connection { get; set; }
-            public EventHandler<ShutdownEventArgs> ShutdownHandler { get; set; }
-        }
-
-        public void RemoveConnection(ConnectionFactory connectionFactory)
-        {
-            var connectionId = GetConnectionId(connectionFactory);
-
-            if (s_connectionPool.ContainsKey(connectionId))
-            {
-                lock (s_lock)
-                {
-                    TryRemoveConnection(connectionId);
-                }
+                s_lock.Release();
             }
         }
     }
+
+    private async Task<PooledConnection> CreateConnectionAsync(ConnectionFactory connectionFactory, CancellationToken cancellationToken = default)
+    {
+        var connectionId = GetConnectionId(connectionFactory);
+
+        await TryRemoveConnectionAsync(connectionId);
+
+        s_logger.LogDebug("RmqMessageGatewayConnectionPool: Creating subscription to Rabbit MQ endpoint {URL}",
+            connectionFactory.Endpoint);
+
+        connectionFactory.RequestedHeartbeat = TimeSpan.FromSeconds(connectionHeartbeat);
+        connectionFactory.RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000);
+        connectionFactory.SocketReadTimeout = TimeSpan.FromMilliseconds(5000);
+        connectionFactory.SocketWriteTimeout = TimeSpan.FromMilliseconds(5000);
+
+        var connection = await connectionFactory.CreateConnectionAsync(connectionName, cancellationToken);
+
+        s_logger.LogDebug("RmqMessageGatewayConnectionPool: new connected to {URL} added to pool named {ProviderName}",
+            connection.Endpoint, connection.ClientProvidedName);
+
+
+        async Task ShutdownHandler(object sender, ShutdownEventArgs e)
+        {
+            s_logger.LogWarning(
+                "RmqMessageGatewayConnectionPool: The subscription {URL} has been shutdown due to {ErrorMessage}",
+                connection.Endpoint, e.ToString());
+
+            await s_lock.WaitAsync(e.CancellationToken);
+
+            try
+            {
+                await TryRemoveConnectionAsync(connectionId);
+            }
+            finally
+            {
+                s_lock.Release();
+            }
+        }
+
+        connection.ConnectionShutdownAsync += ShutdownHandler;
+
+        var pooledConnection = new PooledConnection(connection, ShutdownHandler);
+
+        s_connectionPool.Add(connectionId, pooledConnection);
+
+        return pooledConnection;
+    }
+    
+    private static async Task DelayReconnectingAsync() => await Task.Delay(jitter.Next(5, 100));
+    
+    private async Task TryRemoveConnectionAsync(string connectionId)
+    {
+        if (s_connectionPool.TryGetValue(connectionId, out PooledConnection? pooledConnection))
+        {
+            pooledConnection.Connection.ConnectionShutdownAsync -= pooledConnection.ShutdownHandler;
+            await pooledConnection.Connection.DisposeAsync();
+            s_connectionPool.Remove(connectionId);
+        }
+    }
+
+    private static string GetConnectionId(ConnectionFactory connectionFactory)
+        =>
+            $"{connectionFactory.UserName}.{connectionFactory.Password}.{connectionFactory.HostName}.{connectionFactory.Port}.{connectionFactory.VirtualHost}"
+                .ToLowerInvariant();
+
+    private record PooledConnection(IConnection Connection, AsyncEventHandler<ShutdownEventArgs> ShutdownHandler);
 }

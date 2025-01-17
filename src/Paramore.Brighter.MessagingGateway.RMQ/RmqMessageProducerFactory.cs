@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -41,10 +42,19 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
             foreach (var publication in publications)
             {
+                if (publication.Topic is null || RoutingKey.IsNullOrEmpty(publication.Topic))
+                    throw new ConfigurationException($"A RabbitMQ publication must have a topic");
+                    
                 producers[publication.Topic] = new RmqMessageProducer(connection, publication);
             }
 
             return producers;
+        }
+
+        /// <inheritdoc /> 
+        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        {
+            return Task.FromResult(Create());
         }
     }
 }

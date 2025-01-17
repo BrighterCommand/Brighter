@@ -57,6 +57,9 @@ public abstract class Job
     /// <summary> Is the job scheduled to run?</summary>
     public bool IsScheduled => DueTime.HasValue;
     
+    /// <summary> The id of the parent job, if this is a child job </summary>
+    public string? ParentId { get; set; }
+    
     /// <summary> Is the job waiting to be run, running, waiting for a response or finished </summary>
     public JobState State { get; set; }
 }
@@ -69,10 +72,12 @@ public class Job<TData> : Job
 {
      
     /// <summary> If we are awaiting a response, we store the type of the response and the action to take when it arrives </summary>
-    private readonly Dictionary<Type, TaskResponse<TData>?> _pendingResponses = new();
+    private readonly ConcurrentDictionary<Type, TaskResponse<TData>?> _pendingResponses = new();
 
     /// <summary>The next step. Steps are a linked list. The final step in the list has null for it's next step. </summary>
     private Step<TData>? _step;
+
+    private ConcurrentDictionary<string, Job> _children = new();  
 
     /// <summary> The data that is passed between steps of the workflow </summary>
     public TData Data { get; private set; }
@@ -116,7 +121,8 @@ public class Job<TData> : Job
         lock (LockObject)
         {
             State = JobState.Waiting;
-            _pendingResponses.Add(responseType, taskResponse);
+            if (!_pendingResponses.TryAdd(responseType, taskResponse))
+                throw new InvalidOperationException($"A pending response for {responseType} already exists");
         }
     }
 
@@ -141,9 +147,8 @@ public class Job<TData> : Job
             _step = nextStep;
             if (_step is not null)
                 _step.AddToJob(this);
-            else 
-            if (State != JobState.Waiting) 
-                State = JobState.Done;
+            else if (State != JobState.Waiting) 
+                    State = JobState.Done;
         }
     }
     
@@ -158,11 +163,23 @@ public class Job<TData> : Job
 
         lock (LockObject)
         {
-            var success = _pendingResponses.Remove(eventType);
+            var success = _pendingResponses.Remove(eventType, out _);
             _step.OnCompletion?.Invoke();
             _step = _step.Next;
             if (success) State = JobState.Running;
             return success;
         }
     }
+
+    /// <summary>
+    /// Sets an identifier on each child to indicate the parent id
+    /// Adds the child to a hashtable of children
+    /// </summary>
+    /// <param name="child">The job we want to add as a child</param>
+    public void AddChildJob(Job<TData> child)
+    {
+        child.ParentId = Id;
+        _children.TryAdd(child.Id, child);
+    }
+
 }

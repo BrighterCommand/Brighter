@@ -31,13 +31,13 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
     {
         private readonly RoutingKey _routingKey = new("myTopic");
         private const string ChannelName = "myChannel";
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly InternalBus _bus;
 
         public ChannelStopTests()
         {
             _bus = new InternalBus();
-            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000)); 
+            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000)); 
 
             _channel = new Channel(new(ChannelName),_routingKey, gateway);
 

@@ -395,7 +395,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var i = dr.GetOrdinal("Body");
             var body = dr.GetStream(i);
             var buffer = new byte[body.Length];
-            body.Read(buffer, 0, (int)body.Length);
+            body.ReadExactly(buffer, 0, (int)body.Length);
             return buffer;
         }
 

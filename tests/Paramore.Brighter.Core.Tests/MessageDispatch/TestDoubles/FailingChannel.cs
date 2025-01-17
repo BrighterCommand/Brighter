@@ -27,7 +27,7 @@ using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
-    internal class FailingChannel(ChannelName channelName, RoutingKey topic, IAmAMessageConsumer messageConsumer, int maxQueueLength= 1, bool brokenCircuit = false)
+    internal class FailingChannel(ChannelName channelName, RoutingKey topic, IAmAMessageConsumerSync messageConsumer, int maxQueueLength= 1, bool brokenCircuit = false)
         : Channel(channelName, topic, messageConsumer, maxQueueLength)
     {
         public int NumberOfRetries { get; set; } = 0;
