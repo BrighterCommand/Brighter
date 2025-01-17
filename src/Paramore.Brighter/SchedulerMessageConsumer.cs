@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter;
 
@@ -9,8 +11,10 @@ public class SchedulerMessageConsumer<TTransaction>(
     IAmASchedulerMessageConsumerSync, 
     IAmASchedulerMessageConsumerAsync
 {
+    private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SchedulerMessageConsumer<TTransaction>>();
     public async Task ConsumeAsync(Message message, RequestContext context)
     {
+        s_logger.LogInformation("Publishing scheduler message");
         if (!mediator.HasOutbox())
         {
             throw new InvalidOperationException("No outbox defined.");
@@ -23,6 +27,7 @@ public class SchedulerMessageConsumer<TTransaction>(
 
     public void Consume(Message message, RequestContext context)
     {
+        s_logger.LogInformation("Publishing scheduler message");
         if (!mediator.HasOutbox())
         {
             throw new InvalidOperationException("No outbox defined.");

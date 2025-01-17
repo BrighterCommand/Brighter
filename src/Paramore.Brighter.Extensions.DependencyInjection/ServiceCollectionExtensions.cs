@@ -315,6 +315,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var requestContextFactory = provider.GetService<IAmARequestContextFactory>();
             
             var builder = contextBuilder.RequestContextFactory(requestContextFactory);
+
+            var schedulerMessageFactory = provider.GetService<IAmAMessageSchedulerFactory>();
+
+            builder.MessageSchedulerFactory(schedulerMessageFactory);
                 
             var commandProcessor = builder.Build();
 

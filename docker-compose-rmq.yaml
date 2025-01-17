@@ -1,16 +1,7 @@
-version: '3'
-
 services:
   rabbitmq:
-    image: brightercommand/rabbitmq:latest
+    image: masstransit/rabbitmq
     platform: linux/arm64 
     ports:
       - "5672:5672"
       - "15672:15672"
-    volumes:
-      - rabbitmq-home:/var/lib/rabbitmq
-
-volumes:
-  rabbitmq-home:
-    driver: local
-  

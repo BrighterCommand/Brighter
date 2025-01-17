@@ -441,7 +441,7 @@ namespace Paramore.Brighter
     // TODO Add doc
     public interface INeedAMessageSchedulerFactory
     {
-        IAmACommandProcessorBuilder MessageSchedulerFactory(IAmAMessageSchedulerFactory messageSchedulerFactory);
+        
     }
     
     /// <summary>
@@ -449,6 +449,8 @@ namespace Paramore.Brighter
     /// </summary>
     public interface IAmACommandProcessorBuilder
     {
+        IAmACommandProcessorBuilder MessageSchedulerFactory(IAmAMessageSchedulerFactory messageSchedulerFactory);
+         
         /// <summary>
         /// Builds this instance.
         /// </summary>

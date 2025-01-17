@@ -58,7 +58,6 @@ namespace Paramore.Brighter
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
-        private readonly IAmAMessageSchedulerFactory? _messageSchedulerFactory;
 
         private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
 
@@ -113,8 +112,7 @@ namespace Paramore.Brighter
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
             TimeProvider? timeProvider = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
-            IAmAMessageSchedulerFactory? messageSchedulerFactory = null)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
         {
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
@@ -153,7 +151,6 @@ namespace Paramore.Brighter
             _outBoxBag = outBoxBag ?? new Dictionary<string, object>();
             _instrumentationOptions = instrumentationOptions;
             _tracer = tracer;
-            _messageSchedulerFactory = messageSchedulerFactory;
 
             ConfigureCallbacks(requestContextFactory.Create());
         }
