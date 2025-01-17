@@ -1,5 +1,9 @@
 # ADR: Implementing Parallel Split Step for Concurrent Workflow Execution
 
+## Status
+
+Proposed
+
 ## Context
 
 Our workflow currently supports sequential steps executed in a single thread of control. Each step in the workflow proceeds one after another, and the Mediator has been designed with this single-threaded assumption.
