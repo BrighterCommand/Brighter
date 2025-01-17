@@ -58,6 +58,7 @@ namespace Paramore.Brighter
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly InstrumentationOptions _instrumentationOptions;
         private readonly Dictionary<string, List<TMessage>> _outboxBatches = new();
+        private readonly IAmAMessageSchedulerFactory? _messageSchedulerFactory;
 
         private static readonly SemaphoreSlim s_clearSemaphoreToken = new(1, 1);
 
@@ -104,7 +105,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            IAmABrighterTracer tracer,
+            IAmABrighterTracer tracer, 
             IAmAnOutbox? outbox = null,
             IAmARequestContextFactory? requestContextFactory = null,
             int outboxTimeout = 300,
@@ -112,7 +113,8 @@ namespace Paramore.Brighter
             TimeSpan? maxOutStandingCheckInterval = null,
             Dictionary<string, object>? outBoxBag = null,
             TimeProvider? timeProvider = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            IAmAMessageSchedulerFactory? messageSchedulerFactory = null)
         {
             _producerRegistry = producerRegistry ??
                                 throw new ConfigurationException("Missing Producer Registry for External Bus Services");
@@ -151,6 +153,7 @@ namespace Paramore.Brighter
             _outBoxBag = outBoxBag ?? new Dictionary<string, object>();
             _instrumentationOptions = instrumentationOptions;
             _tracer = tracer;
+            _messageSchedulerFactory = messageSchedulerFactory;
 
             ConfigureCallbacks(requestContextFactory.Create());
         }
@@ -748,7 +751,8 @@ namespace Paramore.Brighter
             return false;
         }
 
-        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext,
+        private void Dispatch(IEnumerable<Message> posts, 
+            RequestContext requestContext,
             Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;

@@ -78,7 +78,13 @@ namespace Paramore.Brighter
     ///     </item>
     /// </list> 
     /// </summary>
-    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedInstrumentation, INeedARequestContext, IAmACommandProcessorBuilder
+    public class CommandProcessorBuilder : INeedAHandlers, 
+        INeedPolicy,
+        INeedMessaging, 
+        INeedInstrumentation, 
+        INeedARequestContext, 
+        INeedAMessageSchedulerFactory,
+        IAmACommandProcessorBuilder
     {
         private IAmARequestContextFactory? _requestContextFactory;
         private IAmASubscriberRegistry? _registry;
@@ -93,6 +99,7 @@ namespace Paramore.Brighter
         private InboxConfiguration? _inboxConfiguration;
         private InstrumentationOptions? _instrumetationOptions;
         private IAmABrighterTracer? _tracer;
+        private IAmAMessageSchedulerFactory? _messageSchedulerFactory;
 
         private CommandProcessorBuilder()
         {
@@ -250,6 +257,12 @@ namespace Paramore.Brighter
             _requestContextFactory = requestContextFactory;
             return this;
         }
+        
+        public IAmACommandProcessorBuilder MessageSchedulerFactory(IAmAMessageSchedulerFactory messageSchedulerFactory)
+        {
+            _messageSchedulerFactory = messageSchedulerFactory;
+            return this;
+        }
 
         /// <summary>
         /// Builds the <see cref="CommandProcessor"/> from the configuration.
@@ -290,7 +303,8 @@ namespace Paramore.Brighter
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
-                    instrumentationOptions: _instrumetationOptions.Value
+                    instrumentationOptions: _instrumetationOptions.Value,
+                    messageSchedulerFactory: _messageSchedulerFactory
                 );
             
             if (_useRequestReplyQueues)
@@ -305,12 +319,15 @@ namespace Paramore.Brighter
                     replySubscriptions: _replySubscriptions,
                     responseChannelFactory: _responseChannelFactory,
                     tracer: _tracer,
-                    instrumentationOptions: _instrumetationOptions.Value
+                    instrumentationOptions: _instrumetationOptions.Value,
+                    messageSchedulerFactory: _messageSchedulerFactory
                 );
 
             throw new ConfigurationException(
                 "The configuration options chosen cannot be used to construct a command processor");
             }
+
+        
     }
 
     #region Progressive interfaces
@@ -420,6 +437,12 @@ namespace Paramore.Brighter
         /// <returns>IAmACommandProcessorBuilder.</returns>
         IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
     }
+
+    // TODO Add doc
+    public interface INeedAMessageSchedulerFactory
+    {
+        IAmACommandProcessorBuilder MessageSchedulerFactory(IAmAMessageSchedulerFactory messageSchedulerFactory);
+    }
     
     /// <summary>
     /// Interface IAmACommandProcessorBuilder
@@ -432,5 +455,6 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         CommandProcessor Build();
     }
+    
     #endregion
 }
