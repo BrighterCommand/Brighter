@@ -9,7 +9,7 @@
     <PackageVersion Include="AWSSDK.S3" Version="3.7.411.7" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.28" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.79" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.79" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.82" />
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
