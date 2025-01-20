@@ -141,7 +141,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>
-    public abstract void Purge();
+    public void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
         
     /// <summary>
     /// Purges the specified queue name.
@@ -309,7 +309,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
 
     private Message MapToBrighterMessage(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (azureServiceBusMessage.MessageBodyValue == null)
+        if (azureServiceBusMessage.MessageBodyValue is null)
         {
             Logger.LogWarning(
                 "Null message body received from topic {Topic} via subscription {ChannelName}",
@@ -356,21 +356,16 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
 
     private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (azureServiceBusMessage.ApplicationProperties == null ||
-            !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey,
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.MessageTypeHeaderBagKey,
                 out object? property))
             return MessageType.MT_EVENT;
 
-        if (Enum.TryParse(property.ToString(), true, out MessageType messageType))
-            return messageType;
-
-        return MessageType.MT_EVENT;
+        return Enum.TryParse(property.ToString(), true, out MessageType messageType) ? messageType : MessageType.MT_EVENT;
     }
 
     private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
     {
-        if (azureServiceBusMessage.ApplicationProperties is null ||
-            !azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey,
+        if (!azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.ReplyToHeaderBagKey,
                 out object? property))
         {
             return string.Empty;
@@ -384,8 +379,7 @@ public abstract class AzureServiceBusConsumer : IAmAMessageConsumerSync, IAmAMes
     private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
     {
         var count = 0;
-        if (azureServiceBusMessage.ApplicationProperties != null &&
-            azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
+        if (azureServiceBusMessage.ApplicationProperties.TryGetValue(ASBConstants.HandledCountHeaderBagKey,
                 out object? property))
         {
             int.TryParse(property.ToString(), out count);
