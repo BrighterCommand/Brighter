@@ -86,7 +86,7 @@ namespace GreetingsSender
 
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
-                var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+                var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
 
                 commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
                 
@@ -100,7 +100,7 @@ namespace GreetingsSender
                         break;
                     }
 
-                    commandProcessor.Scheduler(TimeSpan.FromSeconds(1), new GreetingEvent($"Ian says: Hi {name}"));
+                    commandProcessor.SchedulerPost(TimeSpan.FromSeconds(10), new GreetingEvent($"Ian says: Hi {name}"));
                 }
 
                 commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));

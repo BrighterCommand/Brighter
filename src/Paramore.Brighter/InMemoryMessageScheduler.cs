@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
+using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter;
@@ -8,15 +10,15 @@ namespace Paramore.Brighter;
 public class InMemoryMessageScheduler : IAmAMessageSchedulerSync
 {
     private readonly SchedulerMessageCollection _messages = new();
-    private readonly IAmASchedulerMessageConsumer _consumer;
+    private readonly IAmACommandProcessor _processor;
 
     private readonly Timer _timer;
 
-    public InMemoryMessageScheduler(IAmASchedulerMessageConsumer consumer,
+    public InMemoryMessageScheduler(IAmACommandProcessor processor,
         TimeSpan initialDelay,
         TimeSpan period)
     {
-        _consumer = consumer;
+        _processor = processor;
         _timer = new Timer(Consume, this, initialDelay, period);
     }
 
@@ -28,38 +30,43 @@ public class InMemoryMessageScheduler : IAmAMessageSchedulerSync
         var schedulerMessage = scheduler._messages.Next(now);
         while (schedulerMessage != null)
         {
-            if (scheduler._consumer is IAmASchedulerMessageConsumerSync syncConsumer)
+            BrighterAsyncContext.Run(async () => await scheduler._processor.SendAsync(new SchedulerMessageFired(schedulerMessage.Id)
             {
-                syncConsumer.Consume(schedulerMessage.Message, schedulerMessage.Context);
-            }
-            else if (scheduler._consumer is IAmASchedulerMessageConsumerAsync asyncConsumer)
-            {
-                var tmp = schedulerMessage;
-                BrighterAsyncContext.Run(async () => await asyncConsumer.ConsumeAsync(tmp.Message, tmp.Context));
-            }
+                FireType = schedulerMessage.FireType,
+                MessageType = schedulerMessage.MessageType,
+                MessageData = schedulerMessage.MessageData,
+            }));
 
             // TODO Add log
             schedulerMessage = scheduler._messages.Next(now);
         }
     }
 
-    public string Schedule(DateTimeOffset at, Message message, RequestContext context)
+    public string Schedule<TRequest>(DateTimeOffset at, SchedulerFireType fireType, TRequest request)
+        where TRequest : class, IRequest
     {
         var id = Guid.NewGuid().ToString();
-        _messages.Add(new SchedulerMessage(id, message, context, at));
+        _messages.Add(new SchedulerMessage(id, at, fireType,
+            typeof(TRequest).FullName!,
+            JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)));
         return id;
     }
 
-    public string Schedule(TimeSpan delay, Message message, RequestContext context) 
-        => Schedule(DateTimeOffset.UtcNow.Add(delay), message, context);
+    public string Schedule<TRequest>(TimeSpan delay, SchedulerFireType fireType, TRequest request)
+        where TRequest : class, IRequest
+        => Schedule(DateTimeOffset.UtcNow.Add(delay), fireType, request);
 
-    public void CancelScheduler(string id) 
+    public void CancelScheduler(string id)
         => _messages.Delete(id);
 
     public void Dispose() => _timer.Dispose();
 
-
-    private record SchedulerMessage(string Id, Message Message, RequestContext Context, DateTimeOffset At);
+    private record SchedulerMessage(
+        string Id,
+        DateTimeOffset At,
+        SchedulerFireType FireType,
+        string MessageType,
+        string MessageData);
 
     private class SchedulerMessageCollection
     {

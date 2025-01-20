@@ -37,6 +37,7 @@ using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using Polly;
 using Polly.Registry;
@@ -225,70 +226,49 @@ namespace Paramore.Brighter
         }
 
         /// <inheritdoc />
-        public void Scheduler<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null) 
-            where TRequest : class, IRequest 
-            => Scheduler<TRequest, CommittableTransaction>(delay, request, null, requestContext);
-
-        public void Scheduler<TRequest, TTransaction>(TimeSpan delay, 
-             TRequest request, 
-             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
-             RequestContext? requestContext = null) 
-             where TRequest : class, IRequest
-         {
-            if (_messageSchedulerFactory == null)
-            {
-                throw new InvalidOperationException("No message scheduler factory set.");
-            }
+        public void SchedulerPost<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null) 
+            where TRequest : class, IRequest
+        {
+           if (_messageSchedulerFactory == null)
+           {
+               throw new InvalidOperationException("No message scheduler factory set.");
+           }
             
-            s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
-            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, request, requestContext?.Span, options: _instrumentationOptions);
-            var context = InitRequestContext(span, requestContext);
-
-             var message = s_mediator!.CreateMessageFromRequest(request, context);
-             var scheduler = _messageSchedulerFactory.Create(s_mediator, transactionProvider);
-             if (scheduler is IAmAMessageSchedulerSync sync)
-             {
-                 sync.Schedule(delay, message, context);
-             }
-             else if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
-             {
-                 BrighterAsyncContext.Run(async () => await asyncScheduler.ScheduleAsync(delay, message, context));
-             }
-         }
+           s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
+           var scheduler = _messageSchedulerFactory.Create(this);
+           if (scheduler is IAmAMessageSchedulerSync sync)
+           {
+               sync.Schedule(delay, SchedulerFireType.Post, request);
+           }
+           else if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+           {
+               BrighterAsyncContext.Run(async () => await asyncScheduler.ScheduleAsync(delay, SchedulerFireType.Post, request));
+           }
+        }
 
         /// <inheritdoc />
-        public void Scheduler<TRequest>(DateTimeOffset at,
+        public void SchedulerPost<TRequest>(DateTimeOffset at,
             TRequest request,
-            RequestContext? requestContext = null)
-            where TRequest : class, IRequest => Scheduler<TRequest, CommittableTransaction>(at, request, null, requestContext);
-        
-        public void Scheduler<TRequest, TTransaction>(DateTimeOffset at,
-            TRequest request,
-            IAmABoxTransactionProvider<TTransaction>? transactionProvider,
             RequestContext? requestContext = null)
             where TRequest : class, IRequest
         {
-            if (_messageSchedulerFactory == null)
+            if (_messageSchedulerFactory == null) 
             {
                 throw new InvalidOperationException("No message scheduler factory set.");
             }
             
             s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
-            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, request, requestContext?.Span, options: _instrumentationOptions);
-            var context = InitRequestContext(span, requestContext);
-
-             var message = s_mediator!.CreateMessageFromRequest(request, context);
-             var scheduler = _messageSchedulerFactory.Create(s_mediator, transactionProvider);
-             if (scheduler is IAmAMessageSchedulerSync sync)
-             {
-                 sync.Schedule(at, message, context);
-             }
-             else if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
-             {
-                 BrighterAsyncContext.Run(async () => await asyncScheduler.ScheduleAsync(at, message, context));
-             }
+            var scheduler = _messageSchedulerFactory.Create(this);
+            if (scheduler is IAmAMessageSchedulerSync sync)
+            {
+                sync.Schedule(at, SchedulerFireType.Post, request);
+            }
+            else if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+            {
+                BrighterAsyncContext.Run(async () => await asyncScheduler.ScheduleAsync(at, SchedulerFireType.Post, request));
+            }
         }
-           
+
 
         /// <inheritdoc />
         public async Task SchedulerAsync<TRequest>(TimeSpan delay,
@@ -296,41 +276,23 @@ namespace Paramore.Brighter
             RequestContext? requestContext = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) 
-            where TRequest : class, IRequest =>
-            await SchedulerAsync<TRequest, CommittableTransaction>(delay, 
-                request,
-                null, 
-                requestContext,
-                continueOnCapturedContext, 
-                cancellationToken);
-
-        public async Task SchedulerAsync<TRequest, TTransaction>(TimeSpan delay,
-            TRequest request,
-            IAmABoxTransactionProvider<TTransaction>? transactionProvider,
-            RequestContext? requestContext = null,
-            bool continueOnCapturedContext = true,
-            CancellationToken cancellationToken = default) 
             where TRequest : class, IRequest
-        {
+        { 
             if (_messageSchedulerFactory == null)
             {
                 throw new InvalidOperationException("No message scheduler factory set.");
             }
             
             s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
-            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, request, requestContext?.Span, options: _instrumentationOptions);
-            var context = InitRequestContext(span, requestContext);
-
-             var message = await s_mediator!.CreateMessageFromRequestAsync(request, context, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-             var scheduler = _messageSchedulerFactory.Create(s_mediator, transactionProvider);
-             if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
-             {
-                 await asyncScheduler.ScheduleAsync(delay, message, context, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-             }
-             else if (scheduler is IAmAMessageSchedulerSync sync)
-             {
-                 sync.Schedule(delay, message, context);
-             }
+            var scheduler = _messageSchedulerFactory.Create(this);
+            if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+            {
+                await asyncScheduler.ScheduleAsync(delay, SchedulerFireType.Post, request, cancellationToken);
+            }
+            else if (scheduler is IAmAMessageSchedulerSync sync)
+            {
+                sync.Schedule(delay, SchedulerFireType.Post, request);
+            }
         }
 
         /// <inheritdoc />
@@ -339,42 +301,25 @@ namespace Paramore.Brighter
             RequestContext? requestContext = null,
             bool continueOnCapturedContext = true, 
             CancellationToken cancellationToken = default) 
-            where TRequest : class, IRequest =>
-            await SchedulerAsync<TRequest, CommittableTransaction>(at, 
-                request,
-                null, 
-                requestContext,
-                continueOnCapturedContext, 
-                cancellationToken);
+            where TRequest : class, IRequest
+        {
+            if (_messageSchedulerFactory == null)
+            {
+                throw new InvalidOperationException("No message scheduler factory set.");
+            }
+            
+            s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
+            var scheduler = _messageSchedulerFactory.Create(this);
+            if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+            {
+                await asyncScheduler.ScheduleAsync(at, SchedulerFireType.Post, request, cancellationToken);
+            }
+            else if (scheduler is IAmAMessageSchedulerSync sync)
+            {
+                sync.Schedule(at, SchedulerFireType.Post, request);
+            }
+        }
 
-        public async Task SchedulerAsync<TRequest, TTransaction>(DateTimeOffset at,
-             TRequest request, 
-             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
-             RequestContext? requestContext = null,
-             bool continueOnCapturedContext = true, 
-             CancellationToken cancellationToken = default) 
-             where TRequest : class, IRequest
-         {
-             if (_messageSchedulerFactory == null)
-             {
-                 throw new InvalidOperationException("No message scheduler factory set.");
-             }
-                               
-             s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
-             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Send, request, requestContext?.Span, options: _instrumentationOptions);
-             var context = InitRequestContext(span, requestContext);
-                   
-             var message = await s_mediator!.CreateMessageFromRequestAsync(request, context, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-             var scheduler = _messageSchedulerFactory.Create(s_mediator, transactionProvider);
-             if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
-             {
-                 await asyncScheduler.ScheduleAsync(at, message, context, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-             }
-             else if (scheduler is IAmAMessageSchedulerSync sync)
-             {
-                 sync.Schedule(at, message, context);
-             } 
-         }
 
         /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.

@@ -46,7 +46,7 @@ namespace Paramore.Brighter
         /// <param name="delay">The amount of delay to be used before send the message.</param>
         /// <param name="request">The command.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory "/> </param>
-        void Scheduler<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null) where TRequest : class, IRequest;
+        void SchedulerPost<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null) where TRequest : class, IRequest;
         
         /// <summary>
         /// Sends the specified command.
@@ -55,7 +55,7 @@ namespace Paramore.Brighter
         /// <param name="at">The <see cref="DateTimeOffset"/> that the message should be published.</param>
         /// <param name="request">The command.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory "/> </param>
-        void Scheduler<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null) where TRequest : class, IRequest;
+        void SchedulerPost<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Awaitably sends the specified command.

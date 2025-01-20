@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Transactions;
 
 namespace Paramore.Brighter;
 
@@ -11,21 +9,25 @@ public class InMemoryMessageSchedulerFactory(TimeSpan initialDelay, TimeSpan per
     {
     }
 
-    private static readonly Dictionary<Type, IAmAMessageScheduler> s_schedulers = new();
-
-    public IAmAMessageScheduler Create(IAmAnOutboxProducerMediator mediator)
-        => Create<CommittableTransaction>(mediator, null);
-
-    public IAmAMessageScheduler Create<TTransaction>(IAmAnOutboxProducerMediator mediator,
-        IAmABoxTransactionProvider<TTransaction>? transactionProvider)
+    public IAmAMessageScheduler Create(IAmACommandProcessor processor)
     {
-        if (!s_schedulers.TryGetValue(typeof(TTransaction), out var scheduler))
+        return GetOrCreate(processor, initialDelay, period);
+    }
+
+    private static readonly object s_lock = new();
+    private static InMemoryMessageScheduler? s_scheduler;
+
+    private static InMemoryMessageScheduler GetOrCreate(IAmACommandProcessor processor, TimeSpan initialDelay,
+        TimeSpan period)
+    {
+        if (s_scheduler == null)
         {
-            var consumer = new SchedulerMessageConsumer<TTransaction>(mediator, transactionProvider);
-            scheduler = new InMemoryMessageScheduler(consumer, initialDelay, period);
-            s_schedulers[typeof(TTransaction)] = scheduler;
+            lock (s_lock)
+            {
+                s_scheduler ??= new InMemoryMessageScheduler(processor, initialDelay, period);
+            }
         }
 
-        return scheduler;
+        return s_scheduler;
     }
 }

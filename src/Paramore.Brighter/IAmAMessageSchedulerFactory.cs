@@ -2,8 +2,5 @@
 
 public interface IAmAMessageSchedulerFactory
 {
-    IAmAMessageScheduler Create(IAmAnOutboxProducerMediator mediator);
-
-    IAmAMessageScheduler Create<TTransaction>(IAmAnOutboxProducerMediator mediator,
-        IAmABoxTransactionProvider<TTransaction>? transactionProvider);
+    IAmAMessageScheduler Create(IAmACommandProcessor processor);
 }
