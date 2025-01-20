@@ -74,11 +74,16 @@ namespace Paramore.Brighter
             if (_messageMapperFactory is null)
                 return null;
 
-            var messageMapperType = _messageMappers.ContainsKey(typeof(TRequest))
-                ? _messageMappers[typeof(TRequest)]
-                : _defaultMessageMapper;
+            if (!_messageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapper != null)
+            {
+                messageMapperType = _defaultMessageMapper.MakeGenericType(typeof(TRequest));
+                _messageMappers.Add(typeof(TRequest), messageMapperType);
+            }
 
-            if (messageMapperType is null) return null;
+            if (messageMapperType is null)
+            {
+                return null;
+            }
 
             return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);
         }
@@ -92,12 +97,17 @@ namespace Paramore.Brighter
         {
             if (_messageMapperFactoryAsync is null)
                 return null;
+            
+            if (!_asyncMessageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapperAsync != null)
+            {
+                messageMapperType = _defaultMessageMapperAsync.MakeGenericType(typeof(TRequest));
+                _asyncMessageMappers.Add(typeof(TRequest), messageMapperType);
+            }
 
-            var messageMapperType = _asyncMessageMappers.ContainsKey(typeof(TRequest))
-                ? _asyncMessageMappers[typeof(TRequest)]
-                : _defaultMessageMapperAsync;
-
-            if (messageMapperType is null) return null;
+            if (messageMapperType is null)
+            {
+                return null;
+            }
 
             return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
         }
