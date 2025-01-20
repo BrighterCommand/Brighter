@@ -66,7 +66,12 @@ namespace GreetingsReceiverConsole
                             new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
                             bufferSize: 10,
                             timeOut: TimeSpan.FromMilliseconds(20),
-                            lockTimeout: 30)
+                            lockTimeout: 30,
+                            sqsType: SnsSqsType.Fifo,
+                            snsAttributes: new SnsAttributes
+                            {
+                                Type = SnsSqsType.Fifo
+                            })
                     };
 
                     //create the gateway
