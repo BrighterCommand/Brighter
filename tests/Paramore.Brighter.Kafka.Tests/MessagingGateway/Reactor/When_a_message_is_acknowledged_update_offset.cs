@@ -8,12 +8,12 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
 [Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
+public class KafkaMessageConsumerUpdateOffset : IDisposable
 {
     private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
@@ -21,13 +21,13 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaMessageConsumerUpdateOffsetAsync(ITestOutputHelper output)
+    public KafkaMessageConsumerUpdateOffset(ITestOutputHelper output)
     {
         _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
-                Name = "Kafka Producer Send Test",
+                Name = "Kafka Producer Send Test", 
                 BootStrapServers = new[] {"localhost:9092"}
             },
             new[] {new KafkaPublication
@@ -35,7 +35,7 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
                 ReplicationFactor = 1,
-                //These timeouts support running on a container using the same host as the tests,
+                //These timeouts support running on a container using the same host as the tests, 
                 //your production values ought to be lower
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
@@ -43,22 +43,36 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
             }}).Create();
     }
 
+    //[Fact(Skip = "Fragile as commit thread needs to be scheduled to run")]
     [Fact]
     public async Task When_a_message_is_acknowldgede_update_offset()
     {
+        // let topic propogate in the broker
+        await Task.Delay(500);
+        
         var groupId = Guid.NewGuid().ToString();
-
+        
+        var routingKey = new RoutingKey(_topic);
+        var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+            
         //send x messages to Kafka
         var sentMessages = new string[10];
         for (int i = 0; i < 10; i++)
         {
             var msgId = Guid.NewGuid().ToString();
-            await SendMessageAsync(msgId);
+            producer.Send(
+                new Message(
+                    new MessageHeader(msgId, routingKey, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
+                    new MessageBody($"test content [{_queueName}]")
+                ));
             sentMessages[i] = msgId;
         }
+        
+        //ensure the messages are actually sent
+        ((KafkaMessageProducer)producer).Flush();
 
         //This will create, then delete the consumer
-        Message[] messages = await ConsumeMessagesAsync(groupId: groupId, batchLimit: 5);
+        Message[] messages = await ConsumeMessages(groupId: groupId, batchLimit: 5);
 
         //check we read the first 5 messages
         messages.Length.Should().Be(5);
@@ -67,59 +81,49 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
             messages[i].Id.Should().Be(sentMessages[i]);
         }
 
-        //yield to broker to catch up
-        await Task.Delay(TimeSpan.FromSeconds(5));
-
-        //This will create a new consumer
-        Message[] newMessages = await ConsumeMessagesAsync(groupId, batchLimit: 5);
-        //check we read the first 5 messages
-        newMessages.Length.Should().Be(5);
+        //This will create a new consumer for the same group
+        Message[] newMessages = await ConsumeMessages(groupId, batchLimit: 5);
+        
+        //check we read the next 5 messages
+        messages.Length.Should().Be(5);
         for (int i = 0; i < 5; i++)
         {
             newMessages[i].Id.Should().Be(sentMessages[i+5]);
         }
     }
 
-    private async Task SendMessageAsync(string messageId)
-    {
-        var routingKey = new RoutingKey(_topic);
-
-        await ((IAmAMessageProducerAsync)_producerRegistry.LookupBy(routingKey)).SendAsync(
-            new Message(
-                new MessageHeader(messageId, routingKey, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
-                new MessageBody($"test content [{_queueName}]")
-            )
-        );
-    }
-
-    private async Task<Message[]> ConsumeMessagesAsync(string groupId, int batchLimit)
+    private async Task<Message[]> ConsumeMessages(string groupId, int batchLimit)
     {
         var consumedMessages = new List<Message>();
-        await using (IAmAMessageConsumerAsync consumer = CreateConsumer(groupId))
+        using (IAmAMessageConsumerSync consumer = CreateConsumer(groupId))
         {
             for (int i = 0; i < batchLimit; i++)
             {
-                consumedMessages.Add(await ConsumeMessageAsync(consumer));
+                consumedMessages.Add(ConsumeMessage(consumer));
             }
+            
+            //yield to allow commits to flush
+            await Task.Delay(TimeSpan.FromMilliseconds(5000));
+
         }
 
         return consumedMessages.ToArray();
 
-        async Task<Message> ConsumeMessageAsync(IAmAMessageConsumerAsync consumer)
+        Message ConsumeMessage(IAmAMessageConsumerSync consumer)
         {
-            Message[] messages = new []{new Message()};
+            Message[] messages = [new Message()];
             int maxTries = 0;
             do
             {
                 try
                 {
                     maxTries++;
-                    await Task.Delay(500); //Let topic propagate in the broker
-                    messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
+                   //makes a blocking call to Kafka
+                    messages = consumer.Receive(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     {
-                        await consumer.AcknowledgeAsync(messages[0]);
+                        consumer.Acknowledge(messages[0]);
                         return messages[0];
                     }
 
@@ -135,15 +139,15 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         }
     }
 
-    private IAmAMessageConsumerAsync CreateConsumer(string groupId)
+    private IAmAMessageConsumerSync CreateConsumer(string groupId)
     {
         return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Consumer Test",
+                    Name = "Kafka Consumer Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 })
-            .CreateAsync(new KafkaSubscription<MyCommand>
+            .Create(new KafkaSubscription<MyCommand>
             (
                 name: new SubscriptionName("Paramore.Brighter.Tests"),
                 channelName: new ChannelName(_queueName),
@@ -153,13 +157,13 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                 commitBatchSize:5,
                 numOfPartitions: 1,
                 replicationFactor: 1,
-                messagePumpType: MessagePumpType.Proactor,
+                messagePumpType: MessagePumpType.Reactor,
                 makeChannels: OnMissingChannel.Create
             ));
     }
 
     public void Dispose()
     {
-        _producerRegistry.Dispose();
+        _producerRegistry?.Dispose();
     }
 }

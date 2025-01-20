@@ -6,9 +6,10 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
 [Trait("Category", "Kafka")]
+[Trait("Fragile", "CI")]
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaConsumerDeclareTests : IDisposable
 {
@@ -29,7 +30,8 @@ public class KafkaConsumerDeclareTests : IDisposable
                 Name = "Kafka Producer Send Test", 
                 BootStrapServers = new[] {"localhost:9092"}
             },
-            new[] {new KafkaPublication
+            [
+                new KafkaPublication
             {
                 Topic = new RoutingKey(_topic),
                 NumPartitions = 1,
@@ -38,8 +40,9 @@ public class KafkaConsumerDeclareTests : IDisposable
                 //your production values ought to be lower
                 MessageTimeoutMs = 2000,
                 RequestTimeoutMs = 2000,
-                MakeChannels = OnMissingChannel.Create
-            }}).Create();
+                MakeChannels = OnMissingChannel.Assume
+            }
+            ]).Create();
  
         _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -63,6 +66,9 @@ public class KafkaConsumerDeclareTests : IDisposable
     [Fact]
     public async Task When_a_consumer_declares_topics()
     {
+        //Let topic propogate
+        await Task.Delay(500);
+        
         var routingKey = new RoutingKey(_topic);
             
         var message = new Message(
@@ -72,10 +78,22 @@ public class KafkaConsumerDeclareTests : IDisposable
             },
             new MessageBody($"test content [{_queueName}]")
         );
-            
-        //This should fail, if consumer can't create the topic as set to Assume
-        ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey)).Send(message);
 
+        var producer = ((IAmAMessageProducerSync)_producerRegistry.LookupBy(routingKey));
+        producer.Send(message);
+        
+        //ensure the messages are sent
+        ((KafkaMessageProducer)producer).Flush();
+
+        Message messages = ConsumeMessage();
+
+        messages.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+        messages.Header.PartitionKey.Should().Be(_partitionKey);
+        messages.Body.Value.Should().Be(message.Body.Value);
+    }
+
+    private Message ConsumeMessage()
+    {
         Message[] messages = new Message[0];
         int maxTries = 0;
         do
@@ -83,7 +101,6 @@ public class KafkaConsumerDeclareTests : IDisposable
             try
             {
                 maxTries++;
-                await Task.Delay(500); //Let topic propagate in the broker
                 messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                 _consumer.Acknowledge(messages[0]);
                     
@@ -99,10 +116,7 @@ public class KafkaConsumerDeclareTests : IDisposable
 
         } while (maxTries <= 3);
 
-        messages.Length.Should().Be(1);
-        messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        messages[0].Header.PartitionKey.Should().Be(_partitionKey);
-        messages[0].Body.Value.Should().Be(message.Body.Value);
+        return messages[0];
     }
 
     public void Dispose()

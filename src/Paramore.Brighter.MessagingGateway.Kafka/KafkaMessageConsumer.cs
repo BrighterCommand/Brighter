@@ -46,17 +46,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// </summary>
     public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumerSync, IAmAMessageConsumerAsync
     {
-        private IConsumer<string, byte[]> _consumer;
+        private readonly IConsumer<string, byte[]> _consumer;
         private readonly KafkaMessageCreator _creator;
         private readonly ConsumerConfig _consumerConfig;
-        private List<TopicPartition> _partitions = new List<TopicPartition>();
-        private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = new();
+        private List<TopicPartition> _partitions = [];
+        private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = [];
         private readonly long _maxBatchSize;
         private readonly TimeSpan _readCommittedOffsetsTimeout;
         private DateTime _lastFlushAt = DateTime.UtcNow;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly SemaphoreSlim _flushToken = new(1, 1);
         private bool _hasFatalError;
+        private bool _isClosed;
 
         /// <summary>
         /// Constructs a KafkaMessageConsumer using Confluent's Consumer Builder. We set up callbacks to handle assigned, revoked or lost partitions as
@@ -206,7 +207,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 .Build();
 
             s_logger.LogInformation("Kafka consumer subscribing to {Topic}", Topic);
-            _consumer.Subscribe(new []{ Topic.Value });
+            _consumer.Subscribe([Topic.Value]);
 
             _creator = new KafkaMessageCreator();
             
@@ -217,6 +218,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TopicFindTimeout = topicFindTimeout.Value;
             
             EnsureTopic();
+        }
+
+        /// <summary>
+        /// Destroys the consumer
+        /// </summary>
+        ~KafkaMessageConsumer()
+        {
+            Dispose(false);
         }
 
         /// <summary>
@@ -285,6 +294,35 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Acknowledge(message);
             return Task.CompletedTask;
         }
+        
+        /// <summary>
+        /// Close the consumer
+        /// - Commit any outstanding offsets
+        /// - Surrender any assignments
+        /// </summary>
+        /// <remarks>Use this before disposing of the consumer, to ensure an orderly shutdown</remarks>
+        public void Close()
+        {
+            //we will be called twice if explicitly disposed as well as closed, so just skip in that case
+            if (_isClosed) return;
+            
+            try
+            {
+                _flushToken.Wait(TimeSpan.Zero);
+                //this will release the semaphore
+               CommitAllOffsets(DateTime.UtcNow); 
+            }
+            catch (Exception ex)
+            {
+                //Close anyway, we just will get replay of those messages
+                s_logger.LogDebug("Error committing the current offset to Kafka before closing: {ErrorMessage}", ex.Message);
+            }
+            finally
+            {
+                _consumer.Close();
+                _isClosed = true;
+            }
+        }
 
        /// <summary>
        /// Purges the specified queue name.
@@ -315,9 +353,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// in production code
         /// </remarks>
        /// <param name="cancellationToken"></param>
-        public Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task PurgeAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.Run(this.Purge, cancellationToken);
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var purgeTask = Task.Run(() => 
+            {
+                try
+                {
+                    Purge();
+                    tcs.SetResult(null);
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
+            }, cancellationToken);
+            
+            await tcs.Task;
+            await purgeTask;
         }
 
         /// <summary>
@@ -399,16 +453,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
         /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message.
         /// Kafka does not support an async consumer, and probably never will. See <a href="https://github.com/confluentinc/confluent-kafka-dotnet/issues/487">Confluent Kafka</a>
-        /// As a result we use Task.Run to encapsulate the call. This will cost a thread, and be slower than the sync version. However, given our pump characeristics this would not result
-        /// in thread pool exhaustion.
+        /// As a result we use TimeSpan.Zero to run the recieve loop, which will stop it blocking
         /// </remarks>
-        /// <param name="timeOut">The timeout for receiving a message. Defaults to 300ms</param>
+        /// <param name="timeOut">The timeout for receiving a message. For async always treated as zero</param>
         /// <param name="cancellationToken">The cancellation token - not used as this is async over sync</param>
         /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
         /// <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
         public async Task<Message[]> ReceiveAsync(TimeSpan? timeOut = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await Task.Run(() => Receive(timeOut), cancellationToken);
+            var tcs = new TaskCompletionSource<Message[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            var recieveTask = Task.Run(() => 
+            {
+                try
+                {
+                    var messages = Receive(TimeSpan.Zero);
+                    tcs.SetResult(messages);
+                }
+                catch (Exception e)
+                {
+                    tcs.SetException(e);
+                }
+            }, cancellationToken);
+            
+            var messages = await tcs.Task;
+            await recieveTask;
+            
+            return messages;
         }
 
         /// <summary>
@@ -539,6 +610,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
 
                 _consumer.Commit(listOffsets);
+            }
+            catch(Exception ex)
+            {
+                //may happen if the consumer is not valid when the thread runs
+                s_logger.LogWarning("KafkaMessageConsumer: Error Committing Offsets: {ErrorMessage}", ex.Message);
             }
             finally
             {
@@ -678,37 +754,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
-        private void Close()
-        {
-            try
-            {
-                _consumer.Commit();
-                
-                var committedOffsets = _consumer.Committed(_partitions, _readCommittedOffsetsTimeout);
-                foreach (var committedOffset in committedOffsets)
-                    s_logger.LogInformation("Committed offset: {Offset} on partition: {ChannelName} for topic: {Topic}", committedOffset.Offset.Value.ToString(), committedOffset.Partition.Value.ToString(), committedOffset.Topic);
-
-            }
-            catch (Exception ex)
-            {
-                //this may happen if the offset is already committed
-                s_logger.LogDebug("Error committing the current offset to Kafka before closing: {ErrorMessage}", ex.Message);
-            }
-        }
-
         private void Dispose(bool disposing)
         {
             if (disposing)
             {
+                Close();
                 _consumer?.Dispose();
                 _flushToken?.Dispose();
             }
-        }
-
-
-        ~KafkaMessageConsumer()
-        {
-            Dispose(false);
         }
 
         public void Dispose()
