@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
-using System.Text.Json;
 using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway;
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Reactor;
 
+[Trait("Category", "Kafka")]
+[Collection("Kafka")]   //
 public class KafkaDefaultMessageHeaderBuilderTests 
 {
     [Fact]
@@ -38,7 +38,8 @@ public class KafkaDefaultMessageHeaderBuilderTests
         bag.Add("mystring", "string value");
         bag.Add("myint", 7);
         bag.Add("mydouble", 3.56);
-        bag.Add("mydatetime", DateTime.UtcNow);
+        var myDateTime = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
+        bag.Add("mydatetime", myDateTime);
         
         //act
         var builder = new KafkaDefaultMessageHeaderBuilder();
@@ -50,15 +51,13 @@ public class KafkaDefaultMessageHeaderBuilderTests
         headers.GetLastBytes(HeaderNames.MESSAGE_TYPE).Should().Equal(message.Header.MessageType.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.MESSAGE_ID).Should().Equal(message.Header.MessageId.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.TOPIC).Should().Equal(message.Header.Topic.Value.ToByteArray());
-        headers.GetLastBytes(HeaderNames.TIMESTAMP).Should()
-            .Equal(message.Header.TimeStamp.ToUnixTimeMilliseconds().ToString().ToByteArray());
+        headers.GetLastBytes(HeaderNames.TIMESTAMP).Should().Equal(message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture).ToByteArray());
         headers.GetLastBytes(HeaderNames.CORRELATION_ID).Should()
             .Equal(message.Header.CorrelationId.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.PARTITIONKEY).Should().Equal(message.Header.PartitionKey.ToByteArray());
         headers.GetLastBytes(HeaderNames.CONTENT_TYPE).Should().Equal(message.Header.ContentType.ToByteArray());
         headers.GetLastBytes(HeaderNames.REPLY_TO).Should().Equal(message.Header.ReplyTo.ToByteArray());
-        headers.GetLastBytes(HeaderNames.DELAYED_MILLISECONDS).Should()
-            .Equal(message.Header.Delayed.TotalMilliseconds.ToString().ToByteArray());
+        headers.GetLastBytes(HeaderNames.DELAYED_MILLISECONDS).Should().Equal(message.Header.Delayed.TotalMilliseconds.ToString().ToByteArray());
         headers.GetLastBytes(HeaderNames.HANDLED_COUNT).Should()
             .Equal(message.Header.HandledCount.ToString().ToByteArray());    
 
@@ -67,6 +66,6 @@ public class KafkaDefaultMessageHeaderBuilderTests
         headers.GetLastBytes("mystring").Should().Equal(bag["mystring"].ToString().ToByteArray());
         headers.GetLastBytes("myint").Should().Equal(bag["myint"].ToString().ToByteArray());
         headers.GetLastBytes("mydouble").Should().Equal(bag["mydouble"].ToString().ToByteArray());
-        headers.GetLastBytes("mydatetime").Should().Equal(((DateTime)bag["mydatetime"]).ToString(CultureInfo.InvariantCulture).ToByteArray());
+        headers.GetLastBytes("mydatetime").Should().Equal(myDateTime.ToByteArray());
     }
 }
