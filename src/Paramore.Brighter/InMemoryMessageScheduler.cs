@@ -30,11 +30,13 @@ public class InMemoryMessageScheduler : IAmAMessageSchedulerSync
         var schedulerMessage = scheduler._messages.Next(now);
         while (schedulerMessage != null)
         {
-            BrighterAsyncContext.Run(async () => await scheduler._processor.SendAsync(new SchedulerMessageFired(schedulerMessage.Id)
+            var tmp = schedulerMessage;
+            BrighterAsyncContext.Run(async () => await scheduler._processor.SendAsync(new SchedulerMessageFired(tmp.Id)
             {
-                FireType = schedulerMessage.FireType,
-                MessageType = schedulerMessage.MessageType,
-                MessageData = schedulerMessage.MessageData,
+                FireType = tmp.FireType,
+                MessageType = tmp.MessageType,
+                MessageData = tmp.MessageData,
+                UseAsync = tmp.UseAsync
             }));
 
             // TODO Add log
@@ -46,7 +48,7 @@ public class InMemoryMessageScheduler : IAmAMessageSchedulerSync
         where TRequest : class, IRequest
     {
         var id = Guid.NewGuid().ToString();
-        _messages.Add(new SchedulerMessage(id, at, fireType,
+        _messages.Add(new SchedulerMessage(id, at, fireType, false,
             typeof(TRequest).FullName!,
             JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)));
         return id;
@@ -65,6 +67,7 @@ public class InMemoryMessageScheduler : IAmAMessageSchedulerSync
         string Id,
         DateTimeOffset At,
         SchedulerFireType FireType,
+        bool UseAsync,
         string MessageType,
         string MessageData);
 

@@ -4,6 +4,7 @@
 
 public class SchedulerMessageFired(string id) : Event(id)
 {
+    public bool UseAsync { get; set; }
     public SchedulerFireType FireType { get; set; } = SchedulerFireType.Send;
     public string MessageType { get; set; } = string.Empty;
     public string MessageData { get; set; } = string.Empty;
