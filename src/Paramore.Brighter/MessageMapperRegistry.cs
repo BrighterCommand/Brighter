@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Paramore.Brighter.MessageMappers;
 
@@ -39,8 +40,8 @@ namespace Paramore.Brighter
     {
         private readonly IAmAMessageMapperFactory? _messageMapperFactory;
         private readonly IAmAMessageMapperFactoryAsync? _messageMapperFactoryAsync;
-        private readonly Dictionary<Type, Type> _messageMappers = new Dictionary<Type, Type>();
-        private readonly Dictionary<Type, Type> _asyncMessageMappers = new Dictionary<Type, Type>();
+        private readonly ConcurrentDictionary<Type, Type> _messageMappers = new();
+        private readonly ConcurrentDictionary<Type, Type> _asyncMessageMappers = new();
         private readonly Type? _defaultMessageMapper;
         private readonly Type? _defaultMessageMapperAsync;
 
@@ -74,11 +75,16 @@ namespace Paramore.Brighter
             if (_messageMapperFactory is null)
                 return null;
 
-            var messageMapperType = _messageMappers.ContainsKey(typeof(TRequest))
-                ? _messageMappers[typeof(TRequest)]
-                : _defaultMessageMapper;
+            if (!_messageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapper != null)
+            {
+                messageMapperType = _defaultMessageMapper.MakeGenericType(typeof(TRequest));
+                _messageMappers.TryAdd(typeof(TRequest), messageMapperType);
+            }
 
-            if (messageMapperType is null) return null;
+            if (messageMapperType is null)
+            {
+                return null;
+            }
 
             return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);
         }
@@ -92,12 +98,17 @@ namespace Paramore.Brighter
         {
             if (_messageMapperFactoryAsync is null)
                 return null;
+            
+            if (!_asyncMessageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapperAsync != null)
+            {
+                messageMapperType = _defaultMessageMapperAsync.MakeGenericType(typeof(TRequest));
+                _asyncMessageMappers.TryAdd(typeof(TRequest), messageMapperType);
+            }
 
-            var messageMapperType = _asyncMessageMappers.ContainsKey(typeof(TRequest))
-                ? _asyncMessageMappers[typeof(TRequest)]
-                : _defaultMessageMapperAsync;
-
-            if (messageMapperType is null) return null;
+            if (messageMapperType is null)
+            {
+                return null;
+            }
 
             return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
         }
@@ -113,7 +124,7 @@ namespace Paramore.Brighter
             if (_messageMappers.ContainsKey(typeof(TRequest)))
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", typeof(TRequest).Name));
 
-            _messageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
+            _messageMappers.TryAdd(typeof(TRequest), typeof(TMessageMapper));
         }
 
         /// <summary>
@@ -127,7 +138,7 @@ namespace Paramore.Brighter
             if (_messageMappers.ContainsKey(request))
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", request.Name));
 
-            _messageMappers.Add(request, mapper);
+            _messageMappers.TryAdd(request, mapper);
         }
         
         /// <summary>
@@ -141,7 +152,7 @@ namespace Paramore.Brighter
             if (_asyncMessageMappers.ContainsKey(typeof(TRequest)))
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", typeof(TRequest).Name));
 
-            _asyncMessageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
+            _asyncMessageMappers.TryAdd(typeof(TRequest), typeof(TMessageMapper));
 
         }
         
@@ -156,7 +167,7 @@ namespace Paramore.Brighter
             if (_asyncMessageMappers.ContainsKey(request))
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", request.Name));
 
-            _asyncMessageMappers.Add(request, mapper);
+            _asyncMessageMappers.TryAdd(request, mapper);
         }
     }
 }
