@@ -15,7 +15,7 @@ namespace Paramore.Brighter
         /// Used with RPC to call a remote service via the external bus
         /// </summary>
         /// <param name="outMessage">The message to send</param>
-        /// <param name="requestContext">The context of the request pipeline</param>        
+        /// <param name="requestContext">The context of the request pipeline</param>
         /// <typeparam name="T">The type of the call</typeparam>
         /// <typeparam name="TResponse">The type of the response</typeparam>
         void CallViaExternalBus<T, TResponse>(Message outMessage, RequestContext? requestContext)

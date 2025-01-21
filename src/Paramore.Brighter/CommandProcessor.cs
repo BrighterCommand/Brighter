@@ -37,6 +37,8 @@ using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Scheduler.Events;
+using Paramore.Brighter.Tasks;
 using Polly;
 using Polly.Registry;
 using Exception = System.Exception;
@@ -61,6 +63,7 @@ namespace Paramore.Brighter
         private readonly IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private readonly IEnumerable<Subscription>? _replySubscriptions;
         private readonly IAmABrighterTracer? _tracer;
+        private readonly IAmAMessageSchedulerFactory? _messageSchedulerFactory;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -117,6 +120,7 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="messageSchedulerFactory">TODO: ADD description </param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -125,7 +129,8 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
             IAmABrighterTracer? tracer = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            IAmAMessageSchedulerFactory? messageSchedulerFactory = null)
         {
             _subscriberRegistry = subscriberRegistry;
 
@@ -144,6 +149,7 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
+            _messageSchedulerFactory = messageSchedulerFactory;
         }
 
         /// <summary>
@@ -162,6 +168,7 @@ namespace Paramore.Brighter
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="messageSchedulerFactory">TODO: ADD description </param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -173,14 +180,15 @@ namespace Paramore.Brighter
             IEnumerable<Subscription>? replySubscriptions = null,
             IAmAChannelFactory? responseChannelFactory = null,
             IAmABrighterTracer? tracer = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            IAmAMessageSchedulerFactory? messageSchedulerFactory = null)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration, messageSchedulerFactory: messageSchedulerFactory)
         {
             _responseChannelFactory = responseChannelFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _replySubscriptions = replySubscriptions;
-
+            
             InitExtServiceBus(bus); 
         }
 
@@ -216,6 +224,102 @@ namespace Paramore.Brighter
 
             InitExtServiceBus(mediator); 
         }
+
+        /// <inheritdoc />
+        public void SchedulerPost<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null) 
+            where TRequest : class, IRequest
+        {
+           if (_messageSchedulerFactory == null)
+           {
+               throw new InvalidOperationException("No message scheduler factory set.");
+           }
+            
+           s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
+           var scheduler = _messageSchedulerFactory.Create(this);
+           if (scheduler is IAmAMessageSchedulerSync sync)
+           {
+               sync.Schedule(delay, SchedulerFireType.Post, request);
+           }
+           else if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+           {
+               BrighterAsyncContext.Run(async () => await asyncScheduler.ScheduleAsync(delay, SchedulerFireType.Post, request));
+           }
+        }
+
+        /// <inheritdoc />
+        public void SchedulerPost<TRequest>(DateTimeOffset at,
+            TRequest request,
+            RequestContext? requestContext = null)
+            where TRequest : class, IRequest
+        {
+            if (_messageSchedulerFactory == null) 
+            {
+                throw new InvalidOperationException("No message scheduler factory set.");
+            }
+            
+            s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
+            var scheduler = _messageSchedulerFactory.Create(this);
+            if (scheduler is IAmAMessageSchedulerSync sync)
+            {
+                sync.Schedule(at, SchedulerFireType.Post, request);
+            }
+            else if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+            {
+                BrighterAsyncContext.Run(async () => await asyncScheduler.ScheduleAsync(at, SchedulerFireType.Post, request));
+            }
+        }
+
+
+        /// <inheritdoc />
+        public async Task SchedulerAsync<TRequest>(TimeSpan delay,
+            TRequest request,
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true,
+            CancellationToken cancellationToken = default) 
+            where TRequest : class, IRequest
+        { 
+            if (_messageSchedulerFactory == null)
+            {
+                throw new InvalidOperationException("No message scheduler factory set.");
+            }
+            
+            s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
+            var scheduler = _messageSchedulerFactory.Create(this);
+            if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+            {
+                await asyncScheduler.ScheduleAsync(delay, SchedulerFireType.Post, request, cancellationToken);
+            }
+            else if (scheduler is IAmAMessageSchedulerSync sync)
+            {
+                sync.Schedule(delay, SchedulerFireType.Post, request);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task SchedulerAsync<TRequest>(DateTimeOffset at,
+            TRequest request, 
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default) 
+            where TRequest : class, IRequest
+        {
+            if (_messageSchedulerFactory == null)
+            {
+                throw new InvalidOperationException("No message scheduler factory set.");
+            }
+            
+            s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
+            var scheduler = _messageSchedulerFactory.Create(this);
+            if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+            {
+                await asyncScheduler.ScheduleAsync(at, SchedulerFireType.Post, request, cancellationToken);
+            }
+            else if (scheduler is IAmAMessageSchedulerSync sync)
+            {
+                sync.Schedule(at, SchedulerFireType.Post, request);
+            }
+        }
+
 
         /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.

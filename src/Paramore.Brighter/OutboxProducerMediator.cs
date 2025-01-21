@@ -104,7 +104,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            IAmABrighterTracer tracer,
+            IAmABrighterTracer tracer, 
             IAmAnOutbox? outbox = null,
             IAmARequestContextFactory? requestContextFactory = null,
             int outboxTimeout = 300,
@@ -748,7 +748,8 @@ namespace Paramore.Brighter
             return false;
         }
 
-        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext,
+        private void Dispatch(IEnumerable<Message> posts, 
+            RequestContext requestContext,
             Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;

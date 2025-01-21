@@ -34,5 +34,6 @@ public enum CommandProcessorSpanOperation
     Publish = 2,    // Publish an event
     Deposit = 3,    // Deposit a message in the outbox
     Clear = 4,      // Clear a message from the outbox
-    Archive = 5     //Archive a message from the outbox
+    Archive = 5,     //Archive a message from the outbox
+    Scheduler = 6
 }
