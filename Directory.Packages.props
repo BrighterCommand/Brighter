@@ -61,15 +61,15 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
     <PackageVersion Include="NUnit3TestAdapter" Version="4.6.0" />
-    <PackageVersion Include="OpenTelemetry" Version="1.10.0" />
-    <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.10.0" />
+    <PackageVersion Include="OpenTelemetry" Version="1.11.0" />
+    <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.11.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.10.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.10.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.10.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.10.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.Zipkin" Version="1.9.0" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.10.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.11.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.10.1" />
     <PackageVersion Include="Paramore.Darker" Version="4.0.1" />
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="4.0.1" />
