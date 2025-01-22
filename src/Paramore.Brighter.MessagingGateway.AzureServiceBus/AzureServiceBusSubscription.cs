@@ -120,7 +120,7 @@ public class AzureServiceBusSubscription<T> : AzureServiceBusSubscription where 
         TimeSpan? emptyChannelDelay = null,
         TimeSpan? channelFailureDelay = null)
         : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
-            timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, 
+            timeOut ?? TimeSpan.FromMilliseconds(400), requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, 
             subscriptionConfiguration, emptyChannelDelay, channelFailureDelay)
     {
     }

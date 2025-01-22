@@ -7,7 +7,7 @@ using Paramore.Brighter.AzureServiceBus.Tests.Fakes;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Xunit;
 
-namespace Paramore.Brighter.AzureServiceBus.Tests
+namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor
 {
     public class AzureServiceBusMessageProducerTests
     {

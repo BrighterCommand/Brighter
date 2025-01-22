@@ -103,8 +103,7 @@ public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     /// <returns>IAmAMessageConsumerSync</returns>
     public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
     {
-        var consumer = Create(subscription) as IAmAMessageConsumerAsync;   
-        if (consumer == null)
+        if (Create(subscription) is not IAmAMessageConsumerAsync consumer)
             throw new ChannelFailureException("AzureServiceBusConsumerFactory: Failed to create an async consumer");
         return consumer;
     }
