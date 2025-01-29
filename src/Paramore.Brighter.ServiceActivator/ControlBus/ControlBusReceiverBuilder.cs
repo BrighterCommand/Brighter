@@ -26,6 +26,8 @@ using System;
 using System.Collections.Generic;
 using System.Transactions;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Scheduler.Events;
+using Paramore.Brighter.Scheduler.Handlers;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -139,6 +141,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
+            subscriberRegistry.RegisterAsync<SchedulerMessageFired, SchedulerMessageFiredHandlerAsync>();
             
             var incomingMessageMapperRegistry = new MessageMapperRegistry(
             new ControlBusMessageMapperFactory(), null

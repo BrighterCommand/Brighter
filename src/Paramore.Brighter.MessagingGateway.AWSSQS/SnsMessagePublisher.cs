@@ -50,6 +50,11 @@ public class SnsMessagePublisher
         var messageString = message.Body.Value;
         var publishRequest = new PublishRequest(_topicArn, messageString, message.Header.Subject);
 
+        if (string.IsNullOrEmpty(message.Header.CorrelationId))
+        {
+            message.Header.CorrelationId = Guid.NewGuid().ToString();
+        }
+
         var messageAttributes = new Dictionary<string, MessageAttributeValue>
         {
             [HeaderNames.Id] =
