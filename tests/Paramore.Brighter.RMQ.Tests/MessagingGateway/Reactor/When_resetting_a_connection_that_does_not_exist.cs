@@ -1,5 +1,4 @@
 ﻿#region Licence
-
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,38 +22,36 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Linq;
+using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
 using Xunit;
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway.Reactor;
 
-internal class QueueFactory(RmqMessagingGatewayConnection connection, ChannelName channelName, RoutingKeys routingKeys)
+[Trait("Category", "RMQ")]
+public class RmqMessageGatewayConnectionPoolResetConnectionDoesNotExist
 {
-    public async Task CreateAsync()
-    {
-        var connectionFactory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
-        await using var connection1 = await connectionFactory.CreateConnectionAsync();
-        await using var channel =
-            await connection1.CreateChannelAsync(new CreateChannelOptions(
-                publisherConfirmationsEnabled: true,
-                publisherConfirmationTrackingEnabled: true));
+    private readonly RmqMessageGatewayConnectionPool _connectionPool = new("MyConnectionName", 7);
 
-        await channel.DeclareExchangeForConnection(connection, OnMissingChannel.Create);
-        await channel.QueueDeclareAsync(channelName.Value, false, false, false, null);
-        if (routingKeys.Any())
+    [Fact]
+    public async Task When_resetting_a_connection_that_does_not_exist()
+    {
+        var connectionFactory = new ConnectionFactory {HostName = "invalidhost"};
+
+        bool resetConnectionExceptionThrown = false;
+        try
         {
-            foreach (RoutingKey routingKey in routingKeys)
-            {
-                await channel.QueueBindAsync(channelName.Value, connection.Exchange.Name, routingKey);
-            }
+            await _connectionPool.ResetConnectionAsync(connectionFactory);
         }
-        else
+        catch (Exception )
         {
-            await channel.QueueBindAsync(channelName.Value, connection.Exchange.Name, channelName!);
-        }
+            resetConnectionExceptionThrown = true;
+        }                                
+            
+        resetConnectionExceptionThrown.Should().BeFalse();
+
     }
 }
