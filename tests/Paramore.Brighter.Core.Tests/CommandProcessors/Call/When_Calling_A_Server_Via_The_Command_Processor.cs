@@ -105,14 +105,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
         public void When_Calling_A_Server_Via_The_Command_Processor()
         {
             //start a message pump on a new thread, to recieve the Call message
-            var provider = new CommandProcessorProvider(_commandProcessor);
-            
             Channel channel = new(
                 new("MyChannel"), _routingKey, 
                 new InMemoryMessageConsumer(_routingKey, _bus, TimeProvider.System, TimeSpan.FromMilliseconds(1000))
             );
             
-            var messagePump = new MessagePumpBlocking<MyRequest>(provider, _messageMapperRegistry, 
+            var messagePump = new Reactor<MyRequest>(_commandProcessor, _messageMapperRegistry, 
                     new EmptyMessageTransformerFactory(), new InMemoryRequestContextFactory(), channel) 
                 { Channel = channel, TimeOut = TimeSpan.FromMilliseconds(5000) };
 

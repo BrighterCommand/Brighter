@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
@@ -9,12 +10,12 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
     [Trait("Category", "MSSQL")]
-    public class OrderTest
+    public class OrderTest : IAsyncDisposable, IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topicName = Guid.NewGuid().ToString();
-        private readonly IAmAProducerRegistry _producerRegistry; 
-        private readonly IAmAMessageConsumer _consumer;
+        private readonly IAmAProducerRegistry _producerRegistry;
+        private readonly IAmAMessageConsumerSync _consumer;
 
         public OrderTest()
         {
@@ -22,12 +23,15 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             testHelper.SetupQueueDb();
 
             var routingKey = new RoutingKey(_topicName);
-            
-            var sub = new Subscription<MyCommand>(new SubscriptionName(_queueName),
-                new ChannelName(_topicName), routingKey);
+
+            var sub = new Subscription<MyCommand>(
+                new SubscriptionName(_queueName),
+                new ChannelName(_topicName), routingKey,
+                messagePumpType: MessagePumpType.Reactor);
+
             _producerRegistry = new MsSqlProducerRegistryFactory(
-                testHelper.QueueConfiguration, 
-                new Publication[] {new() {Topic = routingKey}}
+                testHelper.QueueConfiguration,
+                [new() { Topic = routingKey }]
             ).Create();
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
@@ -35,42 +39,34 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         [Fact]
         public void When_a_message_is_sent_keep_order()
         {
-            IAmAMessageConsumer consumer = _consumer;
-            try
-            {
-                //Send a sequence of messages to Kafka
-                var msgId = SendMessage();
-                var msgId2 = SendMessage();
-                var msgId3 = SendMessage();
-                var msgId4 = SendMessage();
-                
-                //Now read those messages in order
+            IAmAMessageConsumerSync consumer = _consumer;
+            //Send a sequence of messages to Kafka
+            var msgId = SendMessage();
+            var msgId2 = SendMessage();
+            var msgId3 = SendMessage();
+            var msgId4 = SendMessage();
 
-                var firstMessage = ConsumeMessages(consumer);
-                var message = firstMessage.First();
-                message.Empty.Should().BeFalse("A message should be returned");
-                message.Id.Should().Be(msgId);
+            //Now read those messages in order
 
-                var secondMessage = ConsumeMessages(consumer);
-                message = secondMessage.First();
-                message.Empty.Should().BeFalse("A message should be returned");
-                message.Id.Should().Be(msgId2);
+            var firstMessage = ConsumeMessages(consumer);
+            var message = firstMessage.First();
+            message.Empty.Should().BeFalse("A message should be returned");
+            message.Id.Should().Be(msgId);
 
-                var thirdMessages = ConsumeMessages(consumer);
-                message = thirdMessages.First();
-                message.Empty.Should().BeFalse("A message should be returned");
-                message.Id.Should().Be(msgId3);
+            var secondMessage = ConsumeMessages(consumer);
+            message = secondMessage.First();
+            message.Empty.Should().BeFalse("A message should be returned");
+            message.Id.Should().Be(msgId2);
 
-                var fourthMessage = ConsumeMessages(consumer);
-                message = fourthMessage.First();
-                message.Empty.Should().BeFalse("A message should be returned");
-                message.Id.Should().Be(msgId4);
+            var thirdMessages = ConsumeMessages(consumer);
+            message = thirdMessages.First();
+            message.Empty.Should().BeFalse("A message should be returned");
+            message.Id.Should().Be(msgId3);
 
-            }
-            finally
-            {
-                consumer?.Dispose();
-            }
+            var fourthMessage = ConsumeMessages(consumer);
+            message = fourthMessage.First();
+            message.Empty.Should().BeFalse("A message should be returned");
+            message.Id.Should().Be(msgId4);
         }
 
         private string SendMessage()
@@ -84,9 +80,10 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             return messageId;
         }
-        private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumer consumer)
+
+        private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumerSync consumer)
         {
-            var messages = new Message[0];
+            var messages = Array.Empty<Message>();
             int maxTries = 0;
             do
             {
@@ -108,5 +105,16 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             return messages;
         }
 
+        public async ValueTask DisposeAsync()
+        {
+            await ((IAmAMessageConsumerAsync)_consumer).DisposeAsync();
+            _producerRegistry.Dispose();
+        }
+
+        public void Dispose()
+        {
+            _consumer?.Dispose();
+            _producerRegistry?.Dispose();
+        }
     }
 }

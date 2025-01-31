@@ -28,4 +28,8 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="MessagingGateway\Sns\" />
+  </ItemGroup>
+
 </Project>

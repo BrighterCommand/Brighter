@@ -379,7 +379,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new ServiceProviderMapperFactory(provider),
-                new ServiceProviderMapperFactoryAsync(provider)
+                new ServiceProviderMapperFactoryAsync(provider),
+                serviceCollectionMessageMapperRegistry.DefaultMessageMapper,
+                serviceCollectionMessageMapperRegistry.DefaultMessageMapperAsync
             );
 
             foreach (var messageMapper in serviceCollectionMessageMapperRegistry.Mappers)
@@ -391,6 +393,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 messageMapperRegistry.RegisterAsync(messageMapper.Key, messageMapper.Value);
             }
+            
 
             return messageMapperRegistry;
         }

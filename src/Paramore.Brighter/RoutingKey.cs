@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -49,7 +51,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="routingKey">The routing key to test</param>
         /// <returns></returns>
-        public static bool IsNullOrEmpty(RoutingKey? routingKey)
+        public static bool IsNullOrEmpty([NotNullWhen(false)]RoutingKey? routingKey)
         {
             return routingKey is null || string.IsNullOrEmpty(routingKey.Value);
         }

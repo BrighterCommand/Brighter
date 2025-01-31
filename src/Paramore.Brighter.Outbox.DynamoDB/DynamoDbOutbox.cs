@@ -117,6 +117,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <inheritdoc />
         /// <summary>
         /// Adds a message to the Outbox
+        /// Sync over async
         /// </summary>       
         /// <param name="message">The message to be stored</param>
         /// <param name="requestContext">What is the context of this request; used to provide Span information to the call</param>
@@ -207,6 +208,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         /// <summary>
         /// Delete messages from the Outbox
+        /// Sync over async
         /// </summary>
         /// <param name="messageIds">The messages to delete</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
@@ -237,6 +239,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent.
+        /// Sync over async
         /// </summary>
         /// <param name="dispatchedSince">How long ago was the message dispatched?</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
@@ -307,6 +310,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         /// <summary>
         ///  Finds a message with the specified identifier.
+        ///  Sync over async
         /// </summary>
         /// <param name="messageId">The identifier.</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>
@@ -320,7 +324,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 .GetAwaiter()
                 .GetResult();
         }
-
 
         /// <summary>
         /// Finds a message with the specified identifier.
@@ -418,6 +421,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         /// <summary>
         /// Returns messages that have yet to be dispatched
+        /// Sync over async
         /// </summary>
         /// <param name="dispatchedSince">How long ago as the message sent?</param>
         /// <param name="requestContext">What is the context for this request; used to access the Span</param>        

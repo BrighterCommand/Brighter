@@ -58,5 +58,11 @@ namespace Paramore.Brighter
         /// Gets the Feature Switches
         /// </summary>
         IAmAFeatureSwitchRegistry? FeatureSwitches { get; }
+
+        /// <summary>
+        /// Create a new copy of the Request Context
+        /// </summary>
+        /// <returns>a new copy of the request context</returns>
+        IRequestContext CreateCopy();
     }
 }

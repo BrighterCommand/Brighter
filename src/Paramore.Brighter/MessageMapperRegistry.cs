@@ -23,7 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Paramore.Brighter.MessageMappers;
 
 namespace Paramore.Brighter
 {
@@ -38,18 +40,26 @@ namespace Paramore.Brighter
     {
         private readonly IAmAMessageMapperFactory? _messageMapperFactory;
         private readonly IAmAMessageMapperFactoryAsync? _messageMapperFactoryAsync;
-        private readonly Dictionary<Type, Type> _messageMappers = new Dictionary<Type, Type>();
-        private readonly Dictionary<Type, Type> _asyncMessageMappers = new Dictionary<Type, Type>();
+        private readonly ConcurrentDictionary<Type, Type> _messageMappers = new();
+        private readonly ConcurrentDictionary<Type, Type> _asyncMessageMappers = new();
+        private readonly Type? _defaultMessageMapper;
+        private readonly Type? _defaultMessageMapperAsync;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageMapperRegistry"/> class.
         /// </summary>
         /// <param name="messageMapperFactory">The message mapper factory.</param>
         /// <param name="messageMapperFactoryAsync">The async message mapper factory</param>
-        public MessageMapperRegistry(IAmAMessageMapperFactory? messageMapperFactory, IAmAMessageMapperFactoryAsync? messageMapperFactoryAsync)
+        /// <param name="defaultMessageMapper">The default message Mapper</param>
+        /// <param name="defaultMessageMapperAsync">The default Async Message Mapper</param>
+        public MessageMapperRegistry(IAmAMessageMapperFactory? messageMapperFactory,
+            IAmAMessageMapperFactoryAsync? messageMapperFactoryAsync, Type? defaultMessageMapper = null,
+            Type? defaultMessageMapperAsync = null)
         {
             _messageMapperFactory = messageMapperFactory;
             _messageMapperFactoryAsync = messageMapperFactoryAsync;
+            _defaultMessageMapper = defaultMessageMapper;
+            _defaultMessageMapperAsync = defaultMessageMapperAsync;
 
             if (messageMapperFactory == null && messageMapperFactoryAsync == null)
                 throw new ConfigurationException("Should have at least one factory");
@@ -62,17 +72,23 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapper&lt;TRequest&gt;.</returns>
         public IAmAMessageMapper<TRequest>? Get<TRequest>() where TRequest : class, IRequest
         {
-            if ( _messageMapperFactory is not null && _messageMappers.ContainsKey(typeof(TRequest)))
+            if (_messageMapperFactory is null)
+                return null;
+
+            if (!_messageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapper != null)
             {
-                var messageMapperType = _messageMappers[typeof(TRequest)];
-                return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);
+                messageMapperType = _defaultMessageMapper.MakeGenericType(typeof(TRequest));
+                _messageMappers.TryAdd(typeof(TRequest), messageMapperType);
             }
-            else
+
+            if (messageMapperType is null)
             {
                 return null;
             }
+
+            return (IAmAMessageMapper<TRequest>)_messageMapperFactory.Create(messageMapperType);
         }
-        
+
         /// <summary>
         /// Gets this instance.
         /// </summary>
@@ -80,15 +96,21 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapperAsync&lt;TRequest&gt;.</returns>
         public IAmAMessageMapperAsync<TRequest>? GetAsync<TRequest>() where TRequest : class, IRequest
         {
-            if (_messageMapperFactoryAsync is not null && _asyncMessageMappers.ContainsKey(typeof(TRequest)))
+            if (_messageMapperFactoryAsync is null)
+                return null;
+            
+            if (!_asyncMessageMappers.TryGetValue(typeof(TRequest), out var messageMapperType) && _defaultMessageMapperAsync != null)
             {
-                var messageMapperType = _asyncMessageMappers[typeof(TRequest)];
-                return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
+                messageMapperType = _defaultMessageMapperAsync.MakeGenericType(typeof(TRequest));
+                _asyncMessageMappers.TryAdd(typeof(TRequest), messageMapperType);
             }
-            else
+
+            if (messageMapperType is null)
             {
                 return null;
             }
+
+            return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
         }
 
         /// <summary>
@@ -102,7 +124,7 @@ namespace Paramore.Brighter
             if (_messageMappers.ContainsKey(typeof(TRequest)))
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", typeof(TRequest).Name));
 
-            _messageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
+            _messageMappers.TryAdd(typeof(TRequest), typeof(TMessageMapper));
         }
 
         /// <summary>
@@ -116,7 +138,7 @@ namespace Paramore.Brighter
             if (_messageMappers.ContainsKey(request))
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", request.Name));
 
-            _messageMappers.Add(request, mapper);
+            _messageMappers.TryAdd(request, mapper);
         }
         
         /// <summary>
@@ -130,7 +152,7 @@ namespace Paramore.Brighter
             if (_asyncMessageMappers.ContainsKey(typeof(TRequest)))
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", typeof(TRequest).Name));
 
-            _asyncMessageMappers.Add(typeof(TRequest), typeof(TMessageMapper));
+            _asyncMessageMappers.TryAdd(typeof(TRequest), typeof(TMessageMapper));
 
         }
         
@@ -145,7 +167,7 @@ namespace Paramore.Brighter
             if (_asyncMessageMappers.ContainsKey(request))
                 throw new ArgumentException(string.Format("Message type {0} already has a mapper; only one mapper can be registered per type", request.Name));
 
-            _asyncMessageMappers.Add(request, mapper);
+            _asyncMessageMappers.TryAdd(request, mapper);
         }
     }
 }

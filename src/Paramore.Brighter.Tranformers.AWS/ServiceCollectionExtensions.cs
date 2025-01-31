@@ -34,6 +34,7 @@ namespace Paramore.Brighter.Tranformers.AWS
     {
         /// <summary>
         /// Will add an S3 Luggage Store into the Service Collection
+        /// Sync over async,  but alright as we are in startup
         /// </summary>
         /// <param name="services"></param>
         /// <param name="configure"></param>

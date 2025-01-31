@@ -124,7 +124,6 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         
         public void Dispose()
         {
-            GC.SuppressFinalize(this);
             Release();
         }
 

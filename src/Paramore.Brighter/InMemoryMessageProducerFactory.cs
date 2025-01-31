@@ -23,31 +23,47 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter;
-
-/// <summary>
-/// A factory for creating a dictionary of in-memory producers indexed by topic. This is mainly intended for usage with tests.
-/// It allows you to send messages to a bus and then inspect the messages that have been sent.
-/// </summary>
-/// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
-/// <param name="publications">The list of topics that we want to publish to</param>
-public class InMemoryMessageProducerFactory(InternalBus bus, IEnumerable<Publication> publications) 
-    : IAmAMessageProducerFactory
+namespace Paramore.Brighter
 {
-    /// <inheritdoc />
-    public Dictionary<RoutingKey,IAmAMessageProducer> Create()
+    /// <summary>
+    /// A factory for creating a dictionary of in-memory producers indexed by topic. This is mainly intended for usage with tests.
+    /// It allows you to send messages to a bus and then inspect the messages that have been sent.
+    /// </summary>
+    /// <param name="bus">An instance of <see cref="IAmABus"/> typically we use an <see cref="InternalBus"/></param>
+    /// <param name="publications">The list of topics that we want to publish to</param>
+    public class InMemoryMessageProducerFactory(InternalBus bus, IEnumerable<Publication> publications)
+        : IAmAMessageProducerFactory
     {
-        var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
-        foreach (var publication in publications)
+        /// <summary>
+        /// Creates a dictionary of in-memory message producers.
+        /// </summary>
+        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+        /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
+        public Dictionary<RoutingKey, IAmAMessageProducer> Create()
         {
-            if (publication.Topic is null)
-                throw new ArgumentException("A publication must have a Topic to be dispatched");
-            var producer = new InMemoryProducer(bus, TimeProvider.System);
-            producer.Publication = publication;
-            producers[publication.Topic] = producer;
+            var producers = new Dictionary<RoutingKey, IAmAMessageProducer>();
+            foreach (var publication in publications)
+            {
+                if (publication.Topic is null)
+                    throw new ArgumentException("A publication must have a Topic to be dispatched");
+                var producer = new InMemoryProducer(bus, TimeProvider.System);
+                producer.Publication = publication;
+                producers[publication.Topic] = producer;
+            }
+
+            return producers;
         }
 
-        return producers;
+        /// <summary>
+        /// Creates a dictionary of in-memory message producers.
+        /// </summary>
+        /// <returns>A dictionary of <see cref="IAmAMessageProducer"/> indexed by <see cref="RoutingKey"/></returns>
+        /// <exception cref="ArgumentException">Thrown when a publication does not have a topic</exception>
+        public Task<Dictionary<RoutingKey, IAmAMessageProducer>> CreateAsync()
+        {
+            return Task.FromResult(Create());
+        }
     }
 }

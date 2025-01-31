@@ -42,20 +42,30 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Creates a consumer for the specified queue.
         /// </summary>
         /// <param name="subscription">The queue to connect to</param>
-        /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(Subscription subscription)
+        /// <returns>IAmAMessageConsumerSync.</returns>
+        public IAmAMessageConsumerSync Create(Subscription subscription)
         {
-            SqsSubscription sqsSubscription = subscription as SqsSubscription;
+            return CreateImpl(subscription);
+        }
+
+        public IAmAMessageConsumerAsync CreateAsync(Subscription subscription)
+        {
+            return CreateImpl(subscription);
+        }
+
+
+        private SqsMessageConsumer CreateImpl(Subscription subscription)
+        {
+            SqsSubscription? sqsSubscription = subscription as SqsSubscription;
             if (sqsSubscription == null) throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
             
             return new SqsMessageConsumer(
                 awsConnection: _awsConnection, 
-                queueName:subscription.ChannelName.ToValidSQSQueueName(), 
-                routingKey:subscription.RoutingKey, 
+                queueName: subscription.ChannelName.ToValidSQSQueueName(sqsSubscription.SqsType == SnsSqsType.Fifo), 
                 batchSize: subscription.BufferSize,
                 hasDLQ: sqsSubscription.RedrivePolicy == null,
                 rawMessageDelivery: sqsSubscription.RawMessageDelivery
-                );
+            );
         }
     }
 }

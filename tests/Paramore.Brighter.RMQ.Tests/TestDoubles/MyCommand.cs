@@ -24,11 +24,10 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.RMQ.Tests.TestDoubles
+namespace Paramore.Brighter.RMQ.Tests.TestDoubles;
+
+internal class MyCommand : Command
 {
-    internal class MyCommand : Command
-    {
-        public string Value { get; set; }
-        public MyCommand() :base(Guid.NewGuid()) {}
-    }
+    public string Value { get; set; }
+    public MyCommand() :base(Guid.NewGuid()) {}
 }

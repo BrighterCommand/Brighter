@@ -95,7 +95,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
         {
             using var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString);
             _tableName = $"message_{_tableName}";
-            var createTableSql = PostgreSqlOutboxBulder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
+            var createTableSql = PostgreSqlOutboxBuilder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
 
             connection.Open();
             using var command = connection.CreateCommand();

@@ -7,6 +7,7 @@ using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Client.Options;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
@@ -22,6 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MQTTMessagePublisher"/> class.
+        /// Sync over async, but necessary as we are in the ctor
         /// </summary>
         /// <param name="config">The Publisher configuration.</param>
         public MQTTMessagePublisher(MQTTMessagingGatewayConfiguration config)
@@ -46,16 +48,16 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             _mqttClientOptions = mqttClientOptionsBuilder.Build();
 
-            Connect();
+            ConnectAsync().GetAwaiter().GetResult();
         }
 
-        private void Connect()
+        private async Task ConnectAsync()
         {
             for (int i = 0; i < _config.ConnectionAttempts; i++)
             {
                 try
                 {
-                    _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None).GetAwaiter().GetResult();
+                    await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
                     s_logger.LogInformation($"Connected to {_config.Hostname}");
                     return;
                 }
@@ -68,27 +70,26 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         /// <summary>
         /// Sends the specified message.
+        /// Sync over async
         /// </summary>
         /// <param name="message">The message.</param>
-        public void PublishMessage(Message message)
-        {
-            PublishMessageAsync(message).GetAwaiter().GetResult();
-        }
+        public void PublishMessage(Message message) => BrighterAsyncContext.Run(async () => await PublishMessageAsync(message));
 
         /// <summary>
         /// Sends the specified message asynchronously.
         /// </summary>
         /// <param name="message">The message.</param>
+        /// <param name="cancellationToken">Allows cancellation of the operation</param>
         /// <returns>Task.</returns>
-        public async Task PublishMessageAsync(Message message)
+        public async Task PublishMessageAsync(Message message, CancellationToken cancellationToken = default)
         {
-            MqttApplicationMessage mqttMessage = createMQTTMessage(message);
-            await _mqttClient.PublishAsync(mqttMessage, CancellationToken.None);
+            MqttApplicationMessage mqttMessage = CreateMqttMessage(message);
+            await _mqttClient.PublishAsync(mqttMessage, cancellationToken);
         }
 
-        private MqttApplicationMessage createMQTTMessage(Message message)
+        private MqttApplicationMessage CreateMqttMessage(Message message)
         {
-            string payload = JsonSerializer.Serialize(message);
+            string payload = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options);
             MqttApplicationMessageBuilder outMessage = new MqttApplicationMessageBuilder()
                  .WithTopic(_config.TopicPrefix!=null?
             $"{_config.TopicPrefix}/{message.Header.Topic}": message.Header.Topic)

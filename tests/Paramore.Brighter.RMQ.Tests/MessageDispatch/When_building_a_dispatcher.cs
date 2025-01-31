@@ -1,29 +1,6 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
+﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -35,104 +12,112 @@ using Polly;
 using Polly.Registry;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
+namespace Paramore.Brighter.RMQ.Tests.MessageDispatch;
+
+[Collection("CommandProcessor")]
+public class DispatchBuilderTests : IDisposable
 {
-    [Collection("CommandProcessor")]
-    public class DispatchBuilderTests : IDisposable
+    private readonly IAmADispatchBuilder _builder;
+    private Dispatcher? _dispatcher;
+
+    public DispatchBuilderTests()
     {
-        private readonly IAmADispatchBuilder _builder;
-        private Dispatcher _dispatcher;
+        var messageMapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
+            null);
+        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-        public DispatchBuilderTests()
-        {
-            var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .WaitAndRetry(new[]
-                {
-                    TimeSpan.FromMilliseconds(50),
-                    TimeSpan.FromMilliseconds(100),
-                    TimeSpan.FromMilliseconds(150)
-                });
-
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-
-            var rmqConnection = new RmqMessagingGatewayConnection
+        var retryPolicy = Policy
+            .Handle<Exception>()
+            .WaitAndRetry(new[]
             {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange")
-            };
+                TimeSpan.FromMilliseconds(50),
+                TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromMilliseconds(150)
+            });
 
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-            var container = new ServiceCollection();
+        var circuitBreakerPolicy = Policy
+            .Handle<Exception>()
+            .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-            var tracer = new BrighterTracer(TimeProvider.System);
-            var instrumentationOptions = InstrumentationOptions.All;
+        var rmqConnection = new RmqMessagingGatewayConnection
+        {
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange")
+        };
+
+        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+        var container = new ServiceCollection();
+
+        var tracer = new BrighterTracer(TimeProvider.System);
+        var instrumentationOptions = InstrumentationOptions.All;
             
-            var commandProcessor = CommandProcessorBuilder.StartNew()
-                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
-                .Policies(new PolicyRegistry
-                {
-                    { CommandProcessor.RETRYPOLICY, retryPolicy },
-                    { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-                })
-                .NoExternalBus()
-                .ConfigureInstrumentation(tracer, instrumentationOptions)
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .Build();
+        var commandProcessor = CommandProcessorBuilder.StartNew()
+            .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
+            .Policies(new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+            })
+            .NoExternalBus()
+            .ConfigureInstrumentation(tracer, instrumentationOptions)
+            .RequestContextFactory(new InMemoryRequestContextFactory())
+            .Build();
 
-            _builder = DispatchBuilder.StartNew()
-                .CommandProcessorFactory(() => 
-                    new CommandProcessorProvider(commandProcessor),
-                    new InMemoryRequestContextFactory()
-                )
-                .MessageMappers(messageMapperRegistry, null, null, null)
-                .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
-                .Subscriptions(new []
-                {
-                    new RmqSubscription<MyEvent>(
-                        new SubscriptionName("foo"),
-                        new ChannelName("mary"),
-                        new RoutingKey("bob"),
-                        timeOut: TimeSpan.FromMilliseconds(200)),
-                    new RmqSubscription<MyEvent>(
-                        new SubscriptionName("bar"),
-                        new ChannelName("alice"),
-                        new RoutingKey("simon"),
-                        timeOut: TimeSpan.FromMilliseconds(200))
-                })
-                .ConfigureInstrumentation(tracer, instrumentationOptions);
-        }
+        _builder = DispatchBuilder.StartNew()
+            .CommandProcessor(commandProcessor,
+                new InMemoryRequestContextFactory()
+            )
+            .MessageMappers(messageMapperRegistry, null, null, null)
+            .ChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
+            .Subscriptions(new []
+            {
+                new RmqSubscription<MyEvent>(
+                    new SubscriptionName("foo"),
+                    new ChannelName("mary"),
+                    new RoutingKey("bob"),
+                    messagePumpType: MessagePumpType.Reactor,
+                    timeOut: TimeSpan.FromMilliseconds(200)),
+                new RmqSubscription<MyEvent>(
+                    new SubscriptionName("bar"),
+                    new ChannelName("alice"),
+                    new RoutingKey("simon"),
+                    messagePumpType: MessagePumpType.Reactor,
+                    timeOut: TimeSpan.FromMilliseconds(200))
+            })
+            .ConfigureInstrumentation(tracer, instrumentationOptions);
+    }
 
-        [Fact]
-        public void When_Building_A_Dispatcher()
-        {
-            _dispatcher = _builder.Build();
+    [Fact]
+    public async Task When_Building_A_Dispatcher()
+    {
+        _dispatcher = _builder.Build();
 
-            //_should_build_a_dispatcher
-            AssertionExtensions.Should(_dispatcher).NotBeNull();
-            //_should_have_a_foo_connection
-            GetConnection("foo").Should().NotBeNull();
-            //_should_have_a_bar_connection
-            GetConnection("bar").Should().NotBeNull();
-            //_should_be_in_the_awaiting_state
-            AssertionExtensions.Should(_dispatcher.State).Be(DispatcherState.DS_AWAITING);
-        }
+        _dispatcher.Should().NotBeNull();
+        GetConnection("foo").Should().NotBeNull();
+        GetConnection("bar").Should().NotBeNull();
+        _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+            
+        await Task.Delay(1000);
 
-        public void Dispose()
-        {
-            CommandProcessor.ClearServiceBus();
-        }
+        _dispatcher.Receive();
 
-        private Subscription GetConnection(string name)
-        {
-            return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Subscriptions, conn => conn.Name == name);
-        }
+        await Task.Delay(1000);
+
+        _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
+
+        await _dispatcher.End();
+            
+        _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
+    }
+
+    public void Dispose()
+    {
+        CommandProcessor.ClearServiceBus();
+    }
+
+    private Subscription GetConnection(string name)
+    {
+        return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Subscriptions, conn => conn.Name == name);
     }
 }

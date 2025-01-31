@@ -31,13 +31,13 @@ namespace Paramore.Brighter
 {
     /// <summary>
     ///   Class Channel.
-    ///   An <see cref="IAmAChannel" /> for reading messages from a
+    ///   An <see cref="IAmAChannelSync" /> for reading messages from a
     ///   <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     ///   and acknowledging receipt of those messages
     /// </summary>
-    public class Channel : IAmAChannel
+    public class Channel : IAmAChannelSync
     {
-        private readonly IAmAMessageConsumer _messageConsumer;
+        private readonly IAmAMessageConsumerSync _messageConsumer;
         private ConcurrentQueue<Message> _queue = new();
         private readonly int _maxQueueLength;
         private static readonly Message s_noneMessage = new();
@@ -66,7 +66,7 @@ namespace Paramore.Brighter
         public Channel(
             ChannelName channelName, 
             RoutingKey routingKey, 
-            IAmAMessageConsumer messageConsumer,
+            IAmAMessageConsumerSync messageConsumer,
             int maxQueueLength = 1
             )
         {

@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,38 +20,54 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MessagingGateway.AWSSQS
+namespace Paramore.Brighter.MessagingGateway.AWSSQS;
+
+/// <summary>
+/// The SNS Message Producer registry factory
+/// </summary>
+public class SnsProducerRegistryFactory : IAmAProducerRegistryFactory
 {
-    public class SnsProducerRegistryFactory : IAmAProducerRegistryFactory
+    private readonly AWSMessagingGatewayConnection _connection;
+    private readonly IEnumerable<SnsPublication> _snsPublications;
+
+    /// <summary>
+    /// Create a collection of producers from the publication information
+    /// </summary>
+    /// <param name="connection">The Connection to use to connect to AWS</param>
+    /// <param name="snsPublications">The publication describing the SNS topic that we want to use</param>
+    public SnsProducerRegistryFactory(
+        AWSMessagingGatewayConnection connection,
+        IEnumerable<SnsPublication> snsPublications)
     {
-        private readonly AWSMessagingGatewayConnection _connection;
-        private readonly IEnumerable<SnsPublication> _snsPublications;
+        _connection = connection;
+        _snsPublications = snsPublications;
+    }
 
-        /// <summary>
-        /// Create a collection of producers from the publication information
-        /// </summary>
-        /// <param name="connection">The Connection to use to connect to AWS</param>
-        /// <param name="snsPublications">The publication describing the SNS topic that we want to use</param>
-        public SnsProducerRegistryFactory(
-            AWSMessagingGatewayConnection connection,
-            IEnumerable<SnsPublication> snsPublications)
-        {
-            _connection = connection;
-            _snsPublications = snsPublications;
-        }
+    /// <summary>
+    /// Create a message producer for each publication, add it into the registry under the key of the topic
+    /// </summary>
+    /// <returns>The <see cref="ProducerRegistry"/> with <see cref="SnsMessageProducerFactory"/>.</returns>
+    public IAmAProducerRegistry Create()
+    {
+        var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
+        return new ProducerRegistry(producerFactory.Create());
+    }
 
-        /// <summary>
-        /// Create a message producer for each publication, add it into the registry under the key of the topic
-        /// </summary>
-        /// <returns></returns>
-        public IAmAProducerRegistry Create()
-        {
-            var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
-            return new ProducerRegistry(producerFactory.Create());
-        }
+    /// <summary>
+    /// Create a message producer for each publication, add it into the registry under the key of the topic
+    /// </summary>
+    /// <param name="ct">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The <see cref="ProducerRegistry"/> with <see cref="SnsMessageProducerFactory"/>.</returns>
+    public async Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
+    {
+        var producerFactory = new SnsMessageProducerFactory(_connection, _snsPublications);
+        return new ProducerRegistry(await producerFactory.CreateAsync());
     }
 }

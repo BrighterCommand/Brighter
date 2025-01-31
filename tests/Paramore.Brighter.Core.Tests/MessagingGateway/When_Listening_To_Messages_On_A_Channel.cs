@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 {
     public class ChannelMessageReceiveTests
     {
-        private readonly IAmAChannel _channel;
+        private readonly IAmAChannelSync _channel;
         private readonly RoutingKey _routingKey = new("MyTopic");
         private const string ChannelName = "myChannel";
         private readonly InternalBus _bus = new();
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
         public ChannelMessageReceiveTests()
         {
-            IAmAMessageConsumer gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _fakeTimeProvider, TimeSpan.FromMilliseconds(1000));
+            IAmAMessageConsumerSync gateway = new InMemoryMessageConsumer(new RoutingKey(_routingKey), _bus, _fakeTimeProvider, TimeSpan.FromMilliseconds(1000));
 
             _channel = new Channel(new(ChannelName),new(_routingKey), gateway);
 

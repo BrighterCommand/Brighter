@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
@@ -31,34 +32,58 @@ using Amazon.SecurityToken.Model;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
+    /// <summary>
+    /// The <see cref="ValidateTopicByArnConvention"/> class is responsible for validating an AWS SNS topic by its ARN convention.
+    /// </summary>
     public class ValidateTopicByArnConvention : ValidateTopicByArn, IValidateTopic
     {
         private readonly RegionEndpoint _region;
-        private AmazonSecurityTokenServiceClient _stsClient;
+        private readonly AmazonSecurityTokenServiceClient _stsClient;
+        private readonly SnsSqsType _type;
 
-        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig> clientConfigAction = null) 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ValidateTopicByArnConvention"/> class.
+        /// </summary>
+        /// <param name="credentials">The AWS credentials.</param>
+        /// <param name="region">The AWS region.</param>
+        /// <param name="clientConfigAction">An optional action to configure the client.</param>
+        public ValidateTopicByArnConvention(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction = null, SnsSqsType type = SnsSqsType.Standard) 
             : base(credentials, region, clientConfigAction)
         {
             _region = region;
+            _type = type;
 
             var clientFactory = new AWSClientFactory(credentials, region, clientConfigAction);
             _stsClient = clientFactory.CreateStsClient();
         }
 
-        public override async Task<(bool, string TopicArn)> ValidateAsync(string topic)
+        /// <summary>
+        /// Validates the specified topic asynchronously.
+        /// </summary>
+        /// <param name="topic">The topic to validate.</param>
+        /// <param name="cancellationToken">Cancel the validation</param>
+        /// <returns>A tuple indicating whether the topic is valid and its ARN.</returns>
+        public override async Task<(bool, string? TopicArn)> ValidateAsync(string topic, CancellationToken cancellationToken = default)
         {
-            var topicArn = GetArnFromTopic(topic);
-            return await base.ValidateAsync(topicArn);
+            var topicArn = await GetArnFromTopic(topic);
+            return await base.ValidateAsync(topicArn, cancellationToken);
         }
 
-        private string GetArnFromTopic(string topicName)
+        /// <summary>
+        /// Gets the ARN from the topic name.
+        /// </summary>
+        /// <param name="topicName">The name of the topic.</param>
+        /// <returns>The ARN of the topic.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the AWS account identity cannot be found.</exception>
+        private async Task<string> GetArnFromTopic(string topicName)
         {
-            var callerIdentityResponse = _stsClient.GetCallerIdentityAsync(
-                    new GetCallerIdentityRequest()
-                )
-                .GetAwaiter().GetResult();
+            var callerIdentityResponse = await _stsClient.GetCallerIdentityAsync(
+                new GetCallerIdentityRequest()
+            );
 
-            if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account"); 
+            if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account");
+
+            topicName = topicName.ToValidSNSTopicName(_type == SnsSqsType.Fifo);
 
             return new Arn
             {

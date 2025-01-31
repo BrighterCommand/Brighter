@@ -5,42 +5,38 @@ using Paramore.Brighter.Redis.Tests.TestDoubles;
 using ServiceStack.Redis;
 using Xunit;
 
-namespace Paramore.Brighter.Redis.Tests.MessagingGateway
+namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
+
+[Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
+[Trait("Category", "Redis")]
+public class RedisMessageConsumerRedisNotAvailableTests : IDisposable
 {
-    [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
-    [Trait("Category", "Redis")]
-    public class RedisMessageConsumerRedisNotAvailableTests : IDisposable
+    private readonly ChannelName _queueName = new ChannelName("test");
+    private readonly RoutingKey _topic = new RoutingKey("test");
+    private readonly RedisMessageConsumer _messageConsumer;
+    private Exception? _exception;
+
+    public RedisMessageConsumerRedisNotAvailableTests()
     {
-        private const string QueueName = "test";
-        private const string Topic = "test";
-        private readonly RedisMessageConsumer _messageConsumer;
-        private Exception _exception;
+        var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
 
-        public RedisMessageConsumerRedisNotAvailableTests()
-        {
-            var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
+        _messageConsumer = new RedisMessageConsumerSocketErrorOnGetClient(configuration, _queueName, _topic);
 
-            _messageConsumer = new RedisMessageConsumerSocketErrorOnGetClient(configuration, QueueName, Topic);
+    }
 
-        }
-
-        [Fact]
-        public void When_a_message_consumer_throws_a_socket_exception_when_connecting_to_the_server()
-        {
-            _exception = Catch.Exception(() => _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000))); 
+    [Fact]
+    public void When_a_message_consumer_throws_a_socket_exception_when_connecting_to_the_server()
+    {
+        _exception = Catch.Exception(() => _messageConsumer.Receive(TimeSpan.FromMilliseconds(1000))); 
             
-            //_should_return_a_channel_failure_exception
-            _exception.Should().BeOfType<ChannelFailureException>();
-            
-            //_should_return_an_explaining_inner_exception
-            _exception.InnerException.Should().BeOfType<RedisException>();
+        _exception.Should().BeOfType<ChannelFailureException>();
+        _exception?.InnerException.Should().BeOfType<RedisException>();
   
-        }
+    }
         
-        public void Dispose()
-        {
-            _messageConsumer.Purge();
-            _messageConsumer.Dispose();
-        }
+    public void Dispose()
+    {
+        _messageConsumer.Purge();
+        _messageConsumer.Dispose();
     }
 }

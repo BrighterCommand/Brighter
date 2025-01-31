@@ -56,8 +56,6 @@ public class MessagePumpQuitOberservabilityTests
                 new PolicyRegistry(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
-
-            var provider = new CommandProcessorProvider(commandProcessor);
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
@@ -71,10 +69,10 @@ public class MessagePumpQuitOberservabilityTests
                 null); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null, 
+            _messagePump = new Reactor<MyEvent>(commandProcessor, messageMapperRegistry, null, 
                 new InMemoryRequestContextFactory(), channel, tracer, instrumentationOptions)
             {
-                Channel = channel, TimeOut= TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = 1000
+                Channel = channel, TimeOut= TimeSpan.FromMilliseconds(5000), EmptyChannelDelay = TimeSpan.FromMilliseconds(1000)
             };
             
             var quitMessage = MessageFactory.CreateQuitMessage(_routingKey);

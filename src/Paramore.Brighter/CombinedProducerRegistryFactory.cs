@@ -22,34 +22,59 @@ THE SOFTWARE. */
 #endregion
 
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter;
+
+public class CombinedProducerRegistryFactory : IAmAProducerRegistryFactory
 {
-    public class CombinedProducerRegistryFactory : IAmAProducerRegistryFactory
+    private readonly IAmAMessageProducerFactory[] _messageProducerFactories;
+
+    /// <summary>
+    /// Creates a combined producer registry of the message producers created by a set of message
+    /// producer factories.
+    /// </summary>
+    /// <param name="messageProducerFactories">The set of message producer factories from which to create the combined registry</param>
+    public CombinedProducerRegistryFactory(params IAmAMessageProducerFactory[] messageProducerFactories)
     {
-        private readonly IAmAMessageProducerFactory[] _messageProducerFactories;
+        _messageProducerFactories = messageProducerFactories;
+    }
 
-        /// <summary>
-        /// Creates a combined producer registry of the message producers created by a set of message
-        /// producer factories.
-        /// </summary>
-        /// <param name="messageProducerFactories">The set of message producer factories from which to create the combined registry</param>
-        public CombinedProducerRegistryFactory(params IAmAMessageProducerFactory[] messageProducerFactories)
-        {
-            _messageProducerFactories = messageProducerFactories;
-        }
+    /// <summary>
+    /// Create a combined producer registry of the producers created by the message producer factories,
+    /// under the key of each topic
+    /// </summary>
+    /// <remarks>
+    /// The async producers block on async calls to create the producers, so this method is synchronous.
+    /// Generally the async calls are where creation of a producer needs to interrogate a remote service
+    /// </remarks>
+    /// <returns>A <see cref="IAmAProducerRegistry"/> registry of producers</returns>
+    public IAmAProducerRegistry Create()
+    {
+        var producers = _messageProducerFactories
+            .SelectMany(x => x.Create())
+            .ToDictionary(x => x.Key, x => x.Value);
+            
+        return new ProducerRegistry(producers);
+    }
 
-        /// <summary>
-        /// Create a combined producer registry of the producers created by the message producer factories,
-        /// under the key of each topic
-        /// </summary>
-        /// <returns></returns>
-        public IAmAProducerRegistry Create()
-        {
-            var producers = _messageProducerFactories
-                .SelectMany(x => x.Create())
-                .ToDictionary(x => x.Key, x => x.Value);
-            return new ProducerRegistry(producers);
-        }
+    /// <summary>
+    /// Create a combined producer registry of the producers created by the message producer factories,
+    /// under the key of each topic
+    /// </summary>
+    /// <remarks>
+    /// The async producers block on async calls to create the producers, so this method is synchronous.
+    /// Generally the async calls are where creation of a producer needs to interrogate a remote service
+    /// </remarks>
+    /// <returns>A <see cref="IAmAProducerRegistry"/> registry of producers</returns>
+    public async Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
+    {
+        var keyedProducerTasks = _messageProducerFactories.Select(x => x.CreateAsync());
+        var keyedProducers = await Task.WhenAll(keyedProducerTasks);
+        var asyncProducers = keyedProducers.SelectMany(x => x)
+            .ToDictionary(x => x.Key, x => x.Value);
+            
+        return new ProducerRegistry(asyncProducers);
     }
 }

@@ -208,8 +208,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out byte[] lastHeader))
             {
                 //Additional testing for a non unixtimestamp string
-                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.CurrentInfo,
-                        DateTimeStyles.AdjustToUniversal, out DateTime timestamp))
+                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AdjustToUniversal, out DateTime timestamp))
                 {
                     return new HeaderResult<DateTime>(timestamp, true);
                 }

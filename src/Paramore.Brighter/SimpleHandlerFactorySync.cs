@@ -32,12 +32,12 @@ namespace Paramore.Brighter
     /// </summary>
     public class SimpleHandlerFactorySync(Func<Type, IHandleRequests> factoryMethod) : IAmAHandlerFactorySync
     {
-        public IHandleRequests Create(Type handlerType)
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
         {
             return factoryMethod(handlerType);
         }
 
-        public void Release(IHandleRequests handler)
+        public void Release(IHandleRequests handler, IAmALifetime lifetime)
         {
             var disposable = handler as IDisposable;
             disposable?.Dispose();

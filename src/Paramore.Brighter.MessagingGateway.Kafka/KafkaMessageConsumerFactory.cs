@@ -27,6 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// <summary>
     /// A factory for creating a Kafka message consumer from a <see cref="Subscription{T}"/>> 
     /// </summary>
+    
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="subscription">The <see cref="KafkaSubscription"/> to read</param>
         /// <returns>A consumer that can be used to read from the stream</returns>
-        public IAmAMessageConsumer Create(Subscription subscription)
+        public IAmAMessageConsumerSync Create(Subscription subscription)
         {
             KafkaSubscription kafkaSubscription = subscription as KafkaSubscription;  
             if (kafkaSubscription == null)
@@ -71,5 +72,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 makeChannels: kafkaSubscription.MakeChannels
                 );
         }
+
+        public IAmAMessageConsumerAsync CreateAsync(Subscription subscription) => (IAmAMessageConsumerAsync)Create(subscription);
+
     }
 }

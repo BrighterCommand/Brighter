@@ -28,82 +28,80 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway;
+
+[Trait("Category", "RMQ")]
+public class RmqMessageProducerDLQTests : IDisposable
 {
-    [Trait("Category", "RMQ")]
-    public class RmqMessageProducerDLQTests : IDisposable
+    private readonly IAmAMessageProducerSync _messageProducer;
+    private readonly IAmAMessageConsumerSync _messageConsumer;
+    private readonly Message _message;
+    private readonly IAmAMessageConsumerSync _deadLetterConsumer;
+
+    public RmqMessageProducerDLQTests()
     {
-        private readonly IAmAMessageProducerSync _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly Message _message;
-        private readonly IAmAMessageConsumer _deadLetterConsumer;
+        var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            
+        _message = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
+                MessageType.MT_COMMAND), 
+            new MessageBody("test content"));
 
-        public RmqMessageProducerDLQTests()
+        var queueName = new ChannelName(Guid.NewGuid().ToString());
+        var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
+        var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
+            
+        var rmqConnection = new RmqMessagingGatewayConnection
         {
-            var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+            Exchange = new Exchange("paramore.brighter.exchange"),
+            DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
+        };
             
-            _message = new Message(
-                new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                    MessageType.MT_COMMAND), 
-                new MessageBody("test content"));
+        _messageProducer = new RmqMessageProducer(rmqConnection);
 
-            var queueName = new ChannelName(Guid.NewGuid().ToString());
-            var deadLetterQueueName = new ChannelName($"{_message.Header.Topic}.DLQ");
-            var deadLetterRoutingKey = new RoutingKey( $"{_message.Header.Topic}.DLQ");
+        _messageConsumer = new RmqMessageConsumer(
+            connection: rmqConnection, 
+            queueName: queueName, 
+            routingKey: routingKey, 
+            isDurable: false, 
+            highAvailability: false,
+            deadLetterQueueName: deadLetterQueueName,
+            deadLetterRoutingKey: deadLetterRoutingKey,
+            makeChannels:OnMissingChannel.Create
+        );
+
+        _deadLetterConsumer = new RmqMessageConsumer(
+            connection: rmqConnection,
+            queueName: deadLetterQueueName,
+            routingKey: deadLetterRoutingKey,
+            isDurable:false,
+            makeChannels:OnMissingChannel.Assume
+        );
+    }
+
+    [Fact]
+    public void When_rejecting_a_message_to_a_dead_letter_queue()
+    {
+        //create the infrastructure
+        _messageConsumer.Receive(TimeSpan.FromMilliseconds(0)); 
+
+        _messageProducer.Send(_message);
+
+        var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
             
-             var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
-                DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
-            };
+        //This will push onto the DLQ
+        _messageConsumer.Reject(message);
+
+        var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             
-            _messageProducer = new RmqMessageProducer(rmqConnection);
+        //assert this is our message
+        dlqMessage.Id.Should().Be(_message.Id);
+        message.Body.Value.Should().Be(dlqMessage.Body.Value);
+    }
 
-            _messageConsumer = new RmqMessageConsumer(
-                connection: rmqConnection, 
-                queueName: queueName, 
-                routingKey: routingKey, 
-                isDurable: false, 
-                highAvailability: false,
-                deadLetterQueueName: deadLetterQueueName,
-                deadLetterRoutingKey: deadLetterRoutingKey,
-                makeChannels:OnMissingChannel.Create
-                );
-
-            _deadLetterConsumer = new RmqMessageConsumer(
-                connection: rmqConnection,
-                queueName: deadLetterQueueName,
-                routingKey: deadLetterRoutingKey,
-                isDurable:false,
-                makeChannels:OnMissingChannel.Assume
-                );
-
-            //create the infrastructure
-            _messageConsumer.Receive(TimeSpan.FromMilliseconds(0)); 
-             
-        }
-
-        [Fact]
-        public void When_rejecting_a_message_to_a_dead_letter_queue()
-        {
-            _messageProducer.Send(_message);
-
-            var message = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First(); 
-            
-            //This will push onto the DLQ
-            _messageConsumer.Reject(message);
-
-            var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
-            
-            //assert this is our message
-            dlqMessage.Id.Should().Be(_message.Id);
-            message.Body.Value.Should().Be(dlqMessage.Body.Value);
-        }
-
-        public void Dispose()
-        {
-            _messageProducer.Dispose();
-        }
+    public void Dispose()
+    {
+        _messageProducer.Dispose();
     }
 }
