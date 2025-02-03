@@ -40,11 +40,13 @@ namespace Paramore.Brighter
         /// <param name="outbox">The outbox to record outbound messages on the control bus</param>
         /// <param name="producerRegistry">The list of producers to send with</param>
         /// <param name="tracer">The tracer lets us create open telemetry information</param>
+        /// <param name="messageSchedulerFactory">The message scheduler factory.</param>
         /// <returns>IAmAControlBusSender.</returns>
         IAmAControlBusSender Create<T, TTransaction>(
             IAmAnOutbox outbox, 
             IAmAProducerRegistry producerRegistry, 
-            BrighterTracer tracer
+            BrighterTracer tracer,
+            IAmAMessageSchedulerFactory? messageSchedulerFactory = null
         )
             where T: Message;
     }

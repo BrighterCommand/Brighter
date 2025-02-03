@@ -131,7 +131,7 @@ namespace Paramore.Brighter
                 throw new ConfigurationException(
                     "A Command Processor with an external bus must have a message transformer factory");
             
-            _timeProvider = (timeProvider is null) ? TimeProvider.System : timeProvider;
+            _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
 
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);

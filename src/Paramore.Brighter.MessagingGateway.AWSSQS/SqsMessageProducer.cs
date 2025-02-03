@@ -50,6 +50,9 @@ public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync,
     /// </summary>
     public Activity? Span { get; set; }
 
+    /// <inheritdoc />
+    public IAmAMessageScheduler? Scheduler { get; set; }
+
     /// <summary>
     /// Initialize a new instance of the <see cref="SqsMessageProducer"/>.
     /// </summary>
@@ -131,11 +134,29 @@ public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync,
     }
 
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
-        => await SendWithDelayAsync(message, null, cancellationToken);
+        => await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
 
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay,
         CancellationToken cancellationToken = default)
     {
+        delay ??= TimeSpan.Zero;
+        if (delay > TimeSpan.FromMinutes(15))
+        {
+            if (Scheduler is IAmAMessageSchedulerAsync async)
+            {
+                await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
+            }
+
+            if (Scheduler is IAmAMessageSchedulerSync sync)
+            {
+                sync.Schedule(message, delay.Value);
+                return;
+            }
+                
+            s_logger.LogWarning("SQSMessageProducer: no scheduler configured, message will be sent immediately");
+        }
+        
         s_logger.LogDebug(
             "SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
             message.Header.Topic, message.Id, message.Body);

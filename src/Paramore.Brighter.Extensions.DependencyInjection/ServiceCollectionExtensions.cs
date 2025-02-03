@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,8 @@ using Paramore.Brighter.Logging;
 using System.Text.Json;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Scheduler.Events;
+using Paramore.Brighter.Scheduler.Handlers;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -103,9 +106,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (options.PolicyRegistry == null) policyRegistry = new DefaultPolicy();
             else policyRegistry = AddDefaults(options.PolicyRegistry);
 
-            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor),
-                (serviceProvider) => (IAmACommandProcessor)BuildCommandProcessor(serviceProvider),
-                options.CommandProcessorLifetime));
+            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
 
             return new ServiceCollectionBrighterBuilder(
                 services,
@@ -147,11 +148,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var busConfiguration = new ExternalBusConfiguration();
             configure?.Invoke(busConfiguration);
-            
+
             if (busConfiguration.ProducerRegistry == null)
+            {
                 throw new ConfigurationException("An external bus must have an IAmAProducerRegistry");
+            }
             
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
+
+            if (busConfiguration.MessageSchedulerFactory != null)
+            {
+                UseMessageScheduler(brighterBuilder, busConfiguration.MessageSchedulerFactory);
+            }
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
             Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(CommittableTransactionProvider);
@@ -160,8 +168,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             Type transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
             Type transactionType = null;
             foreach (Type i in transactionProvider.GetInterfaces())
+            {
                 if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
+                {
                     transactionType = i.GetGenericArguments()[0];
+                }
+            }
 
             if (transactionType == null)
                 throw new ConfigurationException(
@@ -179,11 +191,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 transactionProvider, serviceLifetime);
             
             //we always need an outbox in case of producer callbacks
-            var outbox = busConfiguration.Outbox;
-            if (outbox == null)
-            {
-                outbox = new InMemoryOutbox(TimeProvider.System);
-            }
+            var outbox = busConfiguration.Outbox ?? new InMemoryOutbox(TimeProvider.System);
 
             //we create the outbox from interfaces from the determined transaction type to prevent the need
             //to pass generic types as we know the transaction provider type
@@ -226,7 +234,20 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return brighterBuilder;
         }
-        
+
+        /// <summary>
+        /// An external message scheduler factory
+        /// </summary>
+        /// <param name="builder">The builder.</param>
+        /// <param name="factory">The message scheduler factory</param>
+        /// <returns></returns>
+        public static IBrighterBuilder UseMessageScheduler(this IBrighterBuilder builder, IAmAMessageSchedulerFactory factory)
+        {
+            builder.Services.AddSingleton(factory);
+            builder.AsyncHandlers(x => x.RegisterAsync<SchedulerMessageFired, SchedulerMessageFiredHandlerAsync>());
+            
+            return builder;
+        }
         
         private static INeedInstrumentation AddEventBus(
             IServiceProvider provider,
@@ -236,6 +257,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var eventBus = provider.GetService<IAmAnOutboxProducerMediator>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
+            var messageSchedulerFactory = eventBusConfiguration.MessageSchedulerFactory ?? provider.GetService<IAmAMessageSchedulerFactory>();
 
             INeedInstrumentation instrumentationBuilder = null;
             var hasEventBus = eventBus != null;
@@ -250,8 +272,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     eventBus,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
-                    serviceActivatorOptions?.InboxConfiguration
-                );
+                    serviceActivatorOptions?.InboxConfiguration, 
+                    messageSchedulerFactory);
             }
 
             if (hasEventBus && useRpc)
@@ -261,7 +283,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     eventBus,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
-                    serviceActivatorOptions?.InboxConfiguration
+                    serviceActivatorOptions?.InboxConfiguration,
+                    messageSchedulerFactory
                 );
             }
 
@@ -281,7 +304,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return policyRegistry;
         }
 
-        private static object BuildCommandProcessor(IServiceProvider provider)
+        private static IAmACommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
             var loggerFactory = provider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;
@@ -305,24 +328,22 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var messagingBuilder = options.PolicyRegistry == null
                 ? policyBuilder.DefaultPolicy()
                 : policyBuilder.Policies(options.PolicyRegistry);
-
-            INeedInstrumentation instrumentationBuilder = AddEventBus(provider, messagingBuilder, useRequestResponse);
-
-            var tracer = provider.GetService<IAmABrighterTracer>();
-
-            var contextBuilder = instrumentationBuilder.ConfigureInstrumentation(tracer, options.InstrumentationOptions);
             
-            var requestContextFactory = provider.GetService<IAmARequestContextFactory>();
+            var command = AddEventBus(provider, messagingBuilder, useRequestResponse)
+                .ConfigureInstrumentation(provider.GetService<IAmABrighterTracer>(), options.InstrumentationOptions)
+                .RequestContextFactory(provider.GetService<IAmARequestContextFactory>())
+                .MessageSchedulerFactory(provider.GetService<IAmAMessageSchedulerFactory>())
+                .Build();
             
-            var builder = contextBuilder.RequestContextFactory(requestContextFactory);
+            var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
+            var messageSchedulerFactory = eventBusConfiguration.MessageSchedulerFactory ?? provider.GetService<IAmAMessageSchedulerFactory>();
+            var producerRegistry = provider.GetService<IAmAProducerRegistry>();
+            if (messageSchedulerFactory != null && producerRegistry != null)
+            {
+                producerRegistry.Producers.Each(x => x.Scheduler = messageSchedulerFactory.Create(command));
+            }
 
-            var schedulerMessageFactory = provider.GetService<IAmAMessageSchedulerFactory>();
-
-            builder.MessageSchedulerFactory(schedulerMessageFactory);
-                
-            var commandProcessor = builder.Build();
-
-            return commandProcessor;
+            return command;
         }
         
         private static IAmAnOutboxProducerMediator BuildOutBoxProducerMediator(IServiceProvider serviceProvider,

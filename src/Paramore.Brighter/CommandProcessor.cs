@@ -37,7 +37,6 @@ using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using Polly;
 using Polly.Registry;
@@ -120,7 +119,7 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
-        /// <param name="messageSchedulerFactory">TODO: ADD description </param>
+        /// <param name="messageSchedulerFactory">The <see cref="IAmAMessageSchedulerFactory"/>.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -168,7 +167,7 @@ namespace Paramore.Brighter
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
-        /// <param name="messageSchedulerFactory">TODO: ADD description </param>
+        /// <param name="messageSchedulerFactory">The <see cref="IAmAMessageSchedulerFactory"/>.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -224,102 +223,6 @@ namespace Paramore.Brighter
 
             InitExtServiceBus(mediator); 
         }
-
-        /// <inheritdoc />
-        public void SchedulerPost<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null) 
-            where TRequest : class, IRequest
-        {
-           if (_messageSchedulerFactory == null)
-           {
-               throw new InvalidOperationException("No message scheduler factory set.");
-           }
-            
-           s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
-           var scheduler = _messageSchedulerFactory.Create(this);
-           if (scheduler is IAmAMessageSchedulerSync sync)
-           {
-               sync.Schedule(delay, SchedulerFireType.Post, request);
-           }
-           else if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
-           {
-               BrighterAsyncContext.Run(async () => await asyncScheduler.ScheduleAsync(delay, SchedulerFireType.Post, request));
-           }
-        }
-
-        /// <inheritdoc />
-        public void SchedulerPost<TRequest>(DateTimeOffset at,
-            TRequest request,
-            RequestContext? requestContext = null)
-            where TRequest : class, IRequest
-        {
-            if (_messageSchedulerFactory == null) 
-            {
-                throw new InvalidOperationException("No message scheduler factory set.");
-            }
-            
-            s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
-            var scheduler = _messageSchedulerFactory.Create(this);
-            if (scheduler is IAmAMessageSchedulerSync sync)
-            {
-                sync.Schedule(at, SchedulerFireType.Post, request);
-            }
-            else if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
-            {
-                BrighterAsyncContext.Run(async () => await asyncScheduler.ScheduleAsync(at, SchedulerFireType.Post, request));
-            }
-        }
-
-
-        /// <inheritdoc />
-        public async Task SchedulerAsync<TRequest>(TimeSpan delay,
-            TRequest request,
-            RequestContext? requestContext = null,
-            bool continueOnCapturedContext = true,
-            CancellationToken cancellationToken = default) 
-            where TRequest : class, IRequest
-        { 
-            if (_messageSchedulerFactory == null)
-            {
-                throw new InvalidOperationException("No message scheduler factory set.");
-            }
-            
-            s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
-            var scheduler = _messageSchedulerFactory.Create(this);
-            if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
-            {
-                await asyncScheduler.ScheduleAsync(delay, SchedulerFireType.Post, request, cancellationToken);
-            }
-            else if (scheduler is IAmAMessageSchedulerSync sync)
-            {
-                sync.Schedule(delay, SchedulerFireType.Post, request);
-            }
-        }
-
-        /// <inheritdoc />
-        public async Task SchedulerAsync<TRequest>(DateTimeOffset at,
-            TRequest request, 
-            RequestContext? requestContext = null,
-            bool continueOnCapturedContext = true, 
-            CancellationToken cancellationToken = default) 
-            where TRequest : class, IRequest
-        {
-            if (_messageSchedulerFactory == null)
-            {
-                throw new InvalidOperationException("No message scheduler factory set.");
-            }
-            
-            s_logger.LogInformation("Scheduling request: {RequestType} {Id}", request.GetType(), request.Id);
-            var scheduler = _messageSchedulerFactory.Create(this);
-            if (scheduler is IAmAMessageSchedulerAsync asyncScheduler)
-            {
-                await asyncScheduler.ScheduleAsync(at, SchedulerFireType.Post, request, cancellationToken);
-            }
-            else if (scheduler is IAmAMessageSchedulerSync sync)
-            {
-                sync.Schedule(at, SchedulerFireType.Post, request);
-            }
-        }
-
 
         /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.
@@ -561,6 +464,166 @@ namespace Paramore.Brighter
             finally
             {
                 _tracer?.EndSpans(handlerSpans);
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public string SchedulerPost<TRequest>(TRequest request, 
+            TimeSpan delay, 
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null) where TRequest : class, IRequest
+        {
+            if (_messageSchedulerFactory == null)
+            {
+                throw new InvalidOperationException("No message scheduler factory defined.");
+            }
+            
+            s_logger.LogInformation("Scheduling a request: {RequestType} {Id}", request.GetType(), request.Id);
+            
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, request, requestContext?.Span, options: _instrumentationOptions);
+            var context = InitRequestContext(span, requestContext);
+
+            try
+            {
+                Message message = s_mediator!.CreateMessageFromRequest(request, context);
+
+                var scheduler = _messageSchedulerFactory.Create(this);
+                return scheduler switch
+                {
+                    IAmAMessageSchedulerSync sync => sync.Schedule(message, delay),
+                    IAmAMessageSchedulerAsync async => BrighterAsyncContext.Run(async () => await async.ScheduleAsync(message, delay)),
+                    _ => throw new InvalidOperationException("Message scheduler must be sync or async")
+                };
+            }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public string SchedulerPost<TRequest>(TRequest request, 
+            DateTimeOffset at, 
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null) where TRequest : class, IRequest
+        { 
+            if (_messageSchedulerFactory == null)
+            {
+                throw new InvalidOperationException("No message scheduler factory defined.");
+            }
+            
+            s_logger.LogInformation("Scheduling a request: {RequestType} {Id}", request.GetType(), request.Id);
+            
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, request, requestContext?.Span, options: _instrumentationOptions);
+            var context = InitRequestContext(span, requestContext);
+
+            try
+            {
+                Message message = s_mediator!.CreateMessageFromRequest(request, context);
+
+                var scheduler = _messageSchedulerFactory.Create(this);
+                return scheduler switch
+                {
+                    IAmAMessageSchedulerSync sync => sync.Schedule(message, at),
+                    IAmAMessageSchedulerAsync async => BrighterAsyncContext.Run(async () => await async.ScheduleAsync(message, at)),
+                    _ => throw new InvalidOperationException("Message scheduler must be sync or async")
+                };
+            }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+        
+        /// <inheritdoc />
+        public async Task<string> SchedulerPostAsync<TRequest>(TRequest request, 
+            TimeSpan delay,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            if (_messageSchedulerFactory == null)
+            {
+                throw new InvalidOperationException("No message scheduler factory defined.");
+            }
+            
+            s_logger.LogInformation("Scheduling a request: {RequestType} {Id}", request.GetType(), request.Id);
+            
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, request, requestContext?.Span, options: _instrumentationOptions);
+            var context = InitRequestContext(span, requestContext);
+
+            try
+            {
+                Message message = await s_mediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
+
+                var scheduler = _messageSchedulerFactory.Create(this);
+                return scheduler switch
+                {
+                    IAmAMessageSchedulerAsync async => await async.ScheduleAsync(message, delay, cancellationToken).ConfigureAwait(continueOnCapturedContext),
+                    IAmAMessageSchedulerSync sync => sync.Schedule(message, delay),
+                    _ => throw new InvalidOperationException("Message scheduler must be sync or async")
+                };
+            }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        public async Task<string> SchedulerPostAsync<TRequest>(TRequest request, 
+            DateTimeOffset at,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default) 
+            where TRequest : class, IRequest
+        {
+            if (_messageSchedulerFactory == null)
+            {
+                throw new InvalidOperationException("No message scheduler factory defined.");
+            }
+            
+            s_logger.LogInformation("Scheduling a request: {RequestType} {Id}", request.GetType(), request.Id);
+            
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, request, requestContext?.Span, options: _instrumentationOptions);
+            var context = InitRequestContext(span, requestContext);
+
+            try
+            {
+                Message message = await s_mediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
+
+                var scheduler = _messageSchedulerFactory.Create(this);
+                return scheduler switch
+                {
+                    IAmAMessageSchedulerAsync async => await async.ScheduleAsync(message, at, cancellationToken).ConfigureAwait(continueOnCapturedContext),
+                    IAmAMessageSchedulerSync sync => sync.Schedule(message, at),
+                    _ => throw new InvalidOperationException("Message scheduler must be sync or async")
+                };
+            }
+            catch (Exception e)
+            {
+                _tracer?.AddExceptionToSpan(span, [e]);
+                throw;
+            }
+            finally
+            {
                 _tracer?.EndSpan(span);
             }
         }

@@ -2,29 +2,28 @@
 
 namespace Paramore.Brighter;
 
-public class InMemoryMessageSchedulerFactory(TimeSpan initialDelay, TimeSpan period) : IAmAMessageSchedulerFactory
+public class InMemoryMessageSchedulerFactory(TimeProvider timerProvider) : IAmAMessageSchedulerFactory
 {
     public InMemoryMessageSchedulerFactory()
-        : this(TimeSpan.Zero, TimeSpan.FromSeconds(1))
+        : this(TimeProvider.System)
     {
     }
 
     public IAmAMessageScheduler Create(IAmACommandProcessor processor)
     {
-        return GetOrCreate(processor, initialDelay, period);
+        return GetOrCreate(processor, timerProvider);
     }
 
     private static readonly object s_lock = new();
     private static InMemoryMessageScheduler? s_scheduler;
 
-    private static InMemoryMessageScheduler GetOrCreate(IAmACommandProcessor processor, TimeSpan initialDelay,
-        TimeSpan period)
+    private static InMemoryMessageScheduler GetOrCreate(IAmACommandProcessor processor, TimeProvider timeProvider)
     {
         if (s_scheduler == null)
         {
             lock (s_lock)
             {
-                s_scheduler ??= new InMemoryMessageScheduler(processor, initialDelay, period);
+                s_scheduler ??= new InMemoryMessageScheduler(processor, timeProvider);
             }
         }
 

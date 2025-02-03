@@ -75,7 +75,6 @@ namespace GreetingsSender
                 }).Create();
             
             serviceCollection
-                .AddSingleton<IAmAMessageSchedulerFactory>(new InMemoryMessageSchedulerFactory())
                 .AddBrighter()
                 .UseExternalBus((configure) =>
                 {
@@ -83,6 +82,7 @@ namespace GreetingsSender
                     configure.MaxOutStandingMessages = 5;
                     configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                 })
+                .UseMessageScheduler(new InMemoryMessageSchedulerFactory())
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -101,7 +101,7 @@ namespace GreetingsSender
                     break;
                 }
                 
-                commandProcessor.SchedulerPost(TimeSpan.FromSeconds(60), new GreetingEvent($"Ian says: Hi {name}"));
+                commandProcessor.SchedulerPost(new GreetingEvent($"Ian says: Hi {name}"), TimeSpan.FromSeconds(60));
             }
             
             commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));

@@ -40,8 +40,14 @@ namespace Paramore.Brighter
         /// Creates the specified configuration.
         /// </summary>
         /// <param name="outbox">The outbox for outgoing messages to the control bus</param>
+        /// <param name="producerRegistry"></param>
+        /// <param name="tracer"></param>
+        /// <param name="messageSchedulerFactory"></param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry, BrighterTracer tracer)
+        public IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, 
+            IAmAProducerRegistry producerRegistry,
+            BrighterTracer tracer,
+            IAmAMessageSchedulerFactory? messageSchedulerFactory = null)
             where T : Message
         {
             var mapper = new MessageMapperRegistry(
@@ -65,6 +71,7 @@ namespace Paramore.Brighter
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)   
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
+                .MessageSchedulerFactory(messageSchedulerFactory)
                 .Build()
                 );
         }

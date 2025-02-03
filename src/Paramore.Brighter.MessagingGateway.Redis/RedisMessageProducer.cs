@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 using ServiceStack.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
@@ -69,7 +70,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         public Publication Publication { get { return _publication; } }
 
+        /// <inheritdoc />
         public Activity? Span { get; set; }
+        
+        /// <inheritdoc />
+        public IAmAMessageScheduler? Scheduler { get; set; }
 
         public void Dispose()
         {
@@ -88,33 +93,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="message">The message.</param>
         /// <returns>Task.</returns>
-        public void Send(Message message)
-        {
-           if (s_pool is null)
-                throw new ChannelFailureException("RedisMessageProducer: Connection pool has not been initialized");
-           
-           using var client = s_pool.Value.GetClient();
-           Topic = message.Header.Topic;
-
-           s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
-  
-           var redisMessage = CreateRedisMessage(message);
-
-           s_logger.LogDebug(
-               "RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
-                message.Header.Topic, message.Id.ToString(), message.Body.Value
-               );
-           //increment a counter to get the next message id
-           var nextMsgId = IncrementMessageCounter(client);
-           //store the message, against that id
-           StoreMessage(client, redisMessage, nextMsgId);
-           //If there are subscriber queues, push the message to the subscriber queues
-           var pushedTo = PushToQueues(client, nextMsgId);
-           s_logger.LogDebug(
-               "RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
-                message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo)
-               );
-        }
+        public void Send(Message message) => SendWithDelay(message, TimeSpan.Zero);
 
         /// <summary>
         /// Sends the specified message.
@@ -124,8 +103,100 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>Task.</returns>
         public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
+            await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
+        }
+        
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <remarks>
+        /// No delay support on Redis
+        /// </remarks>
+        /// <param name="message">The message.</param>
+        /// <param name="delay">The sending delay</param>
+        /// <returns>Task.</returns>
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
+        {
             if (s_pool is null)
+            {
                 throw new ChannelFailureException("RedisMessageProducer: Connection pool has not been initialized");
+            }
+            
+            delay ??= TimeSpan.Zero;
+            if (delay != TimeSpan.Zero)
+            {
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    BrighterAsyncContext.Run(async () => await async.ScheduleAsync(message, delay.Value));
+                    return;
+                }
+
+                s_logger.LogInformation("RedisMessageProducer: No scheduler configured, message will be sent immediately");
+            }
+           
+            using var client = s_pool.Value.GetClient();
+            Topic = message.Header.Topic;
+
+            s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
+  
+            var redisMessage = CreateRedisMessage(message);
+
+            s_logger.LogDebug(
+                "RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
+                message.Header.Topic, message.Id.ToString(), message.Body.Value
+            );
+            //increment a counter to get the next message id
+            var nextMsgId = IncrementMessageCounter(client);
+            //store the message, against that id
+            StoreMessage(client, redisMessage, nextMsgId);
+            //If there are subscriber queues, push the message to the subscriber queues
+            var pushedTo = PushToQueues(client, nextMsgId);
+            s_logger.LogDebug(
+                "RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
+                message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo)
+            );
+        }
+
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        ///  <remarks>
+        /// No delay support on Redis
+        /// </remarks>
+        /// <param name="message">The message.</param>
+        /// <param name="delay">The sending delay</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Task.</returns>
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        {
+            if (s_pool is null)
+            {
+                throw new ChannelFailureException("RedisMessageProducer: Connection pool has not been initialized");
+            }
+            
+            delay ??= TimeSpan.Zero;
+            if (delay != TimeSpan.Zero)
+            {
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+                
+                s_logger.LogInformation("RedisMessageProducer: No scheduler configured, message will be sent immediately");
+            }
 
             await using var client = await s_pool.Value.GetClientAsync(token: cancellationToken);
             Topic = message.Header.Topic;
@@ -148,34 +219,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 "RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
                 message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo)
             );
-        }
-        
-        /// <summary>
-        /// Sends the specified message.
-        /// </summary>
-        /// <remarks>
-        /// No delay support on Redis
-        /// </remarks>
-        /// <param name="message">The message.</param>
-        /// <param name="delay">The sending delay</param>
-        /// <returns>Task.</returns>
-         public void SendWithDelay(Message message, TimeSpan? delay = null)
-        {                                                        
-            Send(message);
-        }
-        
-        /// <summary>
-        /// Sends the specified message.
-        /// </summary>
-        ///  <remarks>
-        /// No delay support on Redis
-        /// </remarks>
-        /// <param name="message">The message.</param>
-        /// <param name="delay">The sending delay</param>
-        /// <returns>Task.</returns>
-        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
-        {
-            await SendAsync(message, cancellationToken);
         }
 
         private IEnumerable<string> PushToQueues(IRedisClient client, long nextMsgId)

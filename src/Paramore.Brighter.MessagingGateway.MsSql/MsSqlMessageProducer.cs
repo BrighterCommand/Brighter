@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,6 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
@@ -29,6 +31,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -49,6 +52,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Gets or sets the OTel span for writing producer events.
         /// </summary>
         public Activity? Span { get; set; }
+
+        /// <inheritdoc />
+        public IAmAMessageScheduler? Scheduler { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MsSqlMessageProducer"/> class.
@@ -84,11 +90,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="message">The message to send.</param>
         public void Send(Message message)
         {
-            var topic = message.Header.Topic;
-
-            s_logger.LogDebug("MsSqlMessageProducer: send message with topic {Topic} and id {Id}", topic, message.Id);
-
-            _sqlQ.Send(message, topic);
+            SendWithDelay(message, TimeSpan.Zero);
         }
 
         /// <summary>
@@ -99,12 +101,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns>A task that represents the asynchronous send operation.</returns>
         public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
-            var topic = message.Header.Topic;
-
-            s_logger.LogDebug(
-                "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}", topic, message.Id);
-
-            await _sqlQ.SendAsync(message, topic, TimeSpan.Zero);
+            await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
         }
 
         /// <summary>
@@ -114,9 +111,30 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="message">The message to send.</param>
         /// <param name="delay">The delay to use.</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
-        {
-            // No delay support implemented
-            Send(message);
+        { 
+            delay ??= TimeSpan.Zero;
+            if (delay != TimeSpan.Zero)
+            {
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+                  
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    BrighterAsyncContext.Run(async () => await async.ScheduleAsync(message, delay.Value));
+                    return;
+                } 
+                  
+                s_logger.LogWarning("MsSqlMessageProducer: no scheduler configured, message will be sent immediately");
+            }
+              
+            var topic = message.Header.Topic;
+
+            s_logger.LogDebug("MsSqlMessageProducer: send message with topic {Topic} and id {Id}", topic, message.Id);
+
+            _sqlQ.Send(message, topic);
         }
 
         /// <summary>
@@ -129,8 +147,30 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns>A task that represents the asynchronous send operation.</returns>
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
-            // No delay support implemented
-            await SendAsync(message, cancellationToken);
+            delay ??= TimeSpan.Zero;
+            if (delay != TimeSpan.Zero)
+            {
+                if (Scheduler is IAmAMessageSchedulerAsync async)
+                {
+                    await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                    return;
+                }
+
+                if (Scheduler is IAmAMessageSchedulerSync sync)
+                {
+                    sync.Schedule(message, delay.Value);
+                    return;
+                }
+                
+                s_logger.LogWarning("MsSqlMessageProducer: no scheduler configured, message will be sent immediately");
+            }
+
+            var topic = message.Header.Topic;
+
+            s_logger.LogDebug(
+                "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}", topic, message.Id);
+
+            await _sqlQ.SendAsync(message, topic, TimeSpan.Zero, cancellationToken);
         }
 
         /// <summary>

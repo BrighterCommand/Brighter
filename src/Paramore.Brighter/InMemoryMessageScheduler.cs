@@ -1,133 +1,114 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
+using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter;
 
-public class InMemoryMessageScheduler : IAmAMessageSchedulerSync
+public class InMemoryMessageScheduler(IAmACommandProcessor processor, TimeProvider timeProvider)
+    : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync
 {
-    private readonly SchedulerMessageCollection _messages = new();
-    private readonly IAmACommandProcessor _processor;
+    private readonly ConcurrentDictionary<string, ITimer> _timers = new();
 
-    private readonly Timer _timer;
+    /// <inheritdoc cref="Schedule(Paramore.Brighter.Message,System.DateTimeOffset)"/>
+    public string Schedule(Message message, DateTimeOffset at) 
+        => Schedule(message, at - DateTimeOffset.UtcNow);
 
-    public InMemoryMessageScheduler(IAmACommandProcessor processor,
-        TimeSpan initialDelay,
-        TimeSpan period)
-    {
-        _processor = processor;
-        _timer = new Timer(Consume, this, initialDelay, period);
-    }
-
-    private static void Consume(object? state)
-    {
-        var scheduler = (InMemoryMessageScheduler)state!;
-
-        var now = DateTimeOffset.UtcNow;
-        var schedulerMessage = scheduler._messages.Next(now);
-        while (schedulerMessage != null)
-        {
-            var tmp = schedulerMessage;
-            BrighterAsyncContext.Run(async () => await scheduler._processor.SendAsync(new SchedulerMessageFired(tmp.Id)
-            {
-                FireType = tmp.FireType,
-                MessageType = tmp.MessageType,
-                MessageData = tmp.MessageData,
-                UseAsync = tmp.UseAsync
-            }));
-
-            // TODO Add log
-            schedulerMessage = scheduler._messages.Next(now);
-        }
-    }
-
-    public string Schedule<TRequest>(DateTimeOffset at, SchedulerFireType fireType, TRequest request)
-        where TRequest : class, IRequest
+    /// <inheritdoc cref="Schedule(Paramore.Brighter.Message,System.TimeSpan)"/>
+    public string Schedule(Message message, TimeSpan delay)
     {
         var id = Guid.NewGuid().ToString();
-        _messages.Add(new SchedulerMessage(id, at, fireType, false,
-            typeof(TRequest).FullName!,
-            JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)));
+        _timers[id] = timeProvider.CreateTimer(_ => Execute(id, message), null, delay, TimeSpan.Zero);
         return id;
     }
 
-    public string Schedule<TRequest>(TimeSpan delay, SchedulerFireType fireType, TRequest request)
-        where TRequest : class, IRequest
-        => Schedule(DateTimeOffset.UtcNow.Add(delay), fireType, request);
-
-    public void CancelScheduler(string id)
-        => _messages.Delete(id);
-
-    public void Dispose() => _timer.Dispose();
-
-    private record SchedulerMessage(
-        string Id,
-        DateTimeOffset At,
-        SchedulerFireType FireType,
-        bool UseAsync,
-        string MessageType,
-        string MessageData);
-
-    private class SchedulerMessageCollection
+    /// <inheritdoc cref="ReScheduler(System.String,System.DateTimeOffset)"/>
+    public bool ReScheduler(string schedulerId, DateTimeOffset at)
     {
-        // It's a sorted list
-        private readonly object _lock = new();
-        private readonly LinkedList<SchedulerMessage> _messages = new();
-
-        public SchedulerMessage? Next(DateTimeOffset now)
+        if (_timers.TryGetValue(schedulerId, out var timer))
         {
-            lock (_lock)
-            {
-                var first = _messages.First?.Value;
-                if (first == null || first.At >= now)
-                {
-                    return null;
-                }
-
-                _messages.RemoveFirst();
-                return first;
-            }
+            timer.Change(at - DateTimeOffset.UtcNow, TimeSpan.Zero);
+            return true;
         }
 
-        public void Add(SchedulerMessage message)
+        return false;
+    }
+
+    /// <inheritdoc cref="ReScheduler(System.String,System.TimeSpan)"/>
+    public bool ReScheduler(string schedulerId, TimeSpan delay)
+        => ReScheduler(schedulerId, DateTimeOffset.UtcNow.Add(delay));
+
+    /// <inheritdoc cref="Cancel"/>
+    public void Cancel(string id)
+    {
+        if (_timers.TryRemove(id, out var timer))
         {
-            lock (_lock)
-            {
-                var node = _messages.First;
-                while (node != null)
-                {
-                    if (node.Value.At > message.At)
-                    {
-                        _messages.AddBefore(node, message);
-                        return;
-                    }
+            timer.Dispose();
+        }
+    }
 
-                    node = node.Next;
-                }
+    /// <inheritdoc cref="ScheduleAsync(Paramore.Brighter.Message,System.DateTimeOffset,System.Threading.CancellationToken)"/>
+    public Task<string> ScheduleAsync(Message message, DateTimeOffset at, CancellationToken cancellationToken = default)
+        => Task.FromResult(Schedule(message, at));
 
-                _messages.AddLast(message);
-            }
+    /// <inheritdoc cref="ScheduleAsync(Paramore.Brighter.Message,System.TimeSpan,System.Threading.CancellationToken)"/>
+    public Task<string> ScheduleAsync(Message message, TimeSpan delay, CancellationToken cancellationToken = default)
+        => Task.FromResult(Schedule(message, delay));
+
+    /// <inheritdoc cref="ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
+    public Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(ReScheduler(schedulerId, at));
+
+    /// <inheritdoc cref="ReSchedulerAsync(string,System.TimeSpan,System.Threading.CancellationToken)"/>
+    public Task<bool> ReSchedulerAsync(string schedulerId, TimeSpan delay,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult(ReScheduler(schedulerId, delay));
+
+    /// <inheritdoc cref="CancelAsync"/> 
+    public async Task CancelAsync(string id, CancellationToken cancellationToken = default)
+    {
+        if (_timers.TryRemove(id, out var timer))
+        {
+            await timer.DisposeAsync();
+        }
+    }
+
+    /// <inheritdoc cref="Dispose"/>
+    public void Dispose()
+    {
+        foreach (var timer in _timers.Values)
+        {
+            timer.Dispose();
+        }
+        
+        _timers.Clear();
+    }
+
+    /// <inheritdoc cref="DisposeAsync"/>
+    public async ValueTask DisposeAsync()
+    {
+        foreach (var timer in _timers.Values)
+        {
+            await timer.DisposeAsync();
         }
 
-        public void Delete(string id)
-        {
-            lock (_lock)
-            {
-                var node = _messages.First;
-                while (node != null)
-                {
-                    if (node.Value.Id == id)
-                    {
-                        _messages.Remove(node);
-                        return;
-                    }
+        _timers.Clear();
+    }
 
-                    node = node.Next;
-                }
-            }
+    private void Execute(string id, Message message)
+    {
+        BrighterAsyncContext.Run(async () => await processor.SendAsync(new SchedulerMessageFired
+        {
+            Id = id,
+            Message = message
+        }));
+
+        if (_timers.TryRemove(id, out var timer))
+        {
+            timer.Dispose();
         }
     }
 }

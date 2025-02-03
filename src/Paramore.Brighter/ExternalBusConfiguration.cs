@@ -119,6 +119,11 @@ namespace Paramore.Brighter
         IAmARequestContextFactory? RequestContextFactory { get; set; }
         
         /// <summary>
+        /// The Message Scheduler Factory.
+        /// </summary>
+        IAmAMessageSchedulerFactory? MessageSchedulerFactory { get; set; }
+        
+        /// <summary>
         /// The transaction provider for the outbox
         /// </summary>
         Type? TransactionProvider { get; set; }
@@ -238,6 +243,11 @@ namespace Paramore.Brighter
         /// You can set this, but you will not need to if you are using the AutoFromAssemblies extension method
         /// </summary>
         public IAmAMessageTransformerFactory? TransformerFactory { get; set; }
+        
+        /// <summary>
+        /// The Message Scheduler Factory.
+        /// </summary>
+        public IAmAMessageSchedulerFactory? MessageSchedulerFactory { get; set; }
         
         /// <summary>
         /// The transaction provider for the outbox

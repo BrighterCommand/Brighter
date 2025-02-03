@@ -67,6 +67,11 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// The OTel Span we are writing Producer events too
     /// </summary>
     public Activity? Span { get; set; }
+    
+    /// <summary>
+    /// The <see cref="IAmAMessageScheduler"/>
+    /// </summary>
+    public IAmAMessageScheduler? Scheduler { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -144,13 +149,21 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
 
             _pendingConfirmations.TryAdd(await Channel.GetNextPublishSequenceNumberAsync(cancellationToken), message.Id);
 
-            if (DelaySupported)
+            if (delay == TimeSpan.Zero || DelaySupported)
             {
                 await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
             }
+            else if(Scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+            {
+                await asyncScheduler.ScheduleAsync(message, delay.Value, cancellationToken);
+            }
+            else if (Scheduler is IAmAMessageSchedulerSync scheduler)
+            {
+                scheduler.Schedule(message, delay.Value);
+            }
             else
             {
-                //TODO: Replace with a Timer, don't block
+                s_logger.LogWarning("No scheduler configured, going to ignore delay publish");
                 await rmqMessagePublisher.PublishMessageAsync(message, TimeSpan.Zero, cancellationToken);
             }
 

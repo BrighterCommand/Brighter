@@ -43,50 +43,8 @@ namespace Paramore.Brighter
         /// Sends the specified command.
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
-        /// <param name="delay">The amount of delay to be used before send the message.</param>
-        /// <param name="request">The command.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory "/> </param>
-        void SchedulerPost<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null) where TRequest : class, IRequest;
-        
-        /// <summary>
-        /// Sends the specified command.
-        /// </summary>
-        /// <typeparam name="TRequest"></typeparam>
-        /// <param name="at">The <see cref="DateTimeOffset"/> that the message should be published.</param>
-        /// <param name="request">The command.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory "/> </param>
-        void SchedulerPost<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null) where TRequest : class, IRequest;
-
-        /// <summary>
-        /// Awaitably sends the specified command.
-        /// </summary>
-        /// <typeparam name="TRequest"></typeparam>
-        /// <param name="delay">The amount of delay to be used before send the message.</param>
-        /// <param name="request">The command.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task SchedulerAsync<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
-        
-        /// <summary>
-        /// Awaitably sends the specified command.
-        /// </summary>
-        /// <typeparam name="TRequest"></typeparam>
-        /// <param name="at">The <see cref="DateTimeOffset"/> that the message should be published.</param>
-        /// <param name="request">The command.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task SchedulerAsync<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
-        
-        /// <summary>
-        /// Sends the specified command.
-        /// </summary>
-        /// <typeparam name="TRequest"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         void Send<TRequest>(TRequest command, RequestContext? requestContext = null) where TRequest : class, IRequest;
 
         /// <summary>
@@ -94,7 +52,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
         /// <param name="command">The command.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task SendAsync<TRequest>(TRequest command, RequestContext? requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
@@ -103,7 +62,8 @@ namespace Paramore.Brighter
         /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>       /// <param name="event">The event.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="event">The event.</param>
         void Publish<TRequest>(TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest;
 
         /// <summary>
@@ -111,7 +71,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
         /// <param name="event">The event.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
@@ -127,7 +87,67 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <param name="request">The request.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="delay">The amount of delay before post the message.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        string SchedulerPost<TRequest>(TRequest request, TimeSpan delay, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
+
+        /// <summary>
+        /// Posts the specified request.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <param name="request">The request.</param>
+        /// <param name="at">The date-time the message should be post.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        string SchedulerPost<TRequest>(TRequest request, DateTimeOffset at, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
+
+        /// <summary>
+        /// Posts the specified request with async/await support.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <param name="request">The request.</param>
+        /// <param name="delay">The amount of delay before post the message.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        Task<string> SchedulerPostAsync<TRequest>(
+            TRequest request, 
+            TimeSpan delay,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default
+        ) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Posts the specified request with async/await support.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <param name="request">The request.</param>
+        /// <param name="at">The date-time the message should be post.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        Task<string> SchedulerPostAsync<TRequest>(
+            TRequest request, 
+            DateTimeOffset at,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default
+        ) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Posts the specified request.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <param name="request">The request.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         void Post<TRequest>(TRequest request, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
 
@@ -136,7 +156,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <param name="request">The request.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
@@ -157,7 +177,7 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="CommandProcessor.ClearOutbox"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns></returns>
@@ -172,7 +192,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="batchId">The id of the deposit batch, if this isn't set items will be added to the outbox as they come in and not as a batch</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
@@ -194,7 +214,7 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
@@ -205,11 +225,11 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutbox(System.string[])"/> 
+        /// Pass deposited message to <see/ cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
@@ -229,7 +249,7 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="CommandProcessor.ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -253,7 +273,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -279,12 +299,11 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <typeparam name="TTransaction">The type of transaction used by the outbox</typeparam>
         /// <returns></returns>
         Task<string[]> DepositPostAsync<TRequest>(
             IEnumerable<TRequest> requests,
@@ -303,7 +322,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
@@ -321,19 +340,19 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Flushes the message box message given by <param name="ids"/> to the broker.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPost{TRequest}(TRequest,Paramore.Brighter.RequestContext?,System.Collections.Generic.Dictionary{string,object}?)"/>
         /// </summary>
         /// <param name="ids">The ids to flush</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         void ClearOutbox(string[] ids, RequestContext? requestContext = null, Dictionary<string, object>? args = null);
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"/> to the broker.
-        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostAsync{TRequest}(TRequest,Paramore.Brighter.RequestContext?,System.Collections.Generic.Dictionary{string,object}?,bool,System.Threading.CancellationToken)"/>
         /// </summary>
         /// <param name="posts">The ids to flush</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/> </param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="continueOnCapturedContext"></param>
         /// <param name="cancellationToken"></param>
@@ -353,7 +372,7 @@ namespace Paramore.Brighter
         /// Because the operation blocks, there is a mandatory timeout
         /// </summary>
         /// <param name="request">What message do we want a reply to</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="RequestContextFactory"/></param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/></param>
         /// <param name="timeOut">The call blocks, so we must time out; defaults to 500 ms if null</param>
         /// <exception cref="NotImplementedException"></exception>
         TResponse? Call<T, TResponse>(T request, RequestContext? requestContext = null, TimeSpan? timeOut = null)
