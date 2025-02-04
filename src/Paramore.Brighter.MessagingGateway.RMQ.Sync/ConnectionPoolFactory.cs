@@ -28,7 +28,7 @@ using Paramore.Brighter.Logging;
 using Polly;
 using RabbitMQ.Client.Exceptions;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     /// <summary>
     /// Class ConnectionPolicyFactory.
@@ -51,17 +51,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="connection"></param>
         public ConnectionPolicyFactory(RmqMessagingGatewayConnection connection)
         {
-            if (connection.Exchange is null) throw new ConfigurationException("RabbitMQ Exchange is not set");
-            if (connection.AmpqUri is null) throw new ConfigurationException("RabbitMQ Broker URL is not set");
+            if (connection.AmpqUri is null)
+                throw new ConfigurationException("ConnectionPolicyFactory ctor: RmqMessagingGatewayConnection.AmpqUri is not set");
+            
+            if (connection.Exchange is null)
+                throw new ConfigurationException("ConnectionPolicyFactory ctor: RmqMessagingGatewayConnection.Exchange is not set");
             
             var retries = connection.AmpqUri.ConnectionRetryCount;
             var retryWaitInMilliseconds = connection.AmpqUri.RetryWaitInMilliseconds;
             var circuitBreakerTimeout = connection.AmpqUri.CircuitBreakTimeInMilliseconds;
 
-            RetryPolicyAsync = Policy
+            RetryPolicy = Policy
                 .Handle<BrokerUnreachableException>()
                 .Or<Exception>()
-                .WaitAndRetryAsync(
+                .WaitAndRetry(
                     retries,
                     retryAttempt => TimeSpan.FromMilliseconds(retryWaitInMilliseconds * Math.Pow(2, retryAttempt)),
                     (exception, timeSpan, context) =>
@@ -87,21 +90,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         }
                     });
 
-            CircuitBreakerPolicyAsync = Policy
+            CircuitBreakerPolicy = Policy
                 .Handle<BrokerUnreachableException>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(circuitBreakerTimeout));
         }
 
         /// <summary>
         /// Gets the retry policy.
         /// </summary>
         /// <value>The retry policy.</value>
-        public AsyncPolicy RetryPolicyAsync { get; }
+        public Policy RetryPolicy { get; }
 
         /// <summary>
         /// Gets the circuit breaker policy.
         /// </summary>
         /// <value>The circuit breaker policy.</value>
-        public AsyncPolicy CircuitBreakerPolicyAsync { get; }
+        public Policy CircuitBreakerPolicy { get; }
     }
 }

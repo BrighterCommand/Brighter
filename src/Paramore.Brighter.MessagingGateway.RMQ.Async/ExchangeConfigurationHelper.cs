@@ -30,7 +30,7 @@ using System.Threading.Tasks;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ;
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 public static class ExchangeConfigurationHelper
 {

@@ -34,7 +34,7 @@ using Polly;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ;
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 /// <summary>
 ///     Class RmqMessageGateway.

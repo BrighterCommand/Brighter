@@ -32,7 +32,7 @@ using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ;
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 public class PullConsumer(IChannel channel) : AsyncDefaultBasicConsumer(channel)
 {

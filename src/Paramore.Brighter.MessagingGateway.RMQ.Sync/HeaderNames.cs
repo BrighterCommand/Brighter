@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     public class HeaderNames
     {

@@ -36,7 +36,7 @@ using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 using RabbitMQ.Client.Events;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ;
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 /// <summary>
 /// Class ClientRequestHandler .

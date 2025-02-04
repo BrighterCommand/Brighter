@@ -34,7 +34,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ;
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 /// <summary>
 /// Class MessageGatewayConnectionPool.

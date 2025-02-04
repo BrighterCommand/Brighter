@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     /// <summary>
     /// Creates a message producer registry, which contains a producer for every publication
@@ -27,10 +27,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Creates message producers.
         /// </summary>
+        /// <remarks>Not implemented in this package. This package supports only RMQ.Client V6 which is blocking, use the Paramore.Brighter.MessagingGateway.RMQ.Async for async clients</remarks>
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
         public Task<IAmAProducerRegistry> CreateAsync(CancellationToken ct = default)
         {
-           return Task.FromResult(Create()); 
+            throw new System.NotImplementedException();
         }
     }
 }

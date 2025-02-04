@@ -8,7 +8,7 @@
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.AzureServiceBus\Paramore.Brighter.MessagingGateway.AzureServiceBus.csproj" />
       <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
-      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.csproj" />
+      <ProjectReference Include="..\..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ.Async\Paramore.Brighter.MessagingGateway.RMQ.Async.csproj" />
     </ItemGroup>
 
   <ItemGroup>

@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
     /// <summary>
     /// Creates a collection of RabbitMQ message producers from the RabbitMQ publication information

@@ -21,11 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ;
+namespace Paramore.Brighter.MessagingGateway.RMQ.Sync;
 
 /// <summary>
 /// Factory class for creating RabbitMQ channels.
@@ -73,18 +72,7 @@ public class ChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is not an RmqSubscription.</exception>
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
     {
-        RmqSubscription? rmqSubscription = subscription as RmqSubscription;
-        if (rmqSubscription == null)
-            throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
-
-        var messageConsumer = _messageConsumerFactory.CreateAsync(rmqSubscription);
-
-        return new ChannelAsync(
-            channelName: subscription.ChannelName,
-            routingKey: subscription.RoutingKey,
-            messageConsumer: messageConsumer,
-            maxQueueLength: subscription.BufferSize
-        );
+        throw new ConfigurationException("Use Paramore.Brighter.MessagingGateway.RMQ.Proactor.ChannelFactory.CreateAsyncChannel instead");
     }
 
     /// <summary>

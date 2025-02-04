@@ -1,5 +1,5 @@
 ﻿using System;
-using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway.Reactor;

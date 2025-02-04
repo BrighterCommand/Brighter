@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
@@ -40,6 +40,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>
+        /// <remarks>
+        ///  Consider using Paramore.Brighter.MessagingGateway.Sync instead of using this method. That assembly continues to RMQ.Client V6.X.X
+        /// which is designed for synchronous operation. This assembly uses RMQ.Client V7.X.X which is designed for asynchronous operation.
+        /// As a result, this version uses the BrighterSynchronizationContext to block on async calls. Usage of the V6 library may be more reliable in production
+        /// where you want to use a synchronous consumer.
+        /// </remarks>
         /// <param name="subscription">The queue to connect to</param>
         /// <returns>IAmAMessageConsumerSync.</returns>
         public IAmAMessageConsumerSync Create(Subscription subscription)

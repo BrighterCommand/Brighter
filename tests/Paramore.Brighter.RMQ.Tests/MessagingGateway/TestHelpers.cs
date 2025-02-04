@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System.Linq;
 using System.Threading.Tasks;
-using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
 using Xunit;
 

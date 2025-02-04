@@ -1,4 +1,4 @@
-﻿namespace Paramore.Brighter.MessagingGateway.RMQ
+﻿namespace Paramore.Brighter.MessagingGateway.RMQ.Async
 {
     public class RmqPublication : Publication
     {

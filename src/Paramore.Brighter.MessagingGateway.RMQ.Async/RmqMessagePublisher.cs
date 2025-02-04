@@ -34,7 +34,7 @@ using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ;
+namespace Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 /// <summary>
 /// Class RmqMessagePublisher.

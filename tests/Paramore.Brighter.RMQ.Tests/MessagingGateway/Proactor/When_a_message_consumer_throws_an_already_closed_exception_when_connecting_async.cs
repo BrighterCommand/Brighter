@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 using Xunit;

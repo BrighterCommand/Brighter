@@ -26,14 +26,19 @@ THE SOFTWARE. */
 using System;
 using RabbitMQ.Client;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ
+namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
     public class RmqMessagingGatewayConnection : IAmGatewayConfiguration 
     {
-        /// <summary>
+      public RmqMessagingGatewayConnection()
+      {
+        Name = Environment.MachineName;
+      }
+
+      /// <summary>
       /// Sets Unique name for the subscription
       /// </summary>
-      public string Name { get; set; } = Environment.MachineName;
+      public string? Name { get; set; }
 
       /// <summary>
       /// Gets or sets the ampq URI.
@@ -72,35 +77,38 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// <summary>
     /// Class AMQPUriSpecification
     /// </summary>
-    public class AmqpUriSpecification(
-        Uri uri,
-        int connectionRetryCount = 3,
-        int retryWaitInMilliseconds = 1000,
-        int circuitBreakTimeInMilliseconds = 60000)
+    public class AmqpUriSpecification
     {
         private string? _sanitizedUri;
 
+        public AmqpUriSpecification(Uri uri, int connectionRetryCount = 3, int retryWaitInMilliseconds = 1000, int circuitBreakTimeInMilliseconds = 60000)
+        {
+            Uri = uri;
+            ConnectionRetryCount = connectionRetryCount;
+            RetryWaitInMilliseconds = retryWaitInMilliseconds;
+            CircuitBreakTimeInMilliseconds = circuitBreakTimeInMilliseconds;
+        }
         /// <summary>
         /// Gets or sets the URI.
         /// </summary>
         /// <value>The URI.</value>
-        public Uri Uri { get; set; } = uri;
+        public Uri Uri { get; set; }
 
 
         /// <summary>
         /// Gets or sets the retry count for when a subscription fails
         /// </summary>
-        public int ConnectionRetryCount { get; set; } = connectionRetryCount;
+        public int ConnectionRetryCount { get; set; }
 
         /// <summary>
         /// The time in milliseconds to wait before retrying to connect again
         /// </summary>
-        public int RetryWaitInMilliseconds { get; set; } = retryWaitInMilliseconds;
+        public int RetryWaitInMilliseconds { get; set; }
 
         /// <summary>
         /// The time in milliseconds to wait before retrying to connect again. 
         /// </summary>
-        public int CircuitBreakTimeInMilliseconds { get; set; } = circuitBreakTimeInMilliseconds;
+        public int CircuitBreakTimeInMilliseconds { get; set; }
 
         public string GetSanitizedUri()
         {
