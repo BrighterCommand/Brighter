@@ -15,11 +15,11 @@ public class HangfireMessageScheduler(
 {
     /// <inheritdoc cref="Schedule(Paramore.Brighter.Message,System.DateTimeOffset)"/>
     public string Schedule(Message message, DateTimeOffset at)
-        => client.Schedule(queue, () => ConsumeAsync(message), at);
+        => client.Schedule(queue, () => ConsumeAsync(message, false), at);
 
     /// <inheritdoc cref="Schedule(Paramore.Brighter.Message,System.TimeSpan)"/>
     public string Schedule(Message message, TimeSpan delay)
-        => client.Schedule(queue, () => ConsumeAsync(message), delay);
+        => client.Schedule(queue, () => ConsumeAsync(message, true), delay);
 
     /// <inheritdoc cref="ReScheduler(System.String,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at) => client.Reschedule(schedulerId, at);
@@ -30,8 +30,17 @@ public class HangfireMessageScheduler(
     /// <inheritdoc cref="Cancel"/>
     public void Cancel(string id) => client.Delete(queue, id);
 
-    private async Task ConsumeAsync(Message message) 
-        => await processor.PostAsync(new FireSchedulerMessage { Id = message.Id, Message = message });
+    private async Task ConsumeAsync(Message message, bool async)
+    {
+        if (async)
+        {
+            await processor.PostAsync(new FireSchedulerMessage { Id = message.Id, Message = message });
+        }
+        else
+        {
+            processor.Post(new FireSchedulerMessage { Id = message.Id, Message = message });
+        }
+    }
 
     /// <inheritdoc cref="ScheduleAsync(Paramore.Brighter.Message,System.DateTimeOffset,System.Threading.CancellationToken)"/>
     public Task<string> ScheduleAsync(Message message, DateTimeOffset at, CancellationToken cancellationToken = default)

@@ -99,7 +99,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 policyRegistry,
                 bus
             );
-             }
+        }
 
         [Fact]
         public void When_Posting_A_Message_To_The_Command_Processor()

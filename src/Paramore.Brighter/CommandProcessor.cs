@@ -187,6 +187,7 @@ namespace Paramore.Brighter
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _replySubscriptions = replySubscriptions;
+            _messageSchedulerFactory = messageSchedulerFactory;
             
             InitExtServiceBus(bus); 
         }
@@ -203,6 +204,7 @@ namespace Paramore.Brighter
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="messageSchedulerFactory">The <see cref="IAmAMessageSchedulerFactory"/>.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -211,7 +213,8 @@ namespace Paramore.Brighter
             InboxConfiguration? inboxConfiguration = null,
             IEnumerable<Subscription>? replySubscriptions = null,
             IAmABrighterTracer? tracer = null,
-            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
+            InstrumentationOptions instrumentationOptions = InstrumentationOptions.All,
+            IAmAMessageSchedulerFactory? messageSchedulerFactory = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
@@ -220,6 +223,7 @@ namespace Paramore.Brighter
             _replySubscriptions = replySubscriptions;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
+            _messageSchedulerFactory = messageSchedulerFactory;
 
             InitExtServiceBus(mediator); 
         }

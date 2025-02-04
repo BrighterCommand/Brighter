@@ -26,25 +26,7 @@ public class InMemoryMessageSchedulerFactory(TimeProvider timerProvider) : IAmAM
     {
     }
 
-    public IAmAMessageScheduler Create(IAmACommandProcessor processor)
-    {
-        return GetOrCreate(processor);
-    }
-
-    private static readonly object s_lock = new();
-    private static InMemoryMessageScheduler? s_scheduler;
-
-    private  InMemoryMessageScheduler GetOrCreate(IAmACommandProcessor processor)
-    {
-        if (s_scheduler == null)
-        {
-            lock (s_lock)
-            { 
-                s_scheduler ??= new InMemoryMessageScheduler(processor, timerProvider, GetOrCreateSchedulerId, OnConflict);
-            }
-        }
-
-        return s_scheduler;
-    }
+    public IAmAMessageScheduler Create(IAmACommandProcessor processor) 
+        => new InMemoryMessageScheduler(processor, timerProvider, GetOrCreateSchedulerId, OnConflict);
 }
  

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
+using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter;
 
@@ -13,7 +14,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
     OnSchedulerConflict onConflict)
     : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync
 {
-    private readonly ConcurrentDictionary<string, ITimer> _timers = new();
+    private static readonly ConcurrentDictionary<string, ITimer> s_timers = new();
 
     /// <inheritdoc cref="Schedule(Paramore.Brighter.Message,System.DateTimeOffset)"/>
     public string Schedule(Message message, DateTimeOffset at) 
@@ -23,7 +24,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
     public string Schedule(Message message, TimeSpan delay)
     {
         var id = getOrCreateSchedulerId(message);
-        if (_timers.TryGetValue(id, out var timer))
+        if (s_timers.TryGetValue(id, out var timer))
         {
             if (onConflict == OnSchedulerConflict.Throw)
             {
@@ -33,7 +34,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
             timer.Dispose();
         }
         
-        _timers[id] = timeProvider.CreateTimer(_ => Execute(id, message), null, delay, TimeSpan.Zero);
+        s_timers[id] = timeProvider.CreateTimer(Execute, (processor, id, message, false), delay, TimeSpan.Zero);
         return id;
     }
 
@@ -44,7 +45,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
     /// <inheritdoc cref="ReScheduler(System.String,System.TimeSpan)"/>
     public bool ReScheduler(string schedulerId, TimeSpan delay)
     {
-        if(_timers.TryGetValue(schedulerId, out var timer))
+        if(s_timers.TryGetValue(schedulerId, out var timer))
         {
             timer.Change(delay, TimeSpan.Zero);
             return true;
@@ -56,7 +57,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
     /// <inheritdoc cref="Cancel"/>
     public void Cancel(string id)
     {
-        if (_timers.TryRemove(id, out var timer))
+        if (s_timers.TryRemove(id, out var timer))
         {
             timer.Dispose();
         }
@@ -70,7 +71,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
     public async Task<string> ScheduleAsync(Message message, TimeSpan delay, CancellationToken cancellationToken = default)
     {
         var id = getOrCreateSchedulerId(message);
-        if (_timers.TryGetValue(id, out var timer))
+        if (s_timers.TryGetValue(id, out var timer))
         {
             if (onConflict == OnSchedulerConflict.Throw)
             {
@@ -80,7 +81,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
             await timer.DisposeAsync();
         }
         
-        _timers[id] = timeProvider.CreateTimer(_ => Execute(id, message), null, delay, TimeSpan.Zero);
+        s_timers[id] = timeProvider.CreateTimer(Execute, (processor, id, message, true), delay, TimeSpan.Zero);
         return id;
     }
 
@@ -97,7 +98,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
     /// <inheritdoc cref="CancelAsync"/> 
     public async Task CancelAsync(string id, CancellationToken cancellationToken = default)
     {
-        if (_timers.TryRemove(id, out var timer))
+        if (s_timers.TryRemove(id, out var timer))
         {
             await timer.DisposeAsync();
         }
@@ -106,34 +107,35 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor,
     /// <inheritdoc cref="Dispose"/>
     public void Dispose()
     {
-        foreach (var timer in _timers.Values)
-        {
-            timer.Dispose();
-        }
-        
-        _timers.Clear();
     }
 
     /// <inheritdoc cref="DisposeAsync"/>
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        foreach (var timer in _timers.Values)
-        {
-            await timer.DisposeAsync();
-        }
-
-        _timers.Clear();
+        return new ValueTask();
     }
 
-    private void Execute(string id, Message message)
+    private static void Execute(object? state)
     {
-        BrighterAsyncContext.Run(async () => await processor.PostAsync(new FireSchedulerMessage
+        var (processor, id, message, async) = ((IAmACommandProcessor, string, Message, bool)) state!;
+        if(async)
         {
-            Id = id,
-            Message = message
-        }));
+            BrighterAsyncContext.Run(async () => await processor.PostAsync(new FireSchedulerMessage 
+            { 
+                Id = id,
+                Message = message
+            }));
+        }
+        else
+        {
+            processor.Post(new FireSchedulerMessage
+            {
+                Id = id,
+                Message = message
+            });
+        }
 
-        if (_timers.TryRemove(id, out var timer))
+        if (s_timers.TryRemove(id, out var timer))
         {
             timer.Dispose();
         }
