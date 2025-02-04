@@ -82,7 +82,6 @@ namespace GreetingsSender
                     configure.MaxOutStandingMessages = 5;
                     configure.MaxOutStandingCheckInterval = TimeSpan.FromMilliseconds(500);
                 })
-                .UseMessageScheduler(new InMemoryMessageSchedulerFactory())
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -90,20 +89,6 @@ namespace GreetingsSender
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
-
-            // TODO Remove this code:
-            while (true)
-            {
-                Console.WriteLine("Enter a name to greet (Q to quit):");
-                var name = Console.ReadLine();
-                if (name is "Q" or "q")
-                {
-                    break;
-                }
-                
-                commandProcessor.SchedulerPost(new GreetingEvent($"Ian says: Hi {name}"), TimeSpan.FromSeconds(60));
-            }
-            
             commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
         }
     }

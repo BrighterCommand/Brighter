@@ -11,7 +11,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Hangfire.Core" />
+      <PackageReference Include="Quartz" />
     </ItemGroup>
 
 </Project>

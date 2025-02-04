@@ -32,7 +32,6 @@
     <PackageVersion Include="FluentMigrator.Runner.Postgres" Version="6.2.0" />
     <PackageVersion Include="FluentMigrator.Runner.SQLite" Version="6.2.0" />
     <PackageVersion Include="FluentMigrator.Runner.SqlServer" Version="6.2.0" />
-    <PackageVersion Include="Hangfire.Core" Version="1.8.17" />
     <PackageVersion Include="MessagePack" Version="3.1.1" />
     <PackageVersion Include="Microsoft.Bcl.TimeProvider" Version="9.0.1" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.2.2" />
@@ -79,6 +78,8 @@
     <PackageVersion Include="Polly" Version="8.5.0" />
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
+    <PackageVersion Include="Quartz" Version="3.13.1" />
+    <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.0.0" />
     <PackageVersion Include="Serilog" Version="4.2.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />

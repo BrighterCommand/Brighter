@@ -87,7 +87,6 @@ namespace GreetingsSender
 
                 serviceCollection
                     .AddBrighter()
-                    .UseMessageScheduler(new InMemoryMessageSchedulerFactory())
                     .UseExternalBus(configure =>
                     {
                         configure.ProducerRegistry = producerRegistry;
@@ -99,20 +98,6 @@ namespace GreetingsSender
                 var commandProcessor = serviceProvider.GetRequiredService<IAmACommandProcessor>();
 
                 commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
-                
-                // TODO Remove this code:
-                while (true)
-                {
-                    Console.WriteLine("Enter a name to greet (Q to quit):");
-                    var name = Console.ReadLine();
-                    if (name is "Q" or "q")
-                    {
-                        break;
-                    }
-
-                    commandProcessor.SchedulerPost(new GreetingEvent($"Ian says: Hi {name}"), TimeSpan.FromSeconds(10));
-                }
-
                 commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
             }
         }
