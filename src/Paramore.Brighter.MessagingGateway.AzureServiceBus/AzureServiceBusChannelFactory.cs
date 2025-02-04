@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter.Tasks;
 
 #region Licence
 /* The MIT License (MIT)
@@ -52,16 +53,7 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is incorrect</exception>
     public IAmAChannelSync CreateSyncChannel(Subscription subscription)
     {
-        if (!(subscription is AzureServiceBusSubscription azureServiceBusSubscription))
-        {
-            throw new ConfigurationException(
-                "We expect an AzureServiceBusSubscription or AzureServiceBusSubscription<T> as a parameter");
-        }
-
-        if (subscription.TimeOut < TimeSpan.FromMilliseconds(400))
-        {
-            throw new ArgumentException("The minimum allowed timeout is 400 milliseconds");
-        }
+        var azureServiceBusSubscription = GetAndCheckSubscription(subscription);
 
         IAmAMessageConsumerSync messageConsumer =
             _azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
@@ -82,16 +74,7 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is incorrect</exception>
     public IAmAChannelAsync CreateAsyncChannel(Subscription subscription)
     {
-        if (!(subscription is AzureServiceBusSubscription azureServiceBusSubscription))
-        {
-            throw new ConfigurationException(
-                "We expect an AzureServiceBusSubscription or AzureServiceBusSubscription<T> as a parameter");
-        }
-
-        if (subscription.TimeOut < TimeSpan.FromMilliseconds(400))
-        {
-            throw new ArgumentException("The minimum allowed timeout is 400 milliseconds");
-        }
+        var azureServiceBusSubscription = GetAndCheckSubscription(subscription);
 
         IAmAMessageConsumerAsync messageConsumer =
             _azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
@@ -113,8 +96,11 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
     /// <exception cref="ConfigurationException">Thrown when the subscription is incorrect</exception>
     public Task<IAmAChannelAsync> CreateAsyncChannelAsync(Subscription subscription,
         CancellationToken ct = default)
+        => Task.FromResult(CreateAsyncChannel(subscription));
+    
+    private AzureServiceBusSubscription GetAndCheckSubscription(Subscription subscription)
     {
-        if (!(subscription is AzureServiceBusSubscription azureServiceBusSubscription))
+        if (subscription is not AzureServiceBusSubscription azureServiceBusSubscription)
         {
             throw new ConfigurationException(
                 "We expect an AzureServiceBusSubscription or AzureServiceBusSubscription<T> as a parameter");
@@ -124,17 +110,6 @@ public class AzureServiceBusChannelFactory : IAmAChannelFactory
         {
             throw new ArgumentException("The minimum allowed timeout is 400 milliseconds");
         }
-
-        IAmAMessageConsumerAsync messageConsumer =
-            _azureServiceBusConsumerFactory.CreateAsync(azureServiceBusSubscription);
-
-        IAmAChannelAsync channel = new ChannelAsync(
-            channelName: subscription.ChannelName,
-            routingKey: subscription.RoutingKey,
-            messageConsumer: messageConsumer,
-            maxQueueLength: subscription.BufferSize
-        );
-            
-        return Task.FromResult(channel);
+        return azureServiceBusSubscription;
     }
 }

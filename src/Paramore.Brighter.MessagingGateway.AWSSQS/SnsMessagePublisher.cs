@@ -61,8 +61,6 @@ public class SnsMessagePublisher
                 new() { StringValue = Convert.ToString(message.Header.MessageId), DataType = "String" },
             [HeaderNames.Topic] = new() { StringValue = _topicArn, DataType = "String" },
             [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.CorrelationId] =
-                new() { StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String" },
             [HeaderNames.HandledCount] =
                 new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
             [HeaderNames.MessageType] =
@@ -72,6 +70,16 @@ public class SnsMessagePublisher
                 StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
             }
         };
+
+        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+        {
+            messageAttributes[HeaderNames.CorrelationId] = new MessageAttributeValue
+            {
+                StringValue = Convert.ToString(message.Header.CorrelationId), 
+                DataType = "String"
+            };
+        }
+        
         
         if (_snsSqsType == SnsSqsType.Fifo)
         {

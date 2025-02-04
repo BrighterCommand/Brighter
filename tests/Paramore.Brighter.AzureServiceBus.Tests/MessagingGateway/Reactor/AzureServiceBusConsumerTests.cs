@@ -10,7 +10,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Xunit;
 
-namespace Paramore.Brighter.AzureServiceBus.Tests;
+namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Reactor;
 
 public class AzureServiceBusConsumerTests
 {

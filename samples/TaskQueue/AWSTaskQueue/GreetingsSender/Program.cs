@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
@@ -40,7 +41,7 @@ namespace GreetingsSender
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -71,6 +72,15 @@ namespace GreetingsSender
                         {
                             Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             RequestType = typeof(GreetingEvent)
+                        },
+                        new()
+                        {
+                            Topic = new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                            RequestType = typeof(FarewellEvent),
+                            SnsAttributes = new SnsAttributes
+                            {
+                                Type = SnsSqsType.Fifo
+                            }
                         }
                     }
                 ).Create();

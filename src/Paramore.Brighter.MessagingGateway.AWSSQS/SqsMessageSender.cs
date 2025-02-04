@@ -79,8 +79,6 @@ public class SqsMessageSender
                 new() { StringValue = message.Header.MessageId, DataType = "String" },
             [HeaderNames.Topic] = new() { StringValue = _queueUrl, DataType = "String" },
             [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
-            [HeaderNames.CorrelationId] =
-                new() { StringValue = message.Header.CorrelationId, DataType = "String" },
             [HeaderNames.HandledCount] =
                 new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
             [HeaderNames.MessageType] =
@@ -101,6 +99,12 @@ public class SqsMessageSender
         {
             messageAttributes.Add(HeaderNames.Subject,
                 new MessageAttributeValue { StringValue = message.Header.Subject, DataType = "String" });
+        }
+        
+        if (!string.IsNullOrEmpty(message.Header.CorrelationId))
+        {
+            messageAttributes.Add(HeaderNames.CorrelationId,
+                new MessageAttributeValue { StringValue = message.Header.CorrelationId, DataType = "String" });
         }
 
         // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
