@@ -71,7 +71,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AWSTaskQueue", "AWSTaskQueu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.DynamoDb", "src\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj", "{7F0CDB19-93C6-4C97-A77E-CEFAEB842BB1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.RMQ.Tests", "tests\Paramore.Brighter.RMQ.Tests\Paramore.Brighter.RMQ.Tests.csproj", "{6494BB0C-728D-43CB-B3DA-E56E8D0E4938}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.RMQ.Async.Tests", "tests\Paramore.Brighter.RMQ.Async.Tests\Paramore.Brighter.RMQ.Async.Tests.csproj", "{6494BB0C-728D-43CB-B3DA-E56E8D0E4938}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.AWS.Tests", "tests\Paramore.Brighter.AWS.Tests\Paramore.Brighter.AWS.Tests.csproj", "{FDD6E413-2BC4-4450-A9A6-E8BD2EF86052}"
 EndProject
