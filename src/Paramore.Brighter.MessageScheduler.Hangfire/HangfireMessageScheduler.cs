@@ -31,7 +31,7 @@ public class HangfireMessageScheduler(
     public void Cancel(string id) => client.Delete(queue, id);
 
     private async Task ConsumeAsync(Message message) 
-        => await processor.SendAsync(new SchedulerMessageFired { Id = message.Id, Message = message });
+        => await processor.PostAsync(new FireSchedulerMessage { Id = message.Id, Message = message });
 
     /// <inheritdoc cref="ScheduleAsync(Paramore.Brighter.Message,System.DateTimeOffset,System.Threading.CancellationToken)"/>
     public Task<string> ScheduleAsync(Message message, DateTimeOffset at, CancellationToken cancellationToken = default)

@@ -53,7 +53,7 @@ namespace GreetingsSender
 
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
-                var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
                 var region = string.IsNullOrWhiteSpace(serviceURL) ? RegionEndpoint.EUWest1 : RegionEndpoint.USEast1;
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, region, cfg =>
                 {
@@ -76,9 +76,9 @@ namespace GreetingsSender
                 ).Create();
 
                 serviceCollection
-                    .AddSingleton<IAmAMessageSchedulerFactory>(new InMemoryMessageSchedulerFactory())
                     .AddBrighter()
-                    .UseExternalBus((configure) =>
+                    .UseMessageScheduler(new InMemoryMessageSchedulerFactory())
+                    .UseExternalBus(configure =>
                     {
                         configure.ProducerRegistry = producerRegistry;
                     })
@@ -100,7 +100,7 @@ namespace GreetingsSender
                         break;
                     }
 
-                    commandProcessor.SchedulerPost(TimeSpan.FromSeconds(10), new GreetingEvent($"Ian says: Hi {name}"));
+                    commandProcessor.SchedulerPost(new GreetingEvent($"Ian says: Hi {name}"), TimeSpan.FromSeconds(10));
                 }
 
                 commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));

@@ -7,7 +7,10 @@ using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter;
 
-public class InMemoryMessageScheduler(IAmACommandProcessor processor, TimeProvider timeProvider)
+public class InMemoryMessageScheduler(IAmACommandProcessor processor,
+    TimeProvider timeProvider,
+    Func<Message, string> getOrCreateSchedulerId,
+    OnSchedulerConflict onConflict)
     : IAmAMessageSchedulerSync, IAmAMessageSchedulerAsync
 {
     private readonly ConcurrentDictionary<string, ITimer> _timers = new();
@@ -19,26 +22,36 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor, TimeProvid
     /// <inheritdoc cref="Schedule(Paramore.Brighter.Message,System.TimeSpan)"/>
     public string Schedule(Message message, TimeSpan delay)
     {
-        var id = Guid.NewGuid().ToString();
+        var id = getOrCreateSchedulerId(message);
+        if (_timers.TryGetValue(id, out var timer))
+        {
+            if (onConflict == OnSchedulerConflict.Throw)
+            {
+                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+            }
+            
+            timer.Dispose();
+        }
+        
         _timers[id] = timeProvider.CreateTimer(_ => Execute(id, message), null, delay, TimeSpan.Zero);
         return id;
     }
 
     /// <inheritdoc cref="ReScheduler(System.String,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)
-    {
-        if (_timers.TryGetValue(schedulerId, out var timer))
-        {
-            timer.Change(at - DateTimeOffset.UtcNow, TimeSpan.Zero);
-            return true;
-        }
-
-        return false;
-    }
+        => ReScheduler(schedulerId, at - DateTimeOffset.UtcNow); 
 
     /// <inheritdoc cref="ReScheduler(System.String,System.TimeSpan)"/>
     public bool ReScheduler(string schedulerId, TimeSpan delay)
-        => ReScheduler(schedulerId, DateTimeOffset.UtcNow.Add(delay));
+    {
+        if(_timers.TryGetValue(schedulerId, out var timer))
+        {
+            timer.Change(delay, TimeSpan.Zero);
+            return true;
+        }
+        
+        return false;
+    }
 
     /// <inheritdoc cref="Cancel"/>
     public void Cancel(string id)
@@ -54,8 +67,22 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor, TimeProvid
         => Task.FromResult(Schedule(message, at));
 
     /// <inheritdoc cref="ScheduleAsync(Paramore.Brighter.Message,System.TimeSpan,System.Threading.CancellationToken)"/>
-    public Task<string> ScheduleAsync(Message message, TimeSpan delay, CancellationToken cancellationToken = default)
-        => Task.FromResult(Schedule(message, delay));
+    public async Task<string> ScheduleAsync(Message message, TimeSpan delay, CancellationToken cancellationToken = default)
+    {
+        var id = getOrCreateSchedulerId(message);
+        if (_timers.TryGetValue(id, out var timer))
+        {
+            if (onConflict == OnSchedulerConflict.Throw)
+            {
+                throw new InvalidOperationException($"scheduler with '{id}' id already exists");
+            }
+            
+            await timer.DisposeAsync();
+        }
+        
+        _timers[id] = timeProvider.CreateTimer(_ => Execute(id, message), null, delay, TimeSpan.Zero);
+        return id;
+    }
 
     /// <inheritdoc cref="ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
     public Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at,
@@ -100,7 +127,7 @@ public class InMemoryMessageScheduler(IAmACommandProcessor processor, TimeProvid
 
     private void Execute(string id, Message message)
     {
-        BrighterAsyncContext.Run(async () => await processor.SendAsync(new SchedulerMessageFired
+        BrighterAsyncContext.Run(async () => await processor.PostAsync(new FireSchedulerMessage
         {
             Id = id,
             Message = message

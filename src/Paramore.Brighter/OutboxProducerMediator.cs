@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Scheduler.Events;
 using Polly;
 using Polly.Registry;
 
@@ -425,6 +426,13 @@ namespace Paramore.Brighter
         public Message CreateMessageFromRequest<TRequest>(TRequest request, RequestContext requestContext)
             where TRequest : class, IRequest
         {
+            // The fired scheduler message is a special case
+            // Because the message is in the raw form already, just waiting to be fired
+            if (request is FireSchedulerMessage scheduler)
+            {
+                return scheduler.Message;
+            }
+            
             var message = MapMessage(request, requestContext);
             return message;
         }
@@ -443,7 +451,14 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken
         ) where TRequest : class, IRequest
         {
-            Message message = await MapMessageAsync(request, requestContext, cancellationToken);
+            // The fired scheduler message is a special case
+            // Because the message is in the raw form already, just waiting to be fired
+            if (request is FireSchedulerMessage schedulerMessage)
+            {
+                return schedulerMessage.Message;
+            }
+            
+            var message = await MapMessageAsync(request, requestContext, cancellationToken);
             return message;
         }
 

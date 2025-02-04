@@ -33,8 +33,6 @@ using Paramore.Brighter.Logging;
 using System.Text.Json;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Scheduler.Events;
-using Paramore.Brighter.Scheduler.Handlers;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -244,8 +242,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterBuilder UseMessageScheduler(this IBrighterBuilder builder, IAmAMessageSchedulerFactory factory)
         {
             builder.Services.AddSingleton(factory);
-            builder.AsyncHandlers(x => x.RegisterAsync<SchedulerMessageFired, SchedulerMessageFiredHandlerAsync>());
-            
             return builder;
         }
         
@@ -340,7 +336,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var producerRegistry = provider.GetService<IAmAProducerRegistry>();
             if (messageSchedulerFactory != null && producerRegistry != null)
             {
-                producerRegistry.Producers.Each(x => x.Scheduler = messageSchedulerFactory.Create(command));
+                producerRegistry
+                    .Producers
+                    .Each(x => x.Scheduler ??= messageSchedulerFactory.Create(command));
             }
 
             return command;
