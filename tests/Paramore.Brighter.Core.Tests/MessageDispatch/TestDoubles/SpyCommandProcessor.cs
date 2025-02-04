@@ -44,7 +44,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         DepositAsync,
         Clear,
         ClearAsync,
-        Call
+        Call,
+        Scheduler,
+        SchedulerAsync
     }
 
     public class ClearParams
@@ -57,6 +59,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
     internal class SpyCommandProcessor : IAmACommandProcessor
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
+        private readonly Queue<IRequest> _scheduler = new Queue<IRequest>();
         private readonly Dictionary<string, IRequest> _postBox = new();
 
         public IList<CommandType> Commands { get; } = new List<CommandType>();
@@ -101,6 +104,38 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
+        }
+
+        public string SchedulerPost<TRequest>(TRequest request, TimeSpan delay, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(request);
+            Commands.Add(CommandType.Scheduler);
+            return Guid.NewGuid().ToString();
+        }
+
+        public string SchedulerPost<TRequest>(TRequest request, DateTimeOffset at, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(request);
+            Commands.Add(CommandType.Scheduler);
+            return Guid.NewGuid().ToString();
+        }
+
+        public Task<string> SchedulerPostAsync<TRequest>(TRequest request, TimeSpan delay, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(request);
+            Commands.Add(CommandType.SchedulerAsync);
+            return Task.FromResult(Guid.NewGuid().ToString());
+        }
+
+        public Task<string> SchedulerPostAsync<TRequest>(TRequest request, DateTimeOffset at, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(request);
+            Commands.Add(CommandType.SchedulerAsync);
+            return Task.FromResult(Guid.NewGuid().ToString());
         }
 
         public virtual void Post<TRequest>(TRequest request, RequestContext requestContext = null, Dictionary<string, object> args = null) 

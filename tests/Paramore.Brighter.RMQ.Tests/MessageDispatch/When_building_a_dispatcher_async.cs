@@ -62,6 +62,7 @@ public class DispatchBuilderTestsAsync : IDisposable
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
+            .MessageSchedulerFactory(null)
             .Build();
 
         _builder = DispatchBuilder.StartNew()
