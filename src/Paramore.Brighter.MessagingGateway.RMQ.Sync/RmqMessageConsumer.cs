@@ -267,9 +267,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <returns>Message.</returns>
         public Message[] Receive(TimeSpan? timeOut = null)
         {
-            if (_consumer is null)
-                throw new InvalidOperationException("RmqMessageConsumer.Receive - value of _consumer cannot be null");
-            
+           
             if (Connection.Exchange is null)
                 throw new InvalidOperationException("RmqMessageConsumer.Receive - value of Connection.Exchange cannot be null");
             
@@ -290,7 +288,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
             {
                 EnsureChannel();
 
-                var (resultCount, results) = _consumer.DeQueue(timeOut.Value, _batchSize);
+                //NOTE: EnsureChannel means that _consumer cannot be null
+                var (resultCount, results) = _consumer!.DeQueue(timeOut.Value, _batchSize);
 
                 if (results != null && results.Length != 0)
                 {
