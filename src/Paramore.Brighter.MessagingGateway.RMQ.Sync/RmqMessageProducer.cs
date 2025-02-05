@@ -40,6 +40,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// Class ClientRequestHandler .
     /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles subscription establishment, request sending and error handling
+    /// <remarks>This version of the consumer supports the RMQ V6 Client and its blocking API. For support of the V7 non-blocking API, please use
+    /// the package Paramore.Brighter.MessagingGateway.RMQ.Async. As such, its SendAsync methods do not do true Async. Instead they rely on Run.Thread to mimic
+    /// an Async operation.
+    /// </remarks>
     /// </summary>
     public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     { 
@@ -169,22 +173,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="message"></param>
         /// <param name="cancellationToken">Cancel the ongoing operation</param>
         /// <returns></returns>
-        public Task SendAsync(Message message, CancellationToken cancellationToken = default)
+        public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            Send(message);
-            tcs.SetResult(new object());
-            return tcs.Task;
+            await Task.Run(() => Send(message), cancellationToken);
         }
 
-        public Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            SendWithDelay(message);
-            tcs.SetResult(new object());
-            return tcs.Task;
+            await Task.Run(() => SendWithDelay(message), cancellationToken);
         }
-
 
         public sealed override void Dispose()
         {

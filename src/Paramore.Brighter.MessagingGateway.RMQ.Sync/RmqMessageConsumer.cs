@@ -41,6 +41,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// The <see cref="RmqMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
     /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching, 
     /// result sending, and error handling.
+    /// <remarks>This version of the consumer supports the RMQ V6 Client and its blocking API. For support of the V7 non-blocking API, please use
+    /// the package Paramore.Brighter.MessagingGateway.RMQ.Async.
+    /// </remarks>
     /// </summary>
     public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumerSync
     {
