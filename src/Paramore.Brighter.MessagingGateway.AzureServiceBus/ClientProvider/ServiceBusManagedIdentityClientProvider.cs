@@ -10,9 +10,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
     /// </summary>
     public class ServiceBusManagedIdentityClientProvider : ServiceBusClientProvider
     {
-        protected override ServiceBusClient Client { get; }
-        protected override ServiceBusAdministrationClient AdminClient { get; }
-
         /// <summary>
         /// Initializes an implementation is <see cref="IServiceBusClientProvider"/> using Managed Identity for Authentication.
         /// </summary>

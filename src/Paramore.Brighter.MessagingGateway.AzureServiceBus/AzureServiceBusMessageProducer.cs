@@ -127,7 +127,7 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
     {
-        var topics = messages.Select(m => m.Header.Topic).Distinct();
+        var topics = messages.Select(m => m.Header.Topic).Distinct().ToArray();
         if (topics.Count() != 1)
         {
             Logger.LogError("Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested", topics.Count());

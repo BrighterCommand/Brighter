@@ -64,12 +64,7 @@ public class AzureServiceBusTopicConsumer : AzureServiceBusConsumer
         _subscriptionName = subscription.ChannelName.Value;
         _serviceBusReceiverProvider = serviceBusReceiverProvider;
     }
-        
-    /// <summary>
-    /// Purges the specified queue name.
-    /// </summary>
-    public override void Purge() => BrighterAsyncContext.Run(async () => await PurgeAsync());
-        
+    
     /// <summary>
     /// Purges the specified queue name.
     /// </summary>

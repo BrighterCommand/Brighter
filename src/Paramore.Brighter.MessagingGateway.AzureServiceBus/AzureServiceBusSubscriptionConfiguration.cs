@@ -34,17 +34,17 @@ public class AzureServiceBusSubscriptionConfiguration
     /// The Maximum amount of times that a Message can be delivered before it is dead Lettered
     /// </summary>
     public int MaxDeliveryCount { get; set; } = 5;
-        
+
     /// <summary>
     /// Dead letter a message when it expires
     /// </summary>
     public bool DeadLetteringOnMessageExpiration { get; set; } = true;
-        
+
     /// <summary>
     /// How long message locks are held for
     /// </summary>
     public TimeSpan LockDuration { get; set; } = TimeSpan.FromMinutes(1);
-        
+
     /// <summary>
     /// How long messages sit in the queue before they expire
     /// </summary>
@@ -64,7 +64,7 @@ public class AzureServiceBusSubscriptionConfiguration
     /// <summary>
     /// A Sql Filter to apply to the subscription
     /// </summary>
-    public string SqlFilter = String.Empty;
+    public string SqlFilter = string.Empty;
 
     /// <summary>
     /// Use a Service Bus Queue instead of a Topic
