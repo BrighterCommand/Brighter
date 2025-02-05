@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -47,15 +48,19 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
     private readonly Message _message;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
+    private readonly FakeTimeProvider _timeProvider;
 
     public CommandProcessorSchedulerCommandTests()
     {
-        _myCommand = new MyCommand { Value = $"Hello World {Guid.NewGuid():N}"};
+        _myCommand = new MyCommand { Value = $"Hello World {Guid.NewGuid():N}" };
 
-        var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey(Topic);
-            
-        InMemoryProducer producer = new(_internalBus, timeProvider) {Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}};
+        
+        _timeProvider = new FakeTimeProvider();
+        _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
+
+        InMemoryProducer producer =
+            new(_internalBus, _timeProvider) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
@@ -74,19 +79,20 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
         var circuitBreakerPolicy = Policy
             .Handle<Exception>()
             .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-            
+
         var policyRegistry = new PolicyRegistry
         {
             { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
         };
-        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, producer},});
+        var producerRegistry =
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
 
-        var tracer = new BrighterTracer(timeProvider);
-        _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            
+        var tracer = new BrighterTracer(_timeProvider);
+        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
+
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            policyRegistry, 
+            producerRegistry,
+            policyRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -99,36 +105,38 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             new InMemoryRequestContextFactory(),
             policyRegistry,
             bus,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory()
+            messageSchedulerFactory: new InMemoryMessageSchedulerFactory(_timeProvider)
         );
     }
 
     [Fact]
     public void When_Scheduling_With_Delay_A_Message_To_The_Command_Processor()
     {
-        _commandProcessor.SchedulerPost(_myCommand, TimeSpan.FromSeconds(1));
+        _commandProcessor.SchedulerPost(_myCommand, TimeSpan.FromSeconds(10));
         _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
-        
-        Task.Delay(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
         _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
-            
+
         var message = _outbox.Get(_myCommand.Id, new RequestContext());
         message.Should().NotBeNull();
         message.Should().Be(_message);
     }
-    
+
     [Fact]
     public void When_Scheduling_With_At_A_Message_To_The_Command_Processor()
     {
-        _commandProcessor.SchedulerPost(_myCommand, DateTimeOffset.UtcNow.AddSeconds(1));
+        _commandProcessor.SchedulerPost(_myCommand, _timeProvider.GetUtcNow().AddSeconds(10));
         _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
-            
-        Task.Delay(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult();
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
         _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
-                
+
         var message = _outbox.Get(_myCommand.Id, new RequestContext());
         message.Should().NotBeNull();
-                
+
         message.Should().Be(_message);
     }
 

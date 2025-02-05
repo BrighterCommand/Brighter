@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -46,15 +45,18 @@ public class SchedulerCommandTests : IDisposable
     private readonly Message _message;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
+    private readonly FakeTimeProvider _timeProvider;
 
     public SchedulerCommandTests()
     {
-        _myCommand = new(){ Value = $"Hello World {Guid.NewGuid():N}"};
+        _myCommand = new() { Value = $"Hello World {Guid.NewGuid():N}" };
 
-        var timeProvider = new FakeTimeProvider();
-        var tracer = new BrighterTracer(timeProvider);
-        _outbox = new InMemoryOutbox(timeProvider) { Tracer = tracer };
-        InMemoryProducer producer = new(_internalBus, timeProvider)
+        _timeProvider = new FakeTimeProvider();
+        _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
+
+        var tracer = new BrighterTracer(_timeProvider);
+        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
+        InMemoryProducer producer = new(_internalBus, _timeProvider)
         {
             Publication = { Topic = _routingKey, RequestType = typeof(MyCommand) }
         };
@@ -89,17 +91,18 @@ public class SchedulerCommandTests : IDisposable
             .ExternalBus(ExternalBusType.FireAndForget, externalBus)
             .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .MessageSchedulerFactory(new InMemoryMessageSchedulerFactory())
+            .MessageSchedulerFactory(new InMemoryMessageSchedulerFactory(_timeProvider))
             .Build();
     }
 
     [Fact]
     public void When_Scheduling_With_A_Default_Policy_And_Passing_A_Delay()
     {
-        _commandProcessor.SchedulerPost(_myCommand, TimeSpan.FromSeconds(1));
+        _commandProcessor.SchedulerPost(_myCommand, TimeSpan.FromSeconds(10));
         _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
 
-        Task.Delay(TimeSpan.FromSeconds(2)).Wait();
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
         _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeTrue();
 
         var message = _outbox.Get(_myCommand.Id, new RequestContext());
@@ -110,10 +113,11 @@ public class SchedulerCommandTests : IDisposable
     [Fact]
     public void When_Scheduling_With_A_Default_Policy_And_Passing_An_At()
     {
-        _commandProcessor.SchedulerPost(_myCommand, DateTimeOffset.UtcNow.AddSeconds(1));
+        _commandProcessor.SchedulerPost(_myCommand, _timeProvider.GetUtcNow().AddSeconds(10));
         _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
 
-        Task.Delay(TimeSpan.FromSeconds(2)).Wait();
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
         _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeTrue();
 
         var message = _outbox.Get(_myCommand.Id, new RequestContext());

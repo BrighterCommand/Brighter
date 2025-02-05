@@ -26,39 +26,46 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
-using Polly;
-using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Scheduler;
 
 [Collection("CommandProcessor")]
-public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
+public class SchedulerCommandAsyncTests : IDisposable
 {
+    private readonly RoutingKey _routingKey = new("MyCommand");
     private readonly CommandProcessor _commandProcessor;
     private readonly MyCommand _myCommand;
+    private readonly Message _message;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
-    private readonly RoutingKey _routingKey;
     private readonly FakeTimeProvider _timeProvider;
 
-    public CommandProcessorSchedulerCommandAsyncTests()
+    public SchedulerCommandAsyncTests()
     {
         _myCommand = new() { Value = $"Hello World {Guid.NewGuid():N}" };
-        _routingKey = new RoutingKey("MyCommand");
+
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
+        var tracer = new BrighterTracer(_timeProvider);
+        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
         InMemoryProducer producer = new(_internalBus, _timeProvider)
         {
             Publication = { Topic = _routingKey, RequestType = typeof(MyCommand) }
         };
+
+        _message = new Message(
+            new MessageHeader(_myCommand.Id, _routingKey, MessageType.MT_COMMAND),
+            new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
+        );
 
         var messageMapperRegistry = new MessageMapperRegistry(
             null,
@@ -66,74 +73,71 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
         );
         messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .RetryAsync();
-
-        var circuitBreakerPolicy = Policy
-            .Handle<Exception>()
-            .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-
-        var policyRegistry = new PolicyRegistry
-        {
-            { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
-            { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
-        };
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { _routingKey, producer }, });
 
-        var tracer = new BrighterTracer(_timeProvider);
-        _outbox = new InMemoryOutbox(_timeProvider) { Tracer = tracer };
-
-        IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry,
-            policyRegistry,
-            messageMapperRegistry,
-            new EmptyMessageTransformerFactory(),
-            new EmptyMessageTransformerFactoryAsync(),
-            tracer,
-            _outbox
+        var externalBus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            producerRegistry: producerRegistry,
+            policyRegistry: new DefaultPolicy(),
+            mapperRegistry: messageMapperRegistry,
+            messageTransformerFactory: new EmptyMessageTransformerFactory(),
+            messageTransformerFactoryAsync: new EmptyMessageTransformerFactoryAsync(),
+            tracer: tracer,
+            outbox: _outbox
         );
 
-        CommandProcessor.ClearServiceBus();
-        _commandProcessor = new CommandProcessor(
-            new InMemoryRequestContextFactory(),
-            policyRegistry,
-            bus,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory(_timeProvider)
-        );
+        _commandProcessor = CommandProcessorBuilder.StartNew()
+            .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
+            .DefaultPolicy()
+            .ExternalBus(ExternalBusType.FireAndForget, externalBus)
+            .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
+            .RequestContextFactory(new InMemoryRequestContextFactory())
+            .MessageSchedulerFactory(new InMemoryMessageSchedulerFactory(_timeProvider))
+            .Build();
     }
 
     [Fact]
-    public async Task When_Scheduling_With_Delay_A_Message_To_The_Command_Processor_Async()
+    public async Task When_Scheduling_With_A_Default_Policy_And_Passing_A_Delay_Async()
     {
         await _commandProcessor.SchedulerPostAsync(_myCommand, TimeSpan.FromSeconds(10));
-        _internalBus.Stream(_routingKey).Any().Should().BeFalse();
-        
-        _timeProvider.Advance(TimeSpan.FromSeconds(10));
-        
-        _internalBus.Stream(_routingKey).Any().Should().BeTrue();
+        _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
 
-        _outbox
-            .Get(_myCommand.Id, new RequestContext())
-            .Should().NotBeNull();
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
+        _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeTrue();
+
+        var message = _outbox.Get(_myCommand.Id, new RequestContext());
+        message.Should().NotBeNull();
+        message.Should().Be(_message);
     }
 
     [Fact]
-    public async Task When_Scheduling_With_At_A_Message_To_The_Command_Processor_Async()
+    public async Task When_Scheduling_With_A_Default_Policy_And_Passing_An_At_Async()
     {
         await _commandProcessor.SchedulerPostAsync(_myCommand, _timeProvider.GetUtcNow().AddSeconds(10));
-        _internalBus.Stream(_routingKey).Any().Should().BeFalse();
-        _timeProvider.Advance(TimeSpan.FromSeconds(10));
-        _internalBus.Stream(_routingKey).Any().Should().BeTrue();
+        _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
 
-        _outbox
-            .Get(_myCommand.Id, new RequestContext())
-            .Should().NotBeNull();
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
+        _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeTrue();
+
+        var message = _outbox.Get(_myCommand.Id, new RequestContext());
+        message.Should().NotBeNull();
+        message.Should().Be(_message);
     }
 
     public void Dispose()
     {
         CommandProcessor.ClearServiceBus();
+    }
+
+    internal class EmptyHandlerFactorySync : IAmAHandlerFactorySync
+    {
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
+        {
+            return null;
+        }
+
+        public void Release(IHandleRequests handler, IAmALifetime lifetime) { }
     }
 }

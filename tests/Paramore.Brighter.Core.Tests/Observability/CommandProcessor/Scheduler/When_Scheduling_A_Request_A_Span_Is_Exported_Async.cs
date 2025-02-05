@@ -26,10 +26,14 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
+    private readonly FakeTimeProvider _timeProvider;
 
     public CommandProcessorSchedulerAsyncObservabilityTests()
     {
         var routingKey = new RoutingKey("MyEvent");
+
+        _timeProvider = new FakeTimeProvider();
+        _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -48,18 +52,19 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
 
         var retryPolicy = Policy
             .Handle<Exception>()
-            .Retry();
+            .RetryAsync();
 
-        var policyRegistry = new PolicyRegistry { { Brighter.CommandProcessor.RETRYPOLICY, retryPolicy } };
+        var policyRegistry = new PolicyRegistry { { Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy } };
 
-        var timeProvider = new FakeTimeProvider();
-        var tracer = new BrighterTracer(timeProvider);
-        InMemoryOutbox outbox = new(timeProvider) { Tracer = tracer };
+        var tracer = new BrighterTracer(_timeProvider);
+        InMemoryOutbox outbox = new(_timeProvider) { Tracer = tracer };
 
+        
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
-            null);
-        messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            null,
+            new SimpleMessageMapperFactoryAsync((_) => new MyEventMessageMapperAsync())
+        );
+        messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
         var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
         {
@@ -91,7 +96,7 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
             bus,
             tracer: tracer,
             instrumentationOptions: InstrumentationOptions.All,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory()
+            messageSchedulerFactory: new InMemoryMessageSchedulerFactory(_timeProvider)
         );
     }
 
@@ -105,7 +110,7 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        await _commandProcessor.SchedulerPostAsync(@event, TimeSpan.FromSeconds(5), context);
+        await _commandProcessor.SchedulerPostAsync(@event, TimeSpan.FromSeconds(10), context);
         parentActivity?.Stop();
 
         _traceProvider.ForceFlush();
@@ -132,12 +137,14 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
         events.Count.Should().Be(1);
 
         //mapping a message should be an event
-        var mapperEvent = events.Single(e => e.Name == $"{nameof(MyEventMessageMapper)}");
+        var mapperEvent = events.Single(e => e.Name == $"{nameof(MyEventMessageMapperAsync)}");
         mapperEvent.Tags
             .Any(a => a.Key == BrighterSemanticConventions.MapperName &&
-                      (string)a.Value == nameof(MyEventMessageMapper)).Should().BeTrue();
-        mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperType && (string)a.Value == "sync").Should()
+                      (string)a.Value == nameof(MyEventMessageMapperAsync)).Should().BeTrue();
+        mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperType && (string)a.Value == "async").Should()
             .BeTrue();
+        
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -150,7 +157,7 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        await _commandProcessor.SchedulerPostAsync(@event, DateTimeOffset.UtcNow.AddSeconds(5), context);
+        await _commandProcessor.SchedulerPostAsync(@event, _timeProvider.GetUtcNow().AddSeconds(10), context);
         parentActivity?.Stop();
 
         _traceProvider.ForceFlush();
@@ -177,11 +184,13 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
         events.Count.Should().Be(1);
 
         //mapping a message should be an event
-        var mapperEvent = events.Single(e => e.Name == $"{nameof(MyEventMessageMapper)}");
+        var mapperEvent = events.Single(e => e.Name == $"{nameof(MyEventMessageMapperAsync)}");
         mapperEvent.Tags
             .Any(a => a.Key == BrighterSemanticConventions.MapperName &&
-                      (string)a.Value == nameof(MyEventMessageMapper)).Should().BeTrue();
-        mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperType && (string)a.Value == "sync").Should()
+                      (string)a.Value == nameof(MyEventMessageMapperAsync)).Should().BeTrue();
+        mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperType && (string)a.Value == "async").Should()
             .BeTrue();
+        
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
     }
 }

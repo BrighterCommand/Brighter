@@ -26,10 +26,14 @@ public class CommandProcessorSchedulerObservabilityTests
     private readonly List<Activity> _exportedActivities;
     private readonly TracerProvider _traceProvider;
     private readonly Brighter.CommandProcessor _commandProcessor;
+    private readonly FakeTimeProvider _timeProvider;
 
     public CommandProcessorSchedulerObservabilityTests()
     {
         var routingKey = new RoutingKey("MyEvent");
+
+        _timeProvider = new FakeTimeProvider();
+        _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -51,10 +55,9 @@ public class CommandProcessorSchedulerObservabilityTests
             .Retry();
 
         var policyRegistry = new PolicyRegistry { { Brighter.CommandProcessor.RETRYPOLICY, retryPolicy } };
-
-        var timeProvider = new FakeTimeProvider();
-        var tracer = new BrighterTracer(timeProvider);
-        InMemoryOutbox outbox = new(timeProvider) { Tracer = tracer };
+        
+        var tracer = new BrighterTracer(_timeProvider);
+        InMemoryOutbox outbox = new(_timeProvider) { Tracer = tracer };
 
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
@@ -91,7 +94,7 @@ public class CommandProcessorSchedulerObservabilityTests
             bus,
             tracer: tracer,
             instrumentationOptions: InstrumentationOptions.All,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory()
+            messageSchedulerFactory: new InMemoryMessageSchedulerFactory(_timeProvider)
         );
     }
 
@@ -105,7 +108,7 @@ public class CommandProcessorSchedulerObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        _commandProcessor.SchedulerPost(@event, TimeSpan.FromSeconds(5), context);
+        _commandProcessor.SchedulerPost(@event, TimeSpan.FromSeconds(10), context);
         parentActivity?.Stop();
 
         _traceProvider.ForceFlush();
@@ -138,6 +141,8 @@ public class CommandProcessorSchedulerObservabilityTests
                       (string)a.Value == nameof(MyEventMessageMapper)).Should().BeTrue();
         mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperType && (string)a.Value == "sync").Should()
             .BeTrue();
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -150,7 +155,7 @@ public class CommandProcessorSchedulerObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        _commandProcessor.SchedulerPost(@event, DateTimeOffset.UtcNow.AddSeconds(5), context);
+        _commandProcessor.SchedulerPost(@event, _timeProvider.GetUtcNow().AddSeconds(10), context);
         parentActivity?.Stop();
 
         _traceProvider.ForceFlush();
@@ -183,5 +188,7 @@ public class CommandProcessorSchedulerObservabilityTests
                       (string)a.Value == nameof(MyEventMessageMapper)).Should().BeTrue();
         mapperEvent.Tags.Any(a => a.Key == BrighterSemanticConventions.MapperType && (string)a.Value == "sync").Should()
             .BeTrue();
+        
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
     }
 }
