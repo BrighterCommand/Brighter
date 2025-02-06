@@ -9,28 +9,22 @@ namespace Paramore.Brighter.MessageScheduler.Aws;
 public class Scheduler
 {
     /// <summary>
-    /// The AWS Role ARN
+    /// The role ARN
     /// </summary>
-    public string Role { get; init; } = string.Empty;
+    public string RoleArn { get; init; } = string.Empty;
 
     /// <summary>
     /// The flexible time window
     /// </summary>
     public int? FlexibleTimeWindowMinutes { get; init; }
+    
+    public RoutingKey Topic { get; set; } = RoutingKey.Empty;
 
-    /// <summary>
-    /// The topic ARN or Queue Url
-    /// </summary>
-    public RoutingKey TopicOrQueue { get; init; } = RoutingKey.Empty;
-    
-    /// <summary>
-    /// Allow Brighter to give a priority to <see cref="MessageHeader.Topic"/> as destiny topic, in case it exists.
-    /// </summary>
+    public string TopicArn { get; init; } = string.Empty;
+    public string QueueUrl { get; init; } = string.Empty;
+
     public bool UseMessageTopicAsTarget { get; set; }
-    
-    /// <summary>
-    /// Action to be performed when a conflict happen during scheduler creating
-    /// </summary>
+
     public OnSchedulerConflict OnConflict { get; init; }
 
     internal FlexibleTimeWindow ToFlexibleTimeWindow()

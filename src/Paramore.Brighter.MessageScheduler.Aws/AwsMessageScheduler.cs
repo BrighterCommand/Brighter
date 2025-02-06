@@ -3,12 +3,9 @@ using System.Text.Json;
 using Amazon;
 using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
-using Amazon.SimpleNotificationService.Model;
-using Amazon.SQS.Model;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
-using MessageAttributeValue = Amazon.SimpleNotificationService.Model.MessageAttributeValue;
 using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundException;
 
 namespace Paramore.Brighter.MessageScheduler.Aws;
@@ -19,9 +16,6 @@ public class AwsMessageScheduler(
     Scheduler scheduler,
     SchedulerGroup schedulerGroup) : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync
 {
-    private static string? s_schedulerTopicArn;
-    private static string? s_schedulerQueueUrl;
-    private static string? s_roleArn;
     private static readonly ConcurrentDictionary<string, bool> s_checkedGroup = new();
     private static readonly ConcurrentDictionary<string, string?> s_queueUrl = new();
     private static readonly ConcurrentDictionary<string, string?> s_topic = new();
@@ -32,8 +26,9 @@ public class AwsMessageScheduler(
         => await ScheduleAsync(message, at, true, cancellationToken);
 
     /// <inheritdoc />
-    public Task<string> ScheduleAsync(Message message, TimeSpan delay, CancellationToken cancellationToken = default)
-        => ScheduleAsync(message, DateTimeOffset.UtcNow.Add(delay), cancellationToken);
+    public async Task<string> ScheduleAsync(Message message, TimeSpan delay,
+        CancellationToken cancellationToken = default)
+        => await ScheduleAsync(message, DateTimeOffset.UtcNow.Add(delay), cancellationToken);
 
     /// <inheritdoc />
     public async Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at,
@@ -124,9 +119,9 @@ public class AwsMessageScheduler(
         s_checkedGroup.TryAdd(schedulerGroup.Name, true);
     }
 
-    private async Task<Target> CreateTargetAsync(string id, Message message, bool async, CancellationToken cancellationToken)
+    private async Task<Target> CreateTargetAsync(string id, Message message, bool async)
     {
-        var roleArn = await GetRoleArnAsync(cancellationToken);
+        var roleArn = scheduler.RoleArn;
         if (scheduler.UseMessageTopicAsTarget)
         {
             var topicArn = await GetTopicAsync(message);
@@ -146,44 +141,35 @@ public class AwsMessageScheduler(
                 return new Target
                 {
                     RoleArn = roleArn,
-                    Arn = "arn:aws:scheduler:::aws-sdk:sqs:send",
+                    Arn = "arn:aws:scheduler:::aws-sdk:sqs:sendMessage",
                     Input = JsonSerializer.Serialize(ToSendMessageRequest(queueUrl, message))
                 };
             }
         }
 
-        await LoadDefaultTopicOrQueueAsync();
-
         var schedulerMessage = new Message
         {
-            Header = new MessageHeader
-            {
-                Topic = scheduler.TopicOrQueue,
-                MessageId = id,
-                MessageType = MessageType.MT_COMMAND,
-                Subject = nameof(FireSchedulerMessage),
-            },
-            Body = new MessageBody(
-                JsonSerializer.Serialize(new FireSchedulerMessage { Id = id, Message = message, Async = async }))
+            Header = new MessageHeader(id, scheduler.Topic, MessageType.MT_COMMAND, subject: nameof(FireSchedulerMessage)),
+            Body = new MessageBody(JsonSerializer.Serialize(new FireSchedulerMessage{Id = id, Async = async, Message = message}, JsonSerialisationOptions.Options))
         };
 
-        if (!string.IsNullOrEmpty(s_schedulerTopicArn))
+        if (!string.IsNullOrEmpty(scheduler.TopicArn))
         {
             return new Target
             {
                 RoleArn = roleArn,
                 Arn = "arn:aws:scheduler:::aws-sdk:sns:publish",
-                Input = JsonSerializer.Serialize(ToPublishRequest(s_schedulerTopicArn, schedulerMessage))
+                Input = JsonSerializer.Serialize(ToPublishRequest(scheduler.TopicArn, schedulerMessage))
             };
         }
 
-        if (!string.IsNullOrWhiteSpace(s_schedulerQueueUrl))
+        if (!string.IsNullOrWhiteSpace(scheduler.QueueUrl))
         {
             return new Target
             {
                 RoleArn = roleArn,
-                Arn = "arn:aws:scheduler:::aws-sdk:sqs:send",
-                Input = JsonSerializer.Serialize(ToSendMessageRequest(s_schedulerQueueUrl, schedulerMessage))
+                Arn = "arn:aws:scheduler:::aws-sdk:sqs:sendMessage",
+                Input = JsonSerializer.Serialize(ToSendMessageRequest(scheduler.QueueUrl, schedulerMessage))
             };
         }
 
@@ -247,52 +233,23 @@ public class AwsMessageScheduler(
         }
     }
 
-    private ValueTask<string> GetRoleArnAsync(CancellationToken cancellationToken)
+    private static object ToPublishRequest(string topicArn, Message message)
     {
-        if (s_roleArn != null)
-        {
-            return new ValueTask<string>(s_roleArn);
-        }
-
-        return new ValueTask<string>(GetRoleArnAsync(scheduler.Role, cancellationToken));
-
-        async Task<string> GetRoleArnAsync(string roleName, CancellationToken cancellationToken)
-        {
-            if (Arn.IsArn(roleName))
-            {
-                s_roleArn = roleName;
-                return roleName;
-            }
-
-            using var client = factory.CreateIdentityClient();
-            var role = await client.GetRoleAsync(
-                new Amazon.IdentityManagement.Model.GetRoleRequest { RoleName = roleName },
-                cancellationToken);
-            s_roleArn = role.Role.Arn;
-            return s_roleArn;
-        }
-    }
-
-    private static PublishRequest ToPublishRequest(string topicArn, Message message)
-    {
-        var messageString = message.Body.Value;
-        var request = new PublishRequest(topicArn, messageString, message.Header.Subject);
-
         if (string.IsNullOrEmpty(message.Header.CorrelationId))
         {
             message.Header.CorrelationId = Guid.NewGuid().ToString();
         }
 
-        var messageAttributes = new Dictionary<string, MessageAttributeValue>
+        var messageAttributes = new Dictionary<string, object>
         {
-            [HeaderNames.Id] = new() { StringValue = message.Header.MessageId, DataType = "String" },
-            [HeaderNames.Topic] = new() { StringValue = topicArn, DataType = "String" },
-            [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
+            [HeaderNames.Id] = new { StringValue = message.Header.MessageId, DataType = "String" },
+            [HeaderNames.Topic] = new { StringValue = topicArn, DataType = "String" },
+            [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType, DataType = "String" },
             [HeaderNames.HandledCount] =
-                new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
+                new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
             [HeaderNames.MessageType] =
-                new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new()
+                new { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+            [HeaderNames.Timestamp] = new
             {
                 StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
             }
@@ -300,7 +257,7 @@ public class AwsMessageScheduler(
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
         {
-            messageAttributes[HeaderNames.CorrelationId] = new MessageAttributeValue
+            messageAttributes[HeaderNames.CorrelationId] = new
             {
                 StringValue = Convert.ToString(message.Header.CorrelationId), DataType = "String"
             };
@@ -309,34 +266,33 @@ public class AwsMessageScheduler(
         if (!string.IsNullOrEmpty(message.Header.ReplyTo))
         {
             messageAttributes.Add(HeaderNames.ReplyTo,
-                new MessageAttributeValue
-                {
-                    StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String"
-                });
+                new { StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String" });
         }
 
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-        messageAttributes[HeaderNames.Bag] = new() { StringValue = Convert.ToString(bagJson), DataType = "String" };
-        request.MessageAttributes = messageAttributes;
+        messageAttributes[HeaderNames.Bag] = new { StringValue = Convert.ToString(bagJson), DataType = "String" };
 
-        return request;
+        return new
+        {
+            TopicArn = topicArn,
+            message.Header.Subject,
+            Message = message.Body.Value,
+            MessageAttributes = messageAttributes
+        };
     }
 
-    private static SendMessageRequest ToSendMessageRequest(string queueUrl, Message message)
+    private static object ToSendMessageRequest(string queueUrl, Message message)
     {
-        var request = new SendMessageRequest { QueueUrl = queueUrl, MessageBody = message.Body.Value };
-
-        var messageAttributes = new Dictionary<string, Amazon.SQS.Model.MessageAttributeValue>
+        var messageAttributes = new Dictionary<string, object>
         {
-            [HeaderNames.Id] =
-                new() { StringValue = message.Header.MessageId, DataType = "String" },
-            [HeaderNames.Topic] = new() { StringValue = queueUrl, DataType = "String" },
-            [HeaderNames.ContentType] = new() { StringValue = message.Header.ContentType, DataType = "String" },
+            [HeaderNames.Id] = new { StringValue = message.Header.MessageId, DataType = "String" },
+            [HeaderNames.Topic] = new { StringValue = queueUrl, DataType = "String" },
+            [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType, DataType = "String" },
             [HeaderNames.HandledCount] =
-                new() { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
+                new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
             [HeaderNames.MessageType] =
-                new() { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
-            [HeaderNames.Timestamp] = new()
+                new { StringValue = message.Header.MessageType.ToString(), DataType = "String" },
+            [HeaderNames.Timestamp] = new
             {
                 StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"
             }
@@ -345,70 +301,25 @@ public class AwsMessageScheduler(
         if (!string.IsNullOrEmpty(message.Header.ReplyTo))
         {
             messageAttributes.Add(HeaderNames.ReplyTo,
-                new() { StringValue = message.Header.ReplyTo, DataType = "String" });
+                new { StringValue = message.Header.ReplyTo, DataType = "String" });
         }
 
         if (!string.IsNullOrEmpty(message.Header.Subject))
         {
             messageAttributes.Add(HeaderNames.Subject,
-                new() { StringValue = message.Header.Subject, DataType = "String" });
+                new { StringValue = message.Header.Subject, DataType = "String" });
         }
 
         if (!string.IsNullOrEmpty(message.Header.CorrelationId))
         {
             messageAttributes.Add(HeaderNames.CorrelationId,
-                new() { StringValue = message.Header.CorrelationId, DataType = "String" });
+                new { StringValue = message.Header.CorrelationId, DataType = "String" });
         }
 
         // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-        messageAttributes[HeaderNames.Bag] = new() { StringValue = bagJson, DataType = "String" };
-        request.MessageAttributes = messageAttributes;
-        return request;
-    }
-
-    private ValueTask LoadDefaultTopicOrQueueAsync()
-    {
-        if (s_schedulerTopicArn != null || s_schedulerQueueUrl != null)
-        {
-            return new ValueTask();
-        }
-
-        return new ValueTask(LoadDefaultTopicOrQueue());
-
-        async Task LoadDefaultTopicOrQueue()
-        {
-            if (Arn.IsArn(scheduler.TopicOrQueue))
-            {
-                s_schedulerTopicArn = scheduler.TopicOrQueue;
-                return;
-            }
-
-            if (Uri.TryCreate(scheduler.TopicOrQueue, UriKind.Absolute, out _))
-            {
-                s_schedulerQueueUrl = scheduler.TopicOrQueue;
-                return;
-            }
-
-            using var client = factory.CreateSnsClient();
-            var topic = await client.FindTopicAsync(scheduler.TopicOrQueue);
-            if (topic != null)
-            {
-                s_schedulerTopicArn = topic.TopicArn;
-                return;
-            }
-
-            try
-            {
-                using var sqsClient = factory.CreateSqsClient();
-                var queue = await sqsClient.GetQueueUrlAsync(scheduler.TopicOrQueue);
-                s_schedulerQueueUrl = queue.QueueUrl;
-            }
-            catch (NotFoundException)
-            {
-                // case we don't find the queue we are going to ignrore it.
-            }
-        }
+        messageAttributes[HeaderNames.Bag] = new { StringValue = bagJson, DataType = "String" };
+        return new { QueueUrl = queueUrl, MessageAttributes = messageAttributes, MessageBody = message.Body.Value };
     }
 
     private async Task<string> ScheduleAsync(Message message, DateTimeOffset at, bool async,
@@ -416,7 +327,7 @@ public class AwsMessageScheduler(
     {
         await EnsureGroupExistsAsync(cancellationToken);
         var id = getOrCreateSchedulerId(message);
-        var target = await CreateTargetAsync(id, message, async, cancellationToken);
+        var target = await CreateTargetAsync(id, message, async);
 
         using var client = factory.CreateSchedulerClient();
         try
