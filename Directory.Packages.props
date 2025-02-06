@@ -6,7 +6,9 @@
   <ItemGroup>
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.405.5" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
+    <PackageVersion Include="AWSSDK.IdentityManagement" Version="3.7.404" />
     <PackageVersion Include="AWSSDK.S3" Version="3.7.411.7" />
+    <PackageVersion Include="AWSSDK.Scheduler" Version="3.7.400.88" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.28" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.79" />
     <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.79" />

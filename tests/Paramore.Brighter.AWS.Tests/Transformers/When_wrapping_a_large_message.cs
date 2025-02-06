@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon.SecurityToken;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tranformers.AWS;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;

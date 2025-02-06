@@ -319,6 +319,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageSc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParamoreBrighter.Quartz.Tests", "tests\ParamoreBrighter.Quartz.Tests\ParamoreBrighter.Quartz.Tests.csproj", "{4469AEE3-B460-4948-A0A5-B9480EE70EA4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageScheduler.Aws", "src\Paramore.Brighter.MessageScheduler.Aws\Paramore.Brighter.MessageScheduler.Aws.csproj", "{28C2529C-EF15-4C86-A2CC-9EE326423A77}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1793,6 +1795,18 @@ Global
 		{4469AEE3-B460-4948-A0A5-B9480EE70EA4}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{4469AEE3-B460-4948-A0A5-B9480EE70EA4}.Release|x86.ActiveCfg = Release|Any CPU
 		{4469AEE3-B460-4948-A0A5-B9480EE70EA4}.Release|x86.Build.0 = Release|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Debug|x86.Build.0 = Debug|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Release|x86.ActiveCfg = Release|Any CPU
+		{28C2529C-EF15-4C86-A2CC-9EE326423A77}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
