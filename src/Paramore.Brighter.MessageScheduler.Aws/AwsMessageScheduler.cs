@@ -149,8 +149,12 @@ public class AwsMessageScheduler(
 
         var schedulerMessage = new Message
         {
-            Header = new MessageHeader(id, scheduler.Topic, MessageType.MT_COMMAND, subject: nameof(FireSchedulerMessage)),
-            Body = new MessageBody(JsonSerializer.Serialize(new FireSchedulerMessage{Id = id, Async = async, Message = message}, JsonSerialisationOptions.Options))
+            Header =
+                new MessageHeader(id, scheduler.Topic, MessageType.MT_COMMAND,
+                    subject: nameof(FireSchedulerMessage)),
+            Body = new MessageBody(JsonSerializer.Serialize(
+                new FireSchedulerMessage { Id = id, Async = async, Message = message },
+                JsonSerialisationOptions.Options))
         };
 
         if (!string.IsNullOrEmpty(scheduler.TopicArn))
@@ -272,12 +276,37 @@ public class AwsMessageScheduler(
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new { StringValue = Convert.ToString(bagJson), DataType = "String" };
 
+        if (!topicArn.EndsWith(".fifo"))
+        {
+            return new
+            {
+                TopicArn = topicArn,
+                message.Header.Subject,
+                Message = message.Body.Value,
+                MessageAttributes = messageAttributes
+            };
+        }
+
+        if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
+        {
+            return new
+            {
+                TopicArn = topicArn,
+                message.Header.Subject,
+                Message = message.Body.Value,
+                MessageAttributes = messageAttributes,
+                MessageGroupId = message.Header.PartitionKey,
+                MessageDeduplicationId = deduplicationId
+            };
+        }
+
         return new
         {
             TopicArn = topicArn,
             message.Header.Subject,
             Message = message.Body.Value,
-            MessageAttributes = messageAttributes
+            MessageAttributes = messageAttributes,
+            MessageGroupId = message.Header.PartitionKey,
         };
     }
 
@@ -319,7 +348,30 @@ public class AwsMessageScheduler(
         // we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
         var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
         messageAttributes[HeaderNames.Bag] = new { StringValue = bagJson, DataType = "String" };
-        return new { QueueUrl = queueUrl, MessageAttributes = messageAttributes, MessageBody = message.Body.Value };
+        if (!queueUrl.EndsWith(".fifo"))
+        {
+            return new { QueueUrl = queueUrl, MessageAttributes = messageAttributes, MessageBody = message.Body.Value };
+        }
+
+        if (message.Header.Bag.TryGetValue(HeaderNames.DeduplicationId, out var deduplicationId))
+        {
+            return new
+            {
+                QueueUrl = queueUrl,
+                MessageAttributes = messageAttributes,
+                MessageBody = message.Body.Value,
+                MessageGroupId = message.Header.PartitionKey,
+                MessageDeduplicationId = deduplicationId
+            };
+        }
+
+        return new
+        {
+            QueueUrl = queueUrl,
+            MessageAttributes = messageAttributes,
+            MessageBody = message.Body.Value,
+            MessageGroupId = message.Header.PartitionKey,
+        };
     }
 
     private async Task<string> ScheduleAsync(Message message, DateTimeOffset at, bool async,
