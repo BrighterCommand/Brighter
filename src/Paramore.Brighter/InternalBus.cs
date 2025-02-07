@@ -38,7 +38,7 @@ namespace Paramore.Brighter;
 /// <param name="boundedCapacity">The maximum number of messages that can be enqueued; -1 is unbounded; default is -1</param>
 public class InternalBus(int boundedCapacity = -1) : IAmABus
 {
-    private ConcurrentDictionary<RoutingKey, BlockingCollection<Message>> _messages = new();
+    private readonly ConcurrentDictionary<RoutingKey, BlockingCollection<Message>> _messages = new();
 
     /// <summary>
     /// Enqueue a message to tbe bus
@@ -98,7 +98,7 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
     {
         _messages.TryGetValue(topic, out var messages);
         
-        return messages != null ? messages.ToArray() : Array.Empty<Message>();
+        return messages != null ? messages.ToArray() : [];
     }   
     
     private static void ValidateMillisecondsTimeout(TimeSpan timeout)
