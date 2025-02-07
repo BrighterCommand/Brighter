@@ -1,4 +1,5 @@
-﻿using Paramore.Brighter.Tasks;
+﻿using Paramore.Brighter.Scheduler.Events;
+using Paramore.Brighter.Tasks;
 using Quartz;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -19,8 +20,9 @@ public class QuartzMessageScheduler(IScheduler scheduler, string? group, Func<Me
         var id = getOrCreateSchedulerId(message);
         var job = JobBuilder.Create<QuartzBrighterJob>()
             .WithIdentity(getOrCreateSchedulerId(message), group!)
-            .UsingJobData("message", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options))
-            .UsingJobData("async", false)
+            .UsingJobData("message", JsonSerializer.Serialize(
+                new FireSchedulerMessage { Id = id, Async = false, Message = message },
+                JsonSerialisationOptions.Options))
             .Build();
 
         var trigger = TriggerBuilder.Create()
@@ -28,7 +30,7 @@ public class QuartzMessageScheduler(IScheduler scheduler, string? group, Func<Me
             .StartAt(at)
             .Build();
 
-        BrighterAsyncContext.Run(async () => await scheduler.ScheduleJob(job, trigger));
+       var tmp = BrighterAsyncContext.Run(async () => await scheduler.ScheduleJob(job, trigger));
         return id;
     }
 
@@ -54,8 +56,9 @@ public class QuartzMessageScheduler(IScheduler scheduler, string? group, Func<Me
         var id = getOrCreateSchedulerId(message);
         var job = JobBuilder.Create<QuartzBrighterJob>()
             .WithIdentity(getOrCreateSchedulerId(message), group!)
-            .UsingJobData("message", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options))
-            .UsingJobData("async", true)
+             .UsingJobData("message", JsonSerializer.Serialize(
+                new FireSchedulerMessage { Id = id, Async = false, Message = message },
+                JsonSerialisationOptions.Options))
             .Build();
 
         var trigger = TriggerBuilder.Create()

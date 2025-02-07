@@ -14,23 +14,17 @@ public class QuartzBrighterJob(IAmACommandProcessor processor) : IJob
     {
         if (!context.JobDetail.JobDataMap.TryGetString("message", out var obj))
         {
-            return;
+            throw new InvalidOperationException("Not message, something is wrong with this job scheduler");
         }
 
-        if (!context.JobDetail.JobDataMap.TryGetBooleanValue("async", out var async))
+        var fireScheduler = JsonSerializer.Deserialize<FireSchedulerMessage>(obj!, JsonSerialisationOptions.Options)!;
+        if (fireScheduler.Async)
         {
-            return;
-        }
-
-        var id = context.JobDetail.Key.Name;
-        var message = JsonSerializer.Deserialize<Message>(obj!, JsonSerialisationOptions.Options)!;
-        if (async)
-        {
-            await processor.PostAsync(new FireSchedulerMessage { Id = id, Message = message });
+            await processor.PostAsync(fireScheduler);
         }
         else
         {
-            processor.Post(new FireSchedulerMessage { Id = id, Message = message });
+            processor.Post(fireScheduler);
         }
     }
 }

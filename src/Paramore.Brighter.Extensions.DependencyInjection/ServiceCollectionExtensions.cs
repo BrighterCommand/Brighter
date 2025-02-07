@@ -245,6 +245,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return builder;
         }
         
+        /// <summary>
+        /// An external message scheduler factory
+        /// </summary>
+        /// <param name="builder">The builder.</param>
+        /// <param name="factory">The message scheduler factory</param>
+        /// <returns></returns>
+        public static IBrighterBuilder UseMessageScheduler(this IBrighterBuilder builder, Func<IServiceProvider, IAmAMessageSchedulerFactory> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+        
         private static INeedInstrumentation AddEventBus(
             IServiceProvider provider,
             INeedMessaging messagingBuilder,
@@ -253,7 +265,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var eventBus = provider.GetService<IAmAnOutboxProducerMediator>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
-            var messageSchedulerFactory = eventBusConfiguration.MessageSchedulerFactory ?? provider.GetService<IAmAMessageSchedulerFactory>();
+            var messageSchedulerFactory = eventBusConfiguration?.MessageSchedulerFactory ?? provider.GetService<IAmAMessageSchedulerFactory>();
 
             INeedInstrumentation instrumentationBuilder = null;
             var hasEventBus = eventBus != null;
@@ -266,7 +278,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 instrumentationBuilder = messagingBuilder.ExternalBus(
                     ExternalBusType.FireAndForget,
                     eventBus,
-                    eventBusConfiguration.ResponseChannelFactory,
+                    eventBusConfiguration!.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration, 
                     messageSchedulerFactory);
@@ -277,7 +289,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 instrumentationBuilder = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus,
-                    eventBusConfiguration.ResponseChannelFactory,
+                    eventBusConfiguration!.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
                     serviceActivatorOptions?.InboxConfiguration,
                     messageSchedulerFactory
@@ -332,8 +344,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .Build();
             
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
-            var messageSchedulerFactory = eventBusConfiguration.MessageSchedulerFactory ?? provider.GetService<IAmAMessageSchedulerFactory>();
             var producerRegistry = provider.GetService<IAmAProducerRegistry>();
+            var messageSchedulerFactory = eventBusConfiguration?.MessageSchedulerFactory ?? provider.GetService<IAmAMessageSchedulerFactory>();
             if (messageSchedulerFactory != null && producerRegistry != null)
             {
                 producerRegistry
