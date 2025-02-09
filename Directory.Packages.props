@@ -60,7 +60,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageVersion>
-    <PackageVersion Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="5.0.0" />
     <PackageVersion Include="OpenTelemetry" Version="1.11.1" />
     <PackageVersion Include="OpenTelemetry.Api.ProviderBuilderExtensions" Version="1.11.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.11.1" />
