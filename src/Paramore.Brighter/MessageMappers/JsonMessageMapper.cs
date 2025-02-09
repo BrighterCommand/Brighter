@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessageMappers;
 
-public class JsonMessageMapper<TRequest>(RequestContext? context) : IAmAMessageMapper<TRequest>, IAmAMessageMapperAsync<TRequest> where TRequest : class, IRequest
+public class JsonMessageMapper<TRequest> : IAmAMessageMapper<TRequest>, IAmAMessageMapperAsync<TRequest> where TRequest : class, IRequest
 {
-    public IRequestContext? Context { get; set; } = context;
+    public IRequestContext? Context { get; set; }
 
     public Task<Message> MapToMessageAsync(TRequest request, Publication publication,
         CancellationToken cancellationToken = default)

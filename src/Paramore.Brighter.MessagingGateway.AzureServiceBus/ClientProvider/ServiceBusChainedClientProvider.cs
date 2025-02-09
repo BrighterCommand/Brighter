@@ -8,9 +8,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
 {
     public class ServiceBusChainedClientProvider : ServiceBusClientProvider
     {
-        protected override ServiceBusClient Client { get; }
-        protected override ServiceBusAdministrationClient AdminClient { get; }
-
         /// <summary>
         /// Initializes an implementation is <see cref="IServiceBusClientProvider"/> using Default Azure Credentials for Authentication.
         /// </summary>
@@ -30,9 +27,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
                     "Credential Sources is null or empty, ensure this is set in the constructor.");
             }
 
-            Client = new ServiceBusClient(fullyQualifiedNameSpace, new ChainedTokenCredential(credentialSources));
-            AdminClient = new ServiceBusAdministrationClient(fullyQualifiedNameSpace,
-                new ChainedTokenCredential(credentialSources));
+            var credentials = new ChainedTokenCredential(credentialSources);
+            Client = new ServiceBusClient(fullyQualifiedNameSpace, credentials);
+            AdminClient = new ServiceBusAdministrationClient(fullyQualifiedNameSpace, credentials);
         }
     }
 }

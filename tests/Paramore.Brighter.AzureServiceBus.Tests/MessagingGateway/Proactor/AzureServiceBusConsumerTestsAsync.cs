@@ -10,7 +10,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Xunit;
 
-namespace Paramore.Brighter.AzureServiceBus.Tests;
+namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway.Proactor;
 
 public class AzureServiceBusConsumerTestsAsync
 {
@@ -90,7 +90,6 @@ public class AzureServiceBusConsumerTestsAsync
         Message[] result =await  _azureServiceBusConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(400));
             
         await _nameSpaceManagerWrapper.SubscriptionExistsAsync("topic", "subscription");
-        //A.CallTo(() => _nameSpaceManagerWrapper.f => f.CreateSubscription("topic", "subscription", _subConfig)).MustHaveHappened();
         Assert.Equal("somebody", result[0].Body.Value);
     }
 
