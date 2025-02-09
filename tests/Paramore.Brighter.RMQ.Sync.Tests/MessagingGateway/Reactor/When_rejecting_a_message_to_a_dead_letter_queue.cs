@@ -80,8 +80,8 @@ public class RmqMessageProducerDLQTests : IDisposable
         );
     }
 
-    [Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
-    //[Fact]
+    //[Fact(Skip = "Breaks due to fault in Task Scheduler running after context has closed")]
+    [Fact]
     public void When_rejecting_a_message_to_a_dead_letter_queue()
     {
         //create the infrastructure
