@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Tests.MessagingGateway;
@@ -16,13 +17,14 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
 
     public RmqMessageConsumerMultipleTopicTests()
     {
-        var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+        var routingKeyOne = new RoutingKey(Guid.NewGuid().ToString());
+        var routingKeyTwo = new RoutingKey(Guid.NewGuid().ToString());
             
         _messageTopic1 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKeyOne, MessageType.MT_COMMAND), 
             new MessageBody("test content for topic test 1"));
         _messageTopic2 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKeyTwo, MessageType.MT_COMMAND), 
             new MessageBody("test content for topic test 2"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -32,8 +34,8 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
         };
 
         var topics = new RoutingKeys([
-            new RoutingKey(_messageTopic1.Header.Topic), 
-            new RoutingKey(_messageTopic2.Header.Topic)
+            routingKeyOne, 
+            routingKeyTwo
         ]);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
 
@@ -49,8 +51,12 @@ public class RmqMessageConsumerMultipleTopicTests : IDisposable
         _messageProducer.Send(_messageTopic1);
         _messageProducer.Send(_messageTopic2);
 
+        //allow messages to propogate
+        Task.Delay(3000);
+
         var topic1Result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
         _messageConsumer.Acknowledge(topic1Result);
+        
         var topic2Result = _messageConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
         _messageConsumer.Acknowledge(topic2Result);
 

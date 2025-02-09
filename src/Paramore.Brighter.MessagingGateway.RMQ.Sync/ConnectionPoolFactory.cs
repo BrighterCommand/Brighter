@@ -86,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
                                 connection.Exchange.Name,
                                 connection.AmpqUri.GetSanitizedUri());
 
-                            throw exception;
+                            throw new ChannelFailureException($"RMQMessagingGateway: Exception on subscription to queue { context["queueName"]} via exchange {connection.Exchange.Name} on subscription {connection.AmpqUri.GetSanitizedUri()}", exception);
                         }
                     });
 

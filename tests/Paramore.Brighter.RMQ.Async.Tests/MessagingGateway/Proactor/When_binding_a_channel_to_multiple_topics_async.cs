@@ -16,13 +16,14 @@ public class AsyncRmqMessageConsumerMultipleTopicTests : IAsyncDisposable, IDisp
 
     public AsyncRmqMessageConsumerMultipleTopicTests()
     {
-        var routingKey = new RoutingKey(Guid.NewGuid().ToString());
+        var routingKeyOne = new RoutingKey(Guid.NewGuid().ToString());
+        var routingKeyTwo = new RoutingKey(Guid.NewGuid().ToString());
             
         _messageTopic1 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKeyOne, MessageType.MT_COMMAND), 
             new MessageBody("test content for topic test 1"));
         _messageTopic2 = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND), 
+            new MessageHeader(Guid.NewGuid().ToString(), routingKeyTwo, MessageType.MT_COMMAND), 
             new MessageBody("test content for topic test 2"));
 
         var rmqConnection = new RmqMessagingGatewayConnection
@@ -32,8 +33,8 @@ public class AsyncRmqMessageConsumerMultipleTopicTests : IAsyncDisposable, IDisp
         };
 
         var topics = new RoutingKeys([
-            new RoutingKey(_messageTopic1.Header.Topic), 
-            new RoutingKey(_messageTopic2.Header.Topic)
+            routingKeyOne,
+            routingKeyTwo
         ]);
         var queueName = new ChannelName(Guid.NewGuid().ToString());
 
@@ -48,6 +49,9 @@ public class AsyncRmqMessageConsumerMultipleTopicTests : IAsyncDisposable, IDisp
     {
         await _messageProducer.SendAsync(_messageTopic1);
         await _messageProducer.SendAsync(_messageTopic2);
+
+        //allow messages to propogate
+        await Task.Delay(3000);
 
         var topic1Result = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
         await _messageConsumer.AcknowledgeAsync(topic1Result);
