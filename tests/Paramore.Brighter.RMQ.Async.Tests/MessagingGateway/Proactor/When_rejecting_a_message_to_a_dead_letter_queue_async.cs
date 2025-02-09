@@ -37,15 +37,18 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
     private readonly IAmAMessageProducerAsync _messageProducer;
     private readonly IAmAMessageConsumerAsync _messageConsumer;
     private readonly Message _message;
-    private readonly IAmAMessageConsumerSync _deadLetterConsumer;
+    private readonly IAmAMessageConsumerAsync _deadLetterConsumer;
 
     public RmqMessageProducerDLQTestsAsync()
     {
         var routingKey = new RoutingKey(Guid.NewGuid().ToString());
             
         _message = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, 
-                MessageType.MT_COMMAND), 
+            new MessageHeader(
+                Guid.NewGuid().ToString(), 
+                routingKey,
+                MessageType.MT_COMMAND,
+                contentType: "text/plain"), 
             new MessageBody("test content"));
 
         var queueName = new ChannelName(Guid.NewGuid().ToString());
@@ -94,7 +97,7 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
         //This will push onto the DLQ
         await _messageConsumer.RejectAsync(message);
 
-        var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
+        var dlqMessage = (await _deadLetterConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
             
         //assert this is our message
         dlqMessage.Id.Should().Be(_message.Id);
