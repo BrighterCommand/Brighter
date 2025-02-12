@@ -128,7 +128,7 @@
   </ItemGroup>
   
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
-    <GlobalPackageReference  Include="Microsoft.NETFramework.ReferenceAssemblies">
+    <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </GlobalPackageReference>
