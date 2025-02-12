@@ -102,7 +102,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
             CancellationToken cancellationToken)
         {
             var connection = await GetOpenConnectionAsync(_connectionProvider, transactionProvider, cancellationToken);
+            
+#if NETSTANDARD
+            using var command = commandFunc.Invoke(connection);
+#else
             await using var command = commandFunc.Invoke(connection);
+#endif
             try
             {
                 if (transactionProvider != null && transactionProvider.HasOpenTransaction)
@@ -339,7 +344,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 messages.Add(MapAMessage(dr));
             }
 
+#if NETSTANDARD
+            dr.Close();
+#else
             await dr.CloseAsync();
+#endif 
 
             return messages;
         }
@@ -353,7 +362,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 outstandingMessages = dr.GetInt32(0);
             }
 
+#if NETSTANDARD
+            dr.Close();
+#else
             await dr.CloseAsync();
+#endif 
             return outstandingMessages;
         }
 
@@ -428,7 +441,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var i = dr.GetOrdinal("Body");
             var body = dr.GetStream(i);
             var buffer = new byte[body.Length];
+            
+#if NETSTANDARD
+            body.Read(buffer, 0, (int)body.Length);
+#else
             body.ReadExactly(buffer, 0, (int)body.Length);
+#endif 
             return buffer;
         }
 

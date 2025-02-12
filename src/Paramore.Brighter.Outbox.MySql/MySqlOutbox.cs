@@ -159,14 +159,14 @@ namespace Paramore.Brighter.Outbox.MySql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
-            await using var command = commandFunc.Invoke(connection);
+            using var command = commandFunc.Invoke(connection);
             try
             {
                 return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
             }
             finally
             {
-                await connection.CloseAsync();
+                connection.Close();
             }
         }
 
@@ -341,7 +341,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 outstandingMessages = dr.GetInt32(0);
             }
 
-            await dr.CloseAsync();
+            dr.Close();
             return outstandingMessages;
         }
 
