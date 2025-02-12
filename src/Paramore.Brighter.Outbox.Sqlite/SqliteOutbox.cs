@@ -161,7 +161,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
+#if NETSTANDARD2_0
             using var command = commandFunc.Invoke(connection);
+#else
+            await using var command = commandFunc.Invoke(connection);
+#endif
             try
             {
                 return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
