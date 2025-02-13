@@ -118,7 +118,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.2" />
-    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.1" />
+    <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.2.efcore.9.0.0" />
     <PackageVersion Include="Npgsql" Version="9.0.2" />
   </ItemGroup>
   <ItemGroup>
