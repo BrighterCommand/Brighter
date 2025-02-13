@@ -101,6 +101,7 @@ public class RmqMessageProducerDLQTestsAsync : IDisposable, IAsyncDisposable
             
         //assert this is our message
         dlqMessage.Id.Should().Be(_message.Id);
+        message.Body.Value.Should().Be(dlqMessage.Body.Value);
     }
 
     public void Dispose()
