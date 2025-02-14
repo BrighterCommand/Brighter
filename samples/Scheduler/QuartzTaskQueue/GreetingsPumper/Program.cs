@@ -78,10 +78,10 @@ class Program
                             {
                                 configure.ProducerRegistry = producerRegistry;
                             })
-                            .UseMessageScheduler(provider =>
+                            .UseScheduler(provider =>
                             {
                                 var factory = provider.GetRequiredService<ISchedulerFactory>();
-                                return new QuartzMessageSchedulerFactory(
+                                return new QuartzSchedulerFactory(
                                     factory.GetScheduler().GetAwaiter().GetResult());
                             })
                             .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
@@ -108,8 +108,7 @@ class Program
                 loop++;
 
                 logger.LogInformation("Scheduling message #{Loop}", loop);
-                commandProcessor.SchedulerPost(new GreetingEvent($"Scheduler message Ian #{loop}"),
-                    TimeSpan.FromMinutes(1));
+                commandProcessor.Post(TimeSpan.FromMinutes(1), new GreetingEvent($"Scheduler message Ian #{loop}"));
                 
                 if (loop % 100 != 0)
                 {

@@ -57,8 +57,15 @@ public class Program
                 {
                     new SqsSubscription<FireSchedulerMessage>(
                         new SubscriptionName("paramore.example.fire-scheduler"),
-                        new ChannelName(typeof(FireSchedulerMessage).FullName.ToValidSNSTopicName()),
-                        new RoutingKey(typeof(FireSchedulerMessage).FullName.ToValidSNSTopicName()),
+                        new ChannelName("message-scheduler-channel"),
+                        new RoutingKey("message-scheduler-topic"),
+                        bufferSize: 10,
+                        timeOut: TimeSpan.FromMilliseconds(20),
+                        lockTimeout: 30),
+                    new SqsSubscription<FireSchedulerRequest>(
+                        new SubscriptionName("paramore.example.fire-scheduler"),
+                        new ChannelName("request-scheduler-channel"),
+                        new RoutingKey("request-scheduler-topic"),
                         bufferSize: 10,
                         timeOut: TimeSpan.FromMilliseconds(20),
                         lockTimeout: 30),

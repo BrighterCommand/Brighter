@@ -61,8 +61,13 @@ class Program
                                 },
                                 new SnsPublication
                                 {
-                                    Topic = new RoutingKey(typeof(FireSchedulerMessage).FullName.ToValidSNSTopicName()),
+                                    Topic = new RoutingKey("message-scheduler-topic"),
                                     RequestType = typeof(FireSchedulerMessage)
+                                },
+                                new SnsPublication
+                                {
+                                    Topic = new RoutingKey("request-scheduler-topic"),
+                                    RequestType = typeof(FireSchedulerRequest)
                                 }
                             ]
                         ).Create();
@@ -72,11 +77,13 @@ class Program
                             {
                                 configure.ProducerRegistry = producerRegistry;
                             })
-                            .UseMessageScheduler(new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
+                            .UseScheduler(new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
                             {
-                                SchedulerTopicOrQueue = new RoutingKey(typeof(FireSchedulerMessage).FullName.ToValidSNSTopicName()),
+                                MessageSchedulerTopicOrQueue = new RoutingKey("message-scheduler-topic"),
+                                RequestSchedulerTopicOrQueue = new RoutingKey("request-scheduler-topic"),
                                 OnConflict = OnSchedulerConflict.Overwrite,
-                                GetOrCreateSchedulerId = message => message.Id
+                                GetOrCreateMessageSchedulerId = message => message.Id,
+                                GetOrCreateRequestSchedulerId = request => request.Id
                             })
                             .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
                     }

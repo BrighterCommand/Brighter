@@ -10,7 +10,7 @@ namespace Paramore.Brighter.MessageScheduler.Aws;
 /// The Aws message Scheduler factory
 /// </summary>
 public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection, string role)
-    : IAmAMessageSchedulerFactory
+    : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private string? _roleArn;
@@ -39,37 +39,6 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
     /// The flexible time window
     /// </summary>
     public int? FlexibleTimeWindowMinutes { get; set; }
-
-    /// <summary>
-    /// The topic or queue that Brighter should use for publishing/sending messaging/request scheduler
-    /// It can be Topic Name/ARN or Queue Name/Url
-    /// </summary>
-    public RoutingKey SchedulerTopicOrQueue
-    {
-        get
-        {
-            if (MessageSchedulerTopicOrQueue == RequestSchedulerTopicOrQueue)
-            {
-                return MessageSchedulerTopicOrQueue;
-            }
-
-            throw new InvalidOperationException(
-                "Request and Message scheduler have different configuration, please use them directly");
-        }
-        set
-        {
-            if (MessageSchedulerTopicOrQueue == RequestSchedulerTopicOrQueue)
-            {
-                MessageSchedulerTopicOrQueue = value;
-                RequestSchedulerTopicOrQueue = value;
-            }
-            else
-            {
-                throw new InvalidOperationException(
-                    "Request and Message scheduler have different configuration, please use them directly");
-            }
-        }
-    }
 
     /// <summary>
     /// The topic or queue that Brighter should use for publishing/sending messaging scheduler
@@ -218,4 +187,10 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
 
     /// <inheritdoc />
     public IAmAMessageScheduler Create(IAmACommandProcessor processor) => CreateAwsScheduler();
+
+    /// <inheritdoc />
+    public IAmARequestSchedulerSync CreateSync(IAmACommandProcessor processor) => CreateAwsScheduler();
+
+    /// <inheritdoc />
+    public IAmARequestSchedulerAsync CreateAsync(IAmACommandProcessor processor) => CreateAwsScheduler();
 }
