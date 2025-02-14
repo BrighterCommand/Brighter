@@ -1,8 +1,6 @@
 ﻿using System.Net;
 using Amazon;
 using Amazon.IdentityManagement.Model;
-using Amazon.SimpleNotificationService.Model;
-using Amazon.SQS.Model;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tasks;
 
@@ -16,8 +14,11 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private string? _roleArn;
-    private string? _topicArn;
-    private string? _queueUrl;
+
+    /// <summary>
+    /// The <see cref="System.TimeProvider"/>
+    /// </summary>
+    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
 
     /// <summary>
     /// The AWS Scheduler group
@@ -25,9 +26,14 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
     public SchedulerGroup Group { get; set; } = new();
 
     /// <summary>
-    /// Get or create a scheduler id
+    /// Get or create a message scheduler id
     /// </summary>
-    public Func<Message, string> GetOrCreateSchedulerId { get; set; } = _ => Guid.NewGuid().ToString("N");
+    public Func<Message, string> GetOrCreateMessageSchedulerId { get; set; } = _ => Guid.NewGuid().ToString("N");
+
+    /// <summary>
+    /// Get or create a request scheduler id
+    /// </summary>
+    public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Guid.NewGuid().ToString("N");
 
     /// <summary>
     /// The flexible time window
@@ -35,10 +41,47 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
     public int? FlexibleTimeWindowMinutes { get; set; }
 
     /// <summary>
+    /// The topic or queue that Brighter should use for publishing/sending messaging/request scheduler
+    /// It can be Topic Name/ARN or Queue Name/Url
+    /// </summary>
+    public RoutingKey SchedulerTopicOrQueue
+    {
+        get
+        {
+            if (MessageSchedulerTopicOrQueue == RequestSchedulerTopicOrQueue)
+            {
+                return MessageSchedulerTopicOrQueue;
+            }
+
+            throw new InvalidOperationException(
+                "Request and Message scheduler have different configuration, please use them directly");
+        }
+        set
+        {
+            if (MessageSchedulerTopicOrQueue == RequestSchedulerTopicOrQueue)
+            {
+                MessageSchedulerTopicOrQueue = value;
+                RequestSchedulerTopicOrQueue = value;
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    "Request and Message scheduler have different configuration, please use them directly");
+            }
+        }
+    }
+
+    /// <summary>
     /// The topic or queue that Brighter should use for publishing/sending messaging scheduler
     /// It can be Topic Name/ARN or Queue Name/Url
     /// </summary>
-    public RoutingKey SchedulerTopicOrQueue { get; set; } = RoutingKey.Empty;
+    public RoutingKey MessageSchedulerTopicOrQueue { get; set; } = RoutingKey.Empty;
+
+    /// <summary>
+    /// The topic or queue that Brighter should use for publishing/sending request scheduler
+    /// It can be Topic Name/ARN or Queue Name/Url
+    /// </summary>
+    public RoutingKey RequestSchedulerTopicOrQueue { get; set; } = RoutingKey.Empty;
 
     /// <summary>
     /// The AWS Role Name/ARN
@@ -60,34 +103,23 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
     /// </summary>
     public OnMissingRole MakeRole { get; set; }
 
-    public IAmAMessageScheduler Create(IAmACommandProcessor processor)
+    private AwsScheduler CreateAwsScheduler()
     {
         var factory = new AWSClientFactory(connection);
-        var roleArn = GetOrCreateRoleArnAsync(factory);
-        if (!roleArn.IsCompleted)
+        if (string.IsNullOrEmpty(_roleArn))
         {
-            BrighterAsyncContext.Run(async () => await roleArn);
+            _roleArn =BrighterAsyncContext.Run(async () => await GetOrCreateRoleArnAsync(factory, Role));
         }
 
-        var topicArn = GetTopicArnAsync(factory);
-        if (!topicArn.IsCompleted)
-        {
-            BrighterAsyncContext.Run(async () => await topicArn);
-        }
-
-        var queueUrl = GetQueueUrlAsync(factory);
-        if (!queueUrl.IsCompleted)
-        {
-            BrighterAsyncContext.Run(async () => await queueUrl);
-        }
-
-        return new AwsMessageScheduler(new AWSClientFactory(connection), GetOrCreateSchedulerId,
+        return new AwsScheduler(new AWSClientFactory(connection),
+            TimeProvider,
+            GetOrCreateMessageSchedulerId,
+            GetOrCreateRequestSchedulerId,
             new Scheduler
             {
-                RoleArn = roleArn.Result,
-                TopicArn = topicArn.Result,
-                QueueUrl = queueUrl.Result,
-                Topic = SchedulerTopicOrQueue,
+                RoleArn = _roleArn,
+                MessageSchedulerTopic = MessageSchedulerTopicOrQueue,
+                RequestSchedulerTopic = RequestSchedulerTopicOrQueue,
                 OnConflict = OnConflict,
                 UseMessageTopicAsTarget = UseMessageTopicAsTarget,
                 FlexibleTimeWindowMinutes = FlexibleTimeWindowMinutes
@@ -95,120 +127,51 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
             Group);
     }
 
-    private ValueTask<string> GetTopicArnAsync(AWSClientFactory factory)
+    private async Task<string> GetOrCreateRoleArnAsync(AWSClientFactory factory, string role)
     {
-        if (_topicArn != null)
+        if (MakeRole == OnMissingRole.Assume && Arn.IsArn(role))
         {
-            return new ValueTask<string>(_topicArn);
+            return role;
         }
 
-        if (Arn.IsArn(SchedulerTopicOrQueue))
+        await _semaphore.WaitAsync();
+        try
         {
-            _topicArn = SchedulerTopicOrQueue;
-            return new ValueTask<string>(_topicArn);
+            using var client = factory.CreateIdentityClient();
+            var awsRole = await client.GetRoleAsync(new GetRoleRequest { RoleName = role });
+
+            if (awsRole.HttpStatusCode == HttpStatusCode.OK)
+            {
+                return  awsRole.Role.Arn;
+            }
+
+            if (MakeRole != OnMissingRole.Create)
+            {
+                throw new InvalidOperationException($"Role '{role}' not found");
+            }
+
+            return await CreateRoleArnAsync();
         }
-
-        return new ValueTask<string>(GetFromSnsTopicArnAsync());
-
-        async Task<string> GetFromSnsTopicArnAsync()
+        catch (NoSuchEntityException)
         {
-            using var client = factory.CreateSnsClient();
-            var topic = await client.FindTopicAsync(SchedulerTopicOrQueue);
-            _topicArn = topic?.TopicArn ?? "";
-            return _topicArn;
+            if (MakeRole == OnMissingRole.Assume)
+            {
+                throw new InvalidOperationException($"Role '{Role}' not found");
+            }
+
+            return await CreateRoleArnAsync();
         }
-    }
-
-    private ValueTask<string> GetQueueUrlAsync(AWSClientFactory factory)
-    {
+        finally
         {
-            if (_queueUrl != null)
-            {
-                return new ValueTask<string>(_queueUrl);
-            }
-
-            if (Uri.TryCreate(SchedulerTopicOrQueue, UriKind.Absolute, out _))
-            {
-                _queueUrl = SchedulerTopicOrQueue;
-                return new ValueTask<string>(_queueUrl);
-            }
-
-            return new ValueTask<string>(GetFromSqsQueueUrlAsync());
-
-            async Task<string> GetFromSqsQueueUrlAsync()
-            {
-                using var client = factory.CreateSqsClient();
-                try
-                {
-                    var queue = await client.GetQueueUrlAsync(SchedulerTopicOrQueue);
-                    _queueUrl = queue.QueueUrl;
-                }
-                catch (QueueDoesNotExistException)
-                {
-                    _queueUrl = "";
-                }
-
-                return _queueUrl;
-            }
-        }
-    }
-
-    private ValueTask<string> GetOrCreateRoleArnAsync(AWSClientFactory factory)
-    {
-        if (_roleArn != null)
-        {
-            return new ValueTask<string>(_roleArn);
-        }
-
-        if (Arn.IsArn(Role))
-        {
-            return new ValueTask<string>(Role);
-        }
-
-        return new ValueTask<string>(GetOrCreateRoleArnFromIdentityAsync());
-
-        async Task<string> GetOrCreateRoleArnFromIdentityAsync()
-        {
-            await _semaphore.WaitAsync();
-            try
-            {
-                using var client = factory.CreateIdentityClient();
-                var role = await client.GetRoleAsync(new GetRoleRequest { RoleName = Role });
-
-                if (role.HttpStatusCode == HttpStatusCode.OK)
-                {
-                    _roleArn = role.Role.Arn;
-                    return _roleArn;
-                }
-
-                if (MakeRole == OnMissingRole.AssumeRole)
-                {
-                    throw new InvalidOperationException($"Role '{Role}' not found");
-                }
-
-                return await CreateRoleArnAsync();
-            }
-            catch (NoSuchEntityException)
-            {
-                if (MakeRole == OnMissingRole.AssumeRole)
-                {
-                    throw new InvalidOperationException($"Role '{Role}' not found");
-                }
-
-                return await CreateRoleArnAsync();
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
+            _semaphore.Release();
         }
 
         async Task<string> CreateRoleArnAsync()
         {
             using var client = factory.CreateIdentityClient();
-            var role = await client.CreateRoleAsync(new CreateRoleRequest
+            var createdRole = await client.CreateRoleAsync(new CreateRoleRequest
             {
-                RoleName = Role,
+                RoleName = role,
                 AssumeRolePolicyDocument = """
                                            {
                                                 "Version": "2012-10-17",
@@ -245,11 +208,14 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
 
             await client.AttachRolePolicyAsync(new AttachRolePolicyRequest
             {
-                RoleName = Role, PolicyArn = policy.Policy.Arn
+                RoleName = role,
+                PolicyArn = policy.Policy.Arn
             });
 
-            _roleArn = role.Role.Arn;
-            return _roleArn;
+            return createdRole.Role.Arn;
         }
     }
+
+    /// <inheritdoc />
+    public IAmAMessageScheduler Create(IAmACommandProcessor processor) => CreateAwsScheduler();
 }

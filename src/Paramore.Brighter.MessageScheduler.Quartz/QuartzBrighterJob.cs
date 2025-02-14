@@ -12,12 +12,19 @@ public class QuartzBrighterJob(IAmACommandProcessor processor) : IJob
 {
     public async Task Execute(IJobExecutionContext context)
     {
-        if (!context.JobDetail.JobDataMap.TryGetString("message", out var obj))
+        if (context.JobDetail.JobDataMap.TryGetString("message", out var message))
         {
-            throw new InvalidOperationException("Not message, something is wrong with this job scheduler");
+            var scheduler = JsonSerializer.Deserialize<FireSchedulerMessage>(message!, JsonSerialisationOptions.Options)!;
+            await processor.SendAsync(scheduler);
         }
 
-        var fireScheduler = JsonSerializer.Deserialize<FireSchedulerMessage>(obj!, JsonSerialisationOptions.Options)!;
-        await processor.SendAsync(fireScheduler);
+        if (context.JobDetail.JobDataMap.TryGetString("request", out var request))
+        {
+            var scheduler = JsonSerializer.Deserialize<FireSchedulerRequest>(request!, JsonSerialisationOptions.Options)!;
+            await processor.SendAsync(scheduler);
+        }
+
+        throw new InvalidOperationException(
+            "No message or request found in the job, something is wrong with this job scheduler");
     }
 }

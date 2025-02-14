@@ -153,11 +153,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
             
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
+            busConfiguration.MessageSchedulerFactory ??= new InMemoryMessageSchedulerFactory();
+            brighterBuilder.UseMessageScheduler(busConfiguration.MessageSchedulerFactory);
 
-            if (busConfiguration.MessageSchedulerFactory != null)
-            {
-                UseMessageScheduler(brighterBuilder, busConfiguration.MessageSchedulerFactory);
-            }
+            busConfiguration.RequestSchedulerFactory ??= new InMemoryMessageSchedulerFactory();
+            brighterBuilder.UseRequestScheduler(busConfiguration.RequestSchedulerFactory);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
             Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(CommittableTransactionProvider);
@@ -232,7 +232,73 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return brighterBuilder;
         }
-
+        
+         /// <summary>
+         /// An external request scheduler factory
+         /// </summary>
+         /// <param name="builder">The builder.</param>
+         /// <param name="factory">The message scheduler factory</param>
+         /// <returns></returns>
+         public static IBrighterBuilder UseScheduler<T>(this IBrighterBuilder builder, T factory)
+            where T : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
+         { 
+             builder
+                 .UseRequestScheduler(factory)
+                 .UseMessageScheduler(factory);
+             return builder;
+         }
+         
+         /// <summary>
+         /// An external request scheduler factory
+         /// </summary>
+         /// <param name="builder">The builder.</param>
+         /// <param name="factory">The message scheduler factory</param>
+         /// <returns></returns>
+         public static IBrighterBuilder UseScheduler<T>(this IBrighterBuilder builder, Func<IServiceProvider, T> factory)
+            where T : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
+         {
+             builder
+                 .UseRequestScheduler(provider => factory(provider))
+                 .UseMessageScheduler(provider => factory(provider));
+             return builder;
+         }
+        
+        /// <summary>
+        /// An external request scheduler factory
+        /// </summary>
+        /// <param name="builder">The builder.</param>
+        /// <param name="factory">The message scheduler factory</param>
+        /// <returns></returns>
+        public static IBrighterBuilder UseRequestScheduler(this IBrighterBuilder builder, IAmARequestSchedulerFactory factory)
+        {
+            builder.Services.TryAddSingleton(factory);
+            builder.Services.TryAddSingleton(provide =>
+            {
+                var command = provide.GetRequiredService<IAmACommandProcessor>();
+                var schedulerfactory = provide.GetRequiredService<IAmARequestSchedulerFactory>();
+                return schedulerfactory.CreateSync(command);
+            });
+            builder.Services.TryAddSingleton(provide =>
+            {
+                var command = provide.GetRequiredService<IAmACommandProcessor>();
+                var schedulerFactory = provide.GetRequiredService<IAmARequestSchedulerFactory>();
+                return schedulerFactory.CreateAsync(command);
+            });
+            return builder;
+        }
+        
+        /// <summary>
+        /// An external request scheduler factory
+        /// </summary>
+        /// <param name="builder">The builder.</param>
+        /// <param name="factory">The message scheduler factory</param>
+        /// <returns></returns>
+        public static IBrighterBuilder UseRequestScheduler(this IBrighterBuilder builder, Func<IServiceProvider, IAmAMessageSchedulerFactory> factory)
+        {
+            builder.Services.AddSingleton(factory);
+            return builder;
+        }
+        
         /// <summary>
         /// An external message scheduler factory
         /// </summary>
@@ -273,7 +339,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var eventBus = provider.GetService<IAmAnOutboxProducerMediator>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var serviceActivatorOptions = provider.GetService<IServiceActivatorOptions>();
-            var messageSchedulerFactory = eventBusConfiguration?.MessageSchedulerFactory ?? provider.GetService<IAmAMessageSchedulerFactory>();
 
             INeedInstrumentation instrumentationBuilder = null;
             var hasEventBus = eventBus != null;
@@ -288,8 +353,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     eventBus,
                     eventBusConfiguration!.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
-                    serviceActivatorOptions?.InboxConfiguration, 
-                    messageSchedulerFactory);
+                    serviceActivatorOptions?.InboxConfiguration);
             }
 
             if (hasEventBus && useRpc)
@@ -299,9 +363,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     eventBus,
                     eventBusConfiguration!.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions,
-                    serviceActivatorOptions?.InboxConfiguration,
-                    messageSchedulerFactory
-                );
+                    serviceActivatorOptions?.InboxConfiguration);
             }
 
             return instrumentationBuilder;
@@ -348,18 +410,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var command = AddEventBus(provider, messagingBuilder, useRequestResponse)
                 .ConfigureInstrumentation(provider.GetService<IAmABrighterTracer>(), options.InstrumentationOptions)
                 .RequestContextFactory(provider.GetService<IAmARequestContextFactory>())
-                .MessageSchedulerFactory(provider.GetService<IAmAMessageSchedulerFactory>())
+                .RequestSchedulerFactory(provider.GetRequiredService<IAmARequestSchedulerFactory>())
                 .Build();
             
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var producerRegistry = provider.GetService<IAmAProducerRegistry>();
-            var messageSchedulerFactory = eventBusConfiguration?.MessageSchedulerFactory ?? provider.GetService<IAmAMessageSchedulerFactory>();
-            if (messageSchedulerFactory != null && producerRegistry != null)
-            {
-                producerRegistry
-                    .Producers
-                    .Each(x => x.Scheduler ??= messageSchedulerFactory.Create(command));
-            }
+            var messageSchedulerFactory = eventBusConfiguration?.MessageSchedulerFactory ?? provider.GetRequiredService<IAmAMessageSchedulerFactory>();
+            producerRegistry?.Producers
+                .Each(x => x.Scheduler ??= messageSchedulerFactory.Create(command));
 
             return command;
         }

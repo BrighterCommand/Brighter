@@ -109,7 +109,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// <param name="message">The message.</param>
     /// <param name="delay">Delay to delivery of the message.</param>
     /// <returns>Task.</returns>
-    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
+    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay, false));
 
     /// <summary>
     /// Sends the specified message
@@ -120,7 +120,11 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// <returns></returns>
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default) => await SendWithDelayAsync(message, null, cancellationToken);
 
+    /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        => await SendWithDelayAsync(message, delay, true, cancellationToken);
+    
+    private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useSchedulerAsync, CancellationToken cancellationToken = default)
     {
         if (Connection.Exchange is null) throw new ConfigurationException("RmqMessageProducer: Exchange is not set");
         if (Connection.AmpqUri is null) throw new ConfigurationException("RmqMessageProducer: Broker URL is not set");
@@ -153,18 +157,15 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
             {
                 await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
             }
-            else if(Scheduler is IAmAMessageSchedulerAsync asyncScheduler)
+            else if(useSchedulerAsync)
             {
-                await asyncScheduler.ScheduleAsync(message, delay.Value, cancellationToken);
-            }
-            else if (Scheduler is IAmAMessageSchedulerSync scheduler)
-            {
-                scheduler.Schedule(message, delay.Value);
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
             }
             else
             {
-                s_logger.LogWarning("No scheduler configured, going to ignore delay publish");
-                await rmqMessagePublisher.PublishMessageAsync(message, TimeSpan.Zero, cancellationToken);
+                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+                schedulerSync.Schedule(message, delay.Value);
             }
 
             s_logger.LogInformation(

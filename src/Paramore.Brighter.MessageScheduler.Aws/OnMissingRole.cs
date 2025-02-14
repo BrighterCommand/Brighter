@@ -8,10 +8,16 @@ public enum OnMissingRole
     /// <summary>
     /// Assume the role if it exists
     /// </summary>
-    AssumeRole, 
+    Assume, 
+    
+    /// <summary>
+    /// Check if the role exists,
+    /// </summary>
+    Validate,
+    
     /// <summary>
     /// Create the role if it does not exist
     /// </summary>
-    CreateRole
+    Create
 }
 

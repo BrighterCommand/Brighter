@@ -178,7 +178,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .MessageSchedulerFactory(null)
+                .RequestSchedulerFactory(new InMemoryMessageSchedulerFactory())
                 .Build();
             
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use

@@ -139,7 +139,7 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// <param name="delay">The sending delay</param>
     /// <returns>Task.</returns>
     public void SendWithDelay(Message message, TimeSpan? delay = null)
-        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, TimeSpan.Zero));
+        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, TimeSpan.Zero, false, CancellationToken.None));
 
     /// <summary>
     /// Sends the specified message, with a delay
@@ -148,25 +148,24 @@ public class SnsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync, 
     /// <param name="delay">The sending delay</param>
     /// <param name="cancellationToken">Cancels the send operation</param>
     /// <exception cref="NotImplementedException"></exception>
-    public async Task SendWithDelayAsync(Message message, TimeSpan? delay,
-        CancellationToken cancellationToken = default)
+    public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        => await SendWithDelayAsync(message, delay, true, cancellationToken);
+
+    private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken)
     { 
         delay ??= TimeSpan.Zero;
         if (delay != TimeSpan.Zero)
         {
-            if (Scheduler is IAmAMessageSchedulerAsync async)
+            if (useAsyncScheduler)
             {
-                await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
                 return;
             }
-     
-            if (Scheduler is IAmAMessageSchedulerSync sync)
-            {
-                sync.Schedule(message, delay.Value);
-                return;
-            }
-                     
-            s_logger.LogWarning("SNSMessageProducer: no scheduler configured, message will be sent immediately");
+
+            var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+            schedulerSync.Schedule(message, delay.Value);
+            return;
         }
         
         s_logger.LogDebug(

@@ -125,19 +125,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                if (Scheduler is IAmAMessageSchedulerSync sync)
-                {
-                    sync.Schedule(message, delay.Value);
-                    return;
-                }
-
-                if (Scheduler is IAmAMessageSchedulerAsync async)
-                {
-                    BrighterAsyncContext.Run(async () => await async.ScheduleAsync(message, delay.Value));
-                    return;
-                }
-
-                s_logger.LogInformation("RedisMessageProducer: No scheduler configured, message will be sent immediately");
+                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+                schedulerSync.Schedule(message, delay.Value);
+                return;
             }
            
             using var client = s_pool.Value.GetClient();
@@ -183,19 +173,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                if (Scheduler is IAmAMessageSchedulerAsync async)
-                {
-                    await async.ScheduleAsync(message, delay.Value, cancellationToken);
-                    return;
-                }
-
-                if (Scheduler is IAmAMessageSchedulerSync sync)
-                {
-                    sync.Schedule(message, delay.Value);
-                    return;
-                }
-                
-                s_logger.LogInformation("RedisMessageProducer: No scheduler configured, message will be sent immediately");
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
             }
 
             await using var client = await s_pool.Value.GetClientAsync(token: cancellationToken);

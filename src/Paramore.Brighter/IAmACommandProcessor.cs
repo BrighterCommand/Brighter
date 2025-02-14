@@ -48,6 +48,30 @@ namespace Paramore.Brighter
         void Send<TRequest>(TRequest command, RequestContext? requestContext = null) where TRequest : class, IRequest;
 
         /// <summary>
+        /// Scheduler a sends the specified command.
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="at">The date-time the message should be sent.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a send command sync the whole pipeline during executing the scheduler command will be sync as well.</remarks>
+        string Send<TRequest>(DateTimeOffset at, TRequest command, RequestContext? requestContext = null)
+            where TRequest : class, IRequest;
+
+        /// <summary>
+        /// Scheduler a sends the specified command.
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="delay">The amount of delay before send the message.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a send command sync the whole pipeline during executing the scheduler command will be sync as well.</remarks>
+        string Send<TRequest>(TimeSpan delay, TRequest command, RequestContext? requestContext = null)
+            where TRequest : class, IRequest;
+        
+        /// <summary>
         /// Awaitably sends the specified command.
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
@@ -57,17 +81,66 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task SendAsync<TRequest>(TRequest command, RequestContext? requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Scheduler an awaitable sends the specified command.
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="at">The date-time the message should be sent.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a send command async the whole pipeline during executing the scheduler command will be async as well.</remarks>
+        Task<string> SendAsync<TRequest>(DateTimeOffset at, TRequest command, RequestContext? requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Scheduler an awaitable sends the specified command.
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="delay">The amount of delay before send the message.</param>
+        /// <param name="command">The command.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a send command async the whole pipeline during executing the scheduler command will be async as well.</remarks>
+        Task<string> SendAsync<TRequest>(TimeSpan delay, TRequest command, RequestContext? requestContext = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
 
         /// <summary>
-        /// Publishes the specified event. Throws an aggregate exception on failure of a pipeline but executes remaining
+        /// Publishes the specified event. 
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="event">The event.</param>
+        /// <exception cref="AggregateException">Throws an aggregate exception on failure of a pipeline but executes remaining.</exception>
         void Publish<TRequest>(TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Scheduler a publishes the specified event. 
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="at">The date-time the message should be publish.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="event">The event.</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a publish an event sync the whole pipeline during executing the scheduler event will be sync as well.</remarks>
+        string Publish<TRequest>(DateTimeOffset at, TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Scheduler a publishes the specified event. 
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="delay">The amount of delay before publish the message.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="event">The event.</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a publish an event sync the whole pipeline during executing the scheduler event will be sync as well.</remarks>
+        string Publish<TRequest>(TimeSpan delay, TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest;
 
         /// <summary>
-        /// Publishes the specified event with async/await support. Throws an aggregate exception on failure of a pipeline but executes remaining
+        /// Publishes the specified event with async/await support. 
         /// </summary>
         /// <typeparam name="TRequest"></typeparam>
         /// <param name="event">The event.</param>
@@ -75,7 +148,45 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task PublishAsync<TRequest>(
+        /// <exception cref="AggregateException">Throws an aggregate exception on failure of a pipeline but executes remaining.</exception>
+        Task PublishAsync<TRequest>(TRequest @event, 
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default
+            ) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Scheduler Publishes the specified event with async/await support. 
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="at">The date-time the message should be published.</param>
+        /// <param name="event">The event.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a publish an event async the whole pipeline during executing the scheduler event will be async as well.</remarks>
+        Task<string> PublishAsync<TRequest>(
+            DateTimeOffset at,
+            TRequest @event, 
+            RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default
+            ) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Scheduler Publishes the specified event with async/await support. 
+        /// </summary>
+        /// <typeparam name="TRequest"></typeparam>
+        /// <param name="delay">The amount of delay before publish the message.</param>
+        /// <param name="event">The event.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a publish an event async the whole pipeline during executing the scheduler event will be async as well.</remarks>
+        Task<string> PublishAsync<TRequest>(
+            TimeSpan delay,
             TRequest @event, 
             RequestContext? requestContext = null,
             bool continueOnCapturedContext = true, 
@@ -87,69 +198,33 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <param name="request">The request.</param>
-        /// <param name="delay">The amount of delay before post the message.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        string SchedulerPost<TRequest>(TRequest request, TimeSpan delay, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
-
-        /// <summary>
-        /// Posts the specified request.
-        /// </summary>
-        /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <param name="request">The request.</param>
-        /// <param name="at">The date-time the message should be post.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        string SchedulerPost<TRequest>(TRequest request, DateTimeOffset at, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
-
-        /// <summary>
-        /// Posts the specified request with async/await support.
-        /// </summary>
-        /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <param name="request">The request.</param>
-        /// <param name="delay">The amount of delay before post the message.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task<string> SchedulerPostAsync<TRequest>(
-            TRequest request, 
-            TimeSpan delay,
-            RequestContext? requestContext = null,
-            Dictionary<string, object>? args = null,
-            bool continueOnCapturedContext = true, 
-            CancellationToken cancellationToken = default
-        ) where TRequest : class, IRequest;
-        
-        /// <summary>
-        /// Posts the specified request with async/await support.
-        /// </summary>
-        /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <param name="request">The request.</param>
-        /// <param name="at">The date-time the message should be post.</param>
-        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task<string> SchedulerPostAsync<TRequest>(
-            TRequest request, 
-            DateTimeOffset at,
-            RequestContext? requestContext = null,
-            Dictionary<string, object>? args = null,
-            bool continueOnCapturedContext = true, 
-            CancellationToken cancellationToken = default
-        ) where TRequest : class, IRequest;
-        
-        /// <summary>
-        /// Posts the specified request.
-        /// </summary>
-        /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <param name="request">The request.</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         void Post<TRequest>(TRequest request, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Scheduler a posts the specified request.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <param name="at">The date-time the message should be post.</param>
+        /// <param name="request">The request.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a post request sync the whole pipeline during executing the scheduler event will be sync as well.</remarks>
+        string Post<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
+
+        /// <summary>
+        /// Scheduler a posts the specified request.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <param name="delay">The amount of delay before publish the message.</param>
+        /// <param name="request">The request.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a post request sync the whole pipeline during executing the scheduler event will be sync as well.</remarks>
+        string Post<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext= null, Dictionary<string, object>? args = null) where TRequest : class, IRequest;
 
         /// <summary>
         /// Posts the specified request with async/await support.
@@ -162,6 +237,48 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task PostAsync<TRequest>(
+            TRequest request, 
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default
+        ) where TRequest : class, IRequest;
+
+        /// <summary>
+        /// Scheduler a posts the specified request with async/await support.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <param name="at">The date-time the message should be post.</param>
+        /// <param name="request">The request.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>awaitable <see cref="Task"/>.</returns>
+        /// <remarks>When you scheduler a post request async the whole pipeline during executing the scheduler event will be async as well.</remarks>
+        Task<string> PostAsync<TRequest>(
+            DateTimeOffset at,
+            TRequest request, 
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null,
+            bool continueOnCapturedContext = true, 
+            CancellationToken cancellationToken = default
+        ) where TRequest : class, IRequest;
+        
+        /// <summary>
+        /// Scheduler a posts the specified request with async/await support.
+        /// </summary>
+        /// <typeparam name="TRequest">The type of the request</typeparam>
+        /// <param name="delay">The amount of delay before publish the message.</param>
+        /// <param name="request">The request.</param>
+        /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <returns>The scheduler id.</returns>
+        /// <remarks>When you scheduler a post request async the whole pipeline during executing the scheduler event will be async as well.</remarks>
+        Task<string> PostAsync<TRequest>(
+            TimeSpan delay,
             TRequest request, 
             RequestContext? requestContext = null,
             Dictionary<string, object>? args = null,
@@ -225,7 +342,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see/ cref="ClearOutbox"/> 
+        /// Pass deposited message to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>

@@ -124,6 +124,14 @@ namespace Paramore.Brighter
         IAmAMessageSchedulerFactory? MessageSchedulerFactory { get; set; }
         
         /// <summary>
+        /// The Request Scheduler Factory.
+        /// </summary>
+        /// <remarks>
+        /// The default will be in-memory
+        /// </remarks>
+        IAmARequestSchedulerFactory? RequestSchedulerFactory { get; set; }
+        
+        /// <summary>
         /// The transaction provider for the outbox
         /// </summary>
         Type? TransactionProvider { get; set; }
@@ -247,7 +255,18 @@ namespace Paramore.Brighter
         /// <summary>
         /// The Message Scheduler Factory.
         /// </summary>
+        /// <remarks>
+        /// The default will be in-memory
+        /// </remarks>
         public IAmAMessageSchedulerFactory? MessageSchedulerFactory { get; set; }
+        
+        /// <summary>
+        /// The Request Scheduler Factory.
+        /// </summary>
+        /// <remarks>
+        /// The default will be in-memory
+        /// </remarks>
+        public IAmARequestSchedulerFactory? RequestSchedulerFactory { get; set; }
         
         /// <summary>
         /// The transaction provider for the outbox

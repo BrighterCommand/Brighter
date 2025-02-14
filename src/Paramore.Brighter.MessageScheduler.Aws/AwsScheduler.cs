@@ -10,11 +10,14 @@ using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundExcepti
 
 namespace Paramore.Brighter.MessageScheduler.Aws;
 
-public class AwsMessageScheduler(
+public class AwsScheduler(
     AWSClientFactory factory,
-    Func<Message, string> getOrCreateSchedulerId,
+    TimeProvider timeProvider,
+    Func<Message, string> getOrCreateMessageSchedulerId,
+    Func<IRequest, string> getOrCreateRequestSchedulerId,
     Scheduler scheduler,
-    SchedulerGroup schedulerGroup) : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync
+    SchedulerGroup schedulerGroup) : IAmAMessageSchedulerAsync, IAmAMessageSchedulerSync, IAmARequestSchedulerAsync,
+    IAmARequestSchedulerSync
 {
     private static readonly ConcurrentDictionary<string, bool> s_checkedGroup = new();
     private static readonly ConcurrentDictionary<string, string?> s_queueUrl = new();
@@ -23,14 +26,39 @@ public class AwsMessageScheduler(
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,
         CancellationToken cancellationToken = default)
-        => await ScheduleAsync(message, at, true, cancellationToken);
+        => await ScheduleAsync(message, getOrCreateMessageSchedulerId(message), at, true, cancellationToken);
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, TimeSpan delay,
         CancellationToken cancellationToken = default)
-        => await ScheduleAsync(message, DateTimeOffset.UtcNow.Add(delay), cancellationToken);
+        => await ScheduleAsync(message, timeProvider.GetUtcNow().ToOffset(delay), cancellationToken);
 
     /// <inheritdoc />
+    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
+        CancellationToken cancellationToken = default) where TRequest : class, IRequest
+    {
+        var id = getOrCreateRequestSchedulerId(request);
+        var message = new Message
+        {
+            Header = new MessageHeader(id, scheduler.RequestSchedulerTopic, MessageType.MT_COMMAND, subject: nameof(FireSchedulerRequest)),
+            Body = new MessageBody(JsonSerializer.Serialize(new FireSchedulerRequest
+            {
+                SchedulerType = type,
+                Async = true,
+                RequestType = typeof(TRequest).FullName!,
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+            }))
+        };
+
+        return await ScheduleAsync(message, id, at, true, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
+        CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        => await ScheduleAsync(request, type, timeProvider.GetUtcNow().ToOffset(delay), cancellationToken);
+
+    /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)" />
     public async Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at,
         CancellationToken cancellationToken = default)
     {
@@ -62,12 +90,12 @@ public class AwsMessageScheduler(
         }
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.TimeSpan,System.Threading.CancellationToken)"/>
     public async Task<bool> ReSchedulerAsync(string schedulerId, TimeSpan delay,
         CancellationToken cancellationToken = default)
-        => await ReSchedulerAsync(schedulerId, DateTimeOffset.UtcNow.Add(delay), cancellationToken);
+        => await ReSchedulerAsync(schedulerId, timeProvider.GetUtcNow().ToOffset(delay), cancellationToken);
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IAmAMessageSchedulerAsync.CancelAsync"/>
     public async Task CancelAsync(string id, CancellationToken cancellationToken = default)
     {
         try
@@ -92,7 +120,6 @@ public class AwsMessageScheduler(
 
         return new ValueTask(CreateSchedulerGroup(cancellationToken));
     }
-
 
     private async Task CreateSchedulerGroup(CancellationToken cancellationToken)
     {
@@ -147,33 +174,41 @@ public class AwsMessageScheduler(
             }
         }
 
+        if (message.Header.Subject == nameof(FireSchedulerRequest))
+        {
+            throw new InvalidOperationException("Queue or Topic for Scheduler request not found");
+        }
+
         var schedulerMessage = new Message
         {
             Header =
-                new MessageHeader(id, scheduler.Topic, MessageType.MT_COMMAND,
+                new MessageHeader(id, scheduler.MessageSchedulerTopic, MessageType.MT_COMMAND,
                     subject: nameof(FireSchedulerMessage)),
             Body = new MessageBody(JsonSerializer.Serialize(
                 new FireSchedulerMessage { Id = id, Async = async, Message = message },
                 JsonSerialisationOptions.Options))
         };
-
-        if (!string.IsNullOrEmpty(scheduler.TopicArn))
+        
+        var messageSchedulerTopicArn = await GetTopicAsync(message);
+        if (!string.IsNullOrEmpty(messageSchedulerTopicArn))
         {
             return new Target
             {
                 RoleArn = roleArn,
                 Arn = "arn:aws:scheduler:::aws-sdk:sns:publish",
-                Input = JsonSerializer.Serialize(ToPublishRequest(scheduler.TopicArn, schedulerMessage))
+                Input = JsonSerializer.Serialize(ToPublishRequest(messageSchedulerTopicArn,
+                    schedulerMessage))
             };
         }
 
-        if (!string.IsNullOrWhiteSpace(scheduler.QueueUrl))
+        var messageSchedulerQueueUrl = await GetQueueAsync(message);
+        if (!string.IsNullOrWhiteSpace(messageSchedulerQueueUrl))
         {
             return new Target
             {
                 RoleArn = roleArn,
                 Arn = "arn:aws:scheduler:::aws-sdk:sqs:sendMessage",
-                Input = JsonSerializer.Serialize(ToSendMessageRequest(scheduler.QueueUrl, schedulerMessage))
+                Input = JsonSerializer.Serialize(ToSendMessageRequest(messageSchedulerQueueUrl, schedulerMessage))
             };
         }
 
@@ -374,11 +409,14 @@ public class AwsMessageScheduler(
         };
     }
 
-    private async Task<string> ScheduleAsync(Message message, DateTimeOffset at, bool async,
+    private async Task<string> ScheduleAsync(
+        Message message,
+        string id,
+        DateTimeOffset at,
+        bool async,
         CancellationToken cancellationToken = default)
     {
         await EnsureGroupExistsAsync(cancellationToken);
-        var id = getOrCreateSchedulerId(message);
         var target = await CreateTargetAsync(id, message, async);
 
         using var client = factory.CreateSchedulerClient();
@@ -425,30 +463,49 @@ public class AwsMessageScheduler(
         => $"at({publishAt.ToUniversalTime():yyyy-MM-ddTHH:mm:ss})";
 
     /// <inheritdoc />
-    public ValueTask DisposeAsync() => new();
-
-    /// <inheritdoc />
-    public void Dispose()
-    {
-    }
-
-    /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
-        => BrighterAsyncContext.Run(async () => await ScheduleAsync(message, at, false));
+        => BrighterAsyncContext.Run(async () =>
+            await ScheduleAsync(message, getOrCreateMessageSchedulerId(message), at, false));
 
     /// <inheritdoc />
     public string Schedule(Message message, TimeSpan delay)
-        => Schedule(message, DateTimeOffset.UtcNow.Add(delay));
+        => Schedule(message, timeProvider.GetUtcNow().ToOffset(delay));
 
     /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
+        where TRequest : class, IRequest
+    {
+        var id = getOrCreateRequestSchedulerId(request);
+
+        var message = new Message
+        {
+            Header = new MessageHeader(id, scheduler.RequestSchedulerTopic, MessageType.MT_COMMAND, subject: nameof(FireSchedulerRequest)),
+            Body = new MessageBody(JsonSerializer.Serialize(new FireSchedulerRequest
+            {
+                SchedulerType = type,
+                Async = false,
+                RequestType = typeof(TRequest).FullName!,
+                RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+            }))
+        };
+
+        return BrighterAsyncContext.Run(async () => await ScheduleAsync(message, id, at, false));
+    }
+
+    /// <inheritdoc />
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
+        where TRequest : class, IRequest
+        => Schedule(request, type, timeProvider.GetUtcNow().ToOffset(delay));
+
+    /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)
         => BrighterAsyncContext.Run(async () => await ReSchedulerAsync(schedulerId, at));
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.TimeSpan)"/>
     public bool ReScheduler(string schedulerId, TimeSpan delay)
-        => BrighterAsyncContext.Run(async () => await ReSchedulerAsync(schedulerId, delay));
+        => ReScheduler(schedulerId, timeProvider.GetUtcNow().ToOffset(delay));
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel" />
     public void Cancel(string id)
         => BrighterAsyncContext.Run(async () => await CancelAsync(id));
 }

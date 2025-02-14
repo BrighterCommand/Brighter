@@ -84,7 +84,7 @@ namespace Paramore.Brighter
         INeedMessaging,
         INeedInstrumentation,
         INeedARequestContext,
-        INeedAMessageSchedulerFactory,
+        INeedARequestSchedulerFactory,
         IAmACommandProcessorBuilder
     {
         private IAmARequestContextFactory? _requestContextFactory;
@@ -100,7 +100,7 @@ namespace Paramore.Brighter
         private InboxConfiguration? _inboxConfiguration;
         private InstrumentationOptions? _instrumetationOptions;
         private IAmABrighterTracer? _tracer;
-        private IAmAMessageSchedulerFactory? _messageSchedulerFactory;
+        private IAmARequestSchedulerFactory _requestSchedulerFactory = null!;
 
         private CommandProcessorBuilder()
         {
@@ -181,16 +181,13 @@ namespace Paramore.Brighter
         /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
         /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
-        /// <param name="messageSchedulerFactory">The message scheduler factory</param>
         /// <returns></returns>
         public INeedInstrumentation ExternalBus(
             ExternalBusType busType,
             IAmAnOutboxProducerMediator bus,
             IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
-            InboxConfiguration? inboxConfiguration = null,
-            IAmAMessageSchedulerFactory? messageSchedulerFactory = null
-        )
+            InboxConfiguration? inboxConfiguration = null)
         {
             _inboxConfiguration = inboxConfiguration;
 
@@ -206,7 +203,6 @@ namespace Paramore.Brighter
                     _useRequestReplyQueues = true;
                     _replySubscriptions = subscriptions;
                     _responseChannelFactory = responseChannelFactory;
-                    _messageSchedulerFactory = messageSchedulerFactory;
                     break;
                 default:
                     throw new ConfigurationException("Bus type not supported");
@@ -259,16 +255,16 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
-        public INeedAMessageSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory)
+        public INeedARequestSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory)
         {
             _requestContextFactory = requestContextFactory;
             return this;
         }
 
         /// <inheritdoc />
-        public IAmACommandProcessorBuilder MessageSchedulerFactory(IAmAMessageSchedulerFactory? messageSchedulerFactory)
+        public IAmACommandProcessorBuilder RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory)
         {
-            _messageSchedulerFactory = messageSchedulerFactory;
+            _requestSchedulerFactory = messageSchedulerFactory;
             return this;
         }
 
@@ -296,10 +292,13 @@ namespace Paramore.Brighter
 
             if (_bus == null)
             {
-                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
+                return new CommandProcessor(subscriberRegistry: _registry, 
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory, 
+                    policyRegistry: _policyRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry,
-                    instrumentationOptions: _instrumetationOptions.Value);
+                    instrumentationOptions: _instrumetationOptions.Value,
+                    requestSchedulerFactory: _requestSchedulerFactory);
             }
 
             if (!_useRequestReplyQueues)
@@ -313,7 +312,7 @@ namespace Paramore.Brighter
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    messageSchedulerFactory: _messageSchedulerFactory
+                    requestSchedulerFactory: _requestSchedulerFactory
                 );
 
             if (_useRequestReplyQueues)
@@ -329,7 +328,7 @@ namespace Paramore.Brighter
                     responseChannelFactory: _responseChannelFactory,
                     tracer: _tracer,
                     instrumentationOptions: _instrumetationOptions.Value,
-                    messageSchedulerFactory: _messageSchedulerFactory
+                    requestSchedulerFactory: _requestSchedulerFactory
                 );
 
             throw new ConfigurationException(
@@ -395,16 +394,13 @@ namespace Paramore.Brighter
         /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
         /// <param name="inboxConfiguration">What is the inbox configuration</param>
-        /// <param name="messageSchedulerFactory">The message scheduler factory.</param>
         /// <returns></returns>
         INeedInstrumentation ExternalBus(
             ExternalBusType busType,
             IAmAnOutboxProducerMediator bus,
             IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
-            InboxConfiguration? inboxConfiguration = null,
-            IAmAMessageSchedulerFactory? messageSchedulerFactory = null
-        );
+            InboxConfiguration? inboxConfiguration = null);
 
         /// <summary>
         /// We don't send messages out of process
@@ -448,17 +444,17 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
-        INeedAMessageSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory);
+        INeedARequestSchedulerFactory RequestContextFactory(IAmARequestContextFactory requestContextFactory);
     }
 
-    public interface INeedAMessageSchedulerFactory
+    public interface INeedARequestSchedulerFactory
     {
         /// <summary>
-        /// The <see cref="INeedAMessageSchedulerFactory"/>.
+        /// The <see cref="INeedARequestSchedulerFactory"/>.
         /// </summary>
         /// <param name="messageSchedulerFactory"></param>
         /// <returns></returns>
-        IAmACommandProcessorBuilder MessageSchedulerFactory(IAmAMessageSchedulerFactory? messageSchedulerFactory);
+        IAmACommandProcessorBuilder RequestSchedulerFactory(IAmARequestSchedulerFactory messageSchedulerFactory);
     }
 
 

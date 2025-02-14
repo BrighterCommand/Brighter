@@ -86,19 +86,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                if (Scheduler is IAmAMessageSchedulerSync sync)
-                {
-                    sync.Schedule(message, delay.Value);
-                    return;
-                }
-                  
-                if (Scheduler is IAmAMessageSchedulerAsync async)
-                {
-                    BrighterAsyncContext.Run(async () => await async.ScheduleAsync(message, delay.Value));
-                    return;
-                } 
-                  
-                s_logger.LogWarning("MQTTMessageProducer: no scheduler configured, message will be sent immediately");
+                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+                schedulerSync.Schedule(message, delay.Value);
+                return;
             }
             
             // delay is not natively supported
@@ -121,19 +111,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             delay ??= TimeSpan.Zero;
             if (delay != TimeSpan.Zero)
             {
-                if (Scheduler is IAmAMessageSchedulerAsync async)
-                {
-                    await async.ScheduleAsync(message, delay.Value, cancellationToken);
-                    return;
-                }
-
-                if (Scheduler is IAmAMessageSchedulerSync sync)
-                {
-                    sync.Schedule(message, delay.Value);
-                    return;
-                }
-                
-                s_logger.LogWarning("MQTTMessageProducer: no scheduler configured, message will be sent immediately");
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
             }
             
             if (message == null)

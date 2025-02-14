@@ -3,30 +3,46 @@
 namespace Paramore.Brighter;
 
 /// <summary>
-/// The <see cref="InMemoryMessageScheduler"/> factory
+/// The <see cref="InMemoryScheduler"/> factory
 /// </summary>
-/// <param name="timerProvider">The <see cref="TimeProvider"/>.</param>
-public class InMemoryMessageSchedulerFactory(TimeProvider timerProvider) : IAmAMessageSchedulerFactory
+public class InMemoryMessageSchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     /// <summary>
-    /// Get or create a scheduler id
+    /// The <see cref="System.TimeProvider"/>.
+    /// </summary>
+    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+    
+    /// <summary>
+    /// Get or create a scheduler id for a message
     /// </summary>
     /// <remarks>
-    /// The default approach is to use the message id. 
+    /// The default approach is generate a Guid 
     /// </remarks>
-    public Func<Message, string> GetOrCreateSchedulerId { get; set; } = message => message.Id;
+    public Func<Message, string> GetOrCreateMessageSchedulerId { get; set; } = _ => Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Get or create  a scheduler id to a request
+    /// </summary>
+    /// <remarks>
+    /// The default approach is generate a Guid 
+    /// </remarks>
+    public Func<IRequest, string> GetOrCreateRequestSchedulerId { get; set; } = _ => Guid.NewGuid().ToString();
 
     /// <summary>
     /// The action be executed on conflict during scheduler message
     /// </summary>
     public OnSchedulerConflict OnConflict { get; set; } = OnSchedulerConflict.Throw;
     
-    public InMemoryMessageSchedulerFactory()
-        : this(TimeProvider.System)
-    {
-    }
-
+    /// <inheritdoc />
     public IAmAMessageScheduler Create(IAmACommandProcessor processor) 
-        => new InMemoryMessageScheduler(processor, timerProvider, GetOrCreateSchedulerId, OnConflict);
+        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict);
+
+    /// <inheritdoc />
+    public IAmARequestSchedulerSync CreateSync(IAmACommandProcessor processor)
+        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict);
+
+    /// <inheritdoc />
+    public IAmARequestSchedulerAsync CreateAsync(IAmACommandProcessor processor)
+        => new InMemoryScheduler(processor, TimeProvider, GetOrCreateRequestSchedulerId, GetOrCreateMessageSchedulerId, OnConflict);
 }
  

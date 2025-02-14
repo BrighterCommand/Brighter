@@ -18,10 +18,8 @@ public class Scheduler
     /// </summary>
     public int? FlexibleTimeWindowMinutes { get; init; }
     
-    public RoutingKey Topic { get; set; } = RoutingKey.Empty;
-
-    public string TopicArn { get; init; } = string.Empty;
-    public string QueueUrl { get; init; } = string.Empty;
+    public RoutingKey MessageSchedulerTopic { get; set; } = RoutingKey.Empty;
+    public RoutingKey RequestSchedulerTopic { get; set; } = RoutingKey.Empty;
 
     public bool UseMessageTopicAsTarget { get; set; }
 

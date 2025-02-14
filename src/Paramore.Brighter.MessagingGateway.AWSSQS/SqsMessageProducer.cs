@@ -133,28 +133,31 @@ public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync,
         return !string.IsNullOrEmpty(queueUrl);
     }
 
+    /// <inheritdoc />
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         => await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
 
-    public async Task SendWithDelayAsync(Message message, TimeSpan? delay,
-        CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        => await SendWithDelayAsync(message, delay, true, cancellationToken);
+    
+    
+    private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useAsyncScheduler, CancellationToken cancellationToken = default)
     {
         delay ??= TimeSpan.Zero;
+        // SQS support delay until 15min, more than that we are going to use scheduler
         if (delay > TimeSpan.FromMinutes(15))
         {
-            if (Scheduler is IAmAMessageSchedulerAsync async)
+            if (useAsyncScheduler)
             {
-                await async.ScheduleAsync(message, delay.Value, cancellationToken);
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
                 return;
             }
 
-            if (Scheduler is IAmAMessageSchedulerSync sync)
-            {
-                sync.Schedule(message, delay.Value);
-                return;
-            }
-                
-            s_logger.LogWarning("SQSMessageProducer: no scheduler configured, message will be sent immediately");
+            var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+            schedulerSync.Schedule(message, delay.Value);
+            return;
         }
         
         s_logger.LogDebug(
@@ -182,5 +185,5 @@ public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerAsync,
     public void Send(Message message) => SendWithDelay(message, null);
 
     public void SendWithDelay(Message message, TimeSpan? delay)
-        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
+        => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay, false));
 }
