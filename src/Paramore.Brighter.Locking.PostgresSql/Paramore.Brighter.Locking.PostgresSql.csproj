@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>This is an implementation of the locking using PostgreSql</Description>
     <Authors>Rafael Lillo</Authors>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>$(BrigtherCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>Postgres;Brighter;</PackageTags>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
