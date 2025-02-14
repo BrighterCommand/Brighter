@@ -26,12 +26,24 @@ public class HeartbeatHostedService : IHostedService
         return Task.CompletedTask;
     }
 
+#if NETSTANDARD2_0
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Stopping heartbeat service");
+        _timer?.Dispose();
+
+        return Task.CompletedTask;
+    }
+#else
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Stopping heartbeat service");
         if (_timer != null)
+        {
             await _timer.DisposeAsync();
+        }
     }
+#endif
 
     private void SendHeartbeat(object? state)
     {

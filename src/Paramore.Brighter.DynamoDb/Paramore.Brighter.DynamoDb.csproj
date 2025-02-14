@@ -1,16 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFrameworks>netstandard2.0;net8.0;net9.0</TargetFrameworks>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>$(BrigtherTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <PackageReference Include="AWSSDK.DynamoDBv2" />
-      <PackageReference Include="NJsonSchema" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.DynamoDBv2"/>
+    <PackageReference Include="NJsonSchema"/>
+  </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
-    </ItemGroup>
-   
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
+  </ItemGroup>
+
 </Project>

@@ -37,11 +37,13 @@ namespace Paramore.Brighter.Locking.MsSql;
 /// The Microsoft Sql Server Locking Provider
 /// </summary>
 /// <param name="connectionProvider">The Sql Server connection Provider</param>
-public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider) : IDistributedLock, IAsyncDisposable
+public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider)
+    : IDistributedLock, IAsyncDisposable, IDisposable
 {
     private readonly ConcurrentDictionary<string, DbConnection> _connections = new();
 
     private readonly ILogger _logger = ApplicationLogging.CreateLogger<MsSqlLockingProvider>();
+
     /// <summary>
     /// Attempt to obtain a lock on a resource
     /// </summary>
@@ -56,8 +58,12 @@ public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider) : 
         }
 
         var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
-        
+
+#if NET462
+        using var command = connection.CreateCommand();
+#else
         await using var command = connection.CreateCommand();
+#endif
         command.CommandText = MsSqlLockingQueries.ObtainLockQuery;
         command.Parameters.Add(new SqlParameter("@Resource", SqlDbType.NVarChar, 255));
         command.Parameters["@Resource"].Value = resource;
@@ -69,7 +75,7 @@ public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider) : 
         var resultCode = (int)result;
 
         _logger.LogInformation("Attempt to obtain lock returned: {MsSqlLockResult}", GetLockStatusCode(resultCode));
-        
+
         if (resultCode < 0)
             return null;
 
@@ -91,14 +97,24 @@ public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider) : 
             return;
         }
 
+#if NET462
+        using var command = connection.CreateCommand();
+#else
         await using var command = connection.CreateCommand();
+#endif
+
         command.CommandText = MsSqlLockingQueries.ReleaseLockQuery;
         command.Parameters.Add(new SqlParameter("@Resource", SqlDbType.NVarChar, 255));
         command.Parameters["@Resource"].Value = resource;
         await command.ExecuteNonQueryAsync(cancellationToken);
 
+#if NET462
+        connection.Close();
+        connection.Dispose();
+#else
         await connection.CloseAsync();
         await connection.DisposeAsync();
+#endif
     }
 
     /// <summary>
@@ -121,11 +137,30 @@ public class MsSqlLockingProvider(MsSqlConnectionProvider connectionProvider) : 
     /// <summary>
     /// Dispose Locking Provider
     /// </summary>
+#if NET462
+    public ValueTask DisposeAsync()
+    {
+        Dispose();
+        return new ValueTask();
+    }
+#else
     public async ValueTask DisposeAsync()
     {
         foreach (var connection in _connections)
         {
             await connection.Value.DisposeAsync();
+        }
+    }
+#endif
+
+    /// <summary>
+    /// Dispose Locking Provider
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var connection in _connections)
+        {
+            connection.Value.Dispose();
         }
     }
 }

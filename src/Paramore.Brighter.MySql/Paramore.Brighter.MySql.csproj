@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>$(BrigtherTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MySqlConnector" />
+    <PackageReference Include="MySqlConnector"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>
 
 </Project>

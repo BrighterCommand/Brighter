@@ -1,18 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-    <PropertyGroup>
-        <OutputType>Library</OutputType>
-        <TargetFramework>net9.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <Authors>Paul Reardon</Authors>
-        <IsPackable>true</IsPackable>
-        <Description>The API extensions for the Brighter Service Activator Control module</Description>
-        <PackageTags>Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    </PropertyGroup>
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>$(BrigtherCoreTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Authors>Paul Reardon</Authors>
+    <IsPackable>true</IsPackable>
+    <Description>The API extensions for the Brighter Service Activator Control module</Description>
+    <PackageTags>Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Paramore.Brighter.ServiceActivator.Control\Paramore.Brighter.ServiceActivator.Control.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.ServiceActivator.Control\Paramore.Brighter.ServiceActivator.Control.csproj"/>
+  </ItemGroup>
 
 </Project>

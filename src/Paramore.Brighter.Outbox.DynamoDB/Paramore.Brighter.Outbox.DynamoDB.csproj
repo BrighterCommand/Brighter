@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>$(BrigtherTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" />
-    
 
-  </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj" />
-    <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <PackageReference Include="AWSSDK.DynamoDBv2"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>
 </Project>
