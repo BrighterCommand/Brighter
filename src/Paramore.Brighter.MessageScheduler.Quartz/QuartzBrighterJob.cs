@@ -18,13 +18,6 @@ public class QuartzBrighterJob(IAmACommandProcessor processor) : IJob
         }
 
         var fireScheduler = JsonSerializer.Deserialize<FireSchedulerMessage>(obj!, JsonSerialisationOptions.Options)!;
-        if (fireScheduler.Async)
-        {
-            await processor.PostAsync(fireScheduler);
-        }
-        else
-        {
-            processor.Post(fireScheduler);
-        }
+        await processor.SendAsync(fireScheduler);
     }
 }

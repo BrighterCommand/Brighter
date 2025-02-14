@@ -7,25 +7,29 @@ namespace Paramore.Brighter;
 /// <summary>
 /// The async API for message scheduler (like in-memory, Hang fire and others)
 /// </summary>
-public interface IAmAMessageSchedulerAsync : IAmAMessageScheduler 
+public interface IAmARequestSchedulerAsync : IAmARequestScheduler 
 {
     /// <summary>
     /// Scheduler a message to be executed the provided <see cref="DateTimeOffset"/>.
     /// </summary>
-    /// <param name="message">The <see cref="Message"/>.</param>
+    /// <param name="request">The request to be scheduler</param>
+    /// <param name="type">The <see cref="RequestSchedulerType"/>.</param>
     /// <param name="at">The date-time of when a message should be placed.</param>
     /// <param name="cancellationToken">A cancellation token to end the operation</param>
     /// <returns>The scheduler id.</returns>
-    Task<string> ScheduleAsync(Message message, DateTimeOffset at, CancellationToken cancellationToken = default);
+    Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest;
 
     /// <summary>
     /// Scheduler a message to be executed the provided <see cref="DateTimeOffset"/>.
     /// </summary>
-    /// <param name="message">The <see cref="Message"/>.</param>
+    /// <param name="request">The request to be scheduler</param>
+    /// <param name="type">The <see cref="RequestSchedulerType"/>.</param>
     /// <param name="delay">The <see cref="TimeSpan"/> of delay before place the message.</param>
     /// <param name="cancellationToken">A cancellation token to end the operation</param>
     /// <returns>The scheduler id.</returns>
-    Task<string> ScheduleAsync(Message message, TimeSpan delay, CancellationToken cancellationToken = default);
+    Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest;
 
     /// <summary>
     /// ReScheduler a message.

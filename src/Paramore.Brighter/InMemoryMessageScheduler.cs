@@ -126,24 +126,16 @@ public class InMemoryMessageScheduler(
         var (processor, id, message, async) = ((IAmACommandProcessor, string, Message, bool))state!;
         try
         {
-            if (async)
-            {
-                BrighterAsyncContext.Run(async () =>
-                    await processor.PostAsync(new FireSchedulerMessage { Id = id, Message = message }));
-            }
-            else
-            {
-                processor.Post(new FireSchedulerMessage { Id = id, Message = message });
-            }
-
-            if (s_timers.TryRemove(id, out var timer))
-            {
-                timer.Dispose();
-            }
+            BrighterAsyncContext.Run(async () => await processor.SendAsync(new FireSchedulerMessage { Id = id, Message = message }));
         }
         catch (Exception e)
         {
             Logger.LogError(e, "Error during processing scheduler {Id}", id);
+        }
+
+        if (s_timers.TryRemove(id, out var timer))
+        {
+            timer.Dispose();
         }
     }
 }

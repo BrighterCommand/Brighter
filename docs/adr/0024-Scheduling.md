@@ -14,9 +14,14 @@ Adding the ability to schedule message (by providing `TimeSpan` or `DateTimeOffs
 
 Giving support to Brighter schedule a message, it's necessary breaking on `IAmACommandProcessor` by adding these methods:
 
+// TODO: Add support o Send & Publish
+Add In-Memory scheduler as default
+
 ```c#
 public interface IAmACommandProcessor
 {
+    // TODO: Add support o Send & Publish
+    string Post<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
     string SchedulerPost<TRequest>(TimeSpan delay, TRequest request) where TRequest : class, IRequest;
     string SchedulerPost<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
     Task<string> SchedulerPostAsync<TRequest>(TimeSpan delay, TRequest request, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
@@ -58,6 +63,7 @@ public interface IAmAMessageSchedulerSync : IAmAMessageScheduler, IDisposable
     void Cancel(string id);
 }
 ```
+
 ### Consumer
 After a message is scheduler we need a way to handle this message and route it to correct producer.
 To facilitate the scheduler implementation we are going to have a message type called 
