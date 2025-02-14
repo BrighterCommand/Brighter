@@ -159,14 +159,22 @@ namespace Paramore.Brighter.Outbox.MySql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
+#if NETSTANDARD2_0
+            using var command = commandFunc.Invoke(connection);
+#else
             await using var command = commandFunc.Invoke(connection);
+#endif
             try
             {
                 return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
             }
             finally
             {
+#if NETSTANDARD2_0
+                connection.Close();
+#else
                 await connection.CloseAsync();
+#endif 
             }
         }
 
@@ -325,9 +333,12 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 messages.Add(MapAMessage(dr));
             }
-
+#if NETSTANDARD2_0
             dr.Close();
-
+#else
+            await dr.CloseAsync();
+#endif
+            
             return messages;
         }
 
@@ -340,8 +351,13 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 outstandingMessages = dr.GetInt32(0);
             }
-
+            
+#if NETSTANDARD2_0
+            dr.Close();
+#else
             await dr.CloseAsync();
+#endif
+            
             return outstandingMessages;
         }
 
