@@ -71,6 +71,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             Commands.Add(CommandType.Send);
         }
 
+        public string Send<TRequest>(DateTimeOffset at, TRequest command, RequestContext? requestContext = null) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(command);
+            return Guid.NewGuid().ToString();
+        }
+
+        public string Send<TRequest>(TimeSpan delay, TRequest command, RequestContext? requestContext = null) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(command);
+            return Guid.NewGuid().ToString();
+        }
+
         public virtual async Task SendAsync<TRequest>(
             TRequest command, 
             RequestContext requestContext = null,
@@ -85,10 +97,36 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             await completionSource.Task;
         }
 
+        public Task<string> SendAsync<TRequest>(DateTimeOffset at, TRequest command, RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(command);
+            return Task.FromResult(Guid.NewGuid().ToString());
+        }
+
+        public Task<string> SendAsync<TRequest>(TimeSpan delay, TRequest command, RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(command);
+            return Task.FromResult(Guid.NewGuid().ToString());
+        }
+
         public virtual void Publish<TRequest>(TRequest @event, RequestContext requestContext = null) where TRequest : class, IRequest
         {
             _requests.Enqueue(@event);
             Commands.Add(CommandType.Publish);
+        }
+
+        public string Publish<TRequest>(DateTimeOffset at, TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(@event);
+            return Guid.NewGuid().ToString();
+        }
+
+        public string Publish<TRequest>(TimeSpan delay, TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(@event);
+            return Guid.NewGuid().ToString();
         }
 
         public virtual async Task PublishAsync<TRequest>(
@@ -104,6 +142,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
+        }
+
+        public Task<string> PublishAsync<TRequest>(DateTimeOffset at, TRequest @event, RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(@event);
+            return Task.FromResult(Guid.NewGuid().ToString());
+        }
+
+        public Task<string> PublishAsync<TRequest>(TimeSpan delay, TRequest @event, RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            _scheduler.Enqueue(@event);
+            return Task.FromResult(Guid.NewGuid().ToString());
         }
 
         public string SchedulerPost<TRequest>(TRequest request, TimeSpan delay, RequestContext? requestContext = null,
@@ -145,6 +197,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             Commands.Add(CommandType.Post);
         }
 
+        public string Post<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null) where TRequest : class, IRequest
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Post<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null, Dictionary<string, object>? args = null) where TRequest : class, IRequest
+        {
+            throw new NotImplementedException();
+        }
+
         public virtual async Task PostAsync<TRequest>(
             TRequest request, 
             RequestContext requestContext = null,
@@ -159,6 +222,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
+        }
+
+        public Task<string> PostAsync<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<string> PostAsync<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            throw new NotImplementedException();
         }
 
         public string DepositPost<TRequest>(

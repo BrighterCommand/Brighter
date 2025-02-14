@@ -74,7 +74,7 @@ public class QuartzMessageSchedulerTest
             .ExternalBus(ExternalBusType.FireAndForget, externalBus)
             .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .MessageSchedulerFactory(new QuartzMessageSchedulerFactory(scheduler))
+            .RequestSchedulerFactory(new QuartzSchedulerFactory(scheduler))
             .Build();
 
         BrighterResolver.Processor = _commandProcessor;
@@ -83,7 +83,7 @@ public class QuartzMessageSchedulerTest
     [Fact]
     public void Quartz_Scheduling_A_Message()
     {
-        _commandProcessor.SchedulerPost(_myCommand, TimeSpan.FromSeconds(1));
+        _commandProcessor.Post(TimeSpan.FromSeconds(1), _myCommand);
 
         Task.Delay(TimeSpan.FromSeconds(2)).Wait();
 
@@ -93,10 +93,10 @@ public class QuartzMessageSchedulerTest
     [Fact]
     public async Task Scheduling_A_Message_Async()
     {
-        _commandProcessor.SchedulerPost(_myCommand, DateTimeOffset.UtcNow.AddSeconds(1));
+        _commandProcessor.Post(DateTimeOffset.UtcNow.AddSeconds(1), _myCommand);
 
         await Task.Delay(TimeSpan.FromSeconds(10));
-        
+
         _outbox.Get(_myCommand.Id, new RequestContext()).Should().NotBeNull();
     }
 }

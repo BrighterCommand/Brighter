@@ -70,7 +70,7 @@ namespace Paramore.Brighter
                 .ExternalBus(ExternalBusType.FireAndForget, mediator)   
                 .ConfigureInstrumentation(null, InstrumentationOptions.None)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
-                .RequestSchedulerFactory(requestSchedulerFactory ?? new InMemoryMessageSchedulerFactory())
+                .RequestSchedulerFactory(requestSchedulerFactory ?? new InMemorySchedulerFactory())
                 .Build()
                 );
         }

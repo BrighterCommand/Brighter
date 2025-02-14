@@ -7,7 +7,7 @@ using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessageScheduler.Sns;
+namespace Paramore.Brighter.AWS.Tests.Scheduler.Messages.Sns;
 
 public class SnsSchedulingAsyncMessageTest : IAsyncDisposable
 {
@@ -55,7 +55,7 @@ public class SnsSchedulingAsyncMessageTest : IAsyncDisposable
         _factory = new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
         {
             UseMessageTopicAsTarget = true,
-            MakeRole = OnMissingRole.CreateRole
+            MakeRole = OnMissingRole.Create
         };
     }
 

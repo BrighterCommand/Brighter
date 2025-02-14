@@ -67,7 +67,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                mediator);
+                mediator,
+                new InMemorySchedulerFactory());
 
 
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
@@ -144,7 +145,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                mediator);
+                mediator,
+                new InMemorySchedulerFactory());
             
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
@@ -219,7 +221,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                mediator);
+                mediator,
+                new InMemorySchedulerFactory());
             
             var sweeper = new OutboxSweeper(
                 timeSinceSent, 
@@ -303,7 +306,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                mediator);           
+                mediator,
+                new InMemorySchedulerFactory());           
             
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 

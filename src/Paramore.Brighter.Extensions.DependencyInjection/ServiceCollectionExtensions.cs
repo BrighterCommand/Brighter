@@ -153,10 +153,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
             
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
-            busConfiguration.MessageSchedulerFactory ??= new InMemoryMessageSchedulerFactory();
+            busConfiguration.MessageSchedulerFactory ??= new InMemorySchedulerFactory();
             brighterBuilder.UseMessageScheduler(busConfiguration.MessageSchedulerFactory);
 
-            busConfiguration.RequestSchedulerFactory ??= new InMemoryMessageSchedulerFactory();
+            busConfiguration.RequestSchedulerFactory ??= new InMemorySchedulerFactory();
             brighterBuilder.UseRequestScheduler(busConfiguration.RequestSchedulerFactory);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction

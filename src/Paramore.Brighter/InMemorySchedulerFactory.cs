@@ -5,7 +5,7 @@ namespace Paramore.Brighter;
 /// <summary>
 /// The <see cref="InMemoryScheduler"/> factory
 /// </summary>
-public class InMemoryMessageSchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
+public class InMemorySchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     /// <summary>
     /// The <see cref="System.TimeProvider"/>.
