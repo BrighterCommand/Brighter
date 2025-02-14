@@ -64,6 +64,7 @@ public class RmqMessageProducerDelayedMessageTests : IDisposable
     [Fact]
     public void When_reading_a_delayed_message_via_the_messaging_gateway()
     {
+        //NOTE: This test will fail if RMQ is not configured to support delay
         _messageProducer.SendWithDelay(_message, TimeSpan.FromMilliseconds(3000));
 
         var immediateResult = _messageConsumer.Receive(TimeSpan.Zero).First();
