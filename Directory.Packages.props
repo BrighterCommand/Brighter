@@ -8,7 +8,7 @@
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
     <PackageVersion Include="AWSSDK.S3" Version="3.7.414.4" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.42" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.93" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.95" />
     <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.94" />
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.4" />
