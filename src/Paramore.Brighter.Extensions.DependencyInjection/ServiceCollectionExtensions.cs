@@ -106,13 +106,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
 
-            return new ServiceCollectionBrighterBuilder(
+            var builder =  new ServiceCollectionBrighterBuilder(
                 services,
                 subscriberRegistry,
                 mapperRegistry,
                 transformRegistry,
                 policyRegistry
             );
+
+            return builder.UseScheduler(new InMemorySchedulerFactory());
         }
 
         /// <summary>
@@ -153,11 +155,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
             
             brighterBuilder.Services.TryAddSingleton(busConfiguration.ProducerRegistry);
-            busConfiguration.MessageSchedulerFactory ??= new InMemorySchedulerFactory();
-            brighterBuilder.UseMessageScheduler(busConfiguration.MessageSchedulerFactory);
-
-            busConfiguration.RequestSchedulerFactory ??= new InMemorySchedulerFactory();
-            brighterBuilder.UseRequestScheduler(busConfiguration.RequestSchedulerFactory);
 
             //default to using System Transactions if nothing provided, so we always technically can share the outbox transaction
             Type transactionProvider = busConfiguration.TransactionProvider ?? typeof(CommittableTransactionProvider);
