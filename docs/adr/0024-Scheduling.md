@@ -14,18 +14,14 @@ Adding the ability to schedule message (by providing `TimeSpan` or `DateTimeOffs
 
 Giving support to Brighter schedule a message, it's necessary breaking on `IAmACommandProcessor` by adding these methods:
 
-// TODO: Add support o Send & Publish
-Add In-Memory scheduler as default
-
 ```c#
 public interface IAmACommandProcessor
 {
-    // TODO: Add support o Send & Publish
+    string Send<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
+    string Publish<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
     string Post<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
-    string SchedulerPost<TRequest>(TimeSpan delay, TRequest request) where TRequest : class, IRequest;
-    string SchedulerPost<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
-    Task<string> SchedulerPostAsync<TRequest>(TimeSpan delay, TRequest request, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
-    Task<string> SchedulerPostAsync<TRequest>(DateTimeOffset delay, TRequest request, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest;
+    
+    ....
 }
 ```
 
@@ -36,7 +32,7 @@ Scheduling can be break into 2 part (Producer & Consumer):
 ### Producer 
 Who is responsible for scheduler the message, like for In-Memory scheduler we the producer will create a timer, for Quartz to create a job.
 
-For producing a message we are going to have a new this new interface:
+For producing a message we are going to have a 2 new interfaces:
 
 ```c#
 public interface IAmAMessageScheduler
@@ -44,7 +40,7 @@ public interface IAmAMessageScheduler
 }
 
 
-public interface IAmAMessageSchedulerAsync : IAmAMessageScheduler, IDisposable
+public interface IAmAMessageSchedulerAsync : IAmAMessageScheduler
 {
     Task<string> ScheduleAsync(Message message, DateTimeOffset at, CancellationToken cancellationToken = default);
     Task<string> ScheduleAsync(Message message, TimeSpan delay, CancellationToken cancellationToken = default);
@@ -54,7 +50,7 @@ public interface IAmAMessageSchedulerAsync : IAmAMessageScheduler, IDisposable
 }
 
 
-public interface IAmAMessageSchedulerSync : IAmAMessageScheduler, IDisposable
+public interface IAmAMessageSchedulerSync : IAmAMessageScheduler
 {
     string Schedule(Message message, DateTimeOffset at);
     string Schedule(Message message, TimeSpan delay);
@@ -63,18 +59,65 @@ public interface IAmAMessageSchedulerSync : IAmAMessageScheduler, IDisposable
     void Cancel(string id);
 }
 ```
+And
+```c#
+public interface IAmARequestScheduler
+{
+}
+
+
+public interface IAmARequestSchedulerAsync : IAmARequestScheduler
+{
+    Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest;
+    
+    Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest;
+    
+    Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at, CancellationToken cancellationToken = default);
+    Task<bool> ReSchedulerAsync(string schedulerId, TimeSpan delay, CancellationToken cancellationToken = default);
+    Task CancelAsync(string id, CancellationToken cancellationToken = default);
+}
+
+
+public interface IAmARequestSchedulerSync : IAmAMessageScheduler
+{
+    string ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest;
+    
+    string ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay, CancellationToken cancellationToken = default)
+        where TRequest : class, IRequest;
+    bool ReScheduler(string schedulerId, DateTimeOffset at);
+    bool ReScheduler(string schedulerId, TimeSpan delay);
+    void Cancel(string id);
+}
+```
 
 ### Consumer
 After a message is scheduler we need a way to handle this message and route it to correct producer.
-To facilitate the scheduler implementation we are going to have a message type called 
+To facilitate the scheduler implementation we are going to have a 2 new message type called 
 
 ```c#
 public class FireSchedulerMessage : Command 
 {
-     public Message Message { get; init; } = new();
+     public Message Message { get; set; } = new();
     
     public bool Async { get; set; }
 }
+```
+
+```c#
+public class FireSchedulerRequest() : Command(Guid.NewGuid())
+{
+    public RequestSchedulerType SchedulerType { get; set; }
+
+    public string RequestType { get; set; } = string.Empty;
+
+    public string RequestData { get; set; } = string.Empty;
+    
+    public bool Async { get; set; }
+}
+
 ```
 
 On the scheduler handler (which framework/lib will have a different implementation)
@@ -84,14 +127,12 @@ public class MessageSchedulerJob(ICommandProcessor processor) : IJob
 {
     public async Task ExecuteAsync(FireSchedulerMessage message)
     {
-        if(message.Async)
-        {
-            await processor.PostAsync(message);
-        }
-        else
-        {
-            processor.Post(message);
-        }
+        await processor.SendAsync(message);
+    }
+    
+    public async Task ExecuteAsync(FireSchedulerRequest message)
+    {
+        await processor.SendAsync(message);
     }
 }
 ```
@@ -101,7 +142,6 @@ public class MessageSchedulerJob(ICommandProcessor processor) : IJob
 #### Request to Message
 One important change is necessary is how we map a request to `Message`, we are open an exception to `FireSchedulerMessage`, 
 when we map tha message to `Message` we are going to use the `Message` property.
-
 
 #### Message Producer
 Now we are adding support for `IAmAMessageScheduler` for `IAmAMessageProducer`, 
@@ -115,14 +155,13 @@ public interface IAmAMessageProducer
 ```
 
 ### Default Message scheduler
-To avoid any issue we are not going to set a default message scheduler
+By default, we are going to use In-Memory scheduler
 
 ### In Memory
 We are going to offer in-memory scheduler(it should be used on test or demo), we are scheduling messages with `ITimerProvider`
 
-
 ### Hangfire
-We won't support hangfire by default due issue with Strong name
+We won't support hangfire by default due [issue with Strong name](https://github.com/HangfireIO/Hangfire/issues/1076)
 
 ### Quartz
 Brighter has support to [Quartz](https://www.quartz-scheduler.net/), for developers be able to publish the scheduler message it's necessary

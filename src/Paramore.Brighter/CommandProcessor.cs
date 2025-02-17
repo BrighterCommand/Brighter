@@ -290,7 +290,7 @@ namespace Paramore.Brighter
             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, command, requestContext?.Span, options: _instrumentationOptions);
             try
             {
-                var scheduler = (IAmARequestSchedulerSync)_schedulerFactory.CreateSync(this);
+                var scheduler = _schedulerFactory.CreateSync(this);
                 return scheduler.Schedule(command, RequestSchedulerType.Send, delay);
             }
             finally

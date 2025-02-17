@@ -79,7 +79,7 @@ public class FireSchedulerRequestHandler(IAmACommandProcessor processor) : Reque
         {
             await processor.PostAsync(request, cancellationToken: cancellationToken);
         }
-        else if (command.SchedulerType == RequestSchedulerType.Publish)
+        else if (command.SchedulerType == RequestSchedulerType.Post)
         {
             processor.Post(request);
         }

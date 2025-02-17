@@ -33,6 +33,8 @@ using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Scheduler.Events;
+using Paramore.Brighter.Scheduler.Handlers;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -45,45 +47,60 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
     private const string Topic = "MyCommand";
     private readonly CommandProcessor _commandProcessor;
     private readonly MyCommand _myCommand;
-    private readonly Message _message;
+    private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
+    private readonly FakeTimeProvider _timeProvider;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
-    private readonly FakeTimeProvider _timeProvider;
 
     public CommandProcessorSchedulerCommandTests()
     {
-        _myCommand = new MyCommand { Value = $"Hello World {Guid.NewGuid():N}" };
-
-        var routingKey = new RoutingKey(Topic);
-
+        _myCommand = new() { Value = $"Hello World {Guid.NewGuid():N}" };
+        var routingKey = new RoutingKey("MyCommand");
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
-        InMemoryProducer producer =
-            new(_internalBus, _timeProvider) { Publication = { Topic = routingKey, RequestType = typeof(MyCommand) } };
-
-        _message = new Message(
-            new MessageHeader(_myCommand.Id, routingKey, MessageType.MT_COMMAND),
-            new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-        );
+        var registry = new SubscriberRegistry();
+        registry.RegisterAsync<FireSchedulerRequest, FireSchedulerRequestHandler>();
+        registry.Register<MyCommand, MyCommandHandler>();
+        var handlerFactory = new SimpleHandlerFactory(
+            _ => new MyCommandHandler(_receivedMessages),
+            _ => new FireSchedulerRequestHandler(_commandProcessor!));
 
         var messageMapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+            new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
             null);
+
         messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-        var retryPolicy = Policy
-            .Handle<Exception>()
-            .Retry();
-
-        var circuitBreakerPolicy = Policy
-            .Handle<Exception>()
-            .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+        var producer = new InMemoryProducer(_internalBus, _timeProvider)
+        {
+            Publication = { Topic = routingKey, RequestType = typeof(MyCommand) }
+        };
 
         var policyRegistry = new PolicyRegistry
         {
-            { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+            {
+                CommandProcessor.RETRYPOLICY, Policy
+                    .Handle<Exception>()
+                    .Retry()
+            },
+            {
+                CommandProcessor.CIRCUITBREAKER, Policy
+                    .Handle<Exception>()
+                    .CircuitBreaker(1, TimeSpan.FromMilliseconds(1))
+            },
+            {
+                CommandProcessor.RETRYPOLICYASYNC, Policy
+                    .Handle<Exception>()
+                    .RetryAsync()
+            },
+            {
+                CommandProcessor.CIRCUITBREAKERASYNC, Policy
+                    .Handle<Exception>()
+                    .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1))
+            }
         };
+
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
 
@@ -101,31 +118,66 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
         );
 
         CommandProcessor.ClearServiceBus();
-        _commandProcessor = new CommandProcessor(
+        _commandProcessor = new CommandProcessor(registry,
+            handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
             bus,
-            new InMemorySchedulerFactory { TimeProvider = _timeProvider }
-        );
+            new InMemorySchedulerFactory { TimeProvider = _timeProvider });
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+        PipelineBuilder<FireSchedulerRequest>.ClearPipelineCache();
     }
 
     [Fact]
-    public void When_Scheduling_With_Delay_A_Message_To_The_Command_Processor()
+    public void When_Scheduling_Send_With_Delay_A_Message_To_The_Command_Processor()
     {
-        _commandProcessor.Post(TimeSpan.FromSeconds(10), _myCommand);
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
+        _commandProcessor.Send(TimeSpan.FromSeconds(10), _myCommand);
+
+        _receivedMessages.Should().NotContain(nameof(MyCommandHandler), _myCommand.Id);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
-
-        var message = _outbox.Get(_myCommand.Id, new RequestContext());
-        message.Should().NotBeNull();
-        message.Should().Be(_message);
+        _receivedMessages.Should().Contain(nameof(MyCommandHandler), _myCommand.Id);
     }
 
     [Fact]
-    public void When_Scheduling_With_At_A_Message_To_The_Command_Processor()
+    public void When_Scheduling_Send_With_At_A_Message_To_The_Command_Processor()
+    {
+        _commandProcessor.Send(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
+
+        _receivedMessages.Should().NotContain(nameof(MyCommandHandler), _myCommand.Id);
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
+        _receivedMessages.Should().Contain(nameof(MyCommandHandler), _myCommand.Id);
+    }
+
+    [Fact]
+    public void When_Scheduling_Publish_With_Delay_A_Message_To_The_Command_Processor()
+    {
+        _commandProcessor.Publish(TimeSpan.FromSeconds(10), _myCommand);
+
+        _receivedMessages.Should().NotContain(nameof(MyCommandHandler), _myCommand.Id);
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
+        _receivedMessages.Should().Contain(nameof(MyCommandHandler), _myCommand.Id);
+    }
+
+    [Fact]
+    public void When_Scheduling_Publish_With_At_A_Message_To_The_Command_Processor()
+    {
+        _commandProcessor.Publish(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
+
+        _receivedMessages.Should().NotContain(nameof(MyCommandHandler), _myCommand.Id);
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
+        _receivedMessages.Should().Contain(nameof(MyCommandHandler), _myCommand.Id);
+    }
+
+    [Fact]
+    public void When_Scheduling_Post_With_At_A_Message_To_The_Command_Processor()
     {
         _commandProcessor.Post(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
         _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
@@ -136,8 +188,28 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
 
         var message = _outbox.Get(_myCommand.Id, new RequestContext());
         message.Should().NotBeNull();
+        message.Should().BeEquivalentTo(new Message(
+            new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
+            new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
+        ));
+    }
 
-        message.Should().Be(_message);
+    [Fact]
+    public void When_Scheduling_Post_With_Delay_A_Message_To_The_Command_Processor()
+    {
+        _commandProcessor.Post(TimeSpan.FromSeconds(10), _myCommand);
+        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
+
+        _timeProvider.Advance(TimeSpan.FromSeconds(10));
+
+        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+
+        var message = _outbox.Get(_myCommand.Id, new RequestContext());
+        message.Should().NotBeNull();
+        message.Should().BeEquivalentTo(new Message(
+            new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
+            new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
+        ));
     }
 
     public void Dispose()

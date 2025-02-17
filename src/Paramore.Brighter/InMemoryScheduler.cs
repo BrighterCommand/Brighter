@@ -51,7 +51,7 @@ public class InMemoryScheduler(
         s_timers[id] = timeProvider.CreateTimer(Execute, (processor, new FireSchedulerMessage
         {
             Id = id,
-            Async = true,
+            Async = false,
             Message = message
         }), delay, TimeSpan.Zero);
         return id;
@@ -79,7 +79,7 @@ public class InMemoryScheduler(
         s_timers[id] = timeProvider.CreateTimer(Execute, (processor, new FireSchedulerRequest
         {
             Id = id,
-            Async = true,
+            Async = false,
             SchedulerType = type,
             RequestType = typeof(TRequest).FullName!,
             RequestData =JsonSerializer.Serialize(request, JsonSerialisationOptions.Options) 

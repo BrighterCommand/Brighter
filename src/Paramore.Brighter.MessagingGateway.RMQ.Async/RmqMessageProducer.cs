@@ -153,7 +153,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
 
             _pendingConfirmations.TryAdd(await Channel.GetNextPublishSequenceNumberAsync(cancellationToken), message.Id);
 
-            if (delay == TimeSpan.Zero || DelaySupported)
+            if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
             {
                 await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
             }

@@ -32,6 +32,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
@@ -112,7 +113,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// <param name="message">The message.</param>
         /// <param name="delay">Delay to delivery of the message.</param>
         /// <returns>Task.</returns>
-        public void SendWithDelay(Message message, TimeSpan? delay = null)
+        public void SendWithDelay(Message message, TimeSpan? delay = null) => SendWithDelay(message, delay, false);
+        private void SendWithDelay(Message message, TimeSpan? delay, bool useSchedulerAsync)
         {
             delay ??= TimeSpan.Zero;
             
@@ -140,16 +142,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 
                     _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id);
 
-                    if (DelaySupported)
-                    {
-                        rmqMessagePublisher.PublishMessage(message, delay.Value);
-                    }
-                    else
-                    {
-                        //TODO: Replace with a Timer, don't block
-                        Task.Delay(delay.Value).Wait();
-                        rmqMessagePublisher.PublishMessage(message, TimeSpan.Zero);
-                    }
+                     if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
+                     {
+                         rmqMessagePublisher.PublishMessage(message, delay.Value);
+                     }
+                     else if(useSchedulerAsync)
+                     {
+                         var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                         BrighterAsyncContext.Run(async () => await schedulerAsync.ScheduleAsync(message, delay.Value));
+                     }
+                     else
+                     {
+                         var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+                         schedulerSync.Schedule(message, delay.Value);
+                     }
 
                     s_logger.LogInformation(
                         "RmqMessageProducer: Published message to exchange {ExchangeName} on broker {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}",
