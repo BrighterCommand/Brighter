@@ -175,7 +175,7 @@ services
 ...
 
 services.AddBrighter()
-    .UseMessageScheduler(provider =>
+    .UseScheduler(provider =>
    {
         var factory = provider.GetRequiredService<ISchedulerFactory>();
         return new QuartzMessageSchedulerFactory(factory.GetScheduler().GetAwaiter().GetResult());
@@ -192,7 +192,7 @@ you want to scheduler a message to Kafka for example.
 - In case you only have AWS infra SNS/SQS and you want to scheduler a message to there directly
 ```c#
 services.AddBrighter()
-   .UseMessageScheduler(new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
+   .UseMessageScheduler(new AwsMessageSchedulerFactory(awsConnection, "paramore.example.fire-scheduler")
    {
        OnConflict = OnSchedulerConflict.Overwrite,
        GetOrCreateSchedulerId = message => message.Id
@@ -201,21 +201,23 @@ services.AddBrighter()
 
 - In case you want for all scheduler message go through a specific SNS/SQS
 ```c#
+// Ensure the topic/queue exists
 var producerRegistry = new SnsProducerRegistryFactory(awsConnection,
 [
     new SnsPublication
     {
-        Topic = new RoutingKey(typeof(FireSchedulerMessage).FullName.ToValidSNSTopicName()),
-        RequestType = typeof(FireSchedulerMessage)
+        Topic = new RoutingKey("paramore.example.fire-scheduler"),
+        RequestType = typeof(AwsSchedulerFired)
     }
 ]).Create();
 
+// Fire message handler
 var subscriptions = new Subscription[]
 {
-    new SqsSubscription<FireSchedulerMessage>(
+    new SqsSubscription<AwsSchedulerFired>(
         new SubscriptionName("paramore.example.fire-scheduler"),
-        new ChannelName(typeof(FireSchedulerMessage).FullName.ToValidSNSTopicName()),
-        new RoutingKey(typeof(FireSchedulerMessage).FullName.ToValidSNSTopicName()),
+        new ChannelName("paramore.example.fire-scheduler"),
+        new RoutingKey("paramore.example.fire-scheduler"),
         bufferSize: 10,
         timeOut: TimeSpan.FromMilliseconds(20),
         lockTimeout: 30),
@@ -231,7 +233,7 @@ services.AddServiceActivator(opt =>
    {
        configure.ProducerRegistry = producerRegistry;
    })
-   .UseMessageScheduler(new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
+   .UseScheduler(new AwsMessageSchedulerFactory(awsConnection, "paramore.example.fire-scheduler")
    {
        // This flags is true by default
        // Brighter will try to find a SNS/SQS for the provided Topic
@@ -277,4 +279,57 @@ and this policy
        "Resource": ["*"]
    }]
 }
+```
+### Azure Services
+Azure Queue already support long delay before publish and allow us to cancel them if it's necessary, 
+but doesn't update reschedule it. So, for Azure Service bus we won't support to message reschedule (users should `Cancel` and `Scheduler`).
+Also, because Azure doesn't have a centralized scheduler message, we won't support to scheduler a message/request to Topic/Queue directly, 
+we are going to use a Topic/Queue for that.
+
+```c#
+
+// Ensure the topic/queue exists
+var producerRegistry = new AzureServiceBusProducerRegistryFactory(asbClientProvider,
+[
+    new AzureServiceBusPublication
+    {
+        Topic = new RoutingKey("paramore.example.fire-scheduler"),
+        RequestType = typeof(AzureSchedulerFired)
+    }
+]).Create();
+
+// Fire message handler
+var subscriptions = new Subscription[]
+{
+    new AzureServiceBusSubscription<AzureSchedulerFired>(
+        new SubscriptionName("paramore.example.fire-scheduler"),
+        new ChannelName("paramore.example.fire-scheduler"),
+        new RoutingKey("paramore.example.fire-scheduler"),
+        bufferSize: 10,
+        timeOut: TimeSpan.FromMilliseconds(20),
+        lockTimeout: 30),
+ 
+};
+...
+
+services.AddServiceActivator(opt =>
+    {
+         opt.Subscriptions = subscriptions;
+    })
+    .UseExternalBus(configure =>
+   {
+       configure.ProducerRegistry = producerRegistry;
+   })
+
+
+services.AddServiceActivator(opt =>
+    {
+         opt.Subscriptions = subscriptions;
+    })
+    .UseExternalBus(configure =>
+   {
+       configure.ProducerRegistry = producerRegistry;
+   })
+   .UseScheduler(new AzureServiceBusSchedulerFactory(asbClientProvider, "paramore.example.fire-scheduler"));
+
 ```

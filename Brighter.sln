@@ -343,6 +343,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsPumper", "samples\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\Scheduler\AwsTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{F8A3AE7E-B232-4794-B23F-772F48D8636F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageScheduler.Azure", "src\Paramore.Brighter.MessageScheduler.Azure\Paramore.Brighter.MessageScheduler.Azure.csproj", "{6193C1EA-522A-427F-918A-8127717AF8D4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1925,6 +1927,18 @@ Global
 		{F8A3AE7E-B232-4794-B23F-772F48D8636F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{F8A3AE7E-B232-4794-B23F-772F48D8636F}.Release|x86.ActiveCfg = Release|Any CPU
 		{F8A3AE7E-B232-4794-B23F-772F48D8636F}.Release|x86.Build.0 = Release|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Debug|x86.Build.0 = Debug|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Release|x86.ActiveCfg = Release|Any CPU
+		{6193C1EA-522A-427F-918A-8127717AF8D4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
