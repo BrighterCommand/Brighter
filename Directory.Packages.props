@@ -4,13 +4,12 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.405.20" />
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.405.22" />
     <PackageVersion Include="AWSSDK.IdentityManagement" Version="3.7.404" />
-    <PackageVersion Include="AWSSDK.Scheduler" Version="3.7.400.88" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.414.4" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.42" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.93" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.400" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.415" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.44" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.95" />
     <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.94" />
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.4" />
@@ -51,7 +50,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.2.0" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="MQTTnet" Version="3.1.2" />
     <PackageVersion Include="MySqlConnector" Version="2.4.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
@@ -89,7 +88,24 @@
     <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
-    <PackageVersion Include="ServiceStack.Redis.Core" Version="8.5.2" />
+    <PackageVersion Include="ServiceStack.Redis.Core" Version="8.6.0" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.405.22" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.400" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.415" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.44" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.95" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.405.20" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.301" />
+    <PackageVersion Include="AWSSDK.IdentityManagement" Version="3.7.404" />
+    <PackageVersion Include="AWSSDK.Scheduler" Version="3.7.400.88" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.414.4" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.42" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.93" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageVersion Include="Quartz" Version="3.13.1" />
+    <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
+    <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.13.1" />
+    <PackageVersion Include="ServiceStack.Redis.Core" Version="8.6.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.2" />
