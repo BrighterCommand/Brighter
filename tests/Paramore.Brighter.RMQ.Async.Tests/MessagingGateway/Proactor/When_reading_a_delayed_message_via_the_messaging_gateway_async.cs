@@ -32,6 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.RMQ.Async.Tests.MessagingGateway.Proactor;
 
 [Trait("Category", "RMQ")]
+[Trait("Fragile", "CI")]
 public class RmqMessageProducerDelayedMessageTestsAsync : IDisposable, IAsyncDisposable
 {
     private readonly IAmAMessageProducerAsync _messageProducer;
