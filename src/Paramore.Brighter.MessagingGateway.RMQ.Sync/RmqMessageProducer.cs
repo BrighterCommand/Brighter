@@ -71,6 +71,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
         /// </summary>
         public Activity? Span { get; set; }
 
+        /// <inheritdoc />
+        public IAmAMessageScheduler? Scheduler { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
         /// </summary>

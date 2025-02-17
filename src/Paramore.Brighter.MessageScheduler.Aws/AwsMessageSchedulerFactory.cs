@@ -80,7 +80,7 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
             GetOrCreateRequestSchedulerId,
             new Scheduler
             {
-                RoleArn = _roleArn,
+                RoleArn = _roleArn!,
                 SchedulerTopic = SchedulerTopicOrQueue,
                 OnConflict = OnConflict,
                 UseMessageTopicAsTarget = UseMessageTopicAsTarget,

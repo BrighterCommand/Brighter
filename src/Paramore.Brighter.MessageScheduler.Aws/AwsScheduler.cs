@@ -158,7 +158,7 @@ public class AwsScheduler(
                 {
                     RoleArn = roleArn,
                     Arn = "arn:aws:scheduler:::aws-sdk:sns:publish",
-                    Input = JsonSerializer.Serialize(ToPublishRequest(topicArn, message))
+                    Input = JsonSerializer.Serialize(ToPublishRequest(topicArn!, message))
                 };
             }
 
@@ -169,7 +169,7 @@ public class AwsScheduler(
                 {
                     RoleArn = roleArn,
                     Arn = "arn:aws:scheduler:::aws-sdk:sqs:sendMessage",
-                    Input = JsonSerializer.Serialize(ToSendMessageRequest(queueUrl, message))
+                    Input = JsonSerializer.Serialize(ToSendMessageRequest(queueUrl!, message))
                 };
             }
         }
@@ -191,7 +191,7 @@ public class AwsScheduler(
             {
                 RoleArn = roleArn,
                 Arn = "arn:aws:scheduler:::aws-sdk:sns:publish",
-                Input = JsonSerializer.Serialize(ToPublishRequest(messageSchedulerTopicArn,
+                Input = JsonSerializer.Serialize(ToPublishRequest(messageSchedulerTopicArn!,
                     schedulerMessage))
             };
         }
@@ -203,7 +203,7 @@ public class AwsScheduler(
             {
                 RoleArn = roleArn,
                 Arn = "arn:aws:scheduler:::aws-sdk:sqs:sendMessage",
-                Input = JsonSerializer.Serialize(ToSendMessageRequest(messageSchedulerQueueUrl, schedulerMessage))
+                Input = JsonSerializer.Serialize(ToSendMessageRequest(messageSchedulerQueueUrl!, schedulerMessage))
             };
         }
 

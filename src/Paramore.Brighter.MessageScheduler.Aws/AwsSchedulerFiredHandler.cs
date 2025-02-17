@@ -27,8 +27,8 @@ public class AwsSchedulerFiredHandler(IAmACommandProcessor processor) : RequestH
                     Id = command.Id,
                     Async = command.Async,
                     SchedulerType = command.SchedulerType,
-                    RequestType = command.RequestType,
-                    RequestData = command.RequestData
+                    RequestType = command.RequestType!,
+                    RequestData = command.RequestData!
                 }, cancellationToken: cancellationToken);
         }
         else
