@@ -4,11 +4,11 @@ using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
+namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
 
 [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
-public class RedisMessageConsumerOperationInterruptedTests : IDisposable
+public class RedisMessageConsumerOperationInterruptedTests 
 {
     private readonly ChannelName _queueName = new("test");
     private readonly RoutingKey _topic = new("test");
@@ -31,10 +31,6 @@ public class RedisMessageConsumerOperationInterruptedTests : IDisposable
         _exception?.InnerException.Should().BeOfType<TimeoutException>();
   
     }
-        
-    public void Dispose()
-    {
-        _messageConsumer.Purge();
-        _messageConsumer.Dispose();
-    }
+    
+    //don't try to dispose, not a real client
 }
