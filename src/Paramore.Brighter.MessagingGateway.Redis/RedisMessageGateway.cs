@@ -118,8 +118,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             RedisConfig.DefaultMaxPoolSize = _gatewayConfiguration.MaxPoolSize;
 
-            if (_gatewayConfiguration is { MessageTimeToLive: not null }) 
-                MessageTimeToLive = TimeSpan.FromMinutes(10);
+            if (_gatewayConfiguration.MessageTimeToLive.HasValue) 
+                MessageTimeToLive = _gatewayConfiguration.MessageTimeToLive.Value;
             
             if (_gatewayConfiguration is { VerifyMasterConnections: not null })
                 RedisConfig.VerifyMasterConnections = _gatewayConfiguration.VerifyMasterConnections.Value;
