@@ -79,8 +79,7 @@ class Program
                             })
                             .UseScheduler(new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
                             {
-                                MessageSchedulerTopicOrQueue = new RoutingKey("message-scheduler-topic"),
-                                RequestSchedulerTopicOrQueue = new RoutingKey("request-scheduler-topic"),
+                                SchedulerTopicOrQueue = new RoutingKey("paramore.example.scheduler-message"),
                                 OnConflict = OnSchedulerConflict.Overwrite,
                                 GetOrCreateMessageSchedulerId = message => message.Id,
                                 GetOrCreateRequestSchedulerId = request => request.Id

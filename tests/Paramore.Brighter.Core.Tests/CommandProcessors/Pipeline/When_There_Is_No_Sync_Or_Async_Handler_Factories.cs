@@ -23,7 +23,8 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
             new SubscriberRegistry(),
             null,
             new InMemoryRequestContextFactory(),
-            new PolicyRegistry()));
+            new PolicyRegistry(),
+            new InMemorySchedulerFactory()));
 
         //_should_fail_because_no_handler_factories_have_been_set
         _exception.Should().BeOfType<ArgumentException>();
@@ -43,7 +44,8 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
             new SubscriberRegistry(),
             new DummyHandlerFactory(),
             new InMemoryRequestContextFactory(),
-            new PolicyRegistry()));
+            new PolicyRegistry(),
+            new InMemorySchedulerFactory()));
 
         //_should_fail_because_no_handler_factories_have_been_set
         _exception.Should().BeOfType<ArgumentException>();

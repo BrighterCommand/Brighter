@@ -92,9 +92,9 @@ public class CommandProcessorSchedulerObservabilityTests
             new InMemoryRequestContextFactory(),
             policyRegistry,
             bus,
+            new InMemorySchedulerFactory{ TimeProvider = _timeProvider },
             tracer: tracer,
-            instrumentationOptions: InstrumentationOptions.All,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory(_timeProvider)
+            instrumentationOptions: InstrumentationOptions.All
         );
     }
 
@@ -108,7 +108,7 @@ public class CommandProcessorSchedulerObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        _commandProcessor.SchedulerPost(@event, TimeSpan.FromSeconds(10), context);
+        _commandProcessor.Post(TimeSpan.FromSeconds(10), @event, context);
         parentActivity?.Stop();
 
         _traceProvider.ForceFlush();
@@ -155,7 +155,7 @@ public class CommandProcessorSchedulerObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        _commandProcessor.SchedulerPost(@event, _timeProvider.GetUtcNow().AddSeconds(10), context);
+        _commandProcessor.Post(_timeProvider.GetUtcNow().AddSeconds(10), @event, context);
         parentActivity?.Stop();
 
         _traceProvider.ForceFlush();

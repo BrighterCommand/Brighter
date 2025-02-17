@@ -55,7 +55,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
         _myCommand = new MyCommand { Value = $"Hello World {Guid.NewGuid():N}" };
 
         var routingKey = new RoutingKey(Topic);
-        
+
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
 
@@ -105,14 +105,14 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
             new InMemoryRequestContextFactory(),
             policyRegistry,
             bus,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory(_timeProvider)
+            new InMemorySchedulerFactory { TimeProvider = _timeProvider }
         );
     }
 
     [Fact]
     public void When_Scheduling_With_Delay_A_Message_To_The_Command_Processor()
     {
-        _commandProcessor.SchedulerPost(_myCommand, TimeSpan.FromSeconds(10));
+        _commandProcessor.Post(TimeSpan.FromSeconds(10), _myCommand);
         _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
@@ -127,7 +127,7 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
     [Fact]
     public void When_Scheduling_With_At_A_Message_To_The_Command_Processor()
     {
-        _commandProcessor.SchedulerPost(_myCommand, _timeProvider.GetUtcNow().AddSeconds(10));
+        _commandProcessor.Post(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
         _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));

@@ -95,17 +95,17 @@ public class CommandSchedulingNoMessageMapperTests : IDisposable
             new InMemoryRequestContextFactory(), 
             policyRegistry,
             bus,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory()
+            new InMemorySchedulerFactory()
         ); 
     }
 
     [Fact]
     public void When_Scheduling_A_Message_And_There_Is_No_Message_Mapper_Factory()
     {
-        _exception = Catch.Exception(() => _commandProcessor.SchedulerPost(_myCommand, TimeSpan.FromSeconds(10)));
+        _exception = Catch.Exception(() => _commandProcessor.Post(TimeSpan.FromSeconds(10), _myCommand));
         _exception.Should().BeOfType<ArgumentOutOfRangeException>();
             
-        _exception = Catch.Exception(() => _commandProcessor.SchedulerPost(_myCommand, DateTimeOffset.UtcNow.AddSeconds(10)));
+        _exception = Catch.Exception(() => _commandProcessor.Post(DateTimeOffset.UtcNow.AddSeconds(10), _myCommand));
         _exception.Should().BeOfType<ArgumentOutOfRangeException>();
     }
 

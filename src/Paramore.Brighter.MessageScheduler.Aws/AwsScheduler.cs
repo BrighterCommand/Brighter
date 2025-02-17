@@ -40,8 +40,8 @@ public class AwsScheduler(
         var id = getOrCreateRequestSchedulerId(request);
         var message = new Message
         {
-            Header = new MessageHeader(id, scheduler.RequestSchedulerTopic, MessageType.MT_COMMAND, subject: nameof(FireSchedulerRequest)),
-            Body = new MessageBody(JsonSerializer.Serialize(new FireSchedulerRequest
+            Header = new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT, subject: nameof(AwsSchedulerFired)),
+            Body = new MessageBody(JsonSerializer.Serialize(new AwsSchedulerFired
             {
                 SchedulerType = type,
                 Async = true,
@@ -174,21 +174,16 @@ public class AwsScheduler(
             }
         }
 
-        if (message.Header.Subject == nameof(FireSchedulerRequest))
+        var schedulerMessage = message;
+        if (message.Header.Subject != nameof(AwsSchedulerFired))
         {
-            throw new InvalidOperationException("Queue or Topic for Scheduler request not found");
+            schedulerMessage  = new Message
+            {
+                Header = new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT, subject: nameof(AwsSchedulerFired)),
+                Body = new MessageBody(JsonSerializer.Serialize(new AwsSchedulerFired { Id = id, Async = async, Message = message }, JsonSerialisationOptions.Options))
+            };
         }
 
-        var schedulerMessage = new Message
-        {
-            Header =
-                new MessageHeader(id, scheduler.MessageSchedulerTopic, MessageType.MT_COMMAND,
-                    subject: nameof(FireSchedulerMessage)),
-            Body = new MessageBody(JsonSerializer.Serialize(
-                new FireSchedulerMessage { Id = id, Async = async, Message = message },
-                JsonSerialisationOptions.Options))
-        };
-        
         var messageSchedulerTopicArn = await GetTopicAsync(message);
         if (!string.IsNullOrEmpty(messageSchedulerTopicArn))
         {
@@ -479,8 +474,10 @@ public class AwsScheduler(
 
         var message = new Message
         {
-            Header = new MessageHeader(id, scheduler.RequestSchedulerTopic, MessageType.MT_COMMAND, subject: nameof(FireSchedulerRequest)),
-            Body = new MessageBody(JsonSerializer.Serialize(new FireSchedulerRequest
+            Header =
+                new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_COMMAND,
+                    subject: nameof(AwsSchedulerFired)),
+            Body = new MessageBody(JsonSerializer.Serialize(new AwsSchedulerFired
             {
                 SchedulerType = type,
                 Async = false,

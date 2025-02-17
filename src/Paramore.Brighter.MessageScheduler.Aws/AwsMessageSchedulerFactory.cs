@@ -44,13 +44,7 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
     /// The topic or queue that Brighter should use for publishing/sending messaging scheduler
     /// It can be Topic Name/ARN or Queue Name/Url
     /// </summary>
-    public RoutingKey MessageSchedulerTopicOrQueue { get; set; } = RoutingKey.Empty;
-
-    /// <summary>
-    /// The topic or queue that Brighter should use for publishing/sending request scheduler
-    /// It can be Topic Name/ARN or Queue Name/Url
-    /// </summary>
-    public RoutingKey RequestSchedulerTopicOrQueue { get; set; } = RoutingKey.Empty;
+    public RoutingKey SchedulerTopicOrQueue { get; set; } = RoutingKey.Empty;
 
     /// <summary>
     /// The AWS Role Name/ARN
@@ -87,8 +81,7 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
             new Scheduler
             {
                 RoleArn = _roleArn,
-                MessageSchedulerTopic = MessageSchedulerTopicOrQueue,
-                RequestSchedulerTopic = RequestSchedulerTopicOrQueue,
+                SchedulerTopic = SchedulerTopicOrQueue,
                 OnConflict = OnConflict,
                 UseMessageTopicAsTarget = UseMessageTopicAsTarget,
                 FlexibleTimeWindowMinutes = FlexibleTimeWindowMinutes

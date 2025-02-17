@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -52,7 +53,7 @@ public class CommandSchedulingNoMessageMapperAsyncTests : IDisposable
         var timeProvider = new FakeTimeProvider();
         InMemoryProducer producer = new(new InternalBus(), timeProvider)
         {
-            Publication = {Topic = routingKey, RequestType = typeof(MyCommand)}
+            Publication = { Topic = routingKey, RequestType = typeof(MyCommand) }
         };
 
         var messageMapperRegistry = new MessageMapperRegistry(
@@ -66,16 +67,21 @@ public class CommandSchedulingNoMessageMapperAsyncTests : IDisposable
         var circuitBreakerPolicy = Policy
             .Handle<Exception>()
             .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-            
-        var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
-        var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, producer},});
+
+        var policyRegistry = new PolicyRegistry
+        {
+            { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
+            { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
+        };
+        var producerRegistry =
+            new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> { { routingKey, producer }, });
 
         var tracer = new BrighterTracer(timeProvider);
-        var outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            
+        var outbox = new InMemoryOutbox(timeProvider) { Tracer = tracer };
+
         IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
-            policyRegistry, 
+            producerRegistry,
+            policyRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
             new EmptyMessageTransformerFactoryAsync(),
@@ -87,17 +93,17 @@ public class CommandSchedulingNoMessageMapperAsyncTests : IDisposable
             new InMemoryRequestContextFactory(),
             policyRegistry,
             bus,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory()
+            new InMemorySchedulerFactory()
         );
     }
 
     [Fact]
     public async Task When_Scheduling_A_Message_And_There_Is_No_Message_Mapper_Factory_Async()
     {
-        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SchedulerPostAsync(_myCommand, TimeSpan.FromMinutes(1)));
+        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(TimeSpan.FromMinutes(1), _myCommand));
         _exception.Should().BeOfType<ArgumentOutOfRangeException>();
-            
-        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SchedulerPostAsync(_myCommand, DateTimeOffset.UtcNow.AddMinutes(1)));
+
+        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(DateTimeOffset.UtcNow.AddMinutes(1), _myCommand));
         _exception.Should().BeOfType<ArgumentOutOfRangeException>();
     }
 

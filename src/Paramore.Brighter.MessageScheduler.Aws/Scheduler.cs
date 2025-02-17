@@ -18,8 +18,13 @@ public class Scheduler
     /// </summary>
     public int? FlexibleTimeWindowMinutes { get; init; }
     
-    public RoutingKey MessageSchedulerTopic { get; set; } = RoutingKey.Empty;
-    public RoutingKey RequestSchedulerTopic { get; set; } = RoutingKey.Empty;
+    /// <summary>
+    /// The scheduler message topic
+    /// </summary>
+    /// <remarks>
+    /// It can be SNS name/ARN or SQS Name/Url
+    /// </remarks>
+    public RoutingKey SchedulerTopic { get; set; } = RoutingKey.Empty;
 
     public bool UseMessageTopicAsTarget { get; set; }
 

@@ -100,14 +100,14 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
             new InMemoryRequestContextFactory(),
             policyRegistry,
             bus,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory(_timeProvider)
+            new InMemorySchedulerFactory { TimeProvider = _timeProvider }
         );
     }
 
     [Fact]
     public async Task When_Scheduling_With_Delay_A_Message_To_The_Command_Processor_Async()
     {
-        await _commandProcessor.SchedulerPostAsync(_myCommand, TimeSpan.FromSeconds(10));
+        await _commandProcessor.PostAsync(TimeSpan.FromSeconds(10), _myCommand);
         _internalBus.Stream(_routingKey).Any().Should().BeFalse();
         
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
@@ -122,7 +122,7 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
     [Fact]
     public async Task When_Scheduling_With_At_A_Message_To_The_Command_Processor_Async()
     {
-        await _commandProcessor.SchedulerPostAsync(_myCommand, _timeProvider.GetUtcNow().AddSeconds(10));
+        await _commandProcessor.PostAsync(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
         _internalBus.Stream(_routingKey).Any().Should().BeFalse();
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
         _internalBus.Stream(_routingKey).Any().Should().BeTrue();

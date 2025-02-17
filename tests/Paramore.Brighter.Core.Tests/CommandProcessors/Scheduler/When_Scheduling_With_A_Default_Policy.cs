@@ -91,14 +91,14 @@ public class SchedulerCommandTests : IDisposable
             .ExternalBus(ExternalBusType.FireAndForget, externalBus)
             .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .MessageSchedulerFactory(new InMemoryMessageSchedulerFactory(_timeProvider))
+            .RequestSchedulerFactory(new InMemorySchedulerFactory { TimeProvider = _timeProvider })
             .Build();
     }
 
     [Fact]
     public void When_Scheduling_With_A_Default_Policy_And_Passing_A_Delay()
     {
-        _commandProcessor.SchedulerPost(_myCommand, TimeSpan.FromSeconds(10));
+        _commandProcessor.Post(TimeSpan.FromSeconds(10), _myCommand);
         _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
@@ -113,7 +113,7 @@ public class SchedulerCommandTests : IDisposable
     [Fact]
     public void When_Scheduling_With_A_Default_Policy_And_Passing_An_At()
     {
-        _commandProcessor.SchedulerPost(_myCommand, _timeProvider.GetUtcNow().AddSeconds(10));
+        _commandProcessor.Post(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
         _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));

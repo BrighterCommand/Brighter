@@ -51,7 +51,7 @@ public class SqsSchedulingAsyncMessageViaFireSchedulerTest : IAsyncDisposable
         {
             UseMessageTopicAsTarget = false,
             MakeRole = OnMissingRole.Create, 
-            MessageSchedulerTopicOrQueue = routingKey
+            SchedulerTopicOrQueue = routingKey
         };
     }
 

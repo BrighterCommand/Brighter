@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             MyFailsWithFallbackDivideByZeroHandler.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry, new InMemorySchedulerFactory());
         }
 
         [Fact]

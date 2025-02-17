@@ -68,6 +68,7 @@ public class AsyncCommandProcessorPublishObservabilityTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );

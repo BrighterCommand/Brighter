@@ -95,17 +95,18 @@ public class CommandSchedulerNoMessageSchedulerFactoryAsyncTests : IDisposable
         _commandProcessor = new CommandProcessor(
             new InMemoryRequestContextFactory(), 
             policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         ); 
     }
 
     [Fact]
     public async Task When_Scheduling_A_Message_And_There_Is_No_Message_Scheduler_Factory_Async()
     {
-        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SchedulerPostAsync(_myCommand, TimeSpan.FromSeconds(1)));
+        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(TimeSpan.FromSeconds(1), _myCommand));
         _exception.Should().BeOfType<InvalidOperationException>();
             
-        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SchedulerPostAsync(_myCommand, DateTimeOffset.UtcNow.AddSeconds(10)));
+        _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(DateTimeOffset.UtcNow.AddSeconds(10), _myCommand));
         _exception.Should().BeOfType<InvalidOperationException>();
     }
 

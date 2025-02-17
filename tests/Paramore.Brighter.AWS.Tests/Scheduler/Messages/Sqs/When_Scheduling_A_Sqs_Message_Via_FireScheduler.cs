@@ -52,7 +52,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
         {
             UseMessageTopicAsTarget = false, 
             MakeRole = OnMissingRole.Create,
-            MessageSchedulerTopicOrQueue = routingKey
+            SchedulerTopicOrQueue = routingKey
         };
     }
 

@@ -87,7 +87,8 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
             subscriberRegistry: subscriberRegistry,
             handlerFactory: new QuickHandlerFactory(() => handler),
             requestContextFactory: new InMemoryRequestContextFactory(),
-            policyRegistry: new PolicyRegistry()
+            policyRegistry: new PolicyRegistry(),
+            requestSchedulerFactory: new InMemorySchedulerFactory()
         );
 
         //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test

@@ -31,6 +31,7 @@ using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -55,17 +56,10 @@ public class Program
             {
                 var subscriptions = new Subscription[]
                 {
-                    new SqsSubscription<FireSchedulerMessage>(
-                        new SubscriptionName("paramore.example.fire-scheduler"),
+                    new SqsSubscription<AwsSchedulerFired>(
+                        new SubscriptionName("paramore.example.scheduler-message"),
                         new ChannelName("message-scheduler-channel"),
                         new RoutingKey("message-scheduler-topic"),
-                        bufferSize: 10,
-                        timeOut: TimeSpan.FromMilliseconds(20),
-                        lockTimeout: 30),
-                    new SqsSubscription<FireSchedulerRequest>(
-                        new SubscriptionName("paramore.example.fire-scheduler"),
-                        new ChannelName("request-scheduler-channel"),
-                        new RoutingKey("request-scheduler-topic"),
                         bufferSize: 10,
                         timeOut: TimeSpan.FromMilliseconds(20),
                         lockTimeout: 30),

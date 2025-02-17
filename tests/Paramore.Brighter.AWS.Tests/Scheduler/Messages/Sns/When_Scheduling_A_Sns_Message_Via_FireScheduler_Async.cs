@@ -54,7 +54,7 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
 
         _factory = new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
         {
-            UseMessageTopicAsTarget = false, MakeRole = OnMissingRole.Create, MessageSchedulerTopicOrQueue = routingKey
+            UseMessageTopicAsTarget = false, MakeRole = OnMissingRole.Create, SchedulerTopicOrQueue = routingKey
         };
     }
 

@@ -92,14 +92,14 @@ public class SchedulerCommandAsyncTests : IDisposable
             .ExternalBus(ExternalBusType.FireAndForget, externalBus)
             .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
             .RequestContextFactory(new InMemoryRequestContextFactory())
-            .MessageSchedulerFactory(new InMemoryMessageSchedulerFactory(_timeProvider))
+            .RequestSchedulerFactory(new InMemorySchedulerFactory { TimeProvider = _timeProvider })
             .Build();
     }
 
     [Fact]
     public async Task When_Scheduling_With_A_Default_Policy_And_Passing_A_Delay_Async()
     {
-        await _commandProcessor.SchedulerPostAsync(_myCommand, TimeSpan.FromSeconds(10));
+        await _commandProcessor.PostAsync(TimeSpan.FromSeconds(10), _myCommand);
         _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
@@ -114,7 +114,7 @@ public class SchedulerCommandAsyncTests : IDisposable
     [Fact]
     public async Task When_Scheduling_With_A_Default_Policy_And_Passing_An_At_Async()
     {
-        await _commandProcessor.SchedulerPostAsync(_myCommand, _timeProvider.GetUtcNow().AddSeconds(10));
+        await _commandProcessor.PostAsync(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
         _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeFalse();
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));

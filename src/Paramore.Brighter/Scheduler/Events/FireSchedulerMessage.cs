@@ -10,7 +10,7 @@ public class FireSchedulerMessage() : Command(Guid.NewGuid().ToString())
     /// <summary>
     /// The message that will be fire
     /// </summary>
-    public Message Message { get; init; } = new();
+    public Message Message { get; set; } = new();
     
     /// <summary>
     /// If it should post sync or async

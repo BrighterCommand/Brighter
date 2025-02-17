@@ -94,9 +94,9 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
             new InMemoryRequestContextFactory(),
             policyRegistry,
             bus,
+            new InMemorySchedulerFactory { TimeProvider = _timeProvider },
             tracer: tracer,
-            instrumentationOptions: InstrumentationOptions.All,
-            messageSchedulerFactory: new InMemoryMessageSchedulerFactory(_timeProvider)
+            instrumentationOptions: InstrumentationOptions.All
         );
     }
 
@@ -110,7 +110,7 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        await _commandProcessor.SchedulerPostAsync(@event, TimeSpan.FromSeconds(10), context);
+        await _commandProcessor.PostAsync(TimeSpan.FromSeconds(10), @event, context);
         parentActivity?.Stop();
 
         _traceProvider.ForceFlush();
@@ -157,7 +157,7 @@ public class CommandProcessorSchedulerAsyncObservabilityTests
         var context = new RequestContext { Span = parentActivity };
 
         //act
-        await _commandProcessor.SchedulerPostAsync(@event, _timeProvider.GetUtcNow().AddSeconds(10), context);
+        await _commandProcessor.PostAsync(_timeProvider.GetUtcNow().AddSeconds(10), @event, context);
         parentActivity?.Stop();
 
         _traceProvider.ForceFlush();
