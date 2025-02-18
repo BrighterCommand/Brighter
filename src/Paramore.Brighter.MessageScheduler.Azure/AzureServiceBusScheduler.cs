@@ -29,9 +29,9 @@ public class AzureServiceBusScheduler(
             {
                 Header =
                     new MessageHeader(message.Id, schedulerTopic, MessageType.MT_EVENT,
-                        subject: nameof(AzureSchedulerFired)),
+                        subject: nameof(FireAzureScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
-                    new AzureSchedulerFired { Id = message.Id, Async = true, Message = message },
+                    new FireAzureScheduler { Id = message.Id, Async = true, Message = message },
                     JsonSerialisationOptions.Options))
             }), at, cancellationToken);
 
@@ -53,9 +53,9 @@ public class AzureServiceBusScheduler(
             {
                 Header =
                     new MessageHeader(id, schedulerTopic, MessageType.MT_EVENT,
-                        subject: nameof(AzureSchedulerFired)),
+                        subject: nameof(FireAzureScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
-                    new AzureSchedulerFired
+                    new FireAzureScheduler
                     {
                         Id = id,
                         Async = true,
@@ -147,9 +147,9 @@ public class AzureServiceBusScheduler(
             {
                 Header =
                     new MessageHeader(message.Id, schedulerTopic, MessageType.MT_EVENT,
-                        subject: nameof(AzureSchedulerFired)),
+                        subject: nameof(FireAzureScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
-                    new AzureSchedulerFired { Id = message.Id, Async = true, Message = message },
+                    new FireAzureScheduler { Id = message.Id, Async = true, Message = message },
                     JsonSerialisationOptions.Options))
             }), at));
 
@@ -170,9 +170,9 @@ public class AzureServiceBusScheduler(
             {
                 Header =
                     new MessageHeader(id, schedulerTopic, MessageType.MT_EVENT,
-                        subject: nameof(AzureSchedulerFired)),
+                        subject: nameof(FireAzureScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
-                    new AzureSchedulerFired
+                    new FireAzureScheduler
                     {
                         Id = id,
                         Async = true,

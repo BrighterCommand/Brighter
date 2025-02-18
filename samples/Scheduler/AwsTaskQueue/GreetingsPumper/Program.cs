@@ -32,11 +32,15 @@ class Program
                 {
                     if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                     {
-                        var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.USEast1,
+                        // var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                        // var region = string.IsNullOrWhiteSpace(serviceURL)
+                        //     ? RegionEndpoint.EUWest1
+                        //     : RegionEndpoint.USEast1;
+                        var serviceURL = string.Empty;
+                        var region = RegionEndpoint.USEast1;
+                        var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
                             cfg =>
                             {
-                                var serviceURL =
-                                    "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
                                 if (!string.IsNullOrWhiteSpace(serviceURL))
                                 {
                                     cfg.ServiceURL = serviceURL;
@@ -62,12 +66,7 @@ class Program
                                 new SnsPublication
                                 {
                                     Topic = new RoutingKey("message-scheduler-topic"),
-                                    RequestType = typeof(FireSchedulerMessage)
-                                },
-                                new SnsPublication
-                                {
-                                    Topic = new RoutingKey("request-scheduler-topic"),
-                                    RequestType = typeof(FireSchedulerRequest)
+                                    RequestType = typeof(FireAwsScheduler)
                                 }
                             ]
                         ).Create();
@@ -79,10 +78,8 @@ class Program
                             })
                             .UseScheduler(new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
                             {
-                                SchedulerTopicOrQueue = new RoutingKey("paramore.example.scheduler-message"),
-                                OnConflict = OnSchedulerConflict.Overwrite,
-                                GetOrCreateMessageSchedulerId = message => message.Id,
-                                GetOrCreateRequestSchedulerId = request => request.Id
+                                SchedulerTopicOrQueue = new RoutingKey("message-scheduler-topic"),
+                                OnConflict = OnSchedulerConflict.Overwrite
                             })
                             .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
                     }
@@ -107,13 +104,15 @@ class Program
                 loop++;
 
                 logger.LogInformation("Scheduling message #{Loop}", loop);
-                commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
+                commandProcessor.Post(TimeSpan.FromMinutes(1), new GreetingEvent($"Ian #{loop}"));
 
                 if (loop % 100 != 0)
+                {
                     continue;
-
+                }
+                
                 logger.LogInformation("Pausing for breath...");
-                await Task.Delay(4000, cancellationToken);
+                await Task.Delay(TimeSpan.FromMinutes(2), cancellationToken);
             }
         }
 

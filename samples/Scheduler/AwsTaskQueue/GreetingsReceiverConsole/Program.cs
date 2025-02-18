@@ -31,6 +31,7 @@ using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Scheduler.Events;
@@ -45,18 +46,17 @@ public class Program
     public static async Task Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
+            .MinimumLevel.Information()
             .Enrich.FromLogContext()
             .WriteTo.Console()
             .CreateLogger();
 
         var host = new HostBuilder()
             .ConfigureServices((_, services) =>
-
             {
                 var subscriptions = new Subscription[]
                 {
-                    new SqsSubscription<AwsSchedulerFired>(
+                    new SqsSubscription<FireAwsScheduler>(
                         new SubscriptionName("paramore.example.scheduler-message"),
                         new ChannelName("message-scheduler-channel"),
                         new RoutingKey("message-scheduler-topic"),
@@ -69,7 +69,8 @@ public class Program
                         new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                         bufferSize: 10,
                         timeOut: TimeSpan.FromMilliseconds(20),
-                        lockTimeout: 30),
+                        lockTimeout: 30,
+                        messagePumpType: MessagePumpType.Reactor),
                     new SqsSubscription<FarewellEvent>(new SubscriptionName("paramore.example.farewell"),
                         new ChannelName(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
                         new RoutingKey(typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
@@ -77,17 +78,20 @@ public class Program
                         timeOut: TimeSpan.FromMilliseconds(20),
                         lockTimeout: 30,
                         sqsType: SnsSqsType.Fifo,
-                        snsAttributes: new SnsAttributes { Type = SnsSqsType.Fifo })
+                        snsAttributes: new SnsAttributes { Type = SnsSqsType.Fifo },
+                        messagePumpType: MessagePumpType.Reactor)
                 };
 
                 //create the gateway
                 if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                 {
-                    var serviceURL =
-                        "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
-                    var region = string.IsNullOrWhiteSpace(serviceURL)
-                        ? RegionEndpoint.EUWest1
-                        : RegionEndpoint.USEast1;
+                    // var serviceURL = "http://localhost:4566/"; // Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                    // var region = string.IsNullOrWhiteSpace(serviceURL)
+                    //     ? RegionEndpoint.EUWest1
+                    //     : RegionEndpoint.USEast1;
+
+                    var serviceURL = string.Empty;
+                    var region = RegionEndpoint.USEast1;
                     var awsConnection = new AWSMessagingGatewayConnection(credentials, region,
                         cfg =>
                         {
@@ -101,6 +105,32 @@ public class Program
                         {
                             options.Subscriptions = subscriptions;
                             options.DefaultChannelFactory = new ChannelFactory(awsConnection);
+                        })
+                        .UseExternalBus(configure =>
+                        {
+                            configure.ProducerRegistry = new SnsProducerRegistryFactory(
+                                awsConnection,
+                                [
+                                    new SnsPublication
+                                    {
+                                        Topic = new RoutingKey(typeof(GreetingEvent).FullName
+                                            .ToValidSNSTopicName()),
+                                        RequestType = typeof(GreetingEvent)
+                                    },
+                                    new SnsPublication
+                                    {
+                                        Topic = new RoutingKey(
+                                            typeof(FarewellEvent).FullName.ToValidSNSTopicName(true)),
+                                        SnsAttributes = new SnsAttributes { Type = SnsSqsType.Fifo },
+                                        RequestType = typeof(FarewellEvent)
+                                    },
+                                    new SnsPublication
+                                    {
+                                        Topic = new RoutingKey("message-scheduler-topic"),
+                                        RequestType = typeof(FireAwsScheduler)
+                                    }
+                                ]
+                            ).Create();
                         })
                         .AutoFromAssemblies();
                 }

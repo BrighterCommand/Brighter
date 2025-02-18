@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.MessageScheduler.Azure;
 
-public class AzureSchedulerFired() : Event(Guid.NewGuid())
+public class FireAzureScheduler() : Command(Guid.NewGuid())
 {
     /// <summary>
     /// The <see cref="RequestSchedulerType"/>
@@ -31,26 +31,26 @@ public class AzureSchedulerFired() : Event(Guid.NewGuid())
 }
 
 /// <summary>
-/// The <see cref="AzureSchedulerFired"/>
+/// The <see cref="FireAzureScheduler"/>
 /// </summary>
-public class AzureSchedulerFiredMapper : IAmAMessageMapper<AzureSchedulerFired>
+public class AzureSchedulerFiredMapper : IAmAMessageMapper<FireAzureScheduler>
 {
     /// <inheritdoc />
     public IRequestContext? Context { get; set; }
 
     /// <inheritdoc />
-    public Message MapToMessage(AzureSchedulerFired request, Publication publication)
+    public Message MapToMessage(FireAzureScheduler request, Publication publication)
     {
         return new Message
         {
             Header =
                 new MessageHeader(request.Id, publication.Topic!, MessageType.MT_EVENT,
-                    subject: nameof(AzureSchedulerFired)),
+                    subject: nameof(FireAzureScheduler)),
             Body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options))
         };
     }
 
     /// <inheritdoc />
-    public AzureSchedulerFired MapToRequest(Message message) 
-        => JsonSerializer.Deserialize<AzureSchedulerFired>(message.Body.Value, JsonSerialisationOptions.Options)!;
+    public FireAzureScheduler MapToRequest(Message message) 
+        => JsonSerializer.Deserialize<FireAzureScheduler>(message.Body.Value, JsonSerialisationOptions.Options)!;
 }

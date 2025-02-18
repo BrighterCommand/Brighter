@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.MessageScheduler.Aws;
 
-public class AwsSchedulerFired() : Event(Guid.NewGuid())
+public class FireAwsScheduler() : Command(Guid.NewGuid())
 {
     /// <summary>
     /// The <see cref="RequestSchedulerType"/>
@@ -31,26 +31,26 @@ public class AwsSchedulerFired() : Event(Guid.NewGuid())
 }
 
 /// <summary>
-/// The <see cref="AwsSchedulerFired"/>
+/// The <see cref="FireAwsScheduler"/>
 /// </summary>
-public class AwsSchedulerFiredMapper : IAmAMessageMapper<AwsSchedulerFired>
+public class AwsSchedulerFiredMapper : IAmAMessageMapper<FireAwsScheduler>
 {
     /// <inheritdoc />
     public IRequestContext? Context { get; set; }
 
     /// <inheritdoc />
-    public Message MapToMessage(AwsSchedulerFired request, Publication publication)
+    public Message MapToMessage(FireAwsScheduler request, Publication publication)
     {
         return new Message
         {
             Header =
                 new MessageHeader(request.Id, publication.Topic!, MessageType.MT_EVENT,
-                    subject: nameof(AwsSchedulerFired)),
+                    subject: nameof(FireAwsScheduler)),
             Body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options))
         };
     }
 
     /// <inheritdoc />
-    public AwsSchedulerFired MapToRequest(Message message) 
-        => JsonSerializer.Deserialize<AwsSchedulerFired>(message.Body.Value, JsonSerialisationOptions.Options)!;
+    public FireAwsScheduler MapToRequest(Message message) 
+        => JsonSerializer.Deserialize<FireAwsScheduler>(message.Body.Value, JsonSerialisationOptions.Options)!;
 }

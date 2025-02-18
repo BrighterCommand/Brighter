@@ -3,14 +3,14 @@
 namespace Paramore.Brighter.MessageScheduler.Azure;
 
 /// <summary>
-/// The <see cref="AzureSchedulerFired"/> handler
+/// The <see cref="FireAzureScheduler"/> handler
 /// </summary>
 /// <param name="processor"></param>
-public class AzureSchedulerFiredHandler(IAmACommandProcessor processor) : RequestHandlerAsync<AzureSchedulerFired>
+public class AzureSchedulerFiredHandler(IAmACommandProcessor processor) : RequestHandlerAsync<FireAzureScheduler>
 {
     /// <inheritdoc />
-    public override async Task<AzureSchedulerFired> HandleAsync(
-        AzureSchedulerFired command,
+    public override async Task<FireAzureScheduler> HandleAsync(
+        FireAzureScheduler command,
         CancellationToken cancellationToken = default)
     {
         if (command.Message is not null)

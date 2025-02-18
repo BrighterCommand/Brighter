@@ -3,14 +3,14 @@
 namespace Paramore.Brighter.MessageScheduler.Aws;
 
 /// <summary>
-/// The <see cref="AwsSchedulerFired"/> handler
+/// The <see cref="FireAwsScheduler"/> handler
 /// </summary>
 /// <param name="processor"></param>
-public class AwsSchedulerFiredHandler(IAmACommandProcessor processor) : RequestHandlerAsync<AwsSchedulerFired>
+public class AwsSchedulerFiredHandler(IAmACommandProcessor processor) : RequestHandlerAsync<FireAwsScheduler>
 {
     /// <inheritdoc />
-    public override async Task<AwsSchedulerFired> HandleAsync(
-        AwsSchedulerFired command,
+    public override async Task<FireAwsScheduler> HandleAsync(
+        FireAwsScheduler command,
         CancellationToken cancellationToken = default)
     {
         if (command.Message is not null)

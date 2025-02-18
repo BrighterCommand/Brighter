@@ -268,7 +268,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public static IBrighterBuilder UseRequestScheduler(this IBrighterBuilder builder, IAmARequestSchedulerFactory factory)
         {
-            builder.Services.TryAddSingleton(factory);
+            builder.Services.AddSingleton(factory);
             builder.Services.TryAddSingleton(provide =>
             {
                 var command = provide.GetRequiredService<IAmACommandProcessor>();
@@ -304,7 +304,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public static IBrighterBuilder UseMessageScheduler(this IBrighterBuilder builder, IAmAMessageSchedulerFactory factory)
         {
-            builder.Services.TryAddSingleton(factory);
+            builder.Services.AddSingleton(factory);
             builder.Services.TryAddSingleton(provider =>
             {
                 var messageSchedulerFactory = provider.GetRequiredService<IAmAMessageSchedulerFactory>();

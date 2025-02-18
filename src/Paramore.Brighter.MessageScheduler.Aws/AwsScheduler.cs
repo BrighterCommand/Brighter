@@ -40,8 +40,8 @@ public class AwsScheduler(
         var id = getOrCreateRequestSchedulerId(request);
         var message = new Message
         {
-            Header = new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT, subject: nameof(AwsSchedulerFired)),
-            Body = new MessageBody(JsonSerializer.Serialize(new AwsSchedulerFired
+            Header = new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT, subject: nameof(FireAwsScheduler)),
+            Body = new MessageBody(JsonSerializer.Serialize(new FireAwsScheduler
             {
                 SchedulerType = type,
                 Async = true,
@@ -175,12 +175,12 @@ public class AwsScheduler(
         }
 
         var schedulerMessage = message;
-        if (message.Header.Subject != nameof(AwsSchedulerFired))
+        if (message.Header.Subject != nameof(FireAwsScheduler))
         {
             schedulerMessage  = new Message
             {
-                Header = new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT, subject: nameof(AwsSchedulerFired)),
-                Body = new MessageBody(JsonSerializer.Serialize(new AwsSchedulerFired { Id = id, Async = async, Message = message }, JsonSerialisationOptions.Options))
+                Header = new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT, subject: nameof(FireAwsScheduler)),
+                Body = new MessageBody(JsonSerializer.Serialize(new FireAwsScheduler { Id = id, Async = async, Message = message }, JsonSerialisationOptions.Options))
             };
         }
 
@@ -476,8 +476,8 @@ public class AwsScheduler(
         {
             Header =
                 new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_COMMAND,
-                    subject: nameof(AwsSchedulerFired)),
-            Body = new MessageBody(JsonSerializer.Serialize(new AwsSchedulerFired
+                    subject: nameof(FireAwsScheduler)),
+            Body = new MessageBody(JsonSerializer.Serialize(new FireAwsScheduler
             {
                 SchedulerType = type,
                 Async = false,
