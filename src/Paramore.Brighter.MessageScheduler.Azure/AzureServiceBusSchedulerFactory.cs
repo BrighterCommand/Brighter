@@ -11,6 +11,9 @@ namespace Paramore.Brighter.MessageScheduler.Azure;
 public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, RoutingKey topic)
     : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
+    private readonly object _lock = new();
+    private ServiceBusSender? _sender;
+
     /// <summary>
     /// The Azure client provider
     /// </summary>
@@ -33,28 +36,27 @@ public class AzureServiceBusSchedulerFactory(IServiceBusClientProvider client, R
 
     /// <inheritdoc />
     public IAmAMessageScheduler Create(IAmACommandProcessor processor)
-    {
-        return new AzureServiceBusScheduler(ClientProvider.GetServiceBusClient()
-                .CreateSender(Topic, SenderOptions),
-            Topic,
-            TimeProvider);
-    }
+        => Create();
 
     /// <inheritdoc />
     public IAmARequestSchedulerSync CreateSync(IAmACommandProcessor processor)
-    {
-        return new AzureServiceBusScheduler(ClientProvider.GetServiceBusClient()
-                .CreateSender(Topic, SenderOptions),
-            Topic,
-            TimeProvider);
-    }
+        => Create();
 
     /// <inheritdoc />
-    public IAmARequestSchedulerAsync CreateAsync(IAmACommandProcessor processor)
+    public IAmARequestSchedulerAsync CreateAsync(IAmACommandProcessor processor) 
+        => Create();
+
+    private AzureServiceBusScheduler Create()
     {
-        return new AzureServiceBusScheduler(ClientProvider.GetServiceBusClient()
-                .CreateSender(Topic, SenderOptions),
-            Topic,
-            TimeProvider);
+        if (_sender == null)
+        {
+            lock (_lock)
+            {
+                _sender ??= ClientProvider.GetServiceBusClient()
+                    .CreateSender(Topic, SenderOptions);
+            }
+        }
+        
+        return new AzureServiceBusScheduler(_sender, Topic, TimeProvider);
     }
 }
