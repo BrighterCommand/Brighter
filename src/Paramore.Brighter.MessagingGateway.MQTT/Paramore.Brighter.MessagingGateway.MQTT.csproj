@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using MQTT&lt;</Description>
     <Authors>Tim van Wijk</Authors>
-    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <PackageTags>MQTT;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>

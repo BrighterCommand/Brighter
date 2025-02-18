@@ -6,9 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Client.Options;
-using MQTTnet.Client.Receiving;
+using MQTTnet.Packets;
 using MQTTnet.Protocol;
 using Paramore.Brighter.Logging;
 
@@ -25,8 +23,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private readonly Queue<Message> _messageQueue = new Queue<Message>();
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageConsumer>();
         private readonly Message _noopMessage = new Message();
-        private readonly IMqttClientOptions _mqttClientOptions;
         private readonly IMqttClient _mqttClient;
+        private readonly MqttClientOptions _mqttClientOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MQTTMessageConsumer" /> class.
@@ -53,13 +51,16 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             _mqttClientOptions = mqttClientOptionsBuilder.Build();
 
-            _mqttClient = new MqttFactory().CreateMqttClient();
+            //TODO: Switch to using the low level client here, as it allows us explicit control over ack, recieve etc.
+            //This is slated for post V10, for now, we just want to upgrade this support the V10 release
+            _mqttClient = new MqttClientFactory().CreateMqttClient();
 
-            _mqttClient.ApplicationMessageReceivedHandler = new MqttApplicationMessageReceivedHandlerDelegate(e =>
+            _mqttClient.ApplicationMessageReceivedAsync += new (e =>
             {
                 s_logger.LogInformation("MQTTMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
                 string message = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
                 _messageQueue.Enqueue(JsonSerializer.Deserialize<Message>(message, JsonSerialisationOptions.Options));
+                return Task.CompletedTask;
             });
 
             Task connectTask = Connect(configuration.ConnectionAttempts);
