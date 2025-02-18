@@ -491,7 +491,7 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            ClearOutbox(new []{DepositPost(request, (IAmABoxTransactionProvider<CommittableTransaction>?)null, requestContext, args)}, requestContext, args);
+            ClearOutbox([DepositPost(request, requestContext, args)], requestContext, args);
         }
 
         /// <summary>
@@ -518,10 +518,9 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
-            )
-            where TRequest : class, IRequest
+        ) where TRequest : class, IRequest
         {
-            var messageId = await DepositPostAsync(request, (IAmABoxTransactionProvider<CommittableTransaction>?)null, requestContext, args, continueOnCapturedContext, cancellationToken);
+            var messageId = await DepositPostAsync(request, requestContext, args, continueOnCapturedContext, cancellationToken);
             await ClearOutboxAsync(new[] { messageId }, requestContext, args, continueOnCapturedContext, cancellationToken);
         }
 
