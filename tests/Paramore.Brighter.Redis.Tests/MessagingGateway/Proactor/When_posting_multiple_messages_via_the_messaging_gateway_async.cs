@@ -4,18 +4,17 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
-namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
+namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
 
 [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
-[Trait("Fragile", "CI")]
-public class RedisRequeueMessageTestsAsync : IClassFixture<RedisFixture>, IAsyncDisposable
+public class RedisMessageProducerMultipleSendTestsAsync : IClassFixture<RedisFixture>
 {
     private readonly RedisFixture _redisFixture;
     private readonly Message _messageOne;
     private readonly Message _messageTwo;
 
-    public RedisRequeueMessageTestsAsync(RedisFixture redisFixture)
+    public RedisMessageProducerMultipleSendTestsAsync(RedisFixture redisFixture)
     {
         const string topic = "test";
         _redisFixture = redisFixture;
@@ -33,7 +32,7 @@ public class RedisRequeueMessageTestsAsync : IClassFixture<RedisFixture>, IAsync
     }
 
     [Fact]
-    public async Task When_requeing_a_failed_message_async()
+    public async Task When_posting_multiple_messages_via_the_messaging_gateway_async()
     {
         // Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
         await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
@@ -42,29 +41,17 @@ public class RedisRequeueMessageTestsAsync : IClassFixture<RedisFixture>, IAsync
         await _redisFixture.MessageProducer.SendAsync(_messageOne);
         await _redisFixture.MessageProducer.SendAsync(_messageTwo);
 
-        // Now receive, the first message
+        // Now receive, and confirm order off is order on
         var sentMessageOne = (await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
+        var messageBodyOne = sentMessageOne.Body.Value;
+        await _redisFixture.MessageConsumer.AcknowledgeAsync(sentMessageOne);
 
-        // Now requeue the first message
-        await _redisFixture.MessageConsumer.RequeueAsync(_messageOne, TimeSpan.FromMilliseconds(300));
-
-        // Try receiving again; messageTwo should come first
         var sentMessageTwo = (await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
         var messageBodyTwo = sentMessageTwo.Body.Value;
         await _redisFixture.MessageConsumer.AcknowledgeAsync(sentMessageTwo);
 
-        sentMessageOne = (await _redisFixture.MessageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
-        var messageBodyOne = sentMessageOne.Body.Value;
-        await _redisFixture.MessageConsumer.AcknowledgeAsync(sentMessageOne);
-
         // _should_send_a_message_via_restms_with_the_matching_body
         messageBodyOne.Should().Be(_messageOne.Body.Value);
         messageBodyTwo.Should().Be(_messageTwo.Body.Value);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await _redisFixture.MessageConsumer.DisposeAsync();
-        await _redisFixture.MessageProducer.DisposeAsync();
     }
 }

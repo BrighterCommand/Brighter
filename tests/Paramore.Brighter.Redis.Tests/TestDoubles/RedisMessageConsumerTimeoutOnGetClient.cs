@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.Redis;
 using ServiceStack.Redis;
 
@@ -15,6 +17,11 @@ public class RedisMessageConsumerTimeoutOnGetClient(
 
     protected override IRedisClient GetClient()
     {
-        throw new TimeoutException(PoolTimeoutError);
+        throw new ChannelFailureException("Error getting redi", new TimeoutException(PoolTimeoutError));
+    }
+
+    protected override Task<IRedisClientAsync?> GetClientAsync(CancellationToken cancellationToken = default(CancellationToken))
+    {
+        throw new ChannelFailureException("Error getting redi", new TimeoutException(PoolTimeoutError));
     }
 }

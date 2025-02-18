@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
-namespace Paramore.Brighter.Redis.Tests.MessagingGateway;
+namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
 
 [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
 [Trait("Category", "Redis")]
@@ -23,7 +23,7 @@ public class RedisRequeueWithDelayTestsAsync : IClassFixture<RedisFixture>
         );
     }
 
-    [Fact]
+    [Fact(Skip = "We disabled the blocking delay; reinstate once we have scheduled message")]
     public async Task When_requeing_a_failed_message_with_delay_async()
     {
         // Clear the queue, and ensure it exists
