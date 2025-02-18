@@ -319,6 +319,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Messaging
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.RMQ.Sync.Tests", "tests\Paramore.Brighter.RMQ.Sync.Tests\Paramore.Brighter.RMQ.Sync.Tests.csproj", "{283D7ACD-50D9-4B36-93E0-E6AF3732456C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.MySql", "src\Paramore.Brighter.Locking.MySql\Paramore.Brighter.Locking.MySql.csproj", "{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1769,6 +1771,18 @@ Global
 		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|x86.ActiveCfg = Release|Any CPU
 		{758EE237-C722-4A0A-908C-2D08C1E59025}.Release|x86.Build.0 = Release|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Debug|x86.Build.0 = Debug|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Release|x86.ActiveCfg = Release|Any CPU
+		{5D57A811-A3C2-42BA-A086-A5BFE8B590C7}.Release|x86.Build.0 = Release|Any CPU
 		{A040750D-3EFB-4580-BF29-1C46FE1B3E5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A040750D-3EFB-4580-BF29-1C46FE1B3E5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A040750D-3EFB-4580-BF29-1C46FE1B3E5B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
