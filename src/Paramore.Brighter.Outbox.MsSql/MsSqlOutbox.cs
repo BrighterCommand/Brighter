@@ -391,7 +391,6 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
 
             dr.Close();
-
             return message ?? new Message();
         }
 
@@ -403,8 +402,11 @@ namespace Paramore.Brighter.Outbox.MsSql
                 message = MapAMessage(dr);
             }
 
+#if NET462
+            dr.Close();
+#else
             await dr.CloseAsync();
-
+#endif
             return message ?? new Message();
         }
 
@@ -432,8 +434,11 @@ namespace Paramore.Brighter.Outbox.MsSql
                 messages.Add(MapAMessage(dr));
             }
 
+#if NET462
+            dr.Close();
+#else
             await dr.CloseAsync();
-
+#endif
             return messages;
         }
 
@@ -446,7 +451,11 @@ namespace Paramore.Brighter.Outbox.MsSql
                 outstandingMessages = dr.GetInt32(0);
             }
 
+#if NET462
+            dr.Close();
+#else
             await dr.CloseAsync();
+#endif
             return outstandingMessages;
         }
 

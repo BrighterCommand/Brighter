@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Data.Common;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -35,7 +36,11 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
         }
 
         var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
+#if NETSTANDARD2_0
+        using var command = connection.CreateCommand();
+#else
         await using var command = connection.CreateCommand();
+#endif
         command.CommandText = MySqlLockingQueries.ObtainLockQuery;
         command.Parameters.Add(new MySqlParameter("@RESOURCE_NAME", MySqlDbType.String)
         {
@@ -72,27 +77,52 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
             return;
         }
 
+#if NETSTANDARD2_0
+        using var command = connection.CreateCommand();
+#else
         await using var command = connection.CreateCommand();
+#endif
         command.CommandText = MySqlLockingQueries.ReleaseLockQuery;
         command.Parameters.Add(
             new MySqlParameter("@RESOURCE_NAME", MySqlDbType.String) { Value = GetSafeName(resource) });
 
         await command.ExecuteNonQueryAsync(cancellationToken);
 
+        
+#if NETSTANDARD2_0
+        connection.Close();
+        connection.Dispose();
+#else
         await connection.CloseAsync();
         await connection.DisposeAsync();
+#endif
     }
 
     /// <summary>
     /// Dispose Locking Provider
     /// </summary>
+#if NETSTANDARD2_0
+    public ValueTask DisposeAsync()
+    {
+        foreach (var  connection in _connections.Select(x => x.Value))
+        {
+             connection.Dispose();
+        }
+        
+        _connections.Clear();
+        return new ValueTask();
+    }
+#else
     public async ValueTask DisposeAsync()
     {
         foreach ((_, DbConnection connection) in _connections)
         {
             await connection.DisposeAsync();
         }
+
+        _connections.Clear();
     }
+#endif
 
     // Copied from https://github.com/madelson/DistributedLock/blob/2.5.0/src/DistributedLock.MySql/MySqlDistributedLock.cs#L82-L147
     // That repo is using MIT license.
@@ -117,7 +147,10 @@ public class MySqlLockingProvider(MySqlConnectionProvider connectionProvider) : 
     private static string ToSafeName(string name, int maxNameLength, Func<string, string> convertToValidName,
         Func<byte[], string> hash)
     {
-        ArgumentNullException.ThrowIfNull(name);
+        if (name == null)
+        {
+            throw new ArgumentNullException(nameof(name));
+        }
 
         var validBaseLockName = convertToValidName(name);
         if (validBaseLockName == name && validBaseLockName.Length <= maxNameLength)
