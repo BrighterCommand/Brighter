@@ -5,7 +5,7 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Xunit;
 
-namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
+namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 {
     [Trait("Category", "MQTT")]
     [Collection("MQTT")]
