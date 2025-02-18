@@ -3,7 +3,7 @@
     <PropertyGroup>
       <Description>This is the MsSql Connection providers for Access Token authentication using Azure.Idenity</Description>
       <Authors>Paul Reardon</Authors>
-      <TargetFrameworks>$(BrigtherFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
+      <TargetFrameworks>$(BrighterFrameworkAndCoreTargetFrameworks)</TargetFrameworks>
       <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     </PropertyGroup>
 

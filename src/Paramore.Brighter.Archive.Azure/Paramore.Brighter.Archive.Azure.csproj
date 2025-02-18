@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(BrigtherTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>Paramore.Brighter.Storage.Azure</RootNamespace>
