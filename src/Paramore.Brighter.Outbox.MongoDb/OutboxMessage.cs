@@ -3,14 +3,14 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace Paramore.Brighter.Outbox.MongoDb;
 
-public class MessageItem
+public class OutboxMessage
 {
     /// <summary>
     /// 
     /// </summary>
     /// <param name="message"></param>
     /// <param name="expiresAt"></param>
-    public MessageItem(Message message, long? expiresAt = null)
+    public OutboxMessage(Message message, long? expiresAt = null)
     {
         var date = message.Header.TimeStamp == DateTimeOffset.MinValue
             ? DateTimeOffset.UtcNow
@@ -32,6 +32,22 @@ public class MessageItem
         Topic = message.Header.Topic;
         ExpiresAt = expiresAt;
     }
+
+    /// <summary>
+    /// The Id of the Message. Used as a Global Secondary Index
+    /// </summary>
+    [BsonId]
+    public string MessageId { get; set; }
+
+    /// <summary>
+    /// The type of message i.e. MT_COMMAND, MT_EVENT etc. An enumeration rendered as a string
+    /// </summary>
+    public string MessageType { get; set; }
+
+    /// <summary>
+    /// The Topic the message was published to
+    /// </summary>
+    public string Topic { get; set; }
 
     /// <summary>
     /// The message body
@@ -83,16 +99,6 @@ public class MessageItem
     /// </summary>
     public string HeaderBag { get; set; }
 
-    /// <summary>
-    /// The Id of the Message. Used as a Global Secondary Index
-    /// </summary>
-    [BsonId]
-    public string MessageId { get; set; }
-
-    /// <summary>
-    /// The type of message i.e. MT_COMMAND, MT_EVENT etc. An enumeration rendered as a string
-    /// </summary>
-    public string MessageType { get; set; }
 
     /// <summary>
     /// The partition key for the Kafka message
@@ -105,11 +111,6 @@ public class MessageItem
     /// </summary>
     public string? ReplyTo { get; set; }
 
-    /// <summary>
-    /// The Topic the message was published to
-    /// </summary>
-    /// 
-    public string Topic { get; set; }
 
     public long? ExpiresAt { get; set; }
 

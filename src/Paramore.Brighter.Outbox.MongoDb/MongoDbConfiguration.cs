@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.MongoDb;
 
@@ -60,6 +61,11 @@ public class MongoDbConfiguration
     /// </summary>
     public CreateCollectionOptions? CreateCollectionOptions { get; set; }
 
+    /// <summary>
+    /// The <see cref="InstrumentationOptions"/>.
+    /// </summary>
+    public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
+    
     /// <summary>
     /// Optional time to live for the messages in the outbox
     /// By default, messages will not expire
