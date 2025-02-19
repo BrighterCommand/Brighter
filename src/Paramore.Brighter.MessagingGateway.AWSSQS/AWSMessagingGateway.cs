@@ -211,10 +211,10 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
                     JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
             }
 
-            attributes.Add(QueueAttributeName.DelaySeconds, sqsAttributes.DelaySeconds.ToString());
-            attributes.Add(QueueAttributeName.MessageRetentionPeriod, sqsAttributes.MessageRetentionPeriod.ToString());
-            attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds, sqsAttributes.TimeOut.Seconds.ToString());
-            attributes.Add(QueueAttributeName.VisibilityTimeout, sqsAttributes.LockTimeout.ToString());
+            attributes.Add(QueueAttributeName.DelaySeconds, Convert.ToString(sqsAttributes.DelaySeconds));
+            attributes.Add(QueueAttributeName.MessageRetentionPeriod, Convert.ToString(sqsAttributes.MessageRetentionPeriod));
+            attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds, Convert.ToString(sqsAttributes.TimeOut.Seconds));
+            attributes.Add(QueueAttributeName.VisibilityTimeout, Convert.ToString(sqsAttributes.LockTimeout));
             if (sqsAttributes.IAMPolicy != null)
             {
                 attributes.Add(QueueAttributeName.Policy, sqsAttributes.IAMPolicy);

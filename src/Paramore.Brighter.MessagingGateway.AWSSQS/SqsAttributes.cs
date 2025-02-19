@@ -83,9 +83,9 @@ public class SqsAttributes
         return new SqsAttributes
         {
             ChannelType = subscription.ChannelType,
-            LockTimeout = subscription.LockTimeout,
-            DelaySeconds = subscription.DelaySeconds,
-            MessageRetentionPeriod = subscription.MessageRetentionPeriod,
+            LockTimeout = ValidateRange(subscription.LockTimeout, 0, 43200, 30), // Default: 30 seconds
+            DelaySeconds = ValidateRange(subscription.DelaySeconds, 0, 900, 0), // Default: 0 seconds
+            MessageRetentionPeriod = ValidateRange(subscription.MessageRetentionPeriod, 60, 1209600, 345600), // Default: 4 days (345600 seconds)
             IAMPolicy = subscription.IAMPolicy,
             RawMessageDelivery = subscription.RawMessageDelivery,
             RedrivePolicy = subscription.RedrivePolicy,
@@ -96,5 +96,14 @@ public class SqsAttributes
             FifoThroughputLimit = subscription.FifoThroughputLimit,
             TimeOut = subscription.TimeOut,
         };
+    }
+
+    private static int ValidateRange(int value, int min, int max, int defaultValue)
+    {
+        if (value < min || value > max)
+        {
+            return defaultValue;
+        }
+        return value;
     }
 }
