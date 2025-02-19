@@ -3,13 +3,27 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace Paramore.Brighter.Outbox.MongoDb;
 
+/// <summary>
+/// The MongoDb outbox message
+/// </summary>
 public class OutboxMessage
 {
     /// <summary>
-    /// 
+    /// Initialize new instance of <see cref="OutboxMessage"/>
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="expiresAt"></param>
+    public OutboxMessage()
+    {
+        var timeStamp = DateTimeOffset.UtcNow;
+        CreatedTime = timeStamp.Ticks;
+        CreatedAt = timeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        OutstandingCreatedTime = timeStamp.Ticks;
+    }
+
+    /// <summary>
+    /// Initialize new instance of <see cref="OutboxMessage"/>
+    /// </summary>
+    /// <param name="message">The message to be store.</param>
+    /// <param name="expiresAt">When it should be expires.</param>
     public OutboxMessage(Message message, long? expiresAt = null)
     {
         var date = message.Header.TimeStamp == DateTimeOffset.MinValue
@@ -37,22 +51,22 @@ public class OutboxMessage
     /// The Id of the Message. Used as a Global Secondary Index
     /// </summary>
     [BsonId]
-    public string MessageId { get; set; }
+    public string MessageId { get; set; } = string.Empty;
 
     /// <summary>
     /// The type of message i.e. MT_COMMAND, MT_EVENT etc. An enumeration rendered as a string
     /// </summary>
-    public string MessageType { get; set; }
+    public string MessageType { get; set; } = string.Empty;
 
     /// <summary>
     /// The Topic the message was published to
     /// </summary>
-    public string Topic { get; set; }
+    public string Topic { get; set; } = string.Empty;
 
     /// <summary>
     /// The message body
     /// </summary>
-    public byte[] Body { get; set; }
+    public byte[] Body { get; set; } = [];
 
     /// <summary>
     /// What is the character encoding of the body
@@ -67,7 +81,7 @@ public class OutboxMessage
     /// <summary>
     /// The correlation id of the message
     /// </summary>
-    public string CorrelationId { get; set; }
+    public string? CorrelationId { get; set; }
 
     /// <summary>
     /// The time at which the message was created, formatted as a string yyyy-MM-ddTHH:mm:ss.fffZ
@@ -97,23 +111,27 @@ public class OutboxMessage
     /// <summary>
     /// A JSON object representing a dictionary of additional properties set on the message
     /// </summary>
-    public string HeaderBag { get; set; }
-
+    public string HeaderBag { get; set; } = string.Empty;
 
     /// <summary>
     /// The partition key for the Kafka message
     /// </summary>
-    public string PartitionKey { get; set; }
-
+    public string PartitionKey { get; set; } = string.Empty;
 
     /// <summary>
     /// If this is a conversation i.e. request-response, what is the reply channel
     /// </summary>
     public string? ReplyTo { get; set; }
 
-
+    /// <summary>
+    /// When the doc should expires
+    /// </summary>
     public long? ExpiresAt { get; set; }
 
+    /// <summary>
+    /// Convert the outbox message to <see cref="Message"/>
+    /// </summary>
+    /// <returns>New instance of <see cref="Message"/>.</returns>
     public Message ConvertToMessage()
     {
         //following type may be missing on older data

@@ -14,20 +14,18 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     private readonly MongoClient _client;
     private readonly IMongoDatabase _database;
     private readonly TimeProvider _timeProvider;
-    private readonly MongoDbConfiguration _configuration;
+    private readonly MongoDbOutboxConfiguration _configuration;
 
     /// <summary>
     /// Initialize MongoDbOutbox
     /// </summary>
-    /// <param name="client">The <see cref="MongoClient"/>.</param>
-    /// <param name="configuration">The <see cref="MongoDbConfiguration"/>.</param>
-    /// <param name="provider">The <see cref="System.TimeProvider"/></param>
-    public MongoDbOutbox(MongoClient client, MongoDbConfiguration configuration, TimeProvider? provider = null)
+    /// <param name="configuration">The <see cref="MongoDbOutboxConfiguration"/>.</param>
+    public MongoDbOutbox(MongoDbOutboxConfiguration configuration)
     {
-        _client = client;
-        _database = client.GetDatabase(configuration.DatabaseName, configuration.DatabaseSettings);
+        _client = configuration.Client;
+        _database = _client.GetDatabase(configuration.DatabaseName, configuration.DatabaseSettings);
         _configuration = configuration;
-        _timeProvider = provider ?? TimeProvider.System;
+        _timeProvider = configuration.TimeProvider;
     }
 
     /// <inheritdoc />
@@ -54,7 +52,7 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
         try
         {
             var expiresAt = GetExpirationTime();
-            var messageToStore = new OutboxMessage(message, expiresAt);
+            var messageToStore = new OutboxMessage(message);
             var collection = await GetCollectionAsync(cancellationToken);
 
             if (transactionProvider != null)
@@ -96,7 +94,7 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
         try
         {
             var expiresAt = GetExpirationTime();
-            var messageItems = messages.Select(message => new OutboxMessage(message, expiresAt));
+            var messageItems = messages.Select(message => new OutboxMessage(message));
             var collection = await GetCollectionAsync(cancellationToken);
             if (transactionProvider != null)
             {
@@ -353,7 +351,7 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
             return new ValueTask<IMongoCollection<OutboxMessage>>(_collection);
         }
 
-        if (_configuration.OnResolvingACollection == OnResolvingACollection.Assume)
+        if (_configuration.MakeCollection == OnResolvingAOutboxCollection.Assume)
         {
             _collection =
                 _database.GetCollection<OutboxMessage>(_configuration.CollectionName,
@@ -379,7 +377,7 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
                 return _collection;
             }
 
-            if (_configuration.OnResolvingACollection == OnResolvingACollection.Validate)
+            if (_configuration.MakeCollection == OnResolvingAOutboxCollection.Validate)
             {
                 throw new InvalidOperationException("collection not exits");
             }
@@ -413,7 +411,7 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
         try
         {
             var expiresAt = GetExpirationTime();
-            var messageToStore = new OutboxMessage(message, expiresAt);
+            var messageToStore = new OutboxMessage(message);
             var collection = GetCollection();
 
             if (transactionProvider != null)
@@ -446,7 +444,7 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
         try
         {
             var expiresAt = GetExpirationTime();
-            var messageItems = messages.Select(message => new OutboxMessage(message, expiresAt));
+            var messageItems = messages.Select(message => new OutboxMessage(message));
             var collection = GetCollection();
             if (transactionProvider != null)
             {
@@ -643,7 +641,7 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
             return _collection;
         }
 
-        if (_configuration.OnResolvingACollection == OnResolvingACollection.Assume)
+        if (_configuration.MakeCollection == OnResolvingAOutboxCollection.Assume)
         {
             _collection =
                 _database.GetCollection<OutboxMessage>(_configuration.CollectionName,
@@ -662,7 +660,7 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
             return _collection;
         }
 
-        if (_configuration.OnResolvingACollection == OnResolvingACollection.Validate)
+        if (_configuration.MakeCollection == OnResolvingAOutboxCollection.Validate)
         {
             throw new InvalidOperationException("collection not exits");
         }

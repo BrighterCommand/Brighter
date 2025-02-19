@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Outbox.MongoDb;
 /// <summary>
 /// The MongoDB configuration
 /// </summary>
-public class MongoDbConfiguration
+public class MongoDbOutboxConfiguration
 {
     /// <summary>
     /// 
@@ -14,12 +14,19 @@ public class MongoDbConfiguration
     /// <param name="connectionString"></param>
     /// <param name="databaseName"></param>
     /// <param name="collectionName"></param>
-    public MongoDbConfiguration(string connectionString, string databaseName, string? collectionName = null)
+    public MongoDbOutboxConfiguration(string connectionString, string databaseName, string? collectionName = null)
     {
         ConnectionString = connectionString;
         DatabaseName = databaseName;
         CollectionName = collectionName ?? "brighter_outbox";
+        Client = new MongoClient(connectionString);
     }
+    
+    
+    /// <summary>
+    /// The <see cref="MongoClient"/>
+    /// </summary>
+    public MongoClient Client { get; set; }
 
     /// <summary>
     /// The mongo db connection string
@@ -35,16 +42,22 @@ public class MongoDbConfiguration
     /// The mongodb collection
     /// </summary>
     public string CollectionName { get; }
-
+    
+    /// <summary>
+    /// The <see cref="System.TimeProvider"/>
+    /// </summary>
+    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
+    
     /// <summary>
     /// Timeout in milliseconds
     /// </summary>
     public int Timeout { get; set; } = 500;
 
+
     /// <summary>
     /// Action to be performed when it's resolving a collection  
     /// </summary>
-    public OnResolvingACollection OnResolvingACollection { get; set; } = OnResolvingACollection.Assume;
+    public OnResolvingAOutboxCollection MakeCollection { get; set; } = OnResolvingAOutboxCollection.Assume;
 
     /// <summary>
     /// The <see cref="MongoDatabaseSettings"/> used when access the database.

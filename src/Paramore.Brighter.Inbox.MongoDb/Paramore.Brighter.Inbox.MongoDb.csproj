@@ -13,5 +13,4 @@
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver"/>
   </ItemGroup>
-
 </Project>
