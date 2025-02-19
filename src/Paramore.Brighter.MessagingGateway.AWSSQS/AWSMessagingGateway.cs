@@ -36,6 +36,7 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.AWSSQS.Extensions;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -211,10 +212,10 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
                     JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
             }
 
-            attributes.Add(QueueAttributeName.DelaySeconds, sqsAttributes.DelaySeconds.ToString());
-            attributes.Add(QueueAttributeName.MessageRetentionPeriod, sqsAttributes.MessageRetentionPeriod.ToString());
-            attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds, sqsAttributes.TimeOut.Seconds.ToString());
-            attributes.Add(QueueAttributeName.VisibilityTimeout, sqsAttributes.LockTimeout.ToString());
+            attributes.Add(QueueAttributeName.DelaySeconds, Convert.ToString(sqsAttributes.DelaySeconds));
+            attributes.Add(QueueAttributeName.MessageRetentionPeriod, Convert.ToString(sqsAttributes.MessageRetentionPeriod));
+            attributes.Add(QueueAttributeName.ReceiveMessageWaitTimeSeconds, Convert.ToString(sqsAttributes.TimeOut.Seconds));
+            attributes.Add(QueueAttributeName.VisibilityTimeout, Convert.ToString(sqsAttributes.LockTimeout));
             if (sqsAttributes.IAMPolicy != null)
             {
                 attributes.Add(QueueAttributeName.Policy, sqsAttributes.IAMPolicy);
@@ -238,10 +239,9 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
                     attributes.Add(QueueAttributeName.ContentBasedDeduplication, "true");
                 }
 
-                if (sqsAttributes is { DeduplicationScope: not null, FifoThroughputLimit: not null })
+                if (sqsAttributes.DeduplicationScope != null && sqsAttributes.FifoThroughputLimit != null)
                 {
-                    attributes.Add(QueueAttributeName.FifoThroughputLimit,
-                        sqsAttributes.FifoThroughputLimit.Value.ToString());
+                    attributes.Add(QueueAttributeName.FifoThroughputLimit, Convert.ToString(sqsAttributes.FifoThroughputLimit.Value.AsString()));
                     attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
                     {
                         DeduplicationScope.MessageGroup => "messageGroup",
