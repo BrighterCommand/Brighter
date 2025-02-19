@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
@@ -251,6 +252,8 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
             }
         }
 
+        Trace.WriteLine("SQS attribute dump", string.Join(";", attributes.Select(a => $"{a.Key}={a.Value}")));
+        
         string queueUrl;
         var createQueueRequest = new CreateQueueRequest(queueName) { Attributes = attributes, Tags = tags };
         try
