@@ -74,9 +74,10 @@ public class SqsAttributes
 
     /// <summary>
     /// Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group
+    /// Valid values: perQueue and perMessageGroupId
     /// This configuration is used for high throughput for FIFO queues configuration
     /// </summary>
-    public int? FifoThroughputLimit { get; set; }
+    public FifoThroughputLimit? FifoThroughputLimit { get; set; }
 
     public static SqsAttributes From(SqsSubscription subscription)
     {

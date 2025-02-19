@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text.Json;
@@ -37,6 +36,7 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.AWSSQS.Extensions;
 using InvalidOperationException = System.InvalidOperationException;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -239,10 +239,9 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
                     attributes.Add(QueueAttributeName.ContentBasedDeduplication, "true");
                 }
 
-                if (sqsAttributes is { DeduplicationScope: not null, FifoThroughputLimit: not null })
+                if (sqsAttributes.DeduplicationScope != null && sqsAttributes.FifoThroughputLimit != null)
                 {
-                    attributes.Add(QueueAttributeName.FifoThroughputLimit,
-                        sqsAttributes.FifoThroughputLimit.Value.ToString());
+                    attributes.Add(QueueAttributeName.FifoThroughputLimit, Convert.ToString(sqsAttributes.FifoThroughputLimit.Value.AsString()));
                     attributes.Add(QueueAttributeName.DeduplicationScope, sqsAttributes.DeduplicationScope switch
                     {
                         DeduplicationScope.MessageGroup => "messageGroup",
