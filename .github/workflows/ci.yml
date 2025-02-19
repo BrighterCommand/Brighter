@@ -180,9 +180,11 @@ jobs:
             9.0.x
       - name: Install dependencies
         run: dotnet restore
-      - name: RMQ Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
-
+      - name: RMQ Async Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Async.Tests/Paramore.Brighter.RMQ.Async.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+      - name: RMQ Sync Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Sync.Tests/Paramore.Brighter.RMQ.Sync.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
   kafka-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 20

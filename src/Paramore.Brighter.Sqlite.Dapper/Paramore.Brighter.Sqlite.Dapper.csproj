@@ -1,16 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-     <TargetFrameworks>netstandard2.0;net8.0;net9.0</TargetFrameworks>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
-      <ProjectReference Include="..\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj"/>
+  </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Dapper" />
-      <PackageReference Include="Dapper.Contrib" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Dapper"/>
+    <PackageReference Include="Dapper.Contrib"/>
+  </ItemGroup>
 </Project>

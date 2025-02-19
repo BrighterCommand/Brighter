@@ -23,13 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Transactions;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Serilog;
 using Serilog.Extensions.Logging;
 

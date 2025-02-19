@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,7 +20,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
- #endregion
+
+#endregion
+
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
@@ -34,7 +37,9 @@ namespace Paramore.Brighter.Locking.Azure;
 /// <param name="options"></param>
 public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) : IDistributedLock
 {
-    private readonly BlobContainerClient _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
+    private readonly BlobContainerClient _containerClient =
+        new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
+
     private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobLockingProviderOptions>();
 
     /// <summary>
@@ -50,17 +55,27 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
         // Write if does not exist
         if (!await client.ExistsAsync(cancellationToken))
         {
+#if NETSTANDARD
+            using var emptyStream = new MemoryStream();
+            using var writer = new StreamWriter(emptyStream);
+            await writer.WriteAsync(string.Empty);
+            await writer.FlushAsync();
+            emptyStream.Position = 0;
+            await client.UploadAsync(emptyStream, cancellationToken: cancellationToken);
+#else
             await using var emptyStream = new MemoryStream();
             await using var writer = new StreamWriter(emptyStream);
             await writer.WriteAsync(string.Empty);
             await writer.FlushAsync(cancellationToken);
             emptyStream.Position = 0;
             await client.UploadAsync(emptyStream, cancellationToken: cancellationToken);
+#endif
         }
 
         try
         {
-            var response = await client.GetBlobLeaseClient().AcquireAsync(options.LeaseValidity, cancellationToken: cancellationToken);
+            var response = await client.GetBlobLeaseClient()
+                .AcquireAsync(options.LeaseValidity, cancellationToken: cancellationToken);
             return response.Value.LeaseId;
         }
         catch (RequestFailedException)
@@ -80,20 +95,21 @@ public class AzureBlobLockingProvider(AzureBlobLockingProviderOptions options) :
     public async Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
     {
         var client = GetBlobLeaseClientForResource(resource, lockId);
-        if(client == null)
+        if (client == null)
         {
             _logger.LogInformation("No lock found for {LockResourceName}", resource);
             return;
         }
+
         await client.ReleaseAsync(cancellationToken: cancellationToken);
     }
 
     private BlobLeaseClient? GetBlobLeaseClientForResource(string resource, string lockId) =>
         GetBlobClient(resource).GetBlobLeaseClient(lockId);
-    
+
     private BlobClient GetBlobClient(string resource)
     {
-        var storageLocation = options.StorageLocationFunc.Invoke(NormaliseResourceName(resource));    
+        var storageLocation = options.StorageLocationFunc.Invoke(NormaliseResourceName(resource));
         return _containerClient.GetBlobClient(storageLocation);
     }
 
