@@ -1,17 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <Authors>Daniel Stockhammer, Toby Henderson</Authors>
     <Description>Brighter Microsoft.Extensions.DependencyInjection support</Description>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="System.Text.Json" />
- 
 
-  </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj" />
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>
+    <PackageReference Include="System.Text.Json"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj"/>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>
 </Project>

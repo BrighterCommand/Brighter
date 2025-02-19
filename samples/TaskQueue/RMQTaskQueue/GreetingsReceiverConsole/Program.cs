@@ -29,6 +29,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
@@ -66,6 +67,7 @@ namespace GreetingsReceiverConsole
                             timeOut: TimeSpan.FromMilliseconds(200),
                             isDurable: true,
                             highAvailability: true,
+                            messagePumpType: MessagePumpType.Reactor,
                             makeChannels: OnMissingChannel.Create)
                         };
 
