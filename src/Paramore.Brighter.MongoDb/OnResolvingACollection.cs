@@ -1,9 +1,9 @@
-﻿namespace Paramore.Brighter.Inbox.MongoDb;
+﻿namespace Paramore.Brighter.MongoDb;
 
 /// <summary>
 /// Action to be performed when it's resolving a collection  
 /// </summary>
-public enum OnResolvingAInboxCollection
+public enum OnResolvingACollection
 {
     /// <summary>
     /// Assume the collection exists

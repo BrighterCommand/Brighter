@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.MongoDb\Paramore.Brighter.MongoDb.csproj" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>
 

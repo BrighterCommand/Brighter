@@ -1,12 +1,13 @@
 ﻿using System.Text.Json;
 using MongoDB.Bson.Serialization.Attributes;
+using Paramore.Brighter.MongoDb;
 
 namespace Paramore.Brighter.Outbox.MongoDb;
 
 /// <summary>
 /// The MongoDb outbox message
 /// </summary>
-public class OutboxMessage
+public class OutboxMessage : IMongoDbCollectionTTL
 {
     /// <summary>
     /// Initialize new instance of <see cref="OutboxMessage"/>
@@ -23,8 +24,8 @@ public class OutboxMessage
     /// Initialize new instance of <see cref="OutboxMessage"/>
     /// </summary>
     /// <param name="message">The message to be store.</param>
-    /// <param name="expiresAt">When it should be expires.</param>
-    public OutboxMessage(Message message, long? expiresAt = null)
+    /// <param name="expireAfterSeconds">When it should be expires.</param>
+    public OutboxMessage(Message message, long? expireAfterSeconds = null)
     {
         var date = message.Header.TimeStamp == DateTimeOffset.MinValue
             ? DateTimeOffset.UtcNow
@@ -44,7 +45,7 @@ public class OutboxMessage
         PartitionKey = message.Header.PartitionKey;
         ReplyTo = message.Header.ReplyTo;
         Topic = message.Header.Topic;
-        ExpiresAt = expiresAt;
+        ExpireAfterSeconds = expireAfterSeconds;
     }
 
     /// <summary>
@@ -126,7 +127,7 @@ public class OutboxMessage
     /// <summary>
     /// When the doc should expires
     /// </summary>
-    public long? ExpiresAt { get; set; }
+    public long? ExpireAfterSeconds { get; set; }
 
     /// <summary>
     /// Convert the outbox message to <see cref="Message"/>

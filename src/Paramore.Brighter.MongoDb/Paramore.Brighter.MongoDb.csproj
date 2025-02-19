@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>net472;$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -7,12 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.MongoDb\Paramore.Brighter.MongoDb.csproj" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver"/>
   </ItemGroup>
-
 </Project>

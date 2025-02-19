@@ -1,28 +1,27 @@
 ﻿using MongoDB.Driver;
 using Paramore.Brighter.Observability;
 
-namespace Paramore.Brighter.Outbox.MongoDb;
+namespace Paramore.Brighter.MongoDb;
 
 /// <summary>
 /// The MongoDB configuration
 /// </summary>
-public class MongoDbOutboxConfiguration
+public class MongoDbConfiguration
 {
     /// <summary>
-    /// 
+    /// Initialize new instance of <see cref="MongoDbConfiguration"/>
     /// </summary>
-    /// <param name="connectionString"></param>
-    /// <param name="databaseName"></param>
-    /// <param name="collectionName"></param>
-    public MongoDbOutboxConfiguration(string connectionString, string databaseName, string? collectionName = null)
+    /// <param name="connectionString">The Mongo db connection string.</param>
+    /// <param name="databaseName">The database name.</param>
+    /// <param name="collectionName">The collection name.</param>
+    public MongoDbConfiguration(string connectionString, string databaseName, string? collectionName = null)
     {
         ConnectionString = connectionString;
         DatabaseName = databaseName;
-        CollectionName = collectionName ?? "brighter_outbox";
+        CollectionName = collectionName ?? "brighter_inbox";
         Client = new MongoClient(connectionString);
     }
-    
-    
+
     /// <summary>
     /// The <see cref="MongoClient"/>
     /// </summary>
@@ -42,22 +41,16 @@ public class MongoDbOutboxConfiguration
     /// The mongodb collection
     /// </summary>
     public string CollectionName { get; }
-    
+
     /// <summary>
     /// The <see cref="System.TimeProvider"/>
     /// </summary>
     public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
-    
-    /// <summary>
-    /// Timeout in milliseconds
-    /// </summary>
-    public int Timeout { get; set; } = 500;
-
 
     /// <summary>
     /// Action to be performed when it's resolving a collection  
     /// </summary>
-    public OnResolvingAOutboxCollection MakeCollection { get; set; } = OnResolvingAOutboxCollection.Assume;
+    public OnResolvingACollection MakeCollection { get; set; } = OnResolvingACollection.Assume;
 
     /// <summary>
     /// The <see cref="MongoDatabaseSettings"/> used when access the database.
@@ -78,7 +71,7 @@ public class MongoDbOutboxConfiguration
     /// The <see cref="InstrumentationOptions"/>.
     /// </summary>
     public InstrumentationOptions InstrumentationOptions { get; set; } = InstrumentationOptions.All;
-    
+
     /// <summary>
     /// Optional time to live for the messages in the outbox
     /// By default, messages will not expire

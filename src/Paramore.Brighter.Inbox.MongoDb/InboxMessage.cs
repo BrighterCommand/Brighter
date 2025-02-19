@@ -1,13 +1,41 @@
 using System.Text.Json;
 using MongoDB.Bson.Serialization.Attributes;
+using Paramore.Brighter.MongoDb;
 
 namespace Paramore.Brighter.Inbox.MongoDb;
 
 /// <summary>
 /// The MongoDb inbox message
 /// </summary>
-public class InboxMessage
+public class InboxMessage : IMongoDbCollectionTTL
 {
+    /// <summary>
+    /// Initialize new instance of <see cref="InboxMessage"/>
+    /// </summary>
+    public InboxMessage()
+    {
+        var timeStamp = DateTimeOffset.UtcNow;
+        CreatedTime = timeStamp.Ticks;
+        CreatedAt = timeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+    }
+
+    /// <summary>
+    /// Initialize new instance of <see cref="InboxMessage"/>
+    /// </summary>
+    /// <param name="command">The command.</param>
+    /// <param name="contextKey">The context key.</param>
+    /// <param name="timeStamp">The time stamp of when the message was created.</param>
+    /// <param name="expireAfterSeconds">The expires after X seconds.</param>
+    public InboxMessage(IRequest command, string contextKey, DateTimeOffset timeStamp, long? expireAfterSeconds)
+    {
+        Id = new InboxMessageId { Id = command.Id, ContextKey = contextKey };
+        CreatedTime = timeStamp.Ticks;
+        CreatedAt = timeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        CommandType = command.GetType().FullName!;
+        CommandBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+        ExpireAfterSeconds = expireAfterSeconds;
+    }
+
     /// <summary>
     /// The Message ID
     /// </summary>
@@ -35,29 +63,9 @@ public class InboxMessage
     public string CommandBody { get; set; } = string.Empty;
 
     /// <summary>
-    /// Initialize new instance of <see cref="InboxMessage"/>
+    /// The TTL for this message
     /// </summary>
-    public InboxMessage()
-    {
-        var timeStamp = DateTimeOffset.UtcNow;
-        CreatedTime = timeStamp.Ticks;
-        CreatedAt = timeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-    }
-
-    /// <summary>
-    /// Initialize new instance of <see cref="InboxMessage"/>
-    /// </summary>
-    /// <param name="command">The command.</param>
-    /// <param name="contextKey">The context key.</param>
-    /// <param name="timeStamp">The time stamp of when the message was created.</param>
-    public InboxMessage(IRequest command, string contextKey, DateTimeOffset timeStamp)
-    {
-        Id = new InboxMessageId { Id = command.Id, ContextKey = contextKey };
-        CreatedTime = timeStamp.Ticks;
-        CreatedAt = timeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-        CommandType = command.GetType().FullName!;
-        CommandBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
-    }
+    public long? ExpireAfterSeconds { get; set; }
 
     /// <summary>
     /// The inbox message id
@@ -68,7 +76,7 @@ public class InboxMessage
         /// The id.
         /// </summary>
         public string Id { get; set; } = string.Empty;
-        
+
         /// <summary>
         /// The context key.
         /// </summary>

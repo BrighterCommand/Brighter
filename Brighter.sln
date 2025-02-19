@@ -325,6 +325,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Outbox.Mo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Inbox.MongoDb", "src\Paramore.Brighter.Inbox.MongoDb\Paramore.Brighter.Inbox.MongoDb.csproj", "{34487FF5-FD63-4C64-9A33-9249B0C814AA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MongoDb", "src\Paramore.Brighter.MongoDb\Paramore.Brighter.MongoDb.csproj", "{9389F329-ED2B-45EB-B87F-E25304C82277}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1835,6 +1837,18 @@ Global
 		{34487FF5-FD63-4C64-9A33-9249B0C814AA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{34487FF5-FD63-4C64-9A33-9249B0C814AA}.Release|x86.ActiveCfg = Release|Any CPU
 		{34487FF5-FD63-4C64-9A33-9249B0C814AA}.Release|x86.Build.0 = Release|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Debug|x86.Build.0 = Debug|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Release|x86.ActiveCfg = Release|Any CPU
+		{9389F329-ED2B-45EB-B87F-E25304C82277}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

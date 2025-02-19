@@ -1,31 +1,23 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
+using Paramore.Brighter.MongoDb;
 using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Outbox.MongoDb;
 
 /// <summary>
-/// The implemention for MongoDB for outbox
+/// The implementation for MongoDB for outbox
 /// </summary>
-public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
+public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Message, IClientSessionHandle>,
     IAmAnOutboxSync<Message, IClientSessionHandle>
 {
-    private IMongoCollection<OutboxMessage>? _collection;
-    private readonly MongoClient _client;
-    private readonly IMongoDatabase _database;
-    private readonly TimeProvider _timeProvider;
-    private readonly MongoDbOutboxConfiguration _configuration;
-
     /// <summary>
     /// Initialize MongoDbOutbox
     /// </summary>
-    /// <param name="configuration">The <see cref="MongoDbOutboxConfiguration"/>.</param>
-    public MongoDbOutbox(MongoDbOutboxConfiguration configuration)
+    /// <param name="configuration">The <see cref="MongoDbConfiguration"/>.</param>
+    public MongoDbOutbox(MongoDbConfiguration configuration)
+        : base(configuration)
     {
-        _client = configuration.Client;
-        _database = _client.GetDatabase(configuration.DatabaseName, configuration.DatabaseSettings);
-        _configuration = configuration;
-        _timeProvider = configuration.TimeProvider;
     }
 
     /// <inheritdoc />
@@ -43,30 +35,28 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.Add,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
 
         try
         {
-            var expiresAt = GetExpirationTime();
-            var messageToStore = new OutboxMessage(message);
-            var collection = await GetCollectionAsync(cancellationToken);
+            var messageToStore = new OutboxMessage(message, ExpireAfterSeconds);
 
             if (transactionProvider != null)
             {
                 var session = await transactionProvider.GetTransactionAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
 
-                await collection
+                await Collection
                     .InsertOneAsync(session, messageToStore, cancellationToken: cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
             }
             else
             {
-                await collection
+                await Collection
                     .InsertOneAsync(messageToStore, cancellationToken: cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
             }
@@ -86,27 +76,25 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.Add,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
         try
         {
-            var expiresAt = GetExpirationTime();
-            var messageItems = messages.Select(message => new OutboxMessage(message));
-            var collection = await GetCollectionAsync(cancellationToken);
+            var messageItems = messages.Select(message => new OutboxMessage(message, ExpireAfterSeconds));
             if (transactionProvider != null)
             {
                 var session = await transactionProvider.GetTransactionAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
-                await collection
+                await Collection
                     .InsertManyAsync(session, messageItems, cancellationToken: cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
             }
             else
             {
-                await collection
+                await Collection
                     .InsertManyAsync(messageItems, cancellationToken: cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
             }
@@ -125,17 +113,16 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.Delete,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
 
         try
         {
-            var collection = await GetCollectionAsync(cancellationToken);
             var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds);
-            await collection.DeleteManyAsync(filter, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            await Collection.DeleteManyAsync(filter, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
         finally
         {
@@ -152,22 +139,21 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.DispatchedMessages,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
         try
         {
-            var olderThan = _timeProvider.GetLocalNow() - dispatchedSince;
+            var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
             var filter = Builders<OutboxMessage>.Filter.Lt(x => x.DeliveryTime, olderThan.Ticks);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
             }
 
-            var collection = await GetCollectionAsync(cancellationToken);
-            var cursor = await collection.FindAsync(filter,
+            var cursor = await Collection.FindAsync(filter,
                     new FindOptions<OutboxMessage, OutboxMessage>
                     {
                         Limit = pageSize,
@@ -197,16 +183,15 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.Get,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
 
         try
         {
-            var collection = await GetCollectionAsync(cancellationToken);
-            var find = await collection
+            var find = await Collection
                 .FindAsync(x => x.MessageId == messageId, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
@@ -228,24 +213,23 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.MarkDispatched,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
 
         try
         {
-            var collection = await GetCollectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.MessageId, id);
 
-            dispatchedAt ??= _timeProvider.GetUtcNow();
+            dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
                 .Set(x => x.DeliveryTime, dispatchedAt.Value.Ticks)
                 .Set(x => x.DeliveredAt, dispatchedAt)
                 .Unset(x => x.OutstandingCreatedTime);
 
-            await collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken)
+            await Collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
         finally
@@ -262,23 +246,22 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.MarkDispatched,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
         try
         {
-            var collection = await GetCollectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, ids);
 
-            dispatchedAt ??= _timeProvider.GetUtcNow();
+            dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
                 .Set(x => x.DeliveryTime, dispatchedAt.Value.Ticks)
                 .Set(x => x.DeliveredAt, dispatchedAt)
                 .Unset(x => x.OutstandingCreatedTime);
 
-            await collection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken)
+            await Collection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
         finally
@@ -296,22 +279,21 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.OutStandingMessages,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
         try
         {
-            var olderThan = _timeProvider.GetLocalNow() - dispatchedSince;
+            var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
             var filter = Builders<OutboxMessage>.Filter.Lt(x => x.CreatedTime, olderThan.Ticks);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
             }
 
-            var collection = await GetCollectionAsync(cancellationToken);
-            var cursor = await collection.FindAsync(filter,
+            var cursor = await Collection.FindAsync(filter,
                     new FindOptions<OutboxMessage, OutboxMessage>
                     {
                         Limit = pageSize,
@@ -334,94 +316,30 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
         }
     }
 
-    private long? GetExpirationTime()
-    {
-        if (_configuration.TimeToLive.HasValue)
-        {
-            return _timeProvider.GetUtcNow().Add(_configuration.TimeToLive.Value).ToUnixTimeSeconds();
-        }
-
-        return null;
-    }
-
-    private ValueTask<IMongoCollection<OutboxMessage>> GetCollectionAsync(CancellationToken cancellationToken = default)
-    {
-        if (_collection != null)
-        {
-            return new ValueTask<IMongoCollection<OutboxMessage>>(_collection);
-        }
-
-        if (_configuration.MakeCollection == OnResolvingAOutboxCollection.Assume)
-        {
-            _collection =
-                _database.GetCollection<OutboxMessage>(_configuration.CollectionName,
-                    _configuration.CollectionSettings);
-            return new ValueTask<IMongoCollection<OutboxMessage>>(_collection);
-        }
-
-        return new ValueTask<IMongoCollection<OutboxMessage>>(GetOrCreateAsync());
-
-        async Task<IMongoCollection<OutboxMessage>> GetOrCreateAsync()
-        {
-            var filter = new BsonDocument("name", _configuration.CollectionName);
-            var options = new ListCollectionNamesOptions { Filter = filter };
-
-            var collections = await _database.ListCollectionNamesAsync(options, cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            if (await collections.AnyAsync(cancellationToken: cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext))
-            {
-                _collection = _database.GetCollection<OutboxMessage>(_configuration.CollectionName,
-                    _configuration.CollectionSettings);
-                return _collection;
-            }
-
-            if (_configuration.MakeCollection == OnResolvingAOutboxCollection.Validate)
-            {
-                throw new InvalidOperationException("collection not exits");
-            }
-
-            using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
-
-            await _database
-                .CreateCollectionAsync(session, _configuration.CollectionName, _configuration.CreateCollectionOptions,
-                    cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
-            _collection =
-                _database.GetCollection<OutboxMessage>(_configuration.CollectionName,
-                    _configuration.CollectionSettings);
-            return _collection;
-        }
-    }
-
     /// <inheritdoc />
     public void Add(Message message, RequestContext requestContext, int outBoxTimeout = -1,
         IAmABoxTransactionProvider<IClientSessionHandle>? transactionProvider = null)
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.Add,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
 
         try
         {
-            var expiresAt = GetExpirationTime();
-            var messageToStore = new OutboxMessage(message);
-            var collection = GetCollection();
+            var messageToStore = new OutboxMessage(message, ExpireAfterSeconds);
 
             if (transactionProvider != null)
             {
                 var session = transactionProvider.GetTransaction();
-                collection.InsertOneAsync(session, messageToStore);
+                Collection.InsertOneAsync(session, messageToStore);
             }
             else
             {
-                collection.InsertOneAsync(messageToStore);
+                Collection.InsertOneAsync(messageToStore);
             }
         }
         finally
@@ -436,24 +354,22 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.Add,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
         try
         {
-            var expiresAt = GetExpirationTime();
-            var messageItems = messages.Select(message => new OutboxMessage(message));
-            var collection = GetCollection();
+            var messageItems = messages.Select(message => new OutboxMessage(message, ExpireAfterSeconds));
             if (transactionProvider != null)
             {
                 var session = transactionProvider.GetTransaction();
-                collection.InsertMany(session, messageItems);
+                Collection.InsertMany(session, messageItems);
             }
             else
             {
-                collection.InsertManyAsync(messageItems);
+                Collection.InsertManyAsync(messageItems);
             }
         }
         finally
@@ -467,16 +383,15 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.Delete,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
         try
         {
-            var collection = GetCollection();
             var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds);
-            collection.DeleteMany(filter);
+            Collection.DeleteMany(filter);
         }
         finally
         {
@@ -491,23 +406,22 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.DispatchedMessages,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
 
         try
         {
-            var olderThan = _timeProvider.GetLocalNow() - dispatchedSince;
+            var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
             var filter = Builders<OutboxMessage>.Filter.Lt(x => x.DeliveryTime, olderThan.Ticks);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
             }
 
-            var collection = GetCollection();
-            var cursor = collection.FindSync(filter,
+            var cursor = Collection.FindSync(filter,
                 new FindOptions<OutboxMessage, OutboxMessage>
                 {
                     Limit = pageSize,
@@ -535,16 +449,15 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.Get,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
 
         try
         {
-            var collection = GetCollection();
-            var find = collection.FindSync(x => x.MessageId == messageId);
+            var find = Collection.FindSync(x => x.MessageId == messageId);
             if (!find.Any())
             {
                 return new Message();
@@ -565,24 +478,23 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.MarkDispatched,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
 
         try
         {
-            var collection = GetCollection();
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.MessageId, id);
 
-            dispatchedAt ??= _timeProvider.GetUtcNow();
+            dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
                 .Set(x => x.DeliveryTime, dispatchedAt.Value.Ticks)
                 .Set(x => x.DeliveredAt, dispatchedAt)
                 .Unset(x => x.OutstandingCreatedTime);
 
-            collection.UpdateOne(filter, update);
+            Collection.UpdateOne(filter, update);
         }
         finally
         {
@@ -597,22 +509,21 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
     {
         var span = Tracer?.CreateDbSpan(
             new OutboxSpanInfo(DbSystem.Mongodb,
-                _database.DatabaseNamespace.DatabaseName,
+                Configuration.DatabaseName,
                 OutboxDbOperation.OutStandingMessages,
-                _configuration.CollectionName),
+                Configuration.CollectionName),
             requestContext?.Span,
-            options: _configuration.InstrumentationOptions);
+            options: Configuration.InstrumentationOptions);
         try
         {
-            var olderThan = _timeProvider.GetLocalNow() - dispatchedSince;
+            var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
             var filter = Builders<OutboxMessage>.Filter.Lt(x => x.CreatedTime, olderThan.Ticks);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
             }
 
-            var collection = GetCollection();
-            var cursor = collection.FindSync(filter,
+            var cursor = Collection.FindSync(filter,
                 new FindOptions<OutboxMessage, OutboxMessage>
                 {
                     Limit = pageSize,
@@ -632,47 +543,5 @@ public class MongoDbOutbox : IAmAnOutboxAsync<Message, IClientSessionHandle>,
         {
             Tracer?.EndSpan(span);
         }
-    }
-
-    private IMongoCollection<OutboxMessage> GetCollection()
-    {
-        if (_collection != null)
-        {
-            return _collection;
-        }
-
-        if (_configuration.MakeCollection == OnResolvingAOutboxCollection.Assume)
-        {
-            _collection =
-                _database.GetCollection<OutboxMessage>(_configuration.CollectionName,
-                    _configuration.CollectionSettings);
-            return _collection;
-        }
-
-        var filter = new BsonDocument("name", _configuration.CollectionName);
-        var options = new ListCollectionNamesOptions { Filter = filter };
-
-        var collections = _database.ListCollectionNames(options);
-        if (collections.Any())
-        {
-            _collection = _database.GetCollection<OutboxMessage>(_configuration.CollectionName,
-                _configuration.CollectionSettings);
-            return _collection;
-        }
-
-        if (_configuration.MakeCollection == OnResolvingAOutboxCollection.Validate)
-        {
-            throw new InvalidOperationException("collection not exits");
-        }
-
-        using var session = _client.StartSession();
-
-        _database
-            .CreateCollection(session, _configuration.CollectionName, _configuration.CreateCollectionOptions);
-
-        _collection =
-            _database.GetCollection<OutboxMessage>(_configuration.CollectionName,
-                _configuration.CollectionSettings);
-        return _collection;
     }
 }
