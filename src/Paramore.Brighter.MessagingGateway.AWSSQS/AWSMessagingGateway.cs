@@ -252,8 +252,6 @@ public class AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
             }
         }
 
-        Trace.WriteLine("SQS attribute dump", string.Join(";", attributes.Select(a => $"{a.Key}={a.Value}")));
-        
         string queueUrl;
         var createQueueRequest = new CreateQueueRequest(queueName) { Attributes = attributes, Tags = tags };
         try
