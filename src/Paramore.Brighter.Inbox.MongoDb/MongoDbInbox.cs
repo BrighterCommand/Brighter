@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.MongoDb;
 
 namespace Paramore.Brighter.Inbox.MongoDb;
@@ -24,11 +25,24 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
-        var message = new InboxMessage(command, contextKey, Configuration.TimeProvider.GetUtcNow(), ExpireAfterSeconds);
+        var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(), ExpireAfterSeconds);
 
-        await Collection.InsertOneAsync(message, cancellationToken: cancellationToken)
-            .ConfigureAwait(ContinueOnCapturedContext);
+        try
+        {
+            await Collection.InsertOneAsync(message, cancellationToken: cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+        }
+        catch (MongoWriteException e)
+        {
+            if (e.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                return;
+            }
+
+            throw;
+        }
     }
+        
 
     /// <inheritdoc />
     public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
@@ -38,8 +52,14 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);
 
         var command = await Collection.Find(filter)
-            .FirstAsync(cancellationToken)
+            .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(ContinueOnCapturedContext);
+
+        if (command == null)
+        {
+            throw new RequestNotFoundException<T>(id);
+        }
+
         return command.ToCommand<T>();
     }
 
@@ -57,9 +77,22 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     /// <inheritdoc />
     public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
-        var message = new InboxMessage(command, contextKey, Configuration.TimeProvider.GetUtcNow(), ExpireAfterSeconds);
+        var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(), ExpireAfterSeconds);
+
+        try
+        {
+
+            Collection.InsertOne(message);
+        }
+        catch (MongoWriteException e)
+        {
+            if (e.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                return;
+            }
         
-        Collection.InsertOne(message);
+            throw;
+        }
     }
 
     /// <inheritdoc />
@@ -68,7 +101,12 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
         var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
         var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);
 
-        var command = Collection.Find(filter).First();
+        var command = Collection.Find(filter).FirstOrDefault();
+        if (command == null)
+        {
+            throw new RequestNotFoundException<T>(id);
+        }
+
         return command.ToCommand<T>();
     }
 

@@ -26,9 +26,9 @@ public class InboxMessage : IMongoDbCollectionTTL
     /// <param name="contextKey">The context key.</param>
     /// <param name="timeStamp">The time stamp of when the message was created.</param>
     /// <param name="expireAfterSeconds">The expires after X seconds.</param>
-    public InboxMessage(IRequest command, string contextKey, DateTimeOffset timeStamp, long? expireAfterSeconds)
+    public InboxMessage(object command, string id, string contextKey, DateTimeOffset timeStamp, long? expireAfterSeconds)
     {
-        Id = new InboxMessageId { Id = command.Id, ContextKey = contextKey };
+        Id = new InboxMessageId { Id = id, ContextKey = contextKey };
         CreatedTime = timeStamp.Ticks;
         CreatedAt = timeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         CommandType = command.GetType().FullName!;

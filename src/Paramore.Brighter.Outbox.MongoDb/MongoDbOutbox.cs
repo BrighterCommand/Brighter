@@ -26,6 +26,128 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc />
     public bool ContinueOnCapturedContext { get; set; }
 
+
+    /// <summary>
+    /// Returns all messages in the store
+    /// </summary>
+    /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
+    /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+    /// <param name="args">Additional parameters required for search, if any</param>
+    /// <param name="cancellationToken">The cancellation token</param>
+    /// <returns>A list of messages</returns>
+    public async Task<IList<Message>> GetAsync(int pageSize = 100,
+        int pageNumber = 1,
+        Dictionary<string, object>? args = null,
+        CancellationToken cancellationToken = default)
+    {
+        var span = Tracer?.CreateDbSpan(
+            new OutboxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                OutboxDbOperation.Get,
+                Configuration.CollectionName),
+            null,
+            options: Configuration.InstrumentationOptions);
+
+        try
+        {
+            var filter = Builders<OutboxMessage>.Filter.Empty;
+            if (args != null && args.TryGetValue("Topic", out var topic))
+            {
+                filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
+            }
+
+            var cursor = await Collection.FindAsync(filter,
+                    new FindOptions<OutboxMessage> { Skip = pageSize * Math.Max(pageNumber - 1, 0), Limit = pageSize },
+                    cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+
+            var messages = new List<Message>(pageSize);
+            while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+            {
+                messages.AddRange(cursor.Current.Select(x => x.ConvertToMessage()));
+            }
+
+            return messages;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    /// <summary>
+    /// Returns messages specified by the Ids
+    /// </summary>
+    /// <param name="messageIds">The Ids of the messages</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
+    /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
+    /// <param name="cancellationToken">Cancellation Token.</param>
+    /// <returns></returns>
+    public async Task<IEnumerable<Message>> GetAsync(
+        IEnumerable<string> messageIds,
+        RequestContext requestContext,
+        int outBoxTimeout = -1,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var span = Tracer?.CreateDbSpan(
+            new OutboxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                OutboxDbOperation.Get,
+                Configuration.CollectionName),
+            null,
+            options: Configuration.InstrumentationOptions);
+
+        try
+        {
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds);
+
+            var cursor = await Collection.FindAsync(filter,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+
+            var messages = new List<Message>();
+            while (await cursor.MoveNextAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+            {
+                messages.AddRange(cursor.Current.Select(x => x.ConvertToMessage()));
+            }
+
+            return messages;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    /// <summary>
+    /// Get the number of messages in the Outbox that are not dispatched
+    /// </summary>
+    /// <param name="cancellationToken">Cancel the async operation</param>
+    /// <returns></returns>
+    public async Task<long> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken = default)
+    {
+        var span = Tracer?.CreateDbSpan(
+            new OutboxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                OutboxDbOperation.Get,
+                Configuration.CollectionName),
+            null,
+            options: Configuration.InstrumentationOptions);
+
+        try
+        {
+            return await Collection.CountDocumentsAsync(
+                    Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null),
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
     /// <inheritdoc />
     public async Task AddAsync(Message message,
         RequestContext requestContext,
@@ -59,6 +181,13 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 await Collection
                     .InsertOneAsync(messageToStore, cancellationToken: cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
+            }
+        }
+        catch (MongoWriteException e)
+        {
+            if (e.WriteError.Category != ServerErrorCategory.DuplicateKey)
+            {
+                throw;
             }
         }
         finally
@@ -147,7 +276,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
-            var filter = Builders<OutboxMessage>.Filter.Lt(x => x.DeliveryTime, olderThan.Ticks);
+            var filter = Builders<OutboxMessage>.Filter.Lt(x => x.Dispatched, olderThan);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
@@ -158,7 +287,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                     {
                         Limit = pageSize,
                         Skip = pageSize * Math.Max(pageNumber - 1, 0),
-                        Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.CreatedTime)
+                        Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.Timestamp)
                     }, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
@@ -225,9 +354,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
             dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
-                .Set(x => x.DeliveryTime, dispatchedAt.Value.Ticks)
-                .Set(x => x.DeliveredAt, dispatchedAt)
-                .Unset(x => x.OutstandingCreatedTime);
+                .Set(x => x.Dispatched, dispatchedAt.Value);
 
             await Collection.UpdateOneAsync(filter, update, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
@@ -257,9 +384,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
             dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
-                .Set(x => x.DeliveryTime, dispatchedAt.Value.Ticks)
-                .Set(x => x.DeliveredAt, dispatchedAt)
-                .Unset(x => x.OutstandingCreatedTime);
+                .Set(x => x.Dispatched, dispatchedAt.Value);
 
             await Collection.UpdateManyAsync(filter, update, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
@@ -287,7 +412,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
-            var filter = Builders<OutboxMessage>.Filter.Lt(x => x.CreatedTime, olderThan.Ticks);
+            var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
+            filter &= Builders<OutboxMessage>.Filter.Lt(x => x.Timestamp, olderThan);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
@@ -298,7 +424,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                     {
                         Limit = pageSize,
                         Skip = pageSize * Math.Max(pageNumber - 1, 0),
-                        Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.CreatedTime)
+                        Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.Timestamp)
                     }, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
@@ -309,6 +435,113 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             }
 
             return messages;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    /// <summary>
+    /// Returns all messages in the store
+    /// </summary>
+    /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
+    /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+    /// <param name="args">Additional parameters required for search, if any</param>
+    /// <returns>A list of messages</returns>
+    public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object>? args = null)
+    {
+        var span = Tracer?.CreateDbSpan(
+            new OutboxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                OutboxDbOperation.Get,
+                Configuration.CollectionName),
+            null,
+            options: Configuration.InstrumentationOptions);
+
+        try
+        {
+            var filter = Builders<OutboxMessage>.Filter.Empty;
+            if (args != null && args.TryGetValue("Topic", out var topic))
+            {
+                filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
+            }
+
+            var cursor = Collection.FindSync(filter,
+                new FindOptions<OutboxMessage> { Skip = pageSize * Math.Max(pageNumber - 1, 0), Limit = pageSize });
+
+            var messages = new List<Message>(pageSize);
+            while (cursor.MoveNext())
+            {
+                messages.AddRange(cursor.Current.Select(x => x.ConvertToMessage()));
+            }
+
+            return messages;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    /// <summary>
+    /// Returns messages specified by the Ids
+    /// </summary>
+    /// <param name="messageIds">The Ids of the messages</param>
+    /// <param name="requestContext">What is the context for this request; used to access the Span</param>        
+    /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
+    /// <returns></returns>
+    public IEnumerable<Message> Get(
+        IEnumerable<string> messageIds,
+        RequestContext? requestContext = null,
+        int outBoxTimeout = -1
+    )
+    {
+        var span = Tracer?.CreateDbSpan(
+            new OutboxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                OutboxDbOperation.Get,
+                Configuration.CollectionName),
+            requestContext?.Span,
+            options: Configuration.InstrumentationOptions);
+
+        try
+        {
+            var filter = Builders<OutboxMessage>.Filter.In(x => x.MessageId, messageIds);
+
+            var cursor = Collection.FindSync(filter);
+
+            var messages = new List<Message>();
+            while (cursor.MoveNext())
+            {
+                messages.AddRange(cursor.Current.Select(x => x.ConvertToMessage()));
+            }
+
+            return messages;
+        }
+        finally
+        {
+            Tracer?.EndSpan(span);
+        }
+    }
+
+    /// <summary>
+    /// Get the number of messages in the Outbox that are not dispatched
+    /// </summary>
+    /// <returns></returns>
+    public long GetNumberOfOutstandingMessages()
+    {
+        var span = Tracer?.CreateDbSpan(
+            new OutboxSpanInfo(DbSystem.Mongodb,
+                Configuration.DatabaseName,
+                OutboxDbOperation.Get,
+                Configuration.CollectionName),
+            null,
+            options: Configuration.InstrumentationOptions);
+
+        try
+        {
+            return Collection.CountDocuments(Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null));
         }
         finally
         {
@@ -335,11 +568,18 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             if (transactionProvider != null)
             {
                 var session = transactionProvider.GetTransaction();
-                Collection.InsertOneAsync(session, messageToStore);
+                Collection.InsertOne(session, messageToStore);
             }
             else
             {
-                Collection.InsertOneAsync(messageToStore);
+                Collection.InsertOne(messageToStore);
+            }
+        }
+        catch (MongoWriteException e)
+        {
+            if (e.WriteError.Category != ServerErrorCategory.DuplicateKey)
+            {
+                throw;
             }
         }
         finally
@@ -369,7 +609,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
             }
             else
             {
-                Collection.InsertManyAsync(messageItems);
+                Collection.InsertMany(messageItems);
             }
         }
         finally
@@ -415,7 +655,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
-            var filter = Builders<OutboxMessage>.Filter.Lt(x => x.DeliveryTime, olderThan.Ticks);
+            var filter = Builders<OutboxMessage>.Filter.Lt(x => x.Dispatched, olderThan);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
@@ -426,7 +666,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 {
                     Limit = pageSize,
                     Skip = pageSize * Math.Max(pageNumber - 1, 0),
-                    Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.CreatedTime)
+                    Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.Timestamp)
                 });
 
             var messages = new List<Message>(pageSize);
@@ -458,13 +698,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var find = Collection.FindSync(x => x.MessageId == messageId);
-            if (!find.Any())
-            {
-                return new Message();
-            }
-
-            var first = find.First();
-            return first.ConvertToMessage();
+            var first = find.FirstOrDefault();
+            return first?.ConvertToMessage() ?? new Message();
         }
         finally
         {
@@ -490,9 +725,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
 
             dispatchedAt ??= Configuration.TimeProvider.GetUtcNow();
             var update = Builders<OutboxMessage>.Update
-                .Set(x => x.DeliveryTime, dispatchedAt.Value.Ticks)
-                .Set(x => x.DeliveredAt, dispatchedAt)
-                .Unset(x => x.OutstandingCreatedTime);
+                .Set(x => x.Dispatched, dispatchedAt.Value);
 
             Collection.UpdateOne(filter, update);
         }
@@ -517,7 +750,8 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         try
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
-            var filter = Builders<OutboxMessage>.Filter.Lt(x => x.CreatedTime, olderThan.Ticks);
+            var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
+            filter &= Builders<OutboxMessage>.Filter.Lt(x => x.Timestamp, olderThan);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
@@ -528,7 +762,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 {
                     Limit = pageSize,
                     Skip = pageSize * Math.Max(pageNumber - 1, 0),
-                    Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.CreatedTime)
+                    Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.Timestamp)
                 });
 
             var messages = new List<Message>(pageSize);

@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using System.Collections.ObjectModel;
+using MongoDB.Driver;
 using Paramore.Brighter.MongoDb;
 
 namespace Paramore.Brighter.Locking.MongoDb;
@@ -12,7 +13,7 @@ public class MongoDbLockingProvider : BaseMongoDb<LockMessage>, IDistributedLock
     /// Initialize new instance of <see cref="MongoDbLockingProvider"/>
     /// </summary>
     /// <param name="configuration">The <see cref="MongoDbConfiguration"/></param>
-    public MongoDbLockingProvider(MongoDbConfiguration configuration) 
+    public MongoDbLockingProvider(MongoDbConfiguration configuration)
         : base(configuration)
     {
     }
@@ -20,20 +21,24 @@ public class MongoDbLockingProvider : BaseMongoDb<LockMessage>, IDistributedLock
     /// <inheritdoc />
     public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
-        var update = Builders<LockMessage>.Update.SetOnInsert(x => x.Id, resource);
-        if (ExpireAfterSeconds != null)
+        try
         {
-            update = update.SetOnInsert(x => x.ExpireAfterSeconds, ExpireAfterSeconds);
+            await Collection.InsertOneAsync(new LockMessage { Id = resource, ExpireAfterSeconds = ExpireAfterSeconds },
+                cancellationToken: cancellationToken);
+            return resource;
         }
-        
-        var doc= await Collection.FindOneAndUpdateAsync(Builders<LockMessage>.Filter.Eq(x => x.Id, resource),
-            update,
-            new FindOneAndUpdateOptions<LockMessage> { IsUpsert = true, ReturnDocument = ReturnDocument.Before }, cancellationToken);
+        catch (MongoWriteException e)
+        {
+            if (e.WriteError.Category == ServerErrorCategory.DuplicateKey)
+            {
+                return null;
+            }
 
-        return doc?.Id;
+            throw;
+        }
     }
 
     /// <inheritdoc />
-    public async Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken) 
+    public async Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
         => await Collection.DeleteOneAsync(Builders<LockMessage>.Filter.Eq(x => x.Id, lockId), cancellationToken);
 }

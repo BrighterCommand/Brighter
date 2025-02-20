@@ -14,11 +14,11 @@ public class MongoDbConfiguration
     /// <param name="connectionString">The Mongo db connection string.</param>
     /// <param name="databaseName">The database name.</param>
     /// <param name="collectionName">The collection name.</param>
-    public MongoDbConfiguration(string connectionString, string databaseName, string? collectionName = null)
+    public MongoDbConfiguration(string connectionString, string databaseName, string collectionName)
     {
         ConnectionString = connectionString;
         DatabaseName = databaseName;
-        CollectionName = collectionName ?? "brighter_inbox";
+        CollectionName = collectionName;
         Client = new MongoClient(connectionString);
     }
 

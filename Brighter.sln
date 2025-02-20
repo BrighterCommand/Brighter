@@ -329,6 +329,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MongoDb",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.MongoDb", "src\Paramore.Brighter.Locking.MongoDb\Paramore.Brighter.Locking.MongoDb.csproj", "{EE92EF65-BBA8-4601-A4F6-84A695548BD3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MongoDbTests", "tests\Paramore.Brighter.MongoDbTests\Paramore.Brighter.MongoDbTests.csproj", "{E988767C-A8F0-4EF1-B3CA-1822500F18DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1863,6 +1865,18 @@ Global
 		{EE92EF65-BBA8-4601-A4F6-84A695548BD3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{EE92EF65-BBA8-4601-A4F6-84A695548BD3}.Release|x86.ActiveCfg = Release|Any CPU
 		{EE92EF65-BBA8-4601-A4F6-84A695548BD3}.Release|x86.Build.0 = Release|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Debug|x86.Build.0 = Debug|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Release|x86.ActiveCfg = Release|Any CPU
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1960,6 +1974,7 @@ Global
 		{915BD9FD-2E29-4E2B-8DA3-A74055F32A20} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C} = {11935469-A062-4CFF-9F72-F4F41E14C2B4}
 		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A} = {202BA107-89D5-4868-AC5A-3527114C0109}
+		{E988767C-A8F0-4EF1-B3CA-1822500F18DF} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
