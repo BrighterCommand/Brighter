@@ -25,7 +25,8 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
-        var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(), ExpireAfterSeconds);
+        var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
+            ExpireAfterSeconds);
 
         try
         {
@@ -42,14 +43,14 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             throw;
         }
     }
-        
+
 
     /// <inheritdoc />
     public async Task<T> GetAsync<T>(string id, string contextKey, int timeoutInMilliseconds = -1,
         CancellationToken cancellationToken = default) where T : class, IRequest
     {
         var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
-        var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);
+        var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
 
         var command = await Collection.Find(filter)
             .FirstOrDefaultAsync(cancellationToken)
@@ -77,11 +78,11 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     /// <inheritdoc />
     public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
-        var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(), ExpireAfterSeconds);
+        var message = new InboxMessage(command, command.Id, contextKey, Configuration.TimeProvider.GetUtcNow(),
+            ExpireAfterSeconds);
 
         try
         {
-
             Collection.InsertOne(message);
         }
         catch (MongoWriteException e)
@@ -90,7 +91,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
             {
                 return;
             }
-        
+
             throw;
         }
     }
@@ -99,7 +100,7 @@ public class MongoDbInbox : BaseMongoDb<InboxMessage>, IAmAnInboxAsync, IAmAnInb
     public T Get<T>(string id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
     {
         var commandId = new InboxMessage.InboxMessageId { Id = id, ContextKey = contextKey };
-        var filter = Builders<InboxMessage>.Filter.Eq("Id", commandId);
+        var filter = Builders<InboxMessage>.Filter.Eq(x => x.Id, commandId);
 
         var command = Collection.Find(filter).FirstOrDefault();
         if (command == null)

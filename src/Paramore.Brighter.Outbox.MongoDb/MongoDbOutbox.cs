@@ -26,7 +26,6 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
     /// <inheritdoc />
     public bool ContinueOnCapturedContext { get; set; }
 
-
     /// <summary>
     /// Returns all messages in the store
     /// </summary>
@@ -287,7 +286,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                     {
                         Limit = pageSize,
                         Skip = pageSize * Math.Max(pageNumber - 1, 0),
-                        Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.Timestamp)
+                        Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.TimeStamp)
                     }, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
@@ -413,7 +412,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
-            filter &= Builders<OutboxMessage>.Filter.Lt(x => x.Timestamp, olderThan);
+            filter &= Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, olderThan);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
@@ -424,7 +423,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                     {
                         Limit = pageSize,
                         Skip = pageSize * Math.Max(pageNumber - 1, 0),
-                        Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.Timestamp)
+                        Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.TimeStamp)
                     }, cancellationToken: cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
 
@@ -666,7 +665,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 {
                     Limit = pageSize,
                     Skip = pageSize * Math.Max(pageNumber - 1, 0),
-                    Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.Timestamp)
+                    Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.TimeStamp)
                 });
 
             var messages = new List<Message>(pageSize);
@@ -751,7 +750,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
         {
             var olderThan = Configuration.TimeProvider.GetLocalNow() - dispatchedSince;
             var filter = Builders<OutboxMessage>.Filter.Eq(x => x.Dispatched, null);
-            filter &= Builders<OutboxMessage>.Filter.Lt(x => x.Timestamp, olderThan);
+            filter &= Builders<OutboxMessage>.Filter.Lt(x => x.TimeStamp, olderThan);
             if (args != null && args.TryGetValue("Topic", out var topic))
             {
                 filter &= Builders<OutboxMessage>.Filter.Eq(x => x.Topic, topic);
@@ -762,7 +761,7 @@ public class MongoDbOutbox : BaseMongoDb<OutboxMessage>, IAmAnOutboxAsync<Messag
                 {
                     Limit = pageSize,
                     Skip = pageSize * Math.Max(pageNumber - 1, 0),
-                    Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.Timestamp)
+                    Sort = Builders<OutboxMessage>.Sort.Ascending(x => x.TimeStamp)
                 });
 
             var messages = new List<Message>(pageSize);

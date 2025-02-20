@@ -51,7 +51,7 @@ public abstract class BaseMongoDb<TCollection>
     /// The <see cref="IMongoCollection{TDocument}"/>
     /// </summary>
     protected IMongoCollection<TCollection> Collection => _collection ??= CreateCollection();
-    
+
     /// <summary>
     /// Get or create a collection.
     /// </summary>
@@ -62,6 +62,11 @@ public abstract class BaseMongoDb<TCollection>
         _semaphore.Wait();
         try
         {
+            if (_collection != null)
+            {
+                return _collection;
+            }
+
             if (Configuration.MakeCollection == OnResolvingACollection.Assume)
             {
                 _collection =
@@ -69,7 +74,6 @@ public abstract class BaseMongoDb<TCollection>
                         Configuration.CollectionSettings);
                 return _collection;
             }
-
 
             var filter = new BsonDocument("name", Configuration.CollectionName);
             var options = new ListCollectionNamesOptions { Filter = filter };
@@ -98,8 +102,13 @@ public abstract class BaseMongoDb<TCollection>
 
             if (Configuration.TimeToLive != null)
             {
-                var definition = Builders<TCollection>.IndexKeys.Ascending(x => x.ExpireAfterSeconds);
-                _collection.Indexes.CreateOne(new CreateIndexModel<TCollection>(definition));
+                _collection.Indexes.CreateOne(
+                    new CreateIndexModel<TCollection>(Builders<TCollection>.IndexKeys.Ascending(x => x.TimeStamp),
+                        new CreateIndexOptions
+                        {
+                            Name = $"brighter_ttl_{Configuration.CollectionName}",
+                            ExpireAfter = Configuration.TimeToLive
+                        }));
             }
 
             return _collection;

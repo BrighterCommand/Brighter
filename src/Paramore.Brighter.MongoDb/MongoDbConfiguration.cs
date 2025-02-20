@@ -76,13 +76,5 @@ public class MongoDbConfiguration
     /// Optional time to live for the messages in the outbox
     /// By default, messages will not expire
     /// </summary>
-    public TimeSpan? TimeToLive
-    {
-        get => CreateCollectionOptions?.ExpireAfter;
-        set
-        {
-            CreateCollectionOptions ??= new CreateCollectionOptions();
-            CreateCollectionOptions.ExpireAfter = value;
-        }
-    }
+    public TimeSpan? TimeToLive { get; set; }
 }

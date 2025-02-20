@@ -23,7 +23,12 @@ public class MongoDbLockingProvider : BaseMongoDb<LockMessage>, IDistributedLock
     {
         try
         {
-            await Collection.InsertOneAsync(new LockMessage { Id = resource, ExpireAfterSeconds = ExpireAfterSeconds },
+            await Collection.InsertOneAsync(new LockMessage
+                {
+                    Id = resource,
+                    TimeStamp = Configuration.TimeProvider.GetUtcNow(),
+                    ExpireAfterSeconds = ExpireAfterSeconds
+                },
                 cancellationToken: cancellationToken);
             return resource;
         }

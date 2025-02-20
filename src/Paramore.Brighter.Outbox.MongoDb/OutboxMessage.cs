@@ -23,7 +23,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// <param name="expireAfterSeconds">When it should be expired.</param>
     public OutboxMessage(Message message, long? expireAfterSeconds = null)
     {
-        Timestamp = message.Header.TimeStamp == DateTimeOffset.MinValue
+        TimeStamp = message.Header.TimeStamp == DateTimeOffset.MinValue
             ? DateTimeOffset.UtcNow
             : message.Header.TimeStamp;
         Body = message.Body.Bytes;
@@ -58,7 +58,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
     /// <summary>
     /// The <see cref="DateTimeOffset"/> of the message was created
     /// </summary>
-    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset TimeStamp { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
     /// The correlation id.
@@ -126,7 +126,7 @@ public class OutboxMessage : IMongoDbCollectionTTL
             messageId: MessageId,
             topic: new RoutingKey(Topic),
             messageType: messageType,
-            timeStamp: Timestamp,
+            timeStamp: TimeStamp,
             correlationId: CorrelationId,
             replyTo: ReplyTo == null ? RoutingKey.Empty : new RoutingKey(ReplyTo));
 

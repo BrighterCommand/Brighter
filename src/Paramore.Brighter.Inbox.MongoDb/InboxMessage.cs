@@ -14,23 +14,20 @@ public class InboxMessage : IMongoDbCollectionTTL
     /// </summary>
     public InboxMessage()
     {
-        var timeStamp = DateTimeOffset.UtcNow;
-        CreatedTime = timeStamp.Ticks;
-        CreatedAt = timeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
     }
 
     /// <summary>
     /// Initialize new instance of <see cref="InboxMessage"/>
     /// </summary>
     /// <param name="command">The command.</param>
+    /// <param name="id">The command id.</param>
     /// <param name="contextKey">The context key.</param>
     /// <param name="timeStamp">The time stamp of when the message was created.</param>
     /// <param name="expireAfterSeconds">The expires after X seconds.</param>
     public InboxMessage(object command, string id, string contextKey, DateTimeOffset timeStamp, long? expireAfterSeconds)
     {
         Id = new InboxMessageId { Id = id, ContextKey = contextKey };
-        CreatedTime = timeStamp.Ticks;
-        CreatedAt = timeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        TimeStamp = timeStamp;
         CommandType = command.GetType().FullName!;
         CommandBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
         ExpireAfterSeconds = expireAfterSeconds;
@@ -41,16 +38,11 @@ public class InboxMessage : IMongoDbCollectionTTL
     /// </summary>
     [BsonId]
     public InboxMessageId Id { get; set; } = new();
-
+    
     /// <summary>
-    /// The time at which the message was created, in ticks
+    /// The <see cref="DateTimeOffset"/> when the message was crated
     /// </summary>
-    public long CreatedTime { get; set; }
-
-    /// <summary>
-    /// The time at which the message was created, formatted as a string yyyy-MM-ddTHH:mm:ss.fffZ
-    /// </summary>
-    public string CreatedAt { get; set; }
+    public DateTimeOffset TimeStamp { get; set; }
 
     /// <summary>
     /// The command type(the full name)
