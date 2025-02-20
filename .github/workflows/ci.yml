@@ -445,10 +445,10 @@ jobs:
           MONGO_INITDB_ROOT_PASSWORD: example
           MONGO_INITDB_DATABASE: brighter
         options: >-
-          --health-cmd "echo 'db.runCommand("ping").ok' | mongo mongodb://root:example@localhost:27017/brighter --quiet"
+          --health-cmd mongo
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 5 
     steps:
       - uses: actions/checkout@v4
       - name: Setup dotnet
@@ -459,6 +459,6 @@ jobs:
             9.0.x
       - name: Install dependencies
         run: dotnet restore
-      - name: Postgres Tests
+      - name: MongoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
