@@ -11,26 +11,31 @@ public class MongoDbConfiguration
     /// <summary>
     /// Initialize new instance of <see cref="MongoDbConfiguration"/>
     /// </summary>
+    /// <param name="client">The Mongo client.</param>
+    /// <param name="databaseName">The database name.</param>
+    /// <param name="collectionName">The collection name.</param>
+    public MongoDbConfiguration(MongoClient client, string databaseName, string collectionName)
+    {
+        Client = client;
+        DatabaseName = databaseName;
+        CollectionName = collectionName;
+    }
+
+    /// <summary>
+    /// Initialize new instance of <see cref="MongoDbConfiguration"/>
+    /// </summary>
     /// <param name="connectionString">The Mongo db connection string.</param>
     /// <param name="databaseName">The database name.</param>
     /// <param name="collectionName">The collection name.</param>
     public MongoDbConfiguration(string connectionString, string databaseName, string collectionName)
+        : this(new MongoClient(connectionString), databaseName, collectionName)
     {
-        ConnectionString = connectionString;
-        DatabaseName = databaseName;
-        CollectionName = collectionName;
-        Client = new MongoClient(connectionString);
     }
 
     /// <summary>
     /// The <see cref="MongoClient"/>
     /// </summary>
     public MongoClient Client { get; set; }
-
-    /// <summary>
-    /// The mongo db connection string
-    /// </summary>
-    public string ConnectionString { get; }
 
     /// <summary>
     /// The mongodb database name
