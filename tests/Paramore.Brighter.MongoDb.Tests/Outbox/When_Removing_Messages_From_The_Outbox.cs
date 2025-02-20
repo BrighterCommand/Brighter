@@ -29,7 +29,7 @@ using FluentAssertions;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests.Outbox;
+namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
 [Trait("Category", "MongoDb")]
 public class MongoDbOutboxDeletingMessagesTests : IDisposable

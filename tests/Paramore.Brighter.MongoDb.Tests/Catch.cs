@@ -27,7 +27,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.MongoDbTests
+namespace Paramore.Brighter.MongoDb.Tests
 {
     [DebuggerStepThrough]
     public static class Catch

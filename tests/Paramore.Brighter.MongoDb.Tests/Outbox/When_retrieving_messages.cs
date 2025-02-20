@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests.Outbox;
+namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
 [Trait("Category", "MongoDb")]
-public class MongoDbFetchMessageAsyncTests : IDisposable
+public class MongoDbFetchMessageTests : IDisposable
 {
     private readonly string _collection;
     private readonly Message _messageEarliest;
@@ -16,7 +15,7 @@ public class MongoDbFetchMessageAsyncTests : IDisposable
     private readonly Message _messageUnDispatched;
     private readonly MongoDbOutbox _outbox;
 
-    public MongoDbFetchMessageAsyncTests()
+    public MongoDbFetchMessageTests()
     {
         _collection = $"outbox-{Guid.NewGuid():N}";
         _outbox = new MongoDbOutbox(Configuration.Create(_collection));
@@ -34,28 +33,28 @@ public class MongoDbFetchMessageAsyncTests : IDisposable
     }
 
     [Fact]
-    public async Task When_Retrieving_Messages_Async()
+    public void When_Retrieving_Messages()
     {
         var context = new RequestContext();
-        await _outbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        await _outbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await _outbox.MarkDispatchedAsync(_messageDispatched.Id, context);
+        _outbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        _outbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        _outbox.MarkDispatched(_messageDispatched.Id, context);
 
-        var messages = await _outbox.GetAsync();
+        var messages = _outbox.Get();
 
         //Assert
         messages.Should().HaveCount(3);
     }
 
     [Fact]
-    public async Task When_Retrieving_Messages_By_Id_Async()
+    public void When_Retrieving_Messages_By_Id()
     {
         var context = new RequestContext();
-        await _outbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        await _outbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await _outbox.MarkDispatchedAsync(_messageDispatched.Id, context);
+        _outbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        _outbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        _outbox.MarkDispatched(_messageDispatched.Id, context);
 
-        var messages = await _outbox.GetAsync(
+        var messages = _outbox.Get(
             [_messageEarliest.Id, _messageUnDispatched.Id],
             context);
 
@@ -68,14 +67,14 @@ public class MongoDbFetchMessageAsyncTests : IDisposable
     }
 
     [Fact]
-    public async Task When_Retrieving_Message_By_Id_Async()
+    public void When_Retrieving_Message_By_Id()
     {
         var context = new RequestContext();
-        await _outbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        await _outbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await _outbox.MarkDispatchedAsync(_messageDispatched.Id, context);
+        _outbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        _outbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
+        _outbox.MarkDispatched(_messageDispatched.Id, context);
 
-        var messages = await _outbox.GetAsync(_messageDispatched.Id, context);
+        var messages = _outbox.Get(_messageDispatched.Id, context);
 
         //Assert
         messages.Id.Should().Be(_messageDispatched.Id);

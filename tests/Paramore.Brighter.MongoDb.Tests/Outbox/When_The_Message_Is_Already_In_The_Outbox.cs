@@ -25,19 +25,20 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests.Outbox;
+namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
 [Trait("Category", "MongoDb")]
-public class MongoDbOutboxEmptyStoreTests : IDisposable
+public class MongoDbOutboxMessageAlreadyExistsTests : IDisposable
 {
     private readonly string _collection;
     private readonly Message _messageEarliest;
     private readonly MongoDbOutbox _outbox;
 
-    public MongoDbOutboxEmptyStoreTests()
+    public MongoDbOutboxMessageAlreadyExistsTests()
     {
         _collection = $"outbox-{Guid.NewGuid():N}";
         _outbox = new (Configuration.Create(_collection));
@@ -45,15 +46,16 @@ public class MongoDbOutboxEmptyStoreTests : IDisposable
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
             new MessageBody("message body")
         );
+        _outbox.Add(_messageEarliest, new RequestContext());
     }
 
     [Fact]
-    public void When_There_Is_No_Message_In_The_Sql_Outbox()
+    public void When_The_Message_Is_Already_In_The_Outbox()
     {
-        var storedMessage = _outbox.Get(_messageEarliest.Id, new RequestContext());
+        var exception = Catch.Exception(() => _outbox.Add(_messageEarliest, new RequestContext()));
 
-        //should return a empty message
-        storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+        //should ignore the duplicate key and still succeed
+        exception.Should().BeNull();
     }
 
     public void Dispose()

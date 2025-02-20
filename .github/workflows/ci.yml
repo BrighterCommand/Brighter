@@ -429,3 +429,36 @@ jobs:
         run: dotnet restore
       - name: Azure Tests
         run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
+  mongodb-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    
+    services:
+      mongo:
+        image: mongo
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: example
+          MONGO_INITDB_DATABASE: brighter
+        options: >-
+          --health-cmd "echo 'db.runCommand("ping").ok' | mongo mongodb://root:example@localhost:27017/brighter --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Postgres Tests
+        run: dotnet test ./tests/Paramore.Brighter.MongoDb.Tests/Paramore.Brighter.MongoDb.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+        

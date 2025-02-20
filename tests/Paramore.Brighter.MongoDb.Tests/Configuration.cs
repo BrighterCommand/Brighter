@@ -1,6 +1,6 @@
 using Paramore.Brighter.MongoDb;
 
-namespace Paramore.Brighter.MongoDbTests;
+namespace Paramore.Brighter.MongoDb.Tests;
 
 public class Configuration
 {

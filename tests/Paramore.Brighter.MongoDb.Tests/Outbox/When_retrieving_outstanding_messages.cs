@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests.Outbox;
+namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
 [Trait("Category", "MongoDb")]
-public class MongoDbArchiveFetchAsyncTests : IDisposable
+public class MongoDbFetchOutStandingMessageTests : IDisposable
 {
     private readonly string _collection;
     private readonly Message _messageEarliest;
@@ -16,14 +14,17 @@ public class MongoDbArchiveFetchAsyncTests : IDisposable
     private readonly Message _messageUnDispatched;
     private readonly MongoDbOutbox _outbox;
 
-    public MongoDbArchiveFetchAsyncTests()
+    public MongoDbFetchOutStandingMessageTests()
     {
         _collection = $"outbox-{Guid.NewGuid():N}";
         _outbox = new MongoDbOutbox(Configuration.Create(_collection));
         var routingKey = new RoutingKey("test_topic");
 
         _messageEarliest = new Message(
-            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
+            new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT)
+            {
+                TimeStamp = DateTimeOffset.UtcNow.AddHours(-3)
+            },
             new MessageBody("message body"));
         _messageDispatched = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_DOCUMENT),
@@ -34,25 +35,21 @@ public class MongoDbArchiveFetchAsyncTests : IDisposable
     }
 
     [Fact]
-    public async Task When_Retrieving_Messages_To_Archive_UsingTimeSpan_Async()
+    public void When_Retrieving_Not_Dispatched_Messages()
     {
         var context = new RequestContext();
-        await _outbox.AddAsync([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
-        await _outbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
-        await _outbox.MarkDispatchedAsync(_messageDispatched.Id, context);
+        _outbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
+        _outbox.MarkDispatched(_messageDispatched.Id, context);
+        
+        var total = _outbox.GetNumberOfOutstandingMessages();
 
-        var allDispatched =
-            await _outbox.DispatchedMessagesAsync(TimeSpan.Zero, context,
-                cancellationToken: CancellationToken.None);
-        var messagesOverAnHour =
-            await _outbox.DispatchedMessagesAsync(TimeSpan.FromHours(2), context,
-                cancellationToken: CancellationToken.None);
-        var messagesOver4Hours =
-            await _outbox.DispatchedMessagesAsync(TimeSpan.FromHours(4), context,
-                cancellationToken: CancellationToken.None);
+        var allUnDispatched = _outbox.OutstandingMessages(TimeSpan.Zero, context);
+        var messagesOverAnHour = _outbox.OutstandingMessages(TimeSpan.FromHours(1), context);
+        var messagesOver4Hours = _outbox.OutstandingMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        allDispatched.Should().HaveCount(2);
+        total.Should().Be(2);
+        allUnDispatched.Should().HaveCount(2);
         messagesOverAnHour.Should().ContainSingle();
         messagesOver4Hours.Should().BeEmpty();
     }

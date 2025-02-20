@@ -28,10 +28,10 @@ using System;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MongoDb;
-using Paramore.Brighter.MongoDbTests.TestDoubles;
+using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests.Inbox;
+namespace Paramore.Brighter.MongoDb.Tests.Inbox;
 
 [Trait("Category", "MongoDb")]
 public class MongoDbInboxAddMessageTests : IDisposable

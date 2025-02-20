@@ -1,7 +1,7 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2020 Ian Cooper <ian.cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,46 +23,37 @@ THE SOFTWARE. */
 
 #endregion
 
-
 using System;
-using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Inbox.MongoDb;
-using Paramore.Brighter.MongoDbTests.TestDoubles;
+using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests.Inbox;
+namespace Paramore.Brighter.MongoDb.Tests.Outbox;
 
 [Trait("Category", "MongoDb")]
-public class MongoDbInboxAddMessageAsyncTests : IDisposable
+public class MongoDbOutboxEmptyStoreTests : IDisposable
 {
     private readonly string _collection;
-    private readonly MongoDbInbox _inbox;
-    private readonly MyCommand _raisedCommand;
-    private readonly string _contextKey;
+    private readonly Message _messageEarliest;
+    private readonly MongoDbOutbox _outbox;
 
-    public MongoDbInboxAddMessageAsyncTests()
+    public MongoDbOutboxEmptyStoreTests()
     {
-        _collection = $"inbox-{Guid.NewGuid():N}";
-        _inbox = new MongoDbInbox(Configuration.Create(_collection));
-
-        _raisedCommand = new MyCommand { Value = "Test" };
-        _contextKey = "context-key";
+        _collection = $"outbox-{Guid.NewGuid():N}";
+        _outbox = new (Configuration.Create(_collection));
+        _messageEarliest = new Message(
+            new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_DOCUMENT), 
+            new MessageBody("message body")
+        );
     }
 
     [Fact]
-    public async Task When_Writing_A_Message_To_The_Inbox_Async()
+    public void When_There_Is_No_Message_In_The_Sql_Outbox()
     {
-        await _inbox.AddAsync(_raisedCommand, _contextKey);
+        var storedMessage = _outbox.Get(_messageEarliest.Id, new RequestContext());
 
-        var storedCommand = await _inbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
-
-        //_should_read_the_command_from_the__sql_inbox
-        storedCommand.Should().NotBeNull();
-        //_should_read_the_command_value
-        storedCommand.Value.Should().Be(_raisedCommand.Value);
-        //_should_read_the_command_id
-        storedCommand.Id.Should().Be(_raisedCommand.Id);
+        //should return a empty message
+        storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
     }
 
     public void Dispose()

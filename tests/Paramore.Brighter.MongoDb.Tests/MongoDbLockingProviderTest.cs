@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Locking.MongoDb;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests;
+namespace Paramore.Brighter.MongoDb.Tests;
 
 [Trait("Category", "MongoDb")]
 public class MongoDbLockingProviderTest

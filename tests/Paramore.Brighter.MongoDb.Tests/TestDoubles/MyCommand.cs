@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.MongoDbTests.TestDoubles;
+namespace Paramore.Brighter.MongoDb.Tests.TestDoubles;
 
 internal class MyCommand : Command
 {

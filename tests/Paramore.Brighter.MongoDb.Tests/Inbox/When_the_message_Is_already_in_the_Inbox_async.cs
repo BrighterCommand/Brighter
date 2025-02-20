@@ -25,44 +25,54 @@ THE SOFTWARE. */
 
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MongoDb;
-using Paramore.Brighter.MongoDbTests.TestDoubles;
+using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests.Inbox;
+namespace Paramore.Brighter.MongoDb.Tests.Inbox;
 
 [Trait("Category", "MongoDb")]
-public class MongoDbInboxEmptyWhenSearchedTests : IDisposable
+public class MongoDbInboxDuplicateMessageAsyncTests : IDisposable
 {
     private readonly string _collection;
     private readonly MongoDbInbox _inbox;
+    private readonly MyCommand _raisedCommand;
     private readonly string _contextKey;
 
-    public MongoDbInboxEmptyWhenSearchedTests()
+    public MongoDbInboxDuplicateMessageAsyncTests()
     {
         _collection = $"inbox-{Guid.NewGuid():N}";
         _inbox = new MongoDbInbox(Configuration.Create(_collection));
-        _contextKey = "context-key";
+        _raisedCommand = new MyCommand { Value = "Test" };
+        _contextKey = "test-context";
     }
 
     [Fact]
-    public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Get()
+    public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
     {
-        string commandId = Guid.NewGuid().ToString();
-        var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(commandId, _contextKey));
+        await _inbox.AddAsync(_raisedCommand, _contextKey);
 
-        exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+        var exception = await Catch.ExceptionAsync(() => _inbox.AddAsync(_raisedCommand, _contextKey));
+
+        //_should_succeed_even_if_the_message_is_a_duplicate
+        exception.Should().BeNull();
+        var exists = await _inbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+        exists.Should().BeTrue();
     }
 
     [Fact]
-    public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Exists()
+    public async Task When_The_Message_Is_Already_In_The_Inbox_Different_Context()
     {
-        string commandId = Guid.NewGuid().ToString();
-        _inbox.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
+        await _inbox.AddAsync(_raisedCommand, "some other key");
+
+        var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
+
+        //_should_read_the_command_from_the__dynamo_db_inbox
+        storedCommand.Should().NotBeNull();
     }
-    
+
     public void Dispose()
     {
         Configuration.Cleanup(_collection);

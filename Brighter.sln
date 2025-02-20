@@ -329,7 +329,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MongoDb",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.MongoDb", "src\Paramore.Brighter.Locking.MongoDb\Paramore.Brighter.Locking.MongoDb.csproj", "{EE92EF65-BBA8-4601-A4F6-84A695548BD3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MongoDbTests", "tests\Paramore.Brighter.MongoDbTests\Paramore.Brighter.MongoDbTests.csproj", "{E988767C-A8F0-4EF1-B3CA-1822500F18DF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MongoDb.Tests", "tests\Paramore.Brighter.MongoDb.Tests\Paramore.Brighter.MongoDb.Tests.csproj", "{E988767C-A8F0-4EF1-B3CA-1822500F18DF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

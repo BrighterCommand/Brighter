@@ -27,39 +27,42 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MongoDb;
-using Paramore.Brighter.MongoDbTests.TestDoubles;
+using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.MongoDbTests.Inbox;
+namespace Paramore.Brighter.MongoDb.Tests.Inbox;
 
 [Trait("Category", "MongoDb")]
-public class MongoDbInboxEmptyWhenSearchedAsyncTests : IDisposable
+public class MongoDbInboxAddMessageAsyncTests : IDisposable
 {
     private readonly string _collection;
     private readonly MongoDbInbox _inbox;
+    private readonly MyCommand _raisedCommand;
+    private readonly string _contextKey;
 
-    public MongoDbInboxEmptyWhenSearchedAsyncTests()
+    public MongoDbInboxAddMessageAsyncTests()
     {
         _collection = $"inbox-{Guid.NewGuid():N}";
         _inbox = new MongoDbInbox(Configuration.Create(_collection));
+
+        _raisedCommand = new MyCommand { Value = "Test" };
+        _contextKey = "context-key";
     }
 
     [Fact]
-    public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Get_Async()
+    public async Task When_Writing_A_Message_To_The_Inbox_Async()
     {
-        string commandId = Guid.NewGuid().ToString();
-        var exception = await Catch.ExceptionAsync(() => _inbox.GetAsync<MyCommand>(commandId, "some-key"));
-        exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
-    }
+        await _inbox.AddAsync(_raisedCommand, _contextKey);
 
-    [Fact]
-    public async Task When_There_Is_No_Message_In_The_Sql_Inbox_And_I_Check_Exists_Async()
-    {
-        string commandId = Guid.NewGuid().ToString();
-        bool exists = await _inbox.ExistsAsync<MyCommand>(commandId, "some-key");
-        exists.Should().BeFalse();
+        var storedCommand = await _inbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+
+        //_should_read_the_command_from_the__sql_inbox
+        storedCommand.Should().NotBeNull();
+        //_should_read_the_command_value
+        storedCommand.Value.Should().Be(_raisedCommand.Value);
+        //_should_read_the_command_id
+        storedCommand.Id.Should().Be(_raisedCommand.Id);
     }
 
     public void Dispose()
