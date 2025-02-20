@@ -162,13 +162,14 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="bus">The external service bus that we want to send messages over</param>
+        /// <param name="bus">The external service bus that we want to send messages over.</param>
+        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
-        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
-        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
-        /// <param name="tracer">What is the tracer we will use for telemetry</param>
-        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure.</param>
+        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues.</param>
+        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on.</param>
+        /// <param name="tracer">What is the tracer we will use for telemetry.</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -199,6 +200,7 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mediator">The external service bus that we want to send messages over</param>
+        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
@@ -417,7 +419,7 @@ namespace Paramore.Brighter
             
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
-             try
+            try
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
                     @event.Id);

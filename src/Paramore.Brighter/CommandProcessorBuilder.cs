@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -87,6 +87,7 @@ namespace Paramore.Brighter
 
         private IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private IAmAnOutboxProducerMediator? _bus;
+        private IAmABoxTransactionProvider? _transactionProvider;
         private bool _useRequestReplyQueues;
         private IAmAChannelFactory? _responseChannelFactory;
         private IEnumerable<Subscription>? _replySubscriptions;
@@ -168,13 +169,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The service bus that we need to use to send messages externally</param>
+        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
         /// <param name="inboxConfiguration">What inbox do we use for request-reply</param>
         /// <returns></returns>
         public INeedInstrumentation ExternalBus(
             ExternalBusType busType, 
-            IAmAnOutboxProducerMediator bus, 
+            IAmAnOutboxProducerMediator bus,
+            IAmABoxTransactionProvider? transactionProvider = null,
             IAmAChannelFactory? responseChannelFactory = null, 
             IEnumerable<Subscription>? subscriptions = null,
             InboxConfiguration? inboxConfiguration = null
@@ -188,9 +191,11 @@ namespace Paramore.Brighter
                     break;
                 case ExternalBusType.FireAndForget:
                     _bus = bus;
+                    _transactionProvider = transactionProvider;
                     break;
                 case ExternalBusType.RPC:
                     _bus = bus;
+                    _transactionProvider = transactionProvider;
                     _useRequestReplyQueues = true;
                     _replySubscriptions = subscriptions;
                     _responseChannelFactory = responseChannelFactory;
@@ -287,6 +292,7 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory, 
                     policyRegistry: _policyRegistry,
                     bus: _bus,
+                    transactionProvider: _transactionProvider,
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     tracer: _tracer,
@@ -300,6 +306,7 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory, 
                     policyRegistry: _policyRegistry,
                     bus: _bus,
+                    transactionProvider: _transactionProvider,
                     featureSwitchRegistry: _featureSwitchRegistry, 
                     inboxConfiguration: _inboxConfiguration,
                     replySubscriptions: _replySubscriptions,
@@ -366,14 +373,16 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
+        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
         /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
         /// <param name="inboxConfiguration">What is the inbox configuration</param>
         /// <returns></returns>
         INeedInstrumentation ExternalBus(
-            ExternalBusType busType, 
-            IAmAnOutboxProducerMediator bus, 
-            IAmAChannelFactory? responseChannelFactory = null, 
+            ExternalBusType busType,
+            IAmAnOutboxProducerMediator bus,
+            IAmABoxTransactionProvider? transactionProvider = null,
+            IAmAChannelFactory? responseChannelFactory = null,
             IEnumerable<Subscription>? subscriptions = null,
             InboxConfiguration? inboxConfiguration = null
             );
