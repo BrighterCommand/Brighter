@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -104,11 +105,10 @@ namespace Paramore.Brighter
         private static IAmAnOutboxProducerMediator? s_mediator;
         private static readonly object s_padlock = new();
         private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new();
-        private static readonly ConcurrentDictionary<string, MethodInfo> s_mediatorMethods = new();
-        private static MethodInfo? s_bulkDepositPostMethod;
-        private static MethodInfo? s_bulkDepositPostAsyncMethod;
-        private static readonly object s_bulkDepositPostPadlock = new();
-        private static readonly object s_bulkDepositPostAsyncPadlock = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCallsAsync = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCalls = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCallsAsync = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundMediatorMethods = new();
         private static IAmABoxTransactionProvider? s_defaultTransactionProvider;
         private static Type s_transactionType = typeof(CommittableTransaction);
 
@@ -690,26 +690,30 @@ namespace Paramore.Brighter
             Type transactionType
         ) where TRequest : class, IRequest
         {
-            if (s_bulkDepositPostMethod == null)
+            var requestType = typeof(TRequest).Name;
+            MethodInfo bulkDeposit;
+            if (s_boundBulkDepositCalls.ContainsKey(requestType))
             {
-                lock (s_bulkDepositPostPadlock)
-                {
-                    if (s_bulkDepositPostMethod == null)
-                    {
-                        var method = typeof(CommandProcessor)
-                            .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                            .Where(m =>
-                                m.Name == nameof(DepositPost)
-                                && m.GetCustomAttributes().Any(a => a.GetType() == typeof(BulkDepositCallSiteAttribute))
-                            )
-                            .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 4);
+                bulkDeposit = s_boundBulkDepositCalls[requestType];
+            }
+            else
+            {
+                var bulkDepositMethod = typeof(CommandProcessor)
+                    .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m =>
+                        m.Name == nameof(DepositPost)
+                        && m.GetCustomAttributes().Any(a => a.GetType() == typeof(BulkDepositCallSiteAttribute))
+                    )
+                    .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 4);
 
-                        s_bulkDepositPostMethod = method?.MakeGenericMethod(typeof(TRequest), transactionType);
-                    }
-                }
+                bulkDeposit = bulkDepositMethod?.MakeGenericMethod(typeof(TRequest), transactionType)!;
+
+                s_boundBulkDepositCalls[requestType] = bulkDeposit;
             }
 
-            return (s_bulkDepositPostMethod?.Invoke(this, [requests, transactionProvider, requestContext, args]) as string[])!;
+            return CallMethodAndPreserveException(() =>
+                (bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args]) as string[])!
+            );
         }
 
         // Calls the deposit post method for a single request of a specific type. The transaction type isn't known
@@ -749,7 +753,9 @@ namespace Paramore.Brighter
                 s_boundDepositCalls[actualRequestType.Name] = deposit;
             }
 
-            return (deposit?.Invoke(this, [actualRequest, amABoxTransactionProvider, requestContext, dictionary, batchId]) as string)!;
+            return CallMethodAndPreserveException(() =>
+                (deposit?.Invoke(this, [actualRequest, amABoxTransactionProvider, requestContext, dictionary, batchId]) as string)!
+            );
         }
 
         /// <summary>
@@ -931,27 +937,29 @@ namespace Paramore.Brighter
             Type transactionType
         ) where TRequest : class, IRequest
         {
-            if (s_bulkDepositPostAsyncMethod == null)
+            var requestType = typeof(TRequest).Name;
+            MethodInfo bulkDeposit;
+            if (s_boundBulkDepositCallsAsync.ContainsKey(requestType))
             {
-                lock (s_bulkDepositPostAsyncPadlock)
-                {
-                    if (s_bulkDepositPostAsyncMethod == null)
-                    {
-                        var method = typeof(CommandProcessor)
-                            .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                            .Where(m =>
-                                m.Name == nameof(DepositPostAsync)
-                                && m.GetCustomAttributes().Any(a => a.GetType() == typeof(BulkDepositCallSiteAsyncAttribute))
-                            )
-                            .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 6);
-
-                        s_bulkDepositPostAsyncMethod = method?.MakeGenericMethod(typeof(TRequest), transactionType);
-                    }
-                }
+                bulkDeposit = s_boundBulkDepositCallsAsync[requestType];
             }
+            else
+            {
+                var bulkDepositMethod = typeof(CommandProcessor)
+                    .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m =>
+                        m.Name == nameof(DepositPostAsync)
+                        && m.GetCustomAttributes().Any(a => a.GetType() == typeof(BulkDepositCallSiteAsyncAttribute))
+                    )
+                    .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 6);
 
-            return (Task<string[]>)s_bulkDepositPostAsyncMethod?
-                .Invoke(this, [requests, transactionProvider, requestContext, args, continueOnCapturedContext, cancellationToken])!;
+                bulkDeposit = bulkDepositMethod?.MakeGenericMethod(typeof(TRequest), transactionType)!;
+
+                s_boundBulkDepositCallsAsync[requestType] = bulkDeposit;
+            }
+            return CallMethodAndPreserveException(() =>
+                (Task<string[]>)bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args, continueOnCapturedContext, cancellationToken])!
+            );
         }
 
         // Call the deposit post method for a single request
@@ -973,9 +981,9 @@ namespace Paramore.Brighter
             MethodInfo deposit;
             var actualRequestType = actualRequest.GetType();
 
-            if (s_boundDepositCalls.ContainsKey(actualRequestType.Name))
+            if (s_boundDepositCallsAsync.ContainsKey(actualRequestType.Name))
             {
-                deposit = s_boundDepositCalls[actualRequestType.Name];
+                deposit = s_boundDepositCallsAsync[actualRequestType.Name];
             }
             else
             {
@@ -988,12 +996,12 @@ namespace Paramore.Brighter
                     .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 7);
 
                 deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), transactionType)!;
-                s_boundDepositCalls[actualRequestType.Name] = deposit;
+                s_boundDepositCallsAsync[actualRequestType.Name] = deposit;
             }
 
-            return (Task<string>)deposit?
-                .Invoke(this, [actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId]
-            )!;
+            return CallMethodAndPreserveException(
+                () => (Task<string>)deposit?.Invoke(this, [actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId])!
+            );
         }
 
         private void CallAddToOutbox<TTransaction>(
@@ -1003,7 +1011,8 @@ namespace Paramore.Brighter
             string? batchId)
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.AddToOutbox));
-            method.Invoke(s_mediator, [message, context, transactionProvider, batchId]);
+            CallMethodAndPreserveException(
+                () => method.Invoke(s_mediator, [message, context, transactionProvider, batchId]));
         }
 
         private Task CallAddToOutboxAsync<TTransaction>(
@@ -1015,19 +1024,22 @@ namespace Paramore.Brighter
             string? batchId)
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.AddToOutboxAsync));
-            return (Task)method.Invoke(s_mediator, [message, context, transactionProvider, continueOnCapturedContext, cancellationToken, batchId])!;
+            return CallMethodAndPreserveException(
+                () => (Task)method.Invoke(s_mediator, [message, context, transactionProvider, continueOnCapturedContext, cancellationToken, batchId])!);
         }
 
         private string CallStartBatchAddToOutbox()
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.StartBatchAddToOutbox));
-            return (method.Invoke(s_mediator, null) as string)!;
+            return CallMethodAndPreserveException(
+                () => (method.Invoke(s_mediator, null) as string)!);
         }
 
         private void CallEndBatchAddToOutbox(string batchId, IAmABoxTransactionProvider? transactionProvider, RequestContext context)
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.EndBatchAddToOutbox));
-            method.Invoke(s_mediator, [batchId, transactionProvider, context]);
+            CallMethodAndPreserveException(
+                () => method.Invoke(s_mediator, [batchId, transactionProvider, context]));
         }
 
         private Task CallEndBatchAddToOutboxAsync(
@@ -1037,15 +1049,16 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken)
         {
             var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.EndBatchAddToOutboxAsync));
-            return (Task)method.Invoke(s_mediator, [batchId, transactionProvider, context, cancellationToken])!;
+            return CallMethodAndPreserveException(
+                () => (Task)method.Invoke(s_mediator, [batchId, transactionProvider, context, cancellationToken])!);
         }
 
         private MethodInfo GetMediatorMethod(string methodName)
         {
             MethodInfo method;
-            if (s_mediatorMethods.ContainsKey(methodName))
+            if (s_boundMediatorMethods.ContainsKey(methodName))
             {
-                method = s_mediatorMethods[methodName];
+                method = s_boundMediatorMethods[methodName];
             }
             else
             {
@@ -1054,10 +1067,28 @@ namespace Paramore.Brighter
                     .GetMethods()
                     .Single(x => x.Name == methodName);
 
-                s_mediatorMethods[methodName] = method!;
+                s_boundMediatorMethods[methodName] = method!;
             }
 
             return method;
+        }
+
+        private TResult CallMethodAndPreserveException<TResult>(Func<TResult> method)
+        {
+            try
+            {
+                return method();
+            }
+            catch (TargetInvocationException e)
+            {
+                if (e.InnerException != null)
+                {
+                    var exceptionInfo = ExceptionDispatchInfo.Capture(e.InnerException);
+                    exceptionInfo.Throw();
+                }
+
+                throw;
+            }
         }
 
         /// <summary>
