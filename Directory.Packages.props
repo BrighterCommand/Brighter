@@ -79,6 +79,7 @@
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.0.0" />
+    <PackageVersion Include="RocketMQ.Client" Version="5.1.0" />
     <PackageVersion Include="Serilog" Version="4.2.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.0" />
@@ -121,12 +122,10 @@
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.2.efcore.9.0.0" />
     <PackageVersion Include="Npgsql" Version="9.0.2" />
   </ItemGroup>
-  
   <ItemGroup>
     <GlobalPackageReference Include="MinVer" Version="6.0.0" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
   </ItemGroup>
-  
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
     <GlobalPackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3">
       <PrivateAssets>all</PrivateAssets>

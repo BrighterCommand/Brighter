@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(BrigtherCoreTargetFrameworks)</TargetFrameworks>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RocketMQ.Client" />
+  </ItemGroup>
+
+</Project>
