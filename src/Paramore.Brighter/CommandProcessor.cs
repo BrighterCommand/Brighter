@@ -493,7 +493,7 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            ClearOutbox([DepositPost(request, requestContext, args)], requestContext, args);
+            ClearOutbox([CallDepositPost(request, null, requestContext, args, null, s_transactionType)], requestContext, args);
         }
 
         /// <summary>
@@ -522,8 +522,9 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default
         ) where TRequest : class, IRequest
         {
-            var messageId = await DepositPostAsync(request, requestContext, args, continueOnCapturedContext, cancellationToken);
-            await ClearOutboxAsync(new[] { messageId }, requestContext, args, continueOnCapturedContext, cancellationToken);
+
+            var messageId = await CallDepositPostAsync(request, null, requestContext, args, continueOnCapturedContext, cancellationToken, null, s_transactionType);
+            await ClearOutboxAsync([messageId], requestContext, args, continueOnCapturedContext, cancellationToken);
         }
 
         /// <summary>
@@ -1256,6 +1257,11 @@ namespace Paramore.Brighter
                     {
                         s_mediator.Dispose();
                         s_mediator = null;
+                        s_boundDepositCalls.Clear();
+                        s_boundDepositCallsAsync.Clear();
+                        s_boundBulkDepositCalls.Clear();
+                        s_boundBulkDepositCallsAsync.Clear();
+                        s_boundMediatorMethods.Clear();
                     }
                 }
             }
@@ -1304,13 +1310,17 @@ namespace Paramore.Brighter
                     if (s_mediator == null)
                     {
                         s_mediator = bus;
+                        s_defaultTransactionProvider = defaultTransactionProvider;
 
                         if (defaultTransactionProvider != null)
                         {
-                            s_defaultTransactionProvider = defaultTransactionProvider;
                             s_transactionType = GetTransactionTypeFromTransactionProvider(defaultTransactionProvider) 
                                     ?? throw new ConfigurationException(
                                         $"Unable to initialise outbox producer mediator. {defaultTransactionProvider.GetType().Name} does not implement {typeof(IAmABoxTransactionProvider<>).Name}.");
+                        }
+                        else
+                        {
+                            s_transactionType = typeof(CommittableTransaction);
                         }
                     }
                 }

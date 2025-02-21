@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Transactions;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -38,16 +38,17 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorPostCommandTests : IDisposable
+    public class CommandProcessorPostCommandWithTransactionProviderTestsAsync : IDisposable
     {
         private const string Topic = "MyCommand";
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new();
         private readonly Message _message;
-        private readonly InMemoryOutbox _outbox;
+        private readonly SpyOutbox _spyOutbox;
+        private readonly SpyTransactionProvider _transactionProvider;
         private readonly InternalBus _internalBus = new();
 
-        public CommandProcessorPostCommandTests()
+        public CommandProcessorPostCommandWithTransactionProviderTestsAsync()
         {
             _myCommand.Value = "Hello World";
 
@@ -62,55 +63,63 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 );
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync((_) => new MyCommandMessageMapperAsync())
+            );
+            messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
 
             var retryPolicy = Policy
                 .Handle<Exception>()
-                .Retry();
+                .RetryAsync();
 
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-            
+                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
+
             var policyRegistry = new PolicyRegistry
             {
-                { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+                { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
             };
             var producerRegistry = new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer> {{routingKey, producer},});
 
             var tracer = new BrighterTracer(timeProvider);
-            _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
+            _spyOutbox = new SpyOutbox() {Tracer = tracer};
+            _transactionProvider = new SpyTransactionProvider();
             
-            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
+            IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, SpyTransaction>(
                 producerRegistry, 
                 policyRegistry, 
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
                 new EmptyMessageTransformerFactoryAsync(),
                 tracer,
-                _outbox
+                _spyOutbox
             );
 
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
-                bus
+                bus,
+                _transactionProvider
             );
         }
 
         [Fact]
-        public void When_Posting_A_Message_To_The_Command_Processor()
+        public async Task When_Posting_A_Message_To_The_Command_Processor_With_A_Transaction_Provider_Configured_Async()
         {
-            _commandProcessor.Post(_myCommand);
+            await _commandProcessor.PostAsync(_myCommand);
 
+            //message should not be in the current transaction
+            var transaction = _transactionProvider.GetTransaction();
+            transaction.Get(_myCommand.Id).Should().BeNull();
+
+            //message should have been posted
             _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
             
-            var message = _outbox.Get(_myCommand.Id, new RequestContext());
+            //message should be in the outbox
+            var message = _spyOutbox.Get(_myCommand.Id, new RequestContext());
             message.Should().NotBeNull();
-            
             message.Should().Be(_message);
         }
 
