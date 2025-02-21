@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
     public class RedisFixture : IAsyncDisposable, IDisposable
     {
-        private ChannelName _queueName = new ChannelName("test");
+        private readonly ChannelName _queueName = new ChannelName("test");
         private readonly RoutingKey _topic = new RoutingKey("test");
         public readonly RedisMessageProducer MessageProducer;
         public readonly RedisMessageConsumer MessageConsumer;

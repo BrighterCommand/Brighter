@@ -288,6 +288,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
             
+            //TODO: we removed delay support here because it blocked the pump
+            // Return to this once we have scheduled message support
+            
             if (_inflight.ContainsKey(message.Id))
             {
                 var msgId = _inflight[message.Id];
@@ -318,10 +321,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (client == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No Redis client available");
             
+            //TODO: we removed delay support here because it blocked the pump
+            // Return to this once we have scheduled message support
+            
             if (_inflight.ContainsKey(message.Id))
             {
                 var msgId = _inflight[message.Id];
-                await client.AddItemToListAsync(_queueName, msgId);
+                await client.AddItemToListAsync(_queueName, msgId, cancellationToken);
                 var redisMsg = CreateRedisMessage(message);
                 await StoreMessageAsync(client, redisMsg, long.Parse(msgId));
                 _inflight.Remove(message.Id);
@@ -340,7 +346,18 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (s_pool == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No connection pool available");
 
-            return s_pool.Value.GetClient();
+            try
+            {
+                return s_pool.Value.GetClient();
+            }
+            catch (TimeoutException te)
+            {
+                throw new ChannelFailureException("RedisMessagingGateway: Timeout on getting client from pool", te);
+            }
+            catch(RedisException re)
+            {
+                throw new ChannelFailureException("RedisMessagingGateway: Error on getting client from pool", re);
+            }
         }
 
         // Virtual to allow testing to simulate client failure
@@ -348,8 +365,19 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             if (s_pool == null)
                 throw new ChannelFailureException("RedisMessagingGateway: No connection pool available");
-            
-            return await s_pool.Value.GetClientAsync(cancellationToken);
+
+            try
+            {
+                return await s_pool.Value.GetClientAsync(cancellationToken);
+            }
+            catch (TimeoutException te)
+            {
+                throw new ChannelFailureException("RedisMessagingGateway: Timeout on getting client from pool", te);
+            }
+            catch(RedisException re)
+            {
+                throw new ChannelFailureException("RedisMessagingGateway: Error on getting client from pool", re);
+            }
         }
             
         private void EnsureConnection(IRedisClient client)

@@ -27,6 +27,11 @@
     <FileVersion>10.0.0.0</FileVersion>
     <InformationalVersion>10.0.0</InformationalVersion>
     <Version>10.0.0</Version>
+    
+    <!--  The .NET Version used in all projects -->
+    <BrighterTargetFrameworks>netstandard2.0;net8.0;net9.0</BrighterTargetFrameworks>
+    <BrighterFrameworkAndCoreTargetFrameworks>net462;net8.0;net9.0</BrighterFrameworkAndCoreTargetFrameworks>
+    <BrighterCoreTargetFrameworks>net8.0;net9.0</BrighterCoreTargetFrameworks>
   </PropertyGroup>
 
   <!-- Deterministic builds ensure that the same binary is produced regardless of the machine building it -->

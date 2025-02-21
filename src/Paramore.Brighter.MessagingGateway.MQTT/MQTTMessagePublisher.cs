@@ -4,8 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Client.Options;
+using MQTTnet.Protocol;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Tasks;
 
@@ -19,7 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageProducer>();
         private readonly MQTTMessagingGatewayConfiguration _config;
         private readonly IMqttClient _mqttClient;
-        private readonly IMqttClientOptions _mqttClientOptions;
+        private readonly MqttClientOptions _mqttClientOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MQTTMessagePublisher"/> class.
@@ -30,7 +29,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             _config = config;
 
-            _mqttClient = new MqttFactory().CreateMqttClient();
+            _mqttClient = new MqttClientFactory().CreateMqttClient();
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
                 .WithTcpServer(_config.Hostname)
@@ -91,10 +90,9 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             string payload = JsonSerializer.Serialize(message, JsonSerialisationOptions.Options);
             MqttApplicationMessageBuilder outMessage = new MqttApplicationMessageBuilder()
-                 .WithTopic(_config.TopicPrefix!=null?
-            $"{_config.TopicPrefix}/{message.Header.Topic}": message.Header.Topic)
-                 .WithPayload(payload)
-                 .WithAtLeastOnceQoS();
+                .WithTopic(_config.TopicPrefix != null ? $"{_config.TopicPrefix}/{message.Header.Topic}" : message.Header.Topic)
+                .WithPayload(payload)
+                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce);
             return outMessage.Build();
         }
     }
