@@ -1308,7 +1308,7 @@ namespace Paramore.Brighter
                         if (defaultTransactionProvider != null)
                         {
                             s_defaultTransactionProvider = defaultTransactionProvider;
-                            var s_transactionType = GetTransactionTypeFromTransactionProvider(defaultTransactionProvider) 
+                            s_transactionType = GetTransactionTypeFromTransactionProvider(defaultTransactionProvider) 
                                     ?? throw new ConfigurationException(
                                         $"Unable to initialise outbox producer mediator. {defaultTransactionProvider.GetType().Name} does not implement {typeof(IAmABoxTransactionProvider<>).Name}.");
                         }

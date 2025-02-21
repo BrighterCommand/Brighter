@@ -29,7 +29,7 @@ namespace Paramore.Brighter
         bool HasOpenTransaction { get; }
 
         /// <summary>
-        /// Is there a shared connection? (Do we maintain state of just create anew)
+        /// Is there a shared connection? (Do we maintain state or just create anew)
         /// </summary>
         bool IsSharedConnection { get; }
 
