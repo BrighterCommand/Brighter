@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>$(BrigtherCoreTargetFrameworks)</TargetFrameworks>
     <Nullable>enable</Nullable>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>

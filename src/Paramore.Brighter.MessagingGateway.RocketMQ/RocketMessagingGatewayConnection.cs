@@ -26,7 +26,6 @@ public class RocketMessagingGatewayConnection(ClientConfig config) : IAmGatewayC
     /// </remarks>
     public int MaxAttempts { get; set; } = 3;
 
-
     /// <summary>
     /// The  <see cref="ITransactionChecker" />
     /// </summary>
