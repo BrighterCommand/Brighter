@@ -24,6 +24,11 @@ public class AzureServiceBusScheduler(
     public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,
         CancellationToken cancellationToken = default)
     {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
         var seq = await sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
             {
@@ -41,12 +46,24 @@ public class AzureServiceBusScheduler(
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, TimeSpan delay,
         CancellationToken cancellationToken = default)
-        => await ScheduleAsync(message, timeProvider.GetUtcNow().ToOffset(delay), cancellationToken);
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
+        return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+    }
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
     {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
         var id = Guid.NewGuid().ToString();
         var seq = await sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
@@ -71,7 +88,14 @@ public class AzureServiceBusScheduler(
     public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default)
         where TRequest : class, IRequest
-        => await ScheduleAsync(request, type, timeProvider.GetUtcNow().ToOffset(delay), cancellationToken);
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
+        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+    }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)"/>
     public Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at,
@@ -114,7 +138,7 @@ public class AzureServiceBusScheduler(
         {
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId;
         }
-        
+
         azureServiceBusMessage.ContentType = message.Header.ContentType;
         azureServiceBusMessage.MessageId = message.Header.MessageId;
         if (message.Header.Bag.TryGetValue(ASBConstants.SessionIdKey, out object? value))
@@ -142,6 +166,11 @@ public class AzureServiceBusScheduler(
     /// <inheritdoc />
     public string Schedule(Message message, DateTimeOffset at)
     {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
         var seq = BrighterAsyncContext.Run(async () => await sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
             {
@@ -157,13 +186,25 @@ public class AzureServiceBusScheduler(
     }
 
     /// <inheritdoc />
-    public string Schedule(Message message, TimeSpan delay) =>
-        Schedule(message, timeProvider.GetUtcNow().ToOffset(delay));
+    public string Schedule(Message message, TimeSpan delay)
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
+        return Schedule(message, timeProvider.GetUtcNow().Add(delay));
+    }
 
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
         where TRequest : class, IRequest
     {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
         var id = Guid.NewGuid().ToString();
         var seq = BrighterAsyncContext.Run(async () => await sender.ScheduleMessageAsync(
             ConvertToServiceBusMessage(new Message
@@ -187,15 +228,22 @@ public class AzureServiceBusScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
         where TRequest : class, IRequest
-        => Schedule(request, type, timeProvider.GetUtcNow().ToOffset(delay));
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
+        return Schedule(request, type, timeProvider.GetUtcNow().Add(delay));
+    }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)
-        => BrighterAsyncContext.Run(async () => await ReSchedulerAsync(schedulerId, at));
+        => false;
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.TimeSpan)"/>
     public bool ReScheduler(string schedulerId, TimeSpan delay)
-        => ReScheduler(schedulerId, timeProvider.GetUtcNow().ToOffset(delay));
+        => false;
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel"/>
     public void Cancel(string id)

@@ -32,7 +32,10 @@ Scheduling can be break into 2 part (Producer & Consumer):
 ### Producer 
 Who is responsible for scheduler the message, like for In-Memory scheduler we the producer will create a timer, for Quartz to create a job.
 
-For producing a message we are going to have a 2 new interfaces:
+For producing a message we are going to have 2 new interfaces:
+
+`IAmAMessageScheduler` -> Responsible for scheduler a message, it'll be used by `IAmAMessageProduce` in case the producer
+doesn't support delay message or the current it too long.
 
 ```c#
 public interface IAmAMessageScheduler
@@ -59,7 +62,8 @@ public interface IAmAMessageSchedulerSync : IAmAMessageScheduler
     void Cancel(string id);
 }
 ```
-And
+And `IAmARequestScheduler` -> It'll be used by `IAmACommandProcessor` to scheduler a `Send`, `Publish` and `Post`
+
 ```c#
 public interface IAmARequestScheduler
 {
@@ -94,8 +98,8 @@ public interface IAmARequestSchedulerSync : IAmAMessageScheduler
 ```
 
 ### Consumer
-After a message is scheduler we need a way to handle this message and route it to correct producer.
-To facilitate the scheduler implementation we are going to have a 2 new message type called 
+After a message/request is scheduler we need a way to handle this message and route it to correct producer.
+To facilitate the scheduler implementation we are going to have a 2 new message type called.
 
 ```c#
 public class FireSchedulerMessage : Command 
@@ -120,7 +124,8 @@ public class FireSchedulerRequest() : Command(Guid.NewGuid())
 
 ```
 
-On the scheduler handler (which framework/lib will have a different implementation)
+On the scheduler handler (which framework/lib will have a different implementation), 
+we can just call the `ICommandProcessor.SendAsync`, like the sample bellow:
 
 ```c#
 public class MessageSchedulerJob(ICommandProcessor processor) : IJob
@@ -150,6 +155,7 @@ so if the message producer doesn't support delay message native the message prod
 ```c#
 public interface IAmAMessageProducer 
 {
+    ...
     IAmAMessageScheduler? Scheduler { get; set; }
 }
 ```
@@ -159,6 +165,7 @@ By default, we are going to use In-Memory scheduler
 
 ### In Memory
 We are going to offer in-memory scheduler(it should be used on test or demo), we are scheduling messages with `ITimerProvider`
+which won't persistence the message, in-case the application shutdown or have a failure
 
 ### Hangfire
 We won't support hangfire by default due [issue with Strong name](https://github.com/HangfireIO/Hangfire/issues/1076)
@@ -186,27 +193,16 @@ services.AddBrighter()
 ### AWS Scheduler
 AWS has a service call [AWS Scheduler](https://docs.aws.amazon.com/scheduler/latest/UserGuide/what-is-scheduler.html), 
 which allow us to scheduler a message to SNS & SQS directly without need to have an extra handler, because of this ability
-on AWS Scheduler we can schedule a message directly to the specific SNS & SQS and/or via and extra SNS/SQS in case
-you want to scheduler a message to Kafka for example.
+on AWS Scheduler we can schedule a message directly to the specific SNS & SQS (when you scheduler message via `IAmAMessageScheduler`) and
+via and extra SNS/SQS (when using `IAmARequestScheduler`).
 
-- In case you only have AWS infra SNS/SQS and you want to scheduler a message to there directly
-```c#
-services.AddBrighter()
-   .UseMessageScheduler(new AwsMessageSchedulerFactory(awsConnection, "paramore.example.fire-scheduler")
-   {
-       OnConflict = OnSchedulerConflict.Overwrite,
-       GetOrCreateSchedulerId = message => message.Id
-   });
-```
-
-- In case you want for all scheduler message go through a specific SNS/SQS
 ```c#
 // Ensure the topic/queue exists
 var producerRegistry = new SnsProducerRegistryFactory(awsConnection,
 [
     new SnsPublication
     {
-        Topic = new RoutingKey("paramore.example.fire-scheduler"),
+        Topic = new RoutingKey("paramore.example.scheduler"),
         RequestType = typeof(AwsSchedulerFired)
     }
 ]).Create();
@@ -216,8 +212,8 @@ var subscriptions = new Subscription[]
 {
     new SqsSubscription<AwsSchedulerFired>(
         new SubscriptionName("paramore.example.fire-scheduler"),
-        new ChannelName("paramore.example.fire-scheduler"),
-        new RoutingKey("paramore.example.fire-scheduler"),
+        new ChannelName("paramore.example.scheduler"),
+        new RoutingKey("paramore.example.scheduler"),
         bufferSize: 10,
         timeOut: TimeSpan.FromMilliseconds(20),
         lockTimeout: 30),
@@ -233,13 +229,13 @@ services.AddServiceActivator(opt =>
    {
        configure.ProducerRegistry = producerRegistry;
    })
-   .UseScheduler(new AwsMessageSchedulerFactory(awsConnection, "paramore.example.fire-scheduler")
+   .UseScheduler(new AwsMessageSchedulerFactory(awsConnection, "paramore.example.scheduler-role")
    {
        // This flags is true by default
        // Brighter will try to find a SNS/SQS for the provided Topic
        // If it exists we will publish to that SQS/SNS, otherwise it'll be via fire scheduler SNS/SQS
        UseMessageTopicAsTarget = false,
-       SchedulerTopicOrQueue = new RoutingKey(typeof(FireSchedulerMessage).FullName.ToValidSNSTopicName()),
+       SchedulerTopicOrQueue = new RoutingKey("paramore.example.scheduler"),
        OnConflict = OnSchedulerConflict.Overwrite,
        GetOrCreateSchedulerId = message => message.Id
    });
@@ -283,7 +279,7 @@ and this policy
 ### Azure Services
 Azure Queue already support long delay before publish and allow us to cancel them if it's necessary, 
 but doesn't update reschedule it. So, for Azure Service bus we won't support to message reschedule (users should `Cancel` and `Scheduler`).
-Also, because Azure doesn't have a centralized scheduler message, we won't support to scheduler a message/request to Topic/Queue directly, 
+Also, because Azure doesn't have a scheduler api, we won't support reschedule a message/request to Topic/Queue directly, 
 we are going to use a Topic/Queue for that.
 
 ```c#
@@ -293,7 +289,7 @@ var producerRegistry = new AzureServiceBusProducerRegistryFactory(asbClientProvi
 [
     new AzureServiceBusPublication
     {
-        Topic = new RoutingKey("paramore.example.fire-scheduler"),
+        Topic = new RoutingKey("paramore.example.scheduler"),
         RequestType = typeof(AzureSchedulerFired)
     }
 ]).Create();
@@ -303,8 +299,8 @@ var subscriptions = new Subscription[]
 {
     new AzureServiceBusSubscription<AzureSchedulerFired>(
         new SubscriptionName("paramore.example.fire-scheduler"),
-        new ChannelName("paramore.example.fire-scheduler"),
-        new RoutingKey("paramore.example.fire-scheduler"),
+        new ChannelName("paramore.example.scheduler"),
+        new RoutingKey("paramore.example.scheduler"),
         bufferSize: 10,
         timeOut: TimeSpan.FromMilliseconds(20),
         lockTimeout: 30),
@@ -330,6 +326,6 @@ services.AddServiceActivator(opt =>
    {
        configure.ProducerRegistry = producerRegistry;
    })
-   .UseScheduler(new AzureServiceBusSchedulerFactory(asbClientProvider, "paramore.example.fire-scheduler"));
+   .UseScheduler(new AzureServiceBusSchedulerFactory(asbClientProvider, "paramore.example.scheduler"));
 
 ```

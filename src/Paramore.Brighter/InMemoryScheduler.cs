@@ -48,23 +48,32 @@ public class InMemoryScheduler(
             timer.Dispose();
         }
 
-        s_timers[id] = timeProvider.CreateTimer(Execute, (processor, new FireSchedulerMessage
-        {
-            Id = id,
-            Async = false,
-            Message = message
-        }), delay, TimeSpan.Zero);
+        s_timers[id] = timeProvider.CreateTimer(Execute,
+            (processor, new FireSchedulerMessage { Id = id, Async = false, Message = message }), delay, TimeSpan.Zero);
         return id;
     }
 
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
         where TRequest : class, IRequest
-        => Schedule(request, type, at - timeProvider.GetUtcNow());
+    {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("invalid datetime, it should be in the future");
+        }
+
+        return Schedule(request, type, at - timeProvider.GetUtcNow());
+    }
 
     /// <inheritdoc />
-    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay) where TRequest : class, IRequest
+    public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
+        where TRequest : class, IRequest
     {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
         var id = getOrCreateRequestSchedulerId(request);
         if (s_timers.TryGetValue(id, out var timer))
         {
@@ -72,28 +81,42 @@ public class InMemoryScheduler(
             {
                 throw new InvalidOperationException($"scheduler with '{id}' id already exists");
             }
-        
+
             timer.Dispose();
         }
-        
-        s_timers[id] = timeProvider.CreateTimer(Execute, (processor, new FireSchedulerRequest
-        {
-            Id = id,
-            Async = false,
-            SchedulerType = type,
-            RequestType = typeof(TRequest).FullName!,
-            RequestData =JsonSerializer.Serialize(request, JsonSerialisationOptions.Options) 
-        }), delay, TimeSpan.Zero);
+
+        s_timers[id] = timeProvider.CreateTimer(Execute,
+            (processor,
+                new FireSchedulerRequest
+                {
+                    Id = id,
+                    Async = false,
+                    SchedulerType = type,
+                    RequestType = typeof(TRequest).FullName!,
+                    RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                }), delay, TimeSpan.Zero);
         return id;
     }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)
-        => ReScheduler(schedulerId, at - timeProvider.GetUtcNow());
+    {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
+        return ReScheduler(schedulerId, at - timeProvider.GetUtcNow());
+    }
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.TimeSpan)"/>
     public bool ReScheduler(string schedulerId, TimeSpan delay)
     {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
         if (s_timers.TryGetValue(schedulerId, out var timer))
         {
             timer.Change(delay, TimeSpan.Zero);
@@ -115,12 +138,24 @@ public class InMemoryScheduler(
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,
         CancellationToken cancellationToken = default)
-        => await ScheduleAsync(message, at - timeProvider.GetUtcNow(), cancellationToken);
+    {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
+        return await ScheduleAsync(message, at - timeProvider.GetUtcNow(), cancellationToken);
+    }
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, TimeSpan delay,
         CancellationToken cancellationToken = default)
     {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
         var id = getOrCreateMessageSchedulerId(message);
         if (s_timers.TryGetValue(id, out var timer))
         {
@@ -132,12 +167,8 @@ public class InMemoryScheduler(
             await timer.DisposeAsync();
         }
 
-        s_timers[id] = timeProvider.CreateTimer(Execute, (processor, new FireSchedulerMessage
-        {
-            Id = id,
-            Async = true,
-            Message = message
-        }), delay, TimeSpan.Zero);
+        s_timers[id] = timeProvider.CreateTimer(Execute,
+            (processor, new FireSchedulerMessage { Id = id, Async = true, Message = message }), delay, TimeSpan.Zero);
         return id;
     }
 
@@ -145,13 +176,25 @@ public class InMemoryScheduler(
     public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default)
         where TRequest : class, IRequest
-        => await ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), cancellationToken);
+    {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
+        return await ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), cancellationToken);
+    }
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
     {
-         var id = getOrCreateRequestSchedulerId(request);
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
+        var id = getOrCreateRequestSchedulerId(request);
         if (s_timers.TryGetValue(id, out var timer))
         {
             if (onConflict == OnSchedulerConflict.Throw)
@@ -162,14 +205,16 @@ public class InMemoryScheduler(
             await timer.DisposeAsync();
         }
 
-        s_timers[id] = timeProvider.CreateTimer(Execute, (processor, new FireSchedulerRequest
-        {
-            Id = id,
-            Async = true,
-            SchedulerType = type,
-            RequestType = typeof(TRequest).FullName!,
-            RequestData =JsonSerializer.Serialize(request, JsonSerialisationOptions.Options) 
-        }), delay, TimeSpan.Zero);
+        s_timers[id] = timeProvider.CreateTimer(Execute,
+            (processor,
+                new FireSchedulerRequest
+                {
+                    Id = id,
+                    Async = true,
+                    SchedulerType = type,
+                    RequestType = typeof(TRequest).FullName!,
+                    RequestData = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options)
+                }), delay, TimeSpan.Zero);
         return id;
     }
 
@@ -205,10 +250,10 @@ public class InMemoryScheduler(
             {
                 timer.Dispose();
             }
-            
+
             return;
         }
-        
+
         var fireRequest = state as (IAmACommandProcessor, FireSchedulerRequest)?;
         if (fireRequest != null)
         {
@@ -219,7 +264,7 @@ public class InMemoryScheduler(
             {
                 timer.Dispose();
             }
-            
+
             return;
         }
 

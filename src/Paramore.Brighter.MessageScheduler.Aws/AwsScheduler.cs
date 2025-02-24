@@ -4,7 +4,6 @@ using Amazon;
 using Amazon.Scheduler;
 using Amazon.Scheduler.Model;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Tasks;
 using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundException;
 
@@ -26,21 +25,42 @@ public class AwsScheduler(
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, DateTimeOffset at,
         CancellationToken cancellationToken = default)
-        => await ScheduleAsync(message, getOrCreateMessageSchedulerId(message), at, true, cancellationToken);
+    {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
+        return await ScheduleAsync(message, getOrCreateMessageSchedulerId(message), at, true, cancellationToken);
+    }
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync(Message message, TimeSpan delay,
         CancellationToken cancellationToken = default)
-        => await ScheduleAsync(message, timeProvider.GetUtcNow().ToOffset(delay), cancellationToken);
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
+        return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+    }
 
     /// <inheritdoc />
     public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
     {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
         var id = getOrCreateRequestSchedulerId(request);
         var message = new Message
         {
-            Header = new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT, subject: nameof(FireAwsScheduler)),
+            Header =
+                new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT,
+                    subject: nameof(FireAwsScheduler)),
             Body = new MessageBody(JsonSerializer.Serialize(new FireAwsScheduler
             {
                 SchedulerType = type,
@@ -56,12 +76,24 @@ public class AwsScheduler(
     /// <inheritdoc />
     public async Task<string> ScheduleAsync<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay,
         CancellationToken cancellationToken = default) where TRequest : class, IRequest
-        => await ScheduleAsync(request, type, timeProvider.GetUtcNow().ToOffset(delay), cancellationToken);
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
+        return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+    }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.DateTimeOffset,System.Threading.CancellationToken)" />
     public async Task<bool> ReSchedulerAsync(string schedulerId, DateTimeOffset at,
         CancellationToken cancellationToken = default)
     {
+        if (at < timeProvider.GetUtcNow())
+        {
+            throw new ConfigurationException("Invalid at, it should be in the future");
+        }
+
         try
         {
             using var client = factory.CreateSchedulerClient();
@@ -93,7 +125,14 @@ public class AwsScheduler(
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.ReSchedulerAsync(string,System.TimeSpan,System.Threading.CancellationToken)"/>
     public async Task<bool> ReSchedulerAsync(string schedulerId, TimeSpan delay,
         CancellationToken cancellationToken = default)
-        => await ReSchedulerAsync(schedulerId, timeProvider.GetUtcNow().ToOffset(delay), cancellationToken);
+    {
+        if (delay < TimeSpan.Zero)
+        {
+            throw new ConfigurationException("Invalid delay, it can't be negative");
+        }
+
+        return await ReSchedulerAsync(schedulerId, timeProvider.GetUtcNow().Add(delay), cancellationToken);
+    }
 
     /// <inheritdoc cref="IAmAMessageSchedulerAsync.CancelAsync"/>
     public async Task CancelAsync(string id, CancellationToken cancellationToken = default)
@@ -177,10 +216,14 @@ public class AwsScheduler(
         var schedulerMessage = message;
         if (message.Header.Subject != nameof(FireAwsScheduler))
         {
-            schedulerMessage  = new Message
+            schedulerMessage = new Message
             {
-                Header = new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT, subject: nameof(FireAwsScheduler)),
-                Body = new MessageBody(JsonSerializer.Serialize(new FireAwsScheduler { Id = id, Async = async, Message = message }, JsonSerialisationOptions.Options))
+                Header =
+                    new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT,
+                        subject: nameof(FireAwsScheduler)),
+                Body = new MessageBody(JsonSerializer.Serialize(
+                    new FireAwsScheduler { Id = id, Async = async, Message = message },
+                    JsonSerialisationOptions.Options))
             };
         }
 
@@ -464,7 +507,7 @@ public class AwsScheduler(
 
     /// <inheritdoc />
     public string Schedule(Message message, TimeSpan delay)
-        => Schedule(message, timeProvider.GetUtcNow().ToOffset(delay));
+        => Schedule(message, timeProvider.GetUtcNow().Add(delay));
 
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, DateTimeOffset at)
@@ -492,7 +535,7 @@ public class AwsScheduler(
     /// <inheritdoc />
     public string Schedule<TRequest>(TRequest request, RequestSchedulerType type, TimeSpan delay)
         where TRequest : class, IRequest
-        => Schedule(request, type, timeProvider.GetUtcNow().ToOffset(delay));
+        => Schedule(request, type, timeProvider.GetUtcNow().Add(delay));
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.DateTimeOffset)"/>
     public bool ReScheduler(string schedulerId, DateTimeOffset at)
@@ -500,7 +543,7 @@ public class AwsScheduler(
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.ReScheduler(string,System.TimeSpan)"/>
     public bool ReScheduler(string schedulerId, TimeSpan delay)
-        => ReScheduler(schedulerId, timeProvider.GetUtcNow().ToOffset(delay));
+        => ReScheduler(schedulerId, timeProvider.GetUtcNow().Add(delay));
 
     /// <inheritdoc cref="IAmAMessageSchedulerSync.Cancel" />
     public void Cancel(string id)
