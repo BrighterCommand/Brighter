@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Authors>Ian Cooper</Authors>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <TargetFrameworks>$(BrigtherTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>

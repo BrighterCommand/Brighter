@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
@@ -23,6 +23,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Paramore.Brighter.Inbox.MySql\Paramore.Brighter.Inbox.MySql.csproj" />
+      <ProjectReference Include="..\..\src\Paramore.Brighter.Locking.MySql\Paramore.Brighter.Locking.MySql.csproj" />
       <ProjectReference Include="..\..\src\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj" />
     </ItemGroup>
 

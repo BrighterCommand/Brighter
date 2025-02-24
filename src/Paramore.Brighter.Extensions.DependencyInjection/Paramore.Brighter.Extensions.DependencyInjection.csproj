@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>$(BrigtherTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(BrighterTargetFrameworks)</TargetFrameworks>
     <Authors>Daniel Stockhammer, Toby Henderson</Authors>
     <Description>Brighter Microsoft.Extensions.DependencyInjection support</Description>
   </PropertyGroup>

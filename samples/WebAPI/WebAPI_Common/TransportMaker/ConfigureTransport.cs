@@ -5,7 +5,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.RMQ.Async;
 
 namespace TransportMaker;
 
@@ -137,7 +137,7 @@ public static class ConfigureTransport
     
     static IAmAChannelFactory GetRmqChannelFactory()
     {
-        return new Paramore.Brighter.MessagingGateway.RMQ.ChannelFactory(
+        return new Paramore.Brighter.MessagingGateway.RMQ.Async.ChannelFactory(
             new RmqMessageConsumerFactory(new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),

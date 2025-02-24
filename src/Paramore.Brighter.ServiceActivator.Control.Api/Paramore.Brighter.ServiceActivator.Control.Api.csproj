@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>$(BrigtherCoreTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(BrighterCoreTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Authors>Paul Reardon</Authors>
