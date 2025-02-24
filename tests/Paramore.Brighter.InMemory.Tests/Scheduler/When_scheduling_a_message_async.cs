@@ -18,18 +18,16 @@ namespace Paramore.Brighter.InMemory.Tests.Scheduler;
 [Collection("Scheduler")]
 public class InMemorySchedulerMessageAsyncTests
 {
-    private readonly IAmAMessageSchedulerFactory _scheduler;
+    private readonly InMemorySchedulerFactory _scheduler;
     private readonly IAmACommandProcessor _processor;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
 
-    private readonly Dictionary<string, string> _receivedMessages;
     private readonly RoutingKey _routingKey;
     private readonly FakeTimeProvider _timeProvider;
 
     public InMemorySchedulerMessageAsyncTests()
     {
-        _receivedMessages = new Dictionary<string, string>();
         _routingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
         _timeProvider = new FakeTimeProvider();
         _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
@@ -41,7 +39,7 @@ public class InMemorySchedulerMessageAsyncTests
             {
                 if (type == typeof(MyEventHandlerAsync))
                 {
-                    return new MyEventHandlerAsync(_receivedMessages);
+                    return new MyEventHandlerAsync(new Dictionary<string, string>());
                 }
 
                 return new FireSchedulerMessageHandler(_processor!);
@@ -92,7 +90,7 @@ public class InMemorySchedulerMessageAsyncTests
             new InMemoryRequestContextFactory(),
             policyRegistry,
             outboxBus,
-            new InMemorySchedulerFactory { TimeProvider = _timeProvider }
+            _scheduler
         );
     }
 
@@ -213,13 +211,10 @@ public class InMemorySchedulerMessageAsyncTests
 
         id.Should().NotBeNullOrEmpty();
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
-
 
         await scheduler.CancelAsync(id);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
 
         _outbox.Get(req.Id, new RequestContext())
             .Should().BeEquivalentTo(new Message());
@@ -239,12 +234,10 @@ public class InMemorySchedulerMessageAsyncTests
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromHours(1));
 
         id.Should().NotBeNullOrEmpty();
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
 
         await scheduler.CancelAsync(id);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
 
         _outbox.Get(req.Id, new RequestContext())
             .Should().BeEquivalentTo(new Message());

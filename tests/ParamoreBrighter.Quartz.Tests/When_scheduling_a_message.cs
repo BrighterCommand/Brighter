@@ -1,37 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Specialized;
 using System.Text.Json;
 using System.Transactions;
 using FluentAssertions;
-using Microsoft.Extensions.Time.Testing;
-using Paramore.Brighter.InMemory.Tests.TestDoubles;
+using Paramore.Brighter;
+using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
+using ParamoreBrighter.Quartz.Tests.TestDoubles;
 using Polly;
 using Polly.Registry;
-using Xunit;
+using Quartz;
 
-namespace Paramore.Brighter.InMemory.Tests.Scheduler;
+namespace ParamoreBrighter.Quartz.Tests;
 
 [Collection("Scheduler")]
-public class InMemorySchedulerMessageTests
+public class QuartzSchedulerMessageTests
 {
-    private readonly InMemorySchedulerFactory _scheduler;
+    private readonly QuartzSchedulerFactory _scheduler;
     private readonly IAmACommandProcessor _processor;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
 
     private readonly RoutingKey _routingKey;
-    private readonly FakeTimeProvider _timeProvider;
+    private readonly TimeProvider _timeProvider;
 
-    public InMemorySchedulerMessageTests()
+    public QuartzSchedulerMessageTests()
     {
         _routingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
-        _timeProvider = new FakeTimeProvider();
-        _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
-
-        _scheduler = new InMemorySchedulerFactory { TimeProvider = _timeProvider };
+        _timeProvider = TimeProvider.System;
 
         var handlerFactory = new SimpleHandlerFactory(
             _ => new MyEventHandler(new Dictionary<string, string>()),
@@ -75,6 +72,16 @@ public class InMemorySchedulerMessageTests
             _outbox
         );
 
+        var schedulerFactory = SchedulerBuilder.Create(new NameValueCollection())
+            .UseDefaultThreadPool(x => x.MaxConcurrency = 5)
+            .UseJobFactory<BrighterResolver>()
+            .Build();
+
+        var scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
+        scheduler.Start().GetAwaiter().GetResult();
+
+        _scheduler = new QuartzSchedulerFactory(scheduler);
+
         CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
@@ -84,6 +91,8 @@ public class InMemorySchedulerMessageTests
             outboxBus,
             _scheduler
         );
+
+        BrighterResolver.Processor = _processor;
     }
 
     [Fact]
@@ -103,7 +112,7 @@ public class InMemorySchedulerMessageTests
 
         _internalBus.Stream(_routingKey).Should().BeEmpty();
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
 
         _outbox.Get(message.Id, new RequestContext())
             .Should().BeEquivalentTo(message);
@@ -127,7 +136,7 @@ public class InMemorySchedulerMessageTests
 
         _internalBus.Stream(_routingKey).Should().BeEmpty();
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
 
         _internalBus.Stream(_routingKey).Should().NotBeEmpty();
 
@@ -150,12 +159,12 @@ public class InMemorySchedulerMessageTests
         id.Should().NotBeNullOrEmpty();
         _internalBus.Stream(_routingKey).Should().BeEmpty();
 
-        scheduler.ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromHours(1)));
+        scheduler.ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
         _internalBus.Stream(_routingKey).Should().BeEmpty();
 
-        _timeProvider.Advance(TimeSpan.FromHours(2));
+        Thread.Sleep(TimeSpan.FromSeconds(4));
 
         _internalBus.Stream(_routingKey).Should().NotBeEmpty();
         _outbox.Get(req.Id, new RequestContext())
@@ -177,12 +186,12 @@ public class InMemorySchedulerMessageTests
         id.Should().NotBeNullOrEmpty();
         _internalBus.Stream(_routingKey).Should().BeEmpty();
 
-        scheduler.ReScheduler(id, TimeSpan.FromHours(1));
+        scheduler.ReScheduler(id, TimeSpan.FromSeconds(5));
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
         _internalBus.Stream(_routingKey).Should().BeEmpty();
 
-        _timeProvider.Advance(TimeSpan.FromHours(2));
+        Thread.Sleep(TimeSpan.FromSeconds(4));
         _internalBus.Stream(_routingKey).Should().NotBeEmpty();
 
         _outbox.Get(req.Id, new RequestContext())
@@ -205,7 +214,7 @@ public class InMemorySchedulerMessageTests
 
         scheduler.Cancel(id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
 
         _outbox.Get(req.Id, new RequestContext())
             .Should().BeEquivalentTo(new Message());
@@ -222,13 +231,13 @@ public class InMemorySchedulerMessageTests
                 new MessageBody(JsonSerializer.Serialize(req)));
 
         var scheduler = (IAmAMessageSchedulerSync)_scheduler.Create(_processor);
-        var id = scheduler.Schedule(message, TimeSpan.FromHours(1));
+        var id = scheduler.Schedule(message, TimeSpan.FromSeconds(1));
 
         id.Should().NotBeNullOrEmpty();
 
         scheduler.Cancel(id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        Thread.Sleep(TimeSpan.FromSeconds(2));
 
         _outbox.Get(req.Id, new RequestContext())
             .Should().BeEquivalentTo(new Message());

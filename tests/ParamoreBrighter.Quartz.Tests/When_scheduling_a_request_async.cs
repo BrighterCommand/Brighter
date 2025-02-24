@@ -1,40 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Collections.Specialized;
 using System.Transactions;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
-using Paramore.Brighter.InMemory.Tests.TestDoubles;
+using Paramore.Brighter;
+using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
 using Paramore.Brighter.Scheduler.Events;
 using Paramore.Brighter.Scheduler.Handlers;
+using ParamoreBrighter.Quartz.Tests.TestDoubles;
 using Polly;
 using Polly.Registry;
-using Xunit;
-using MyEventHandlerAsync = Paramore.Brighter.InMemory.Tests.TestDoubles.MyEventHandlerAsync;
+using Quartz;
+using MyEventHandlerAsync = ParamoreBrighter.Quartz.Tests.TestDoubles.MyEventHandlerAsync;
 
-namespace Paramore.Brighter.InMemory.Tests.Scheduler;
+namespace ParamoreBrighter.Quartz.Tests;
 
 [Collection("Scheduler")]
-public class InMemorySchedulerRequestAsyncTests
+public class QuartzSchedulerRequestAsyncTests
 {
-    private readonly InMemorySchedulerFactory _scheduler;
+    private readonly QuartzSchedulerFactory _scheduler;
     private readonly IAmACommandProcessor _processor;
     private readonly InMemoryOutbox _outbox;
     private readonly InternalBus _internalBus = new();
 
     private readonly Dictionary<string, string> _receivedMessages;
     private readonly RoutingKey _routingKey;
-    private readonly FakeTimeProvider _timeProvider;
+    private readonly TimeProvider _timeProvider;
 
-    public InMemorySchedulerRequestAsyncTests()
+    public QuartzSchedulerRequestAsyncTests()
     {
         _receivedMessages = new Dictionary<string, string>();
         _routingKey = new RoutingKey($"Test-{Guid.NewGuid():N}");
-        _timeProvider = new FakeTimeProvider();
-        _timeProvider.SetUtcNow(DateTimeOffset.UtcNow);
+        _timeProvider = TimeProvider.System;
 
-        _scheduler = new InMemorySchedulerFactory { TimeProvider = _timeProvider };
 
         var handlerFactory = new SimpleHandlerFactoryAsync(
             type =>
@@ -43,7 +41,7 @@ public class InMemorySchedulerRequestAsyncTests
                 {
                     return new MyEventHandlerAsync(_receivedMessages);
                 }
-                
+
                 return new FireSchedulerRequestHandler(_processor!);
             });
 
@@ -84,7 +82,17 @@ public class InMemorySchedulerRequestAsyncTests
             trace,
             _outbox
         );
-        
+
+        var schedulerFactory = SchedulerBuilder.Create(new NameValueCollection())
+            .UseDefaultThreadPool(x => x.MaxConcurrency = 5)
+            .UseJobFactory<BrighterResolver>()
+            .Build();
+
+        var scheduler = schedulerFactory.GetScheduler().GetAwaiter().GetResult();
+        scheduler.Start().GetAwaiter().GetResult();
+
+        _scheduler = new QuartzSchedulerFactory(scheduler);
+
         CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(
             subscriberRegistry,
@@ -94,6 +102,8 @@ public class InMemorySchedulerRequestAsyncTests
             outboxBus,
             _scheduler
         );
+
+        BrighterResolver.Processor = _processor;
     }
 
     #region Scheduler
@@ -110,7 +120,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
 
@@ -129,7 +139,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
 
@@ -149,7 +159,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
 
@@ -168,7 +178,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
 
@@ -188,7 +198,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         _internalBus.Stream(_routingKey).Should().BeEmpty();
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         _outbox.Get(req.Id, new RequestContext())
             .Should().NotBeEquivalentTo(new Message());
@@ -207,7 +217,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         _internalBus.Stream(_routingKey).Should().BeEmpty();
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
 
         _internalBus.Stream(_routingKey).Should().NotBeEmpty();
 
@@ -230,14 +240,14 @@ public class InMemorySchedulerRequestAsyncTests
 
         id.Should().NotBeNullOrEmpty();
 
-        await scheduler.ReSchedulerAsync(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromHours(1)));
+        await scheduler.ReSchedulerAsync(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
 
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
-        _timeProvider.Advance(TimeSpan.FromHours(2));
+        await Task.Delay(TimeSpan.FromSeconds(4));
         _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
 
         _outbox.Get(req.Id, new RequestContext())
@@ -251,17 +261,17 @@ public class InMemorySchedulerRequestAsyncTests
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateAsync(_processor);
-        var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromHours(1));
+        var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromSeconds(1));
 
         id.Should().NotBeNullOrEmpty();
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
-        await scheduler.ReSchedulerAsync(id, TimeSpan.FromHours(1));
+        await scheduler.ReSchedulerAsync(id, TimeSpan.FromSeconds(5));
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
-        _timeProvider.Advance(TimeSpan.FromHours(2));
+        await Task.Delay(TimeSpan.FromSeconds(4));
         _receivedMessages.Should().Contain(nameof(MyEventHandlerAsync), req.Id);
 
         _outbox.Get(req.Id, new RequestContext())
@@ -289,7 +299,7 @@ public class InMemorySchedulerRequestAsyncTests
 
         await scheduler.CancelAsync(id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
         _outbox.Get(req.Id, new RequestContext())
@@ -304,14 +314,14 @@ public class InMemorySchedulerRequestAsyncTests
     {
         var req = new MyEvent();
         var scheduler = _scheduler.CreateAsync(_processor);
-        var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromHours(1));
+        var id = await scheduler.ScheduleAsync(req, type, TimeSpan.FromSeconds(1));
 
         id.Should().NotBeNullOrEmpty();
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
         await scheduler.CancelAsync(id);
 
-        _timeProvider.Advance(TimeSpan.FromSeconds(2));
+        await Task.Delay(TimeSpan.FromSeconds(2));
         _receivedMessages.Should().NotContain(nameof(MyEventHandlerAsync), req.Id);
 
         _outbox.Get(req.Id, new RequestContext())
