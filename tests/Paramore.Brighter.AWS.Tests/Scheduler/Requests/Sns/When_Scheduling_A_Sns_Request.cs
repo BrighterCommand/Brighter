@@ -29,8 +29,8 @@ public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
 
         _channelFactory = new ChannelFactory(awsConnection);
         //we need the channel to create the queues and notifications
-        string topicName = $"Producer-Fire-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var channelName = $"Producer-Fire-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        string topicName = $"Producer-FSR-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var channelName = $"Producer-FSR-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<FireSchedulerMessage>(
@@ -100,7 +100,7 @@ public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");
@@ -140,7 +140,7 @@ public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");

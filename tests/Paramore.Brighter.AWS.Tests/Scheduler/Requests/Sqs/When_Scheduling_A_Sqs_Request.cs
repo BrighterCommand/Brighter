@@ -28,8 +28,8 @@ public class SqsSchedulingRequestTest : IDisposable
         var awsConnection = GatewayFactory.CreateFactory();
 
         _channelFactory = new ChannelFactory(awsConnection);
-        var subscriptionName = $"Buffered-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        _queueName = $"Buffered-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var subscriptionName = $"Buffered-FSR-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        _queueName = $"Buffered-FSR-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
 
         //we need the channel to create the queues and notifications
         var routingKey = new RoutingKey(_queueName);
@@ -94,7 +94,7 @@ public class SqsSchedulingRequestTest : IDisposable
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");
@@ -136,7 +136,7 @@ public class SqsSchedulingRequestTest : IDisposable
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");

@@ -82,8 +82,9 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
                 messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+                messages[0].Header.Subject.Should().Be(nameof(FireAwsScheduler));
                 messages[0].Body.Value.Should().NotBeNullOrEmpty();
-                var m = JsonSerializer.Deserialize<FireSchedulerMessage>(messages[0].Body.Value,
+                var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
                 m.Should().NotBeNull();
                 m.Message.Should().BeEquivalentTo(message);

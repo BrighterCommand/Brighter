@@ -82,7 +82,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
             {
                 messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
                 messages[0].Body.Value.Should().NotBeNullOrEmpty();
-                var m = JsonSerializer.Deserialize<FireSchedulerMessage>(messages[0].Body.Value,
+                var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
                 m.Should().NotBeNull();
                 m.Message.Should().BeEquivalentTo(message);
@@ -91,7 +91,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
                 return;
             }
 
-            Thread.Sleep(TimeSpan.FromMinutes(1));
+            Thread.Sleep(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");

@@ -29,8 +29,8 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
 
         _channelFactory = new ChannelFactory(awsConnection);
         //we need the channel to create the queues and notifications
-        string topicName = $"Producer-Fire-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-        var channelName = $"Producer-Fire-Scheduler-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        string topicName = $"Producer-FSRA-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+        var channelName = $"Producer-FSRA-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
         var routingKey = new RoutingKey(topicName);
 
         var channel = _channelFactory.CreateSyncChannel(new SqsSubscription<FireSchedulerMessage>(
@@ -89,6 +89,7 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
                 messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+                messages[0].Header.Subject.Should().Be(nameof(FireAwsScheduler));
                 messages[0].Body.Value.Should().NotBeNullOrEmpty();
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
@@ -100,7 +101,7 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");
@@ -131,6 +132,7 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
                 messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+                messages[0].Header.Subject.Should().Be(nameof(FireAwsScheduler));
                 messages[0].Body.Value.Should().NotBeNullOrEmpty();
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
@@ -142,7 +144,7 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
                 return;
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1));
+            await Task.Delay(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");

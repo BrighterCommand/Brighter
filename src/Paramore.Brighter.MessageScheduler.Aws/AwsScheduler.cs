@@ -59,7 +59,7 @@ public class AwsScheduler(
         var message = new Message
         {
             Header =
-                new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT,
+                new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_COMMAND,
                     subject: nameof(FireAwsScheduler)),
             Body = new MessageBody(JsonSerializer.Serialize(new FireAwsScheduler
             {
@@ -219,7 +219,7 @@ public class AwsScheduler(
             schedulerMessage = new Message
             {
                 Header =
-                    new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_EVENT,
+                    new MessageHeader(id, scheduler.SchedulerTopic, MessageType.MT_COMMAND,
                         subject: nameof(FireAwsScheduler)),
                 Body = new MessageBody(JsonSerializer.Serialize(
                     new FireAwsScheduler { Id = id, Async = async, Message = message },
@@ -321,6 +321,7 @@ public class AwsScheduler(
         {
             [HeaderNames.Id] = new { StringValue = message.Header.MessageId, DataType = "String" },
             [HeaderNames.Topic] = new { StringValue = topicArn, DataType = "String" },
+            [HeaderNames.Subject] = new { StringValue = message.Header.Subject, DataType = "String" },
             [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType, DataType = "String" },
             [HeaderNames.HandledCount] =
                 new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },
