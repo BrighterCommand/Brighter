@@ -7,7 +7,7 @@ using Paramore.Brighter.MessageScheduler.Aws;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessageScheduler.Sqs;
+namespace Paramore.Brighter.AWS.Tests.Scheduler.Messages.Sqs;
 
 public class SqsSchedulingAsyncMessageTest : IAsyncDisposable
 {
@@ -45,7 +45,7 @@ public class SqsSchedulingAsyncMessageTest : IAsyncDisposable
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SqsPublication { MakeChannels = OnMissingChannel.Create });
 
-        _factory = new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
+        _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
             UseMessageTopicAsTarget = true
         };

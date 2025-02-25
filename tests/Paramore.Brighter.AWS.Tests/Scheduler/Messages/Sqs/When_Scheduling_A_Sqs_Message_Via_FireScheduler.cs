@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
@@ -9,7 +10,7 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Scheduler.Events;
 using Xunit;
 
-namespace Paramore.Brighter.AWS.Tests.MessageScheduler.Sqs;
+namespace Paramore.Brighter.AWS.Tests.Scheduler.Messages.Sqs;
 
 [Collection("Scheduler SQS")]
 public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
@@ -48,7 +49,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
         _messageProducer = new SqsMessageProducer(awsConnection,
             new SqsPublication { MakeChannels = OnMissingChannel.Create });
 
-        _factory = new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
+        _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
             UseMessageTopicAsTarget = false, 
             MakeRole = OnMissingRole.Create,
@@ -69,7 +70,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_factory.Create(null!)!;
         scheduler.Schedule(message, TimeSpan.FromMinutes(1));
 
-        Task.Delay(TimeSpan.FromMinutes(1)).Wait();
+        Thread.Sleep(TimeSpan.FromMinutes(1));
 
         var stopAt = DateTimeOffset.UtcNow.AddMinutes(2);
         while (stopAt > DateTimeOffset.UtcNow)
@@ -90,7 +91,7 @@ public class SqsSchedulingMessageViaFireSchedulerTest : IDisposable
                 return;
             }
 
-            Task.Delay(TimeSpan.FromSeconds(1)).Wait();
+            Thread.Sleep(TimeSpan.FromMinutes(1));
         }
 
         Assert.Fail("The message wasn't fired");

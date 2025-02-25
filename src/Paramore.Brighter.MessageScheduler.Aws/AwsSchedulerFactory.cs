@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MessageScheduler.Aws;
 /// <summary>
 /// The Aws message Scheduler factory
 /// </summary>
-public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection, string role)
+public class AwsSchedulerFactory(AWSMessagingGatewayConnection connection, string role)
     : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -71,7 +71,7 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
         var factory = new AWSClientFactory(connection);
         if (string.IsNullOrEmpty(_roleArn))
         {
-            _roleArn =BrighterAsyncContext.Run(async () => await GetOrCreateRoleArnAsync(factory, Role));
+            _roleArn = BrighterAsyncContext.Run(async () => await GetOrCreateRoleArnAsync(factory, Role));
         }
 
         return new AwsScheduler(new AWSClientFactory(connection),
@@ -104,7 +104,7 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
 
             if (awsRole.HttpStatusCode == HttpStatusCode.OK)
             {
-                return  awsRole.Role.Arn;
+                return awsRole.Role.Arn;
             }
 
             if (MakeRole != OnMissingRole.Create)
@@ -170,8 +170,7 @@ public class AwsMessageSchedulerFactory(AWSMessagingGatewayConnection connection
 
             await client.AttachRolePolicyAsync(new AttachRolePolicyRequest
             {
-                RoleName = role,
-                PolicyArn = policy.Policy.Arn
+                RoleName = role, PolicyArn = policy.Policy.Arn
             });
 
             return createdRole.Role.Arn;

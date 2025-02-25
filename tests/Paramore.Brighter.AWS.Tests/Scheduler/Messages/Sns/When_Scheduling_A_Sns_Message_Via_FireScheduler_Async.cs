@@ -52,7 +52,7 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
         ));
         _consumer.Purge();
 
-        _factory = new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
+        _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
             UseMessageTopicAsTarget = false, MakeRole = OnMissingRole.Create, SchedulerTopicOrQueue = routingKey
         };

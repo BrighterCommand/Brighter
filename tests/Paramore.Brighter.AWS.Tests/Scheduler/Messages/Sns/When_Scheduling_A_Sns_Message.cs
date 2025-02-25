@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Threading.Tasks;
+using System.Threading;
 using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
@@ -52,7 +52,7 @@ public class SnsSchedulingMessageTest : IDisposable
 
         _consumer.Purge();
 
-        _factory = new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
+        _factory = new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
         {
             UseMessageTopicAsTarget = true, MakeRole = OnMissingRole.Create
         };
@@ -71,7 +71,7 @@ public class SnsSchedulingMessageTest : IDisposable
         var scheduler = (IAmAMessageSchedulerSync)_factory.Create(null!);
         scheduler.Schedule(message, TimeSpan.FromMinutes(1));
 
-        Task.Delay(TimeSpan.FromMinutes(1)).Wait();
+        Thread.Sleep(TimeSpan.FromMinutes(1));
 
         var stopAt = DateTimeOffset.UtcNow.AddMinutes(2);
         while (stopAt > DateTimeOffset.UtcNow)
@@ -87,7 +87,7 @@ public class SnsSchedulingMessageTest : IDisposable
                 return;
             }
 
-            Task.Delay(TimeSpan.FromSeconds(1)).Wait();
+            Thread.Sleep(TimeSpan.FromMinutes(1));
         }
 
         Assert.Fail("The message wasn't fired");

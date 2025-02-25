@@ -223,7 +223,7 @@ var producerRegistry = new SnsProducerRegistryFactory(awsConnection,
 var subscriptions = new Subscription[]
 {
     new SqsSubscription<AwsSchedulerFired>(
-        new SubscriptionName("paramore.example.fire-scheduler"),
+        new SubscriptionName("paramore.example.scheduler"),
         new ChannelName("paramore.example.scheduler"),
         new RoutingKey("paramore.example.scheduler"),
         bufferSize: 10,
@@ -295,7 +295,6 @@ Also, because Azure doesn't have a scheduler api, we won't support reschedule a 
 we are going to use a Topic/Queue for that.
 
 ```c#
-
 // Ensure the topic/queue exists
 var producerRegistry = new AzureServiceBusProducerRegistryFactory(asbClientProvider,
 [
@@ -339,5 +338,4 @@ services.AddServiceActivator(opt =>
        configure.ProducerRegistry = producerRegistry;
    })
    .UseScheduler(new AzureServiceBusSchedulerFactory(asbClientProvider, "paramore.example.scheduler"));
-
 ```
