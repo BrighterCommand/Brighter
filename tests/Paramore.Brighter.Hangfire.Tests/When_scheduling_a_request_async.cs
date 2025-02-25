@@ -92,7 +92,7 @@ public class HangfireSchedulerRequestAsyncTests : IDisposable
         {
             WorkerCount = 1, SchedulePollingInterval = TimeSpan.FromSeconds(1), Activator = new BrighterActivator(),
         });
-        _scheduler = new(new BackgroundJobClient());
+        _scheduler = new HangfireMessageSchedulerFactory();
 
         CommandProcessor.ClearServiceBus();
         _processor = new CommandProcessor(

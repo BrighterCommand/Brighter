@@ -20,7 +20,6 @@ public interface IAmACommandProcessor
     string Send<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
     string Publish<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
     string Post<TRequest>(DateTimeOffset delay, TRequest request) where TRequest : class, IRequest;
-    
     ....
 }
 ```
@@ -168,7 +167,20 @@ We are going to offer in-memory scheduler(it should be used on test or demo), we
 which won't persistence the message, in-case the application shutdown or have a failure
 
 ### Hangfire
-We won't support hangfire by default due [issue with Strong name](https://github.com/HangfireIO/Hangfire/issues/1076)
+For Hangfire, we won't sign the assembly due [issue with Strong name](https://github.com/HangfireIO/Hangfire/issues/1076).
+
+Using Hangfire for scheduler, it'll be necessary registry `BrighterHangfireSchedulerJob` in Hangfire `JobActivator`.
+
+```c#
+services
+    .AddSingleton<BrighterHangfireSchedulerJob>()
+    .AddHangfire(opt => { .... });
+
+services.AddBrighter()
+    .UseScheduler(new HangfireMessageSchedulerFactory());
+ ....
+```
+
 
 ### Quartz
 Brighter has support to [Quartz](https://www.quartz-scheduler.net/), for developers be able to publish the scheduler message it's necessary
@@ -183,10 +195,10 @@ services
 
 services.AddBrighter()
     .UseScheduler(provider =>
-   {
+    {
         var factory = provider.GetRequiredService<ISchedulerFactory>();
         return new QuartzMessageSchedulerFactory(factory.GetScheduler().GetAwaiter().GetResult());
-  })
+    })
 ....
 ```
 

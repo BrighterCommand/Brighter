@@ -5,9 +5,7 @@ namespace Paramore.Brighter.MessageScheduler.Hangfire;
 /// <summary>
 /// The <see cref="HangfireMessageScheduler"/> factory
 /// </summary>
-/// <param name="client">The hangfire client</param>
-public class HangfireMessageSchedulerFactory(IBackgroundJobClientV2 client)
-    : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
+public class HangfireMessageSchedulerFactory : IAmAMessageSchedulerFactory, IAmARequestSchedulerFactory
 {
     /// <summary>
     /// The Hangfire queu
@@ -17,7 +15,7 @@ public class HangfireMessageSchedulerFactory(IBackgroundJobClientV2 client)
     /// <summary>
     /// The <see cref="IBackgroundJobClientV2"/>.
     /// </summary>
-    public IBackgroundJobClientV2 Client { get; set; } = client;
+    public IBackgroundJobClientV2 Client { get; set; } = new BackgroundJobClient();
 
     /// <summary>
     /// The <see cref="System.TimeProvider"/>
