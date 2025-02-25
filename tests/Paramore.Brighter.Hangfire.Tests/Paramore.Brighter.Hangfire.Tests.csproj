@@ -4,7 +4,6 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
@@ -16,9 +15,9 @@
     </PackageReference>
     <PackageReference Include="FluentAssertions"/>
     <PackageReference Include="FakeItEasy"/>
+    <PackageReference Include="Hangfire.InMemory" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing"/>
     <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-    <PackageReference Include="Quartz.Extensions.DependencyInjection" />
     <PackageReference Include="xunit"/>
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
@@ -31,7 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageScheduler.Quartz\Paramore.Brighter.MessageScheduler.Quartz.csproj"/>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageScheduler.Hangfire\Paramore.Brighter.MessageScheduler.Hangfire.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 
 </Project>
