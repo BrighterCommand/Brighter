@@ -32,3 +32,4 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             Assert.IsType<InvalidOperationException>(exception.InnerException);
         }
     }
+}
