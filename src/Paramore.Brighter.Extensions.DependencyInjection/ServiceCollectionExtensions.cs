@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -33,6 +33,7 @@ using System.Text.Json;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
+using System.Linq;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -190,21 +191,30 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
             var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
 
-            foreach (Type i in outbox.GetType().GetInterfaces())
-            {
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType)
-                {
-                    var outboxDescriptor =
-                        new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
-                    brighterBuilder.Services.Add(outboxDescriptor);
-                }
+            var outboxInterfaces = outbox.GetType().GetInterfaces();
+            var syncOutboxInterface = outboxInterfaces
+                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType);
+            var asyncOutboxInterface = outboxInterfaces
+                .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == asyncOutboxType);
 
-                if (i.IsGenericType && i.GetGenericTypeDefinition() == asyncOutboxType)
-                {
-                    var asyncOutboxdescriptor =
+            if (syncOutboxInterface == null && asyncOutboxType == null)
+            {
+                throw new ConfigurationException(
+                    $"Unable to register outbox of type {outbox.GetType().Name} - no transaction provider has been registered that matches the outbox's transaction type");
+            }
+
+            if (syncOutboxInterface != null)
+            {
+                var outboxDescriptor =
+                        new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                brighterBuilder.Services.Add(outboxDescriptor);
+            }
+
+            if (asyncOutboxInterface != null)
+            {
+                var asyncOutboxdescriptor =
                         new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
-                    brighterBuilder.Services.Add(asyncOutboxdescriptor);
-                }
+                brighterBuilder.Services.Add(asyncOutboxdescriptor);
             }
             
             // If no distributed locking service is added, then add the in memory variant
