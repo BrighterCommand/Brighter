@@ -76,7 +76,7 @@ class Program
                             {
                                 configure.ProducerRegistry = producerRegistry;
                             })
-                            .UseScheduler(new AwsMessageSchedulerFactory(awsConnection, "brighter-scheduler")
+                            .UseScheduler(new AwsSchedulerFactory(awsConnection, "brighter-scheduler")
                             {
                                 SchedulerTopicOrQueue = new RoutingKey("message-scheduler-topic"),
                                 OnConflict = OnSchedulerConflict.Overwrite
