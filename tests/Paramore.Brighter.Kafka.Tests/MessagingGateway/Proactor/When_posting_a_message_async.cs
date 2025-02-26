@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -106,16 +105,16 @@ public class KafkaMessageProducerSendTestsAsync : IAsyncDisposable, IDisposable
         //allow the message publication callback to run
         await Task.Delay(10000);
 
-        messagePublished.Should().BeTrue();
+        Assert.True(messagePublished);
 
         var receivedMessage = await GetMessageAsync();
 
         var receivedCommand = JsonSerializer.Deserialize<MyCommand>(receivedMessage.Body.Value, JsonSerialisationOptions.Options);
 
-        receivedMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
-        receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
-        receivedMessage.Body.Value.Should().Be(message.Body.Value);
+        Assert.Equal(MessageType.MT_COMMAND, receivedMessage.Header.MessageType);
+        Assert.Equal(_partitionKey, receivedMessage.Header.PartitionKey);
+        Assert.Equal(receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes));
+        Assert.Equal(message.Body.Value, receivedMessage.Body.Value);
         receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z")
             .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:Z"));
         receivedCommand.Id.Should().Be(command.Id);

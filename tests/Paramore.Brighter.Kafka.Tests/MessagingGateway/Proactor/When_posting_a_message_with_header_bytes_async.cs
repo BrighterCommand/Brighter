@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -114,20 +113,19 @@ public class KafkaMessageProducerHeaderBytesSendTestsAsync : IAsyncDisposable, I
 
         var received = await GetMessageAsync();
 
-        received.Body.Bytes.Length.Should().BeGreaterThan(5);
+        Assert.True(received.Body.Bytes.Length > 5);
 
         var receivedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(received.Body.Bytes.Skip(1).Take(4).ToArray()));
 
         var receivedCommand =await  _deserializer.DeserializeAsync(received.Body.Bytes, received.Body.Bytes is null, _serializationContext);
 
         //assert
-        received.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        received.Header.PartitionKey.Should().Be(_partitionKey);
-        received.Body.Bytes.Should().Equal(received.Body.Bytes);
-        received.Body.Value.Should().Be(received.Body.Value);
-        receivedSchemaId.Should().Be(schemaId);
-        receivedCommand.Id.Should().Be(myCommand.Id);
-        receivedCommand.Value.Should().Be(myCommand.Value);
+        Assert.Equal(MessageType.MT_COMMAND, received.Header.MessageType);
+        Assert.Equal(_partitionKey, received.Header.PartitionKey);
+        Assert.Equal(body, received.Body.Bytes);
+        Assert.Equal(schemaId, receivedSchemaId);
+        Assert.Equal(myCommand.Id, receivedCommand.Id);
+        Assert.Equal(myCommand.Value, receivedCommand.Value);
     }
 
     private async Task<Message> GetMessageAsync()

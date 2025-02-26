@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -69,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             
             //assert we are in, and auto-context added us under our name
             var boxed = await _inbox.ExistsAsync<MyCommand>(command.Id, typeof(MyCommandHandlerAsync).FullName, 100);
-            boxed.Should().BeTrue();
+            Assert.True(boxed);
         }
         
         public void Dispose()

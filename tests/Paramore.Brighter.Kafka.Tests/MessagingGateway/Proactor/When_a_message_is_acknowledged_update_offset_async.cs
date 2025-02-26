@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -34,8 +33,6 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 1,
-                    //These timeouts support running on a container using the same host as the tests,
-                    //your production values ought to be lower
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
@@ -43,7 +40,6 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
             }).Create();
     }
 
-    //[Fact(Skip = "As it has to wait for the messages to flush, only tends to run well in debug")]
     [Fact]
     public async Task When_a_message_is_acknowledged_update_offset()
     {
@@ -82,19 +78,18 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         await Task.Delay(10000);
 
         //check we sent everything
-        sentMessages.Any(dr => dr.Value == false).Should().BeFalse();
+        Assert.False(sentMessages.Any(dr => dr.Value == false));
 
         var consumerOne = CreateConsumer(groupId);
         Message[] messages = await ConsumeMessagesAsync(consumerOne, groupId: groupId, batchLimit: 5);
 
         //check we read the first 5 messages
-        messages.Length.Should().Be(5);
+        Assert.Equal(5, messages.Length);
         for (int i = 0; i < 5; i++)
         {
-            //messages[i].Id.Should().Be(sentMessages[i])
-            sentMessages.ContainsKey(messages[i].Id).Should().BeTrue();
+            Assert.True(sentMessages.ContainsKey(messages[i].Id));
         }
-        
+
         //yield to let offsets propogate
         await Task.Delay(2500);
 
@@ -102,26 +97,25 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
         ((KafkaMessageConsumer)consumerOne).Close();
 
         //This will create a new consumer
-        var consumerTwo= CreateConsumer(groupId);
-        
+        var consumerTwo = CreateConsumer(groupId);
+
         Message[] newMessages = await ConsumeMessagesAsync(consumerTwo, groupId, batchLimit: 5);
-        
+
         //check we read the first 5 messages
-        newMessages.Length.Should().Be(5);
+        Assert.Equal(5, newMessages.Length);
         for (int i = 0; i < 5; i++)
         {
-            sentMessages.ContainsKey(messages[i].Id).Should().BeTrue();
+            Assert.True(sentMessages.ContainsKey(messages[i].Id));
         }
-        
+
         //yield to let offsets propogate
         await Task.Delay(2500);
-        
+
         //kill this consumer - but flushes offsets
         ((KafkaMessageConsumer)consumerTwo).Close();
 
         //kill this consumer
         await consumerTwo.DisposeAsync();
-        
     }
 
     private async Task<Message[]> ConsumeMessagesAsync(IAmAMessageConsumerAsync consumer, string groupId, int batchLimit)
@@ -143,7 +137,6 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                 try
                 {
                     maxTries++;
-                    //use TimeSpan.Zero to avoid blocking
                     messages = await consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
@@ -152,12 +145,10 @@ public class KafkaMessageConsumerUpdateOffsetAsync : IDisposable
                         return messages[0];
                     }
 
-                    //wait before retry
                     await Task.Delay(1000);
                 }
                 catch (ChannelFailureException cfx)
                 {
-                    //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
             } while (maxTries <= 3);
