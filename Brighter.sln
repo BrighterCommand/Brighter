@@ -321,7 +321,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.RMQ.Sync.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageScheduler.Quartz", "src\Paramore.Brighter.MessageScheduler.Quartz\Paramore.Brighter.MessageScheduler.Quartz.csproj", "{097CB927-EC20-413A-85C9-61E6380814CA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParamoreBrighter.Quartz.Tests", "tests\ParamoreBrighter.Quartz.Tests\ParamoreBrighter.Quartz.Tests.csproj", "{4469AEE3-B460-4948-A0A5-B9480EE70EA4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Quartz.Tests", "tests\Paramore.Brighter.Quartz.Tests\Paramore.Brighter.Quartz.Tests.csproj", "{4469AEE3-B460-4948-A0A5-B9480EE70EA4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessageScheduler.Aws", "src\Paramore.Brighter.MessageScheduler.Aws\Paramore.Brighter.MessageScheduler.Aws.csproj", "{28C2529C-EF15-4C86-A2CC-9EE326423A77}"
 EndProject
