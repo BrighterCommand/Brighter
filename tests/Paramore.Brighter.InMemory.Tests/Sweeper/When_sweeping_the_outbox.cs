@@ -13,6 +13,7 @@ using Xunit;
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
     [Trait("Category", "InMemory")]
+    [Collection("CommandProcess")]
     public class SweeperTests
     {
         private const string MyTopic = "MyTopic";

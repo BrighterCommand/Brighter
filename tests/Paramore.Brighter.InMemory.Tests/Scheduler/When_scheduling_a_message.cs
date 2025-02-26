@@ -14,7 +14,8 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Scheduler;
 
-[Collection("Scheduler")]
+[Trait("Category", "InMemory")]
+[Collection("CommandProcess")]
 public class InMemorySchedulerMessageTests
 {
     private readonly InMemorySchedulerFactory _scheduler;
