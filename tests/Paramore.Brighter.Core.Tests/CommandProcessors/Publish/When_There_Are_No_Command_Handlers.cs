@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -57,11 +56,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
-            //_should_fail_because_multiple_receivers_found
-            _exception.Should().BeOfType<ArgumentException>();
-            //_should_have_an_error_message_that_tells_you_why
-            _exception.Should().NotBeNull();
-            _exception.Message.Should().Contain("No command handler was found");
+            //Should fail because multiple receivers found
+            Assert.IsType<ArgumentException>(_exception);
+            //Should have an error message that tells you why
+            Assert.NotNull(_exception);
+            Assert.Contains("No command handler was found", _exception.Message);
         }
 
         public void Dispose()

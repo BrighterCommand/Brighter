@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return base.Handle(command);
         }
 
-        public static bool Shouldreceive(TRequest expectedCommand)
+        public static bool ShouldReceive(TRequest expectedCommand)
         {
             return (expectedCommand != null);
         }

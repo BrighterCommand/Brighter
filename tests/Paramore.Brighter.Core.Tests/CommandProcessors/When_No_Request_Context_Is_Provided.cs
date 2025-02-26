@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
@@ -12,24 +11,24 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors;
 
 [Collection("CommandProcessor")]
-public class RequestContextFromFactoryTests : IDisposable 
+public class RequestContextFromFactoryTests : IDisposable
 {
     private readonly SpyContextFactory _requestContextFactory;
     private readonly IPolicyRegistry<string> _policyRegistry;
 
     public RequestContextFromFactoryTests()
     {
-        MyContextAwareCommandHandler.TestString = null; 
+        MyContextAwareCommandHandler.TestString = null;
         MyContextAwareCommandHandlerAsync.TestString = null;
         MyContextAwareEventHandler.TestString = null;
         MyContextAwareEventHandlerAsync.TestString = null;
-        
+
         _policyRegistry = new DefaultPolicy();
         _requestContextFactory = new SpyContextFactory();
         _requestContextFactory.Context = null;
         _requestContextFactory.CreateWasCalled = false;
     }
-    
+
     [Fact]
     public void When_No_Request_Context_Is_Provided_On_A_Send()
     {
@@ -43,15 +42,13 @@ public class RequestContextFromFactoryTests : IDisposable
 
        //act
        commandProcessor.Send(myCommand);
-       
+
        //assert
-       _requestContextFactory.CreateWasCalled.Should().BeTrue();
-       //_should_have_seen_the_data_we_pushed_into_the_bag  dd
-       MyContextAwareCommandHandler.TestString.Should().Be(_requestContextFactory.Context.Bag["TestString"].ToString());
-       //_should_have_been_filled_by_the_handler
-       _requestContextFactory.Context.Bag["MyContextAwareCommandHandler"].Should().Be("I was called and set the context");
+       Assert.True(_requestContextFactory.CreateWasCalled);
+       Assert.Equal(_requestContextFactory.Context.Bag["TestString"].ToString(), MyContextAwareCommandHandler.TestString);
+       Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareCommandHandler"]);
     }
-    
+
     [Fact]
     public async Task When_No_Request_Context_Is_Provided_On_A_Send_Async()
     {
@@ -65,15 +62,13 @@ public class RequestContextFromFactoryTests : IDisposable
 
         //act
         await commandProcessor.SendAsync(myCommand);
-       
+
         //assert
-        _requestContextFactory.CreateWasCalled.Should().BeTrue();
-        //_should_have_seen_the_data_we_pushed_into_the_bag  dd
-        MyContextAwareCommandHandlerAsync.TestString.Should().Be(_requestContextFactory.Context.Bag["TestString"].ToString());
-        //_should_have_been_filled_by_the_handler
-        _requestContextFactory.Context.Bag["MyContextAwareCommandHandler"].Should().Be("I was called and set the context");
+        Assert.True(_requestContextFactory.CreateWasCalled);
+        Assert.Equal(_requestContextFactory.Context.Bag["TestString"].ToString(), MyContextAwareCommandHandlerAsync.TestString);
+        Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareCommandHandler"]);
     }
-    
+
     [Fact]
     public void When_No_Request_Context_Is_Provided_On_A_Publish()
     {
@@ -87,15 +82,13 @@ public class RequestContextFromFactoryTests : IDisposable
 
         //act
         commandProcessor.Publish(myEvent);
-       
+
         //assert
-        _requestContextFactory.CreateWasCalled.Should().BeTrue();
-        //_should_have_seen_the_data_we_pushed_into_the_bag  dd
-        MyContextAwareEventHandler.TestString.Should().Be(_requestContextFactory.Context.Bag["TestString"].ToString());
-        //_should_have_been_filled_by_the_handler
-        _requestContextFactory.Context.Bag["MyContextAwareEventHandler"].Should().Be("I was called and set the context");
+        Assert.True(_requestContextFactory.CreateWasCalled);
+        Assert.Equal(_requestContextFactory.Context.Bag["TestString"].ToString(), MyContextAwareEventHandler.TestString);
+        Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareEventHandler"]);
     }
-    
+
     [Fact]
     public async Task When_No_Request_Context_Is_Provided_On_A_Publish_Async()
     {
@@ -109,13 +102,11 @@ public class RequestContextFromFactoryTests : IDisposable
 
         //act
         await commandProcessor.PublishAsync(myEvent);
-       
+
         //assert
-        _requestContextFactory.CreateWasCalled.Should().BeTrue();
-        //_should_have_seen_the_data_we_pushed_into_the_bag  dd
-        MyContextAwareEventHandlerAsync.TestString.Should().Be(_requestContextFactory.Context.Bag["TestString"].ToString());
-        //_should_have_been_filled_by_the_handler
-        _requestContextFactory.Context.Bag["MyContextAwareEventHandler"].Should().Be("I was called and set the context");
+        Assert.True(_requestContextFactory.CreateWasCalled);
+        Assert.Equal(_requestContextFactory.Context.Bag["TestString"].ToString(), MyContextAwareEventHandlerAsync.TestString);
+        Assert.Equal("I was called and set the context", _requestContextFactory.Context.Bag["MyContextAwareEventHandler"]);
     }
 
     [Fact]
@@ -128,7 +119,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("MyCommand");
-        
+
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
@@ -140,9 +131,9 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var tracer = new BrighterTracer();
         var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-        
+
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
+            producerRegistry,
             _policyRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
@@ -150,7 +141,7 @@ public class RequestContextFromFactoryTests : IDisposable
             tracer,
             fakeOutbox
         );
-        
+
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
@@ -161,9 +152,9 @@ public class RequestContextFromFactoryTests : IDisposable
         commandProcessor.DepositPost(new MyCommand());
 
         //assert
-        _requestContextFactory.CreateWasCalled.Should().BeTrue();
-    } 
-    
+        Assert.True(_requestContextFactory.CreateWasCalled);
+    }
+
     [Fact]
     public async Task When_No_Request_Context_Is_Provided_On_A_Deposit_Async()
     {
@@ -174,7 +165,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("MyCommand");
-        
+
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
@@ -183,12 +174,12 @@ public class RequestContextFromFactoryTests : IDisposable
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
-            
+
         var tracer = new BrighterTracer();
         var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-        
+
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
+            producerRegistry,
             _policyRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
@@ -196,7 +187,7 @@ public class RequestContextFromFactoryTests : IDisposable
             tracer,
             fakeOutbox
         );
-        
+
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
@@ -207,9 +198,9 @@ public class RequestContextFromFactoryTests : IDisposable
         await commandProcessor.DepositPostAsync(new MyCommand());
 
         //assert
-        _requestContextFactory.CreateWasCalled.Should().BeTrue();
-    } 
-    
+        Assert.True(_requestContextFactory.CreateWasCalled);
+    }
+
     [Fact]
     public void When_No_Request_Context_Is_Provided_On_A_Clear()
     {
@@ -221,7 +212,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("MyCommand");
-        
+
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
@@ -230,12 +221,12 @@ public class RequestContextFromFactoryTests : IDisposable
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
-            
+
         var tracer = new BrighterTracer();
         var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-        
+
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
+            producerRegistry,
             _policyRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
@@ -243,24 +234,24 @@ public class RequestContextFromFactoryTests : IDisposable
             tracer,
             fakeOutbox
         );
-        
+
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
             bus
         );
-        
+
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
         var message = new Message(new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         bus.AddToOutbox(message, new RequestContext());
-            
+
         //act
         commandProcessor.ClearOutbox(new []{myCommand.Id});
 
         //assert
-        _requestContextFactory.CreateWasCalled.Should().BeTrue();
+        Assert.True(_requestContextFactory.CreateWasCalled);
     }
-    
+
     [Fact]
     public async Task When_A_Request_Context_Is_Provided_On_A_Clear_Async()
     {
@@ -272,7 +263,7 @@ public class RequestContextFromFactoryTests : IDisposable
 
         var timeProvider = new FakeTimeProvider();
         var routingKey = new RoutingKey("MyCommand");
-        
+
         var producerRegistry =
             new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
             {
@@ -281,12 +272,12 @@ public class RequestContextFromFactoryTests : IDisposable
                     Publication = new Publication{RequestType = typeof(MyCommand), Topic = routingKey}
                 } },
             });
-            
+
         var tracer = new BrighterTracer();
         var fakeOutbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-        
+
         var bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-            producerRegistry, 
+            producerRegistry,
             _policyRegistry,
             messageMapperRegistry,
             new EmptyMessageTransformerFactory(),
@@ -294,28 +285,28 @@ public class RequestContextFromFactoryTests : IDisposable
             tracer,
             fakeOutbox
         );
-        
+
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
             bus
         );
-        
+
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
         var message = new Message(new MessageHeader(myCommand.Id, routingKey, MessageType.MT_COMMAND), new MessageBody("test content"));
         bus.AddToOutbox(message, new RequestContext());
-            
+
         //act
         await commandProcessor.ClearOutboxAsync(new []{myCommand.Id});
 
         //assert
-        _requestContextFactory.CreateWasCalled.Should().BeTrue();
+        Assert.True(_requestContextFactory.CreateWasCalled);
 
     }
-    
+
     public void Dispose()
     {
-        MyContextAwareCommandHandler.TestString = null; 
+        MyContextAwareCommandHandler.TestString = null;
         MyContextAwareCommandHandlerAsync.TestString = null;
         MyContextAwareEventHandler.TestString = null;
         MyContextAwareEventHandlerAsync.TestString = null;
