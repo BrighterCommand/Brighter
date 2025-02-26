@@ -34,7 +34,6 @@ using System.Text.Json;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Observability;
 using Polly.Registry;
-using System.Linq;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
