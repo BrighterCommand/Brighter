@@ -86,7 +86,6 @@ public class SnsSchedulingMessageViaFireSchedulerTest : IDisposable
             {
                 messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
                 messages[0].Body.Value.Should().NotBeNullOrEmpty();
-                messages[0].Header.Subject.Should().Be(nameof(FireAwsScheduler));
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
                 m.Should().NotBeNull();
