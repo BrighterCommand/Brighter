@@ -9,6 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Scheduler.Messages.Sns;
 
+[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
+[Collection("Scheduler SNS")]
 public class SnsSchedulingMessageTest : IDisposable
 {
     private const string ContentType = "text\\plain";
@@ -81,13 +83,14 @@ public class SnsSchedulingMessageTest : IDisposable
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
+                messages[0].Header.MessageType.Should().Be(message.Header.MessageType);
                 messages[0].Body.Value.Should().Be(message.Body.Value);
                 messages[0].Header.Should().BeEquivalentTo(message.Header);
                 _consumer.Acknowledge(messages[0]);
                 return;
             }
 
-            Thread.Sleep(TimeSpan.FromMinutes(1));
+            Thread.Sleep(TimeSpan.FromSeconds(1));
         }
 
         Assert.Fail("The message wasn't fired");

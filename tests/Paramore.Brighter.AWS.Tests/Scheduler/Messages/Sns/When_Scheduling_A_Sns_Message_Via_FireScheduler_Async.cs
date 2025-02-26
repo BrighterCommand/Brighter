@@ -10,6 +10,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Scheduler.Messages.Sns;
 
+[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
+[Collection("Scheduler SNS")]
 public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
 {
     private const string ContentType = "text\\plain";

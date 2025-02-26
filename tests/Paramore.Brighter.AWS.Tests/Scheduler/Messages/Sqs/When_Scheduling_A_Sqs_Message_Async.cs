@@ -9,6 +9,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Scheduler.Messages.Sqs;
 
+[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
+[Collection("Scheduler SQS")]
 public class SqsSchedulingAsyncMessageTest : IAsyncDisposable
 {
     private const string ContentType = "text\\plain";

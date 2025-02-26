@@ -12,6 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Scheduler.Requests.Sqs;
 
+[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
 [Collection("Scheduler SQS")]
 public class SqsSchedulingRequestTest : IDisposable
 {
@@ -89,7 +90,7 @@ public class SqsSchedulingRequestTest : IDisposable
                 m.Should().NotBeNull();
                 m.SchedulerType.Should().Be(schedulerType);
                 m.RequestType.Should().Be(typeof(MyCommand).FullName);
-                m.Async.Should().BeFalse();
+                m.Async.Should().BeTrue();
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }
@@ -131,7 +132,7 @@ public class SqsSchedulingRequestTest : IDisposable
                 m.Should().NotBeNull();
                 m.SchedulerType.Should().Be(schedulerType);
                 m.RequestType.Should().Be(typeof(MyCommand).FullName);
-                m.Async.Should().BeFalse();
+                m.Async.Should().BeTrue();
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }

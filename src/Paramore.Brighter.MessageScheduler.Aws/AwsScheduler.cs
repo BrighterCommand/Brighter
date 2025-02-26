@@ -321,7 +321,6 @@ public class AwsScheduler(
         {
             [HeaderNames.Id] = new { StringValue = message.Header.MessageId, DataType = "String" },
             [HeaderNames.Topic] = new { StringValue = topicArn, DataType = "String" },
-            [HeaderNames.Subject] = new { StringValue = message.Header.Subject, DataType = "String" },
             [HeaderNames.ContentType] = new { StringValue = message.Header.ContentType, DataType = "String" },
             [HeaderNames.HandledCount] =
                 new { StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String" },

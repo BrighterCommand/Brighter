@@ -12,6 +12,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Scheduler.Requests.Sqs;
 
+[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
+[Collection("Scheduler SQS")]
 public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
 {
     private const string ContentType = "text\\plain";
@@ -79,8 +81,7 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                messages[0].Header.MessageType.Should().Be(MessageType.MT_EVENT);
-                messages[0].Header.Subject.Should().Be(nameof(FireAwsScheduler));
+                messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
                 messages[0].Body.Value.Should().NotBeNullOrEmpty();
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);

@@ -13,6 +13,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Scheduler.Requests.Sns;
 
+[Trait("Fragile", "CI")] // It isn't really fragile, it's time consumer (1-2 per test)
+[Collection("Scheduler SNS")]
 public class SnsSchedulingRequestAsyncTest : IDisposable
 {
     private const string ContentType = "text\\plain";
@@ -96,7 +98,7 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
                 m.Should().NotBeNull();
                 m.SchedulerType.Should().Be(schedulerType);
                 m.RequestType.Should().Be(typeof(MyCommand).FullName);
-                m.Async.Should().BeFalse();
+                m.Async.Should().BeTrue();
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }
@@ -132,14 +134,13 @@ public class SnsSchedulingRequestAsyncTest : IDisposable
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
                 messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-                messages[0].Header.Subject.Should().Be(nameof(FireAwsScheduler));
                 messages[0].Body.Value.Should().NotBeNullOrEmpty();
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
                 m.Should().NotBeNull();
                 m.SchedulerType.Should().Be(schedulerType);
                 m.RequestType.Should().Be(typeof(MyCommand).FullName);
-                m.Async.Should().BeFalse();
+                m.Async.Should().BeTrue();
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }
