@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,13 +29,13 @@ using Paramore.Brighter.Logging.Attributes;
 
 namespace HelloWorld
 {
-    internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
+    internal class GreetingCommandHandler : RequestHandlerAsync<GreetingCommand>
     {
-        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-        public override GreetingCommand Handle(GreetingCommand command)
+        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
+        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken)
         {
             Console.WriteLine("Hello {0}", command.Name);
-            return base.Handle(command);
+            return await base.HandleAsync(command, cancellationToken);
         }
     }
 }
