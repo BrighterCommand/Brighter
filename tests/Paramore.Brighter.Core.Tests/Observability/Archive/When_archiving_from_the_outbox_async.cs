@@ -102,7 +102,7 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
         await _bus.AddToOutboxAsync(myMessage, context); 
         await  _bus.ClearOutboxAsync([myMessage.Id], context);
         
-        //se should have an entry in the outbox
+        //we should have an entry in the outbox
         Assert.Equal(1, _outbox.EntryCount);
         
         //allow time to pass
@@ -112,23 +112,23 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
         var dispatchedSince = TimeSpan.FromSeconds(100);
         await _archiver.ArchiveAsync(dispatchedSince, context);
         
-        //should be no messages in the outbox
+         //should be no messages in the outbox
         Assert.Equal(0, _outbox.EntryCount);
-        
+
         parentActivity?.Stop();
-        
+
         _traceProvider.ForceFlush();
-        
+
         //We should have exported matching activities
         Assert.Equal(9, _exportedActivities.Count);
-        
+
         Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
-        
-        //there should be a n archive create span for the batch
+
+        //there should be an archive create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ArchiveMessages} {CommandProcessorSpanOperation.Archive.ToSpanName()}");
         Assert.NotNull(createActivity);
         Assert.Equal(parentActivity?.Id, createActivity.ParentId);
-        
+
         //check for outstanding messages span
         var osCheckActivity = _exportedActivities.SingleOrDefault(a =>
             a.DisplayName == $"{OutboxDbOperation.DispatchedMessages.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
@@ -140,17 +140,17 @@ public class AsyncExternalServiceBusArchiveObservabilityTests
             a.DisplayName == $"{OutboxDbOperation.Delete.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
         Assert.NotNull(deleteActivity);
         Assert.Equal(createActivity.Id, deleteActivity?.ParentId);
-        
+
         //check the tags for the create span
-        Assert.Contains(t => t.Key == BrighterSemanticConventions.ArchiveAge && Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE, createActivity.TagObjects);
-        
+        Assert.Contains(createActivity.TagObjects, t => t.Key == BrighterSemanticConventions.ArchiveAge && Math.Abs(Convert.ToDouble(t.Value) - dispatchedSince.TotalMilliseconds) < TOLERANCE);
+
         //check the tags for the outstanding messages span
         Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.DispatchedMessages.ToSpanName()));
         Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable));
         Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()));
         Assert.True(osCheckActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbName && t.Value == InMemoryAttributes.DbName));
-        
-        //check the tages for the delete messages span
+
+        //check the tags for the delete messages span
         Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbOperation && t.Value == OutboxDbOperation.Delete.ToSpanName()));
         Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbTable && t.Value == InMemoryAttributes.DbTable));
         Assert.True(deleteActivity?.Tags.Any(t => t.Key == BrighterSemanticConventions.DbSystem && t.Value == DbSystem.Brighter.ToDbName()));

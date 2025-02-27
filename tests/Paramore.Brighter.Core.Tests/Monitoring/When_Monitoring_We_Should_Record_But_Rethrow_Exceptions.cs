@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //_should_post_the_handler_name_to_the_control_bus_after
             Assert.Equal(typeof(MyMonitoredHandler).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
             //should_post_the_time_of_the_request_after
-            Assert.True((_afterEvent.EventTime.AsUtc()) > (_at.AsUtc()));
+            Assert.True((_afterEvent.EventTime.ToUniversalTime()) > (_at.ToUniversalTime()));
         }
 
         public void Dispose()

@@ -62,19 +62,19 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
         {
             _monitorEvent = _monitorEventMessageMapper.MapToRequest(_message);
 
-            //_should_have_the_correct_instance_name
+            //Should have the correct instance name
             Assert.Equal(InstanceName, _monitorEvent.InstanceName);
-            //_should_have_the_correct_handler_name
+            //Should have the correct handler name
             Assert.Equal(HandlerName, _monitorEvent.HandlerName);
-            //_should_have_the_correct_handler_full_assembly_name
+            //Should have the correct handler full assembly name
             Assert.Equal(HandlerFullAssemblyName, _monitorEvent.HandlerFullAssemblyName);
-            //_should_have_the_correct_monitor_type
+            //Should have the correct monitor type
             Assert.Equal(MonitorEventType.EnterHandler, _monitorEvent.EventType);
-            //_should_have_the_original_request_as_json
+            //Should have the original request as json
             Assert.Equal(_originalRequestAsJson, _monitorEvent.RequestBody);
-            //_should_have_the_correct_event_time
-            Assert.True((_monitorEvent.EventTime.AsUtc()) >= ((_at.AsUtc()) - (TimeSpan.FromSeconds(1))) && (_monitorEvent.EventTime.AsUtc()) <= ((_at.AsUtc()) + (TimeSpan.FromSeconds(1))));
-            //_should_have_the_correct_time_elapsed
+            //Should have the correct event time
+            Assert.True((_monitorEvent.EventTime.ToUniversalTime()) >= ((_at.ToUniversalTime()) - (TimeSpan.FromSeconds(1))) && (_monitorEvent.EventTime.ToUniversalTime()) <= ((_at.ToUniversalTime()) + (TimeSpan.FromSeconds(1))));
+            //Should have the correct time elapsed
             Assert.Equal(_elapsedMilliseconds, _monitorEvent.TimeElapsedMs);
         }
 

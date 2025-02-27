@@ -90,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //_should_include_the_underlying_request_details_before
             Assert.Equal(_originalRequestAsJson, _beforeEvent.RequestBody);
             //should_post_the_time_of_the_request_before
-            Assert.True((_beforeEvent.EventTime.AsUtc()) >= ((_at.AsUtc()) - (TimeSpan.FromSeconds(1))) && (_beforeEvent.EventTime.AsUtc()) <= ((_at.AsUtc()) + (TimeSpan.FromSeconds(1))));
+            Assert.True((_beforeEvent.EventTime.ToUniversalTime()) >= ((_at.ToUniversalTime()) - (TimeSpan.FromSeconds(1))) && (_beforeEvent.EventTime.ToUniversalTime()) <= ((_at.ToUniversalTime()) + (TimeSpan.FromSeconds(1))));
             //_should_have_an_instance_name_after
             Assert.Equal("UnitTests", _afterEvent.InstanceName);
             //_should_post_the_event_type_to_the_control_bus_after
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //_should_include_the_underlying_request_details_after
             Assert.Equal(_originalRequestAsJson, _afterEvent.RequestBody);
             //should_post_the_time_of_the_request_after
-            Assert.True((_afterEvent.EventTime.AsUtc()) > (_at.AsUtc()));
+            Assert.True((_afterEvent.EventTime.ToUniversalTime()) > (_at.ToUniversalTime()));
         }
 
         public void Dispose()

@@ -95,7 +95,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //_should_include_the_underlying_request_details_after
             Assert.Equal(_originalRequestAsJson, _afterEvent.RequestBody);
             //should_post_the_time_of_the_request_after
-            Assert.True((_afterEvent.EventTime.AsUtc()) > (_at.AsUtc()));
+            Assert.True((_afterEvent.EventTime.ToUniversalTime()) > (_at.ToUniversalTime()));
         }
 
         public void Dispose()

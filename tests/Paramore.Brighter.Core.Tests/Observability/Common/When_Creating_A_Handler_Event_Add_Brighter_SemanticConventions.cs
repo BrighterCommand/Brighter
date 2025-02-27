@@ -43,12 +43,12 @@ public class BrighterSemanticConventionsEventTests
         var childActivity = _exportedActivities.First(a => a.DisplayName == "BrighterSemanticConventionsEventTests");
         Assert.NotNull(childActivity);
         var childEvent = childActivity.Events.First(e => e.Name == "MyCommandHandler");
-        childEvent.Tags.Should().ContainKey(BrighterSemanticConventions.HandlerName);
+        Assert.Contains(BrighterSemanticConventions.HandlerName, childEvent.Tags.ToDictionary());
         var eventDictionary = childEvent.Tags.ToDictionary(pair => pair.Key, pair => pair.Value);
         Assert.Equal("MyCommandHandler", eventDictionary[BrighterSemanticConventions.HandlerName]);
-        childEvent.Tags.Should().ContainKey(BrighterSemanticConventions.HandlerType);
+        Assert.Contains(BrighterSemanticConventions.HandlerType, childEvent.Tags.ToDictionary());
         Assert.Equal("sync", eventDictionary[BrighterSemanticConventions.HandlerType]);
-        childEvent.Tags.Should().ContainKey(BrighterSemanticConventions.IsSink);
+        Assert.Contains(BrighterSemanticConventions.IsSink, childEvent.Tags.ToDictionary());
         Assert.Equal(true, eventDictionary[BrighterSemanticConventions.IsSink]);
 
     }
