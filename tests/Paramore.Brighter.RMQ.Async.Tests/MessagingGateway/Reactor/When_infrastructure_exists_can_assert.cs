@@ -1,5 +1,4 @@
 ﻿using System;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -57,7 +56,7 @@ public class RmqAssumeExistingInfrastructureTests : IDisposable
             exceptionThrown = true;
         }
 
-        exceptionThrown.Should().BeFalse();
+        Assert.False(exceptionThrown);
     }
 
     public void Dispose()

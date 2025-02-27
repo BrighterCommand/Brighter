@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -46,7 +45,7 @@ public class SqliteFetchMessageTests : IAsyncDisposable
         var messages = _sqlOutbox.Get();
 
         //Assert
-        messages.Should().HaveCount(3);
+        Assert.Equal(3, (messages)?.Count());
     }
 
     [Fact]
@@ -63,10 +62,10 @@ public class SqliteFetchMessageTests : IAsyncDisposable
 
         //Assert
         messages = messages.ToList();
-        messages.Should().HaveCount(2);
-        messages.Should().Contain(x => x.Id == _messageEarliest.Id);
-        messages.Should().Contain(x => x.Id == _messageUnDispatched.Id);
-        messages.Should().NotContain(x => x.Id == _messageDispatched.Id);
+        Assert.Equal(2, (messages)?.Count());
+        Assert.Contains(x => x.Id == _messageEarliest.Id, messages);
+        Assert.Contains(x => x.Id == _messageUnDispatched.Id, messages);
+        Assert.DoesNotContain(x => x.Id == _messageDispatched.Id, messages);
     }
 
     [Fact]
@@ -80,7 +79,7 @@ public class SqliteFetchMessageTests : IAsyncDisposable
         var messages = _sqlOutbox.Get(_messageDispatched.Id, context);
 
         //Assert
-        messages.Id.Should().Be(_messageDispatched.Id);
+        Assert.Equal(_messageDispatched.Id, messages.Id);
     }
 
     public async ValueTask DisposeAsync()

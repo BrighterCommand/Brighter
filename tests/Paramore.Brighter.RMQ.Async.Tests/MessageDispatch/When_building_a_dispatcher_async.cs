@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -94,10 +93,10 @@ public class DispatchBuilderTestsAsync : IDisposable
     {
         _dispatcher = _builder.Build();
 
-        _dispatcher.Should().NotBeNull();
-        GetConnection("foo").Should().NotBeNull();
-        GetConnection("bar").Should().NotBeNull();
-        _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+        Assert.NotNull(_dispatcher);
+        Assert.NotNull(GetConnection("foo"));
+        Assert.NotNull(GetConnection("bar"));
+        Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
 
         await Task.Delay(1000);
 
@@ -105,7 +104,7 @@ public class DispatchBuilderTestsAsync : IDisposable
 
         await Task.Delay(1000);
 
-        _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
+        Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
 
         await _dispatcher.End();
     }

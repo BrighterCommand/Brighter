@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -106,15 +105,15 @@ public class MessagePumpChannelFailureOberservabilityTests
 
         _traceProvider.ForceFlush();
             
-        _exportedActivities.Count.Should().Be(7);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue(); 
+        Assert.Equal(7, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter")); 
         
         var errorMessageActivity = _exportedActivities.FirstOrDefault(a => 
             a.DisplayName == $"{_message.Header.Topic} {MessagePumpSpanOperation.Receive.ToSpanName()}"
             && a.Status == ActivityStatusCode.Error
             );
         
-        errorMessageActivity.Should().NotBeNull();
-        errorMessageActivity!.Status.Should().Be(ActivityStatusCode.Error);
+        Assert.NotNull(errorMessageActivity);
+        Assert.Equal(ActivityStatusCode.Error, errorMessageActivity!.Status);
     }
 }

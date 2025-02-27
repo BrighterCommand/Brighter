@@ -26,7 +26,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
@@ -61,7 +60,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         {
             string commandId = Guid.NewGuid().ToString();
             bool exists = await _sqlSqlInbox.ExistsAsync<MyCommand>(commandId, "some-key");
-            exists.Should().BeFalse();
+            Assert.False(exists);
         }
 
         public void Dispose()

@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -69,7 +68,7 @@ public class RmqMessageProducerSendMessageTestsAsync : IDisposable, IAsyncDispos
 
         var result = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First(); 
 
-        result.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, result.Body.Value);
     }
 
     public void Dispose()

@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;

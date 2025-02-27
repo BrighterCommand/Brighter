@@ -7,7 +7,6 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.SecurityToken;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
@@ -86,11 +85,11 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
 
             //assert
-            message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();
+            Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK));
             _id = (string)message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
-            message.Body.Value.Should().Be($"Claim Check {_id}");
+            Assert.Equal($"Claim Check {_id}", message.Body.Value);
             
-            (await _luggageStore.HasClaimAsync(_id)).Should().BeTrue();
+            Assert.True((await _luggageStore.HasClaimAsync(_id)));
         }
 
         public void Dispose()

@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
 using Xunit;
@@ -59,8 +58,8 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             _exception = Catch.Exception(() => _pgSqlInbox.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            _pgSqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            Assert.Null(_exception);
+            Assert.True(_pgSqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey));
         }
 
         [Fact]

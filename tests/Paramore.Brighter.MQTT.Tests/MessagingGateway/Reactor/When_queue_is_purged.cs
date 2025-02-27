@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Xunit;
 
@@ -86,7 +85,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 
             Message[] recievedMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(100));
 
-            recievedMessages.Should().NotBeEmpty()
+            Assert.NotEmpty(recievedMessages)
             .And.HaveCount(1)
             .And.ContainInOrder(new[] { _noopMessage })
             .And.ContainItemsAssignableTo<Message>();

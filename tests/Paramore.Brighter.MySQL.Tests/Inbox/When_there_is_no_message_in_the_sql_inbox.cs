@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.MySQL.Tests.TestDoubles;
@@ -59,7 +58,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         public void When_There_Is_No_Message_In_The_Sql_Inbox_Exists()
         {
             string commandId = Guid.NewGuid().ToString();
-            _mysqlInBox.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
+            Assert.False(_mysqlInBox.Exists<MyCommand>(commandId, _contextKey));
         }
 
         public void Dispose()

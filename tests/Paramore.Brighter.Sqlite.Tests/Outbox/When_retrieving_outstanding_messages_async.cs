@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -51,10 +50,10 @@ public class PostgresSqlFetchOutStandingMessageAsyncTests : IAsyncDisposable
         var messagesOver4Hours = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.FromHours(4), context);
 
         //Assert
-        total.Should().Be(2);
-        allUnDispatched.Should().HaveCount(2);
+        Assert.Equal(2, total);
+        Assert.Equal(2, (allUnDispatched)?.Count());
         messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
+        Assert.Empty(messagesOver4Hours ?? []);
     }
 
     public async ValueTask DisposeAsync()

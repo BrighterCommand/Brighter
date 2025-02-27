@@ -70,11 +70,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
         {
             _commandProcessor.Post(_myCommand);
 
-            _internalBus.Stream(new RoutingKey(_routingKey)).Any().Should().BeTrue();
+            Assert.True(_internalBus.Stream(new RoutingKey(_routingKey)).Any());
             
             var message = _outbox.Get(_myCommand.Id, new RequestContext());
-            message.Should().NotBeNull();
-            message.Should().Be(_message);
+            Assert.NotNull(message);
+            Assert.Equal(_message, message);
         }
 
         public void Dispose()

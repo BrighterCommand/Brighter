@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -33,10 +32,10 @@ public class MessageValueSerializationTests
         var desBody = new MessageBody(serBodyValue, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    
-        desBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);
+        Assert.Equal(CharacterEncoding.UTF8, serBody.CharacterEncoding);    
+        Assert.Equal(CharacterEncoding.UTF8, desBody.CharacterEncoding);
         serBody.Bytes.Should().Equal(desBody.Bytes);
-        serBody.Value.Should().Be(desBody.Value);
+        Assert.Equal(desBody.Value, serBody.Value);
 
     }
     
@@ -59,10 +58,10 @@ public class MessageValueSerializationTests
         var desBody = new MessageBody(serBodyValue, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.Base64);
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    
-        desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);
+        Assert.Equal(CharacterEncoding.UTF8, serBody.CharacterEncoding);    
+        Assert.Equal(CharacterEncoding.Base64, desBody.CharacterEncoding);
         serBody.Bytes.Should().Equal(desBody.Bytes);
-        serBody.Value.Should().Be(desBody.ToCharacterEncodedString(CharacterEncoding.UTF8));
+        Assert.Equal(desBody.ToCharacterEncodedString(CharacterEncoding.UTF8), serBody.Value);
 
     }
     
@@ -82,8 +81,8 @@ public class MessageValueSerializationTests
         var desBody = new MessageBody(serBody.Bytes, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Raw);
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);    
-        desBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);  
+        Assert.Equal(CharacterEncoding.Raw, serBody.CharacterEncoding);    
+        Assert.Equal(CharacterEncoding.Raw, desBody.CharacterEncoding);  
         serBody.Bytes.Should().Equal(desBody.Bytes); 
 
     }
@@ -107,8 +106,8 @@ public class MessageValueSerializationTests
         var desBody = new MessageBody(serBody.Bytes, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Base64);
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);    
-        desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);  
+        Assert.Equal(CharacterEncoding.Raw, serBody.CharacterEncoding);    
+        Assert.Equal(CharacterEncoding.Base64, desBody.CharacterEncoding);  
         serBody.Bytes.Should().Equal(desBody.Bytes); 
 
     }
@@ -132,8 +131,8 @@ public class MessageValueSerializationTests
         var desBody = new MessageBody(bodyAsString, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Base64);
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);    
-        desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);  
+        Assert.Equal(CharacterEncoding.Raw, serBody.CharacterEncoding);    
+        Assert.Equal(CharacterEncoding.Base64, desBody.CharacterEncoding);  
         serBody.Bytes.Should().Equal(desBody.Bytes); 
     }
     
@@ -166,10 +165,10 @@ public class MessageValueSerializationTests
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);    
-        desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);  
+        Assert.Equal(CharacterEncoding.Raw, serBody.CharacterEncoding);    
+        Assert.Equal(CharacterEncoding.Base64, desBody.CharacterEncoding);  
         serBody.Bytes.Should().Equal(desBody.Bytes); 
-        retrievedSchemaId.Should().Be(id);
+        Assert.Equal(id, retrievedSchemaId);
 
     }
     
@@ -199,11 +198,11 @@ public class MessageValueSerializationTests
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    
-        desBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);
+        Assert.Equal(CharacterEncoding.UTF8, serBody.CharacterEncoding);    
+        Assert.Equal(CharacterEncoding.UTF8, desBody.CharacterEncoding);
         serBody.Bytes.Should().Equal(desBody.Bytes);
-        serBody.Value.Should().Be(desBody.Value);
-        retrievedSchemaId.Should().Be(id);
+        Assert.Equal(desBody.Value, serBody.Value);
+        Assert.Equal(id, retrievedSchemaId);
 
     }
     
@@ -233,8 +232,8 @@ public class MessageValueSerializationTests
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    
-        desBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);
+        Assert.Equal(CharacterEncoding.UTF8, serBody.CharacterEncoding);    
+        Assert.Equal(CharacterEncoding.UTF8, desBody.CharacterEncoding);
         
         //Note the issue here, that the UTF conversion means that we do not get back the same bytes
         serBody.Bytes.Should().NotEqual(desBody.Bytes);

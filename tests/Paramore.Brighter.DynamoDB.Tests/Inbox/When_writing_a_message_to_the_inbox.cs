@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;

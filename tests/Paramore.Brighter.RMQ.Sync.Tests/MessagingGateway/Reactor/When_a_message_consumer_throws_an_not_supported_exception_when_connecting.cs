@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 using Xunit;
@@ -69,10 +68,10 @@ public class RmqMessageConsumerChannelFailureTests : IDisposable
         catch (ChannelFailureException cfe)
         {
             exceptionHappened = true;
-            cfe.InnerException.Should().BeOfType<NotSupportedException>();
+            Assert.True((cfe.InnerException) is NotSupportedException);
         }
             
-        exceptionHappened.Should().BeTrue();
+        Assert.True(exceptionHappened);
     }
 
     [Fact]

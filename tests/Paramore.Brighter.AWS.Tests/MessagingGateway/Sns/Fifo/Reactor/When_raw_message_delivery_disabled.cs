@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -74,18 +73,18 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
         _channel.Acknowledge(messageReceived);
 
         //assert
-        messageReceived.Id.Should().Be(messageToSent.Id);
-        messageReceived.Header.Topic.Should().Be(messageToSent.Header.Topic.ToValidSNSTopicName(true));
-        messageReceived.Header.MessageType.Should().Be(messageToSent.Header.MessageType);
-        messageReceived.Header.CorrelationId.Should().Be(messageToSent.Header.CorrelationId);
-        messageReceived.Header.ReplyTo.Should().Be(messageToSent.Header.ReplyTo);
-        messageReceived.Header.ContentType.Should().Be(messageToSent.Header.ContentType);
+        Assert.Equal(messageToSent.Id, messageReceived.Id);
+        Assert.Equal(messageToSent.Header.Topic.ToValidSNSTopicName(true), messageReceived.Header.Topic);
+        Assert.Equal(messageToSent.Header.MessageType, messageReceived.Header.MessageType);
+        Assert.Equal(messageToSent.Header.CorrelationId, messageReceived.Header.CorrelationId);
+        Assert.Equal(messageToSent.Header.ReplyTo, messageReceived.Header.ReplyTo);
+        Assert.Equal(messageToSent.Header.ContentType, messageReceived.Header.ContentType);
         messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
-        messageReceived.Body.Value.Should().Be(messageToSent.Body.Value);
+        Assert.Equal(messageToSent.Body.Value, messageReceived.Body.Value);
 
-        messageReceived.Header.PartitionKey.Should().Be(messageGroupId);
+        Assert.Equal(messageGroupId, messageReceived.Header.PartitionKey);
         messageReceived.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
-        messageReceived.Header.Bag[HeaderNames.DeduplicationId].Should().Be(deduplicationId);
+        Assert.Equal(deduplicationId, messageReceived.Header.Bag[HeaderNames.DeduplicationId]);
     }
 
     public void Dispose()

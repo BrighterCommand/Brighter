@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;

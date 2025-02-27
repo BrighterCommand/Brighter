@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.TestDoubles;
 using Xunit;
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             _exception = Catch.Exception(() => _sqlInbox.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
             AssertionExtensions.Should(_sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey)).BeTrue();
         }
 

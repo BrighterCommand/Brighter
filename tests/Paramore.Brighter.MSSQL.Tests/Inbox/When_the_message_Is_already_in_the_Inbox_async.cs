@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -58,9 +57,9 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
             _exception = await Catch.ExceptionAsync(() => _sqlInbox.AddAsync(_raisedCommand, _contextKey));
 
            //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
             var exists = await _sqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
-            exists.Should().BeTrue();
+            Assert.True(exists);
         }
 
         [Fact]

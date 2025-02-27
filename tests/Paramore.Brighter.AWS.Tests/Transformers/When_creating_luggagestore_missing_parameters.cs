@@ -7,7 +7,6 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.SecurityToken;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.Tranformers.AWS;
@@ -59,8 +58,8 @@ public class S3LuggageUploadMissingParametersTests
                 deleteGoodUploadsAfterDays: 1);
         });
 
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentNullException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentNullException);
     }
 
     [Fact]
@@ -85,8 +84,8 @@ public class S3LuggageUploadMissingParametersTests
                 deleteGoodUploadsAfterDays: 1);
         });
 
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentNullException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentNullException);
     }
     
     [Fact]
@@ -111,8 +110,8 @@ public class S3LuggageUploadMissingParametersTests
                 deleteGoodUploadsAfterDays: 1);
         });
 
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentException);
     }
     
     [Fact]
@@ -137,8 +136,8 @@ public class S3LuggageUploadMissingParametersTests
                 deleteGoodUploadsAfterDays: 1);
         });
 
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentNullException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentNullException);
     }
 
     [Fact]
@@ -163,8 +162,8 @@ public class S3LuggageUploadMissingParametersTests
                 deleteGoodUploadsAfterDays: 1);
         });
 
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentNullException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentNullException);
     }
     
     [Fact]
@@ -187,8 +186,8 @@ public class S3LuggageUploadMissingParametersTests
                 deleteGoodUploadsAfterDays: 1);
         });
 
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentNullException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentNullException);
     }
     
       [Fact]
@@ -213,7 +212,7 @@ public class S3LuggageUploadMissingParametersTests
                     deleteGoodUploadsAfterDays: 1);
             });
     
-            exception.Should().NotBeNull();
-            exception.Should().BeOfType<ArgumentNullException>();
+            Assert.NotNull(exception);
+            Assert.True((exception) is ArgumentNullException);
         }
 }

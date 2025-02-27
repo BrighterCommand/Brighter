@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MQTT;
 using Xunit;
 
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 
             Message[] receivedMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
-            receivedMessages.Should().NotBeEmpty()
+            Assert.NotEmpty(receivedMessages)
                 .And.HaveCount(messageCount)
                 .And.ContainInOrder(sentMessages)
                 .And.ContainItemsAssignableTo<Message>();

@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;

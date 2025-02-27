@@ -1,5 +1,4 @@
 ﻿using System;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
@@ -46,9 +45,9 @@ public class MsSqlArchiveFetchTests : IDisposable
         var messagesOver4Hours = _sqlOutbox.DispatchedMessages(4, context);
 
         //Assert
-        allDispatched.Should().HaveCount(2);
+        Assert.Equal(2, (allDispatched)?.Count());
         messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
+        Assert.Empty(messagesOver4Hours ?? []);
     }
 
     [Fact]
@@ -64,9 +63,9 @@ public class MsSqlArchiveFetchTests : IDisposable
         var messagesOver4Hours = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        allDispatched.Should().HaveCount(2);
+        Assert.Equal(2, (allDispatched)?.Count());
         messagesOverAnHour.Should().ContainSingle();
-        messagesOver4Hours.Should().BeEmpty();
+        Assert.Empty(messagesOver4Hours ?? []);
     }
 
     public void Dispose()

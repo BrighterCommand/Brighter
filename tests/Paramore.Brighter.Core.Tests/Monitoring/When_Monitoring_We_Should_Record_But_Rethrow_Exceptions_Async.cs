@@ -24,8 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Monitoring.TestDoubles;
 using Xunit;
@@ -83,21 +81,21 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
            //_should_pass_through_the_exception_not_swallow
-            _exception.Should().NotBeNull();
+            Assert.NotNull(_exception);
             //_should_monitor_the_exception
-            _afterEvent.Exception.Should().BeOfType<Exception>();
+            Assert.True((_afterEvent.Exception) is Exception);
             //_should_surface_the_error_message
-            _afterEvent.Exception.Message.Should().Contain("monitored");
+            Assert.Contains("monitored", _afterEvent.Exception.Message);
             //_should_have_an_instance_name_after
-            _afterEvent.InstanceName.Should().Be("UnitTests");
+            Assert.Equal("UnitTests", _afterEvent.InstanceName);
             //_should_post_the_handler_fullname_to_the_control_bus_after
-            _afterEvent.HandlerFullAssemblyName.Should().Be(typeof(MyMonitoredHandlerThatThrowsAsync).AssemblyQualifiedName);
+            Assert.Equal(typeof(MyMonitoredHandlerThatThrowsAsync).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
             //_should_post_the_handler_name_to_the_control_bus_after
-            _afterEvent.HandlerName.Should().Be(typeof(MyMonitoredHandlerThatThrowsAsync).FullName);
+            Assert.Equal(typeof(MyMonitoredHandlerThatThrowsAsync).FullName, _afterEvent.HandlerName);
             //_should_include_the_underlying_request_details_after
-            _afterEvent.RequestBody.Should().Be(_originalRequestAsJson);
+            Assert.Equal(_originalRequestAsJson, _afterEvent.RequestBody);
             //should_post_the_time_of_the_request_after
-            _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
+            Assert.True((_afterEvent.EventTime.AsUtc()) > (_at.AsUtc()));
         }
 
         public void Dispose()

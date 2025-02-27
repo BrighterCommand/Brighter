@@ -26,7 +26,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;
 using Xunit;

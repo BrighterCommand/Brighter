@@ -29,7 +29,6 @@ using System.Net;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Outbox.DynamoDB;
@@ -81,9 +80,9 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(storedMessage.Body.Bytes.Skip(1).Take(4).ToArray()));
 
             //assert
-            retrievedSchemaId.Should().Be(schemaId);
+            Assert.Equal(schemaId, retrievedSchemaId);
             storedMessage.Body.Bytes.Should().Equal(messageEarliest.Body.Bytes);
-            storedMessage.Body.Value.Should().Be(messageEarliest.Body.Value);
+            Assert.Equal(messageEarliest.Body.Value, storedMessage.Body.Value);
         }
     }
 }

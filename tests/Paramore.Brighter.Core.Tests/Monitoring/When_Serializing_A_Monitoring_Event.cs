@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.Monitoring.Events;
@@ -65,19 +63,19 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             _monitorEvent = _monitorEventMessageMapper.MapToRequest(_message);
 
             //_should_have_the_correct_instance_name
-            _monitorEvent.InstanceName.Should().Be(InstanceName);
+            Assert.Equal(InstanceName, _monitorEvent.InstanceName);
             //_should_have_the_correct_handler_name
-            _monitorEvent.HandlerName.Should().Be(HandlerName);
+            Assert.Equal(HandlerName, _monitorEvent.HandlerName);
             //_should_have_the_correct_handler_full_assembly_name
-            _monitorEvent.HandlerFullAssemblyName.Should().Be(HandlerFullAssemblyName);
+            Assert.Equal(HandlerFullAssemblyName, _monitorEvent.HandlerFullAssemblyName);
             //_should_have_the_correct_monitor_type
-            _monitorEvent.EventType.Should().Be(MonitorEventType.EnterHandler);
+            Assert.Equal(MonitorEventType.EnterHandler, _monitorEvent.EventType);
             //_should_have_the_original_request_as_json
-            _monitorEvent.RequestBody.Should().Be(_originalRequestAsJson);
+            Assert.Equal(_originalRequestAsJson, _monitorEvent.RequestBody);
             //_should_have_the_correct_event_time
-            _monitorEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), TimeSpan.FromSeconds(1));
+            Assert.True((_monitorEvent.EventTime.AsUtc()) >= ((_at.AsUtc()) - (TimeSpan.FromSeconds(1))) && (_monitorEvent.EventTime.AsUtc()) <= ((_at.AsUtc()) + (TimeSpan.FromSeconds(1))));
             //_should_have_the_correct_time_elapsed
-            _monitorEvent.TimeElapsedMs.Should().Be(_elapsedMilliseconds);
+            Assert.Equal(_elapsedMilliseconds, _monitorEvent.TimeElapsedMs);
         }
 
    }

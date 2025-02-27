@@ -1,5 +1,4 @@
 ﻿using System;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
@@ -89,7 +88,7 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
     {
         _dispatcher = _builder.Build();
 
-        _dispatcher.Should().NotBeNull();
+        Assert.NotNull(_dispatcher);
     }
 
     public void Dispose()

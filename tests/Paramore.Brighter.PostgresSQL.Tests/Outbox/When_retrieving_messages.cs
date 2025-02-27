@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -45,7 +44,7 @@ public class PostgresSqlFetchMessageTests : IDisposable
         var messages = _sqlOutbox.Get();
 
         //Assert
-        messages.Should().HaveCount(3);
+        Assert.Equal(3, (messages)?.Count());
     }
 
     [Fact]
@@ -62,10 +61,10 @@ public class PostgresSqlFetchMessageTests : IDisposable
 
         //Assert
         messages = messages.ToList();
-        messages.Should().HaveCount(2);
-        messages.Should().Contain(x => x.Id == _messageEarliest.Id);
-        messages.Should().Contain(x => x.Id == _messageUnDispatched.Id);
-        messages.Should().NotContain(x => x.Id == _messageDispatched.Id);
+        Assert.Equal(2, (messages)?.Count());
+        Assert.Contains(x => x.Id == _messageEarliest.Id, messages);
+        Assert.Contains(x => x.Id == _messageUnDispatched.Id, messages);
+        Assert.DoesNotContain(x => x.Id == _messageDispatched.Id, messages);
     }
 
     [Fact]
@@ -79,7 +78,7 @@ public class PostgresSqlFetchMessageTests : IDisposable
         var messages = _sqlOutbox.Get(_messageDispatched.Id, context);
 
         //Assert
-        messages.Id.Should().Be(_messageDispatched.Id);
+        Assert.Equal(_messageDispatched.Id, messages.Id);
     }
 
 

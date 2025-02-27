@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.TestDoubles;

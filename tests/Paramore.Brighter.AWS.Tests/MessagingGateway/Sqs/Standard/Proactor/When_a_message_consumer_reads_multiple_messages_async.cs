@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -113,7 +112,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
 
         } while ((iteration <= 5) && (messagesReceivedCount < MessageCount));
 
-        messagesReceivedCount.Should().Be(4);
+        Assert.Equal(4, messagesReceivedCount);
     }
 
     public async ValueTask DisposeAsync()

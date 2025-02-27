@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
@@ -60,7 +59,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest, context));
 
             //should ignore the duplicate key and still succeed
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
         }
 
         public void Dispose()

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -113,25 +112,25 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
         _traceProvider.ForceFlush();
         
         //assert
-        _exportedActivities.Count.Should().Be(8);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        Assert.Equal(8, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
         
         //first there should be a create activity for the bulk deposit
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        createActivity.Should().NotBeNull();
-        createActivity.ParentId.Should().Be(parentActivity?.Id);
+        Assert.NotNull(createActivity);
+        Assert.Equal(parentActivity?.Id, createActivity.ParentId);
         
         //Then we should see three activities for each of the deposits
         var depositActivities = _exportedActivities.Where(a => a.DisplayName == $"{nameof(MyEvent)} {CommandProcessorSpanOperation.Deposit.ToSpanName()}").ToList();
-        depositActivities.Count().Should().Be(3);
+        Assert.Equal(3, depositActivities.Count());
         
         for(int i = 0; i < 3; i++)
         {
             var depositActivity = depositActivities.ElementAt(i);
-            depositActivity.ParentId.Should().Be(createActivity.Id);
+            Assert.Equal(createActivity.Id, depositActivity.ParentId);
             
-            depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == events[i].Id).Should().BeTrue();
-            depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(events[i], JsonSerialisationOptions.Options)).Should().BeTrue();
+            Assert.True(depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestId && t.Value == events[i].Id));
+            Assert.True(depositActivity.Tags.Any(t => t.Key == BrighterSemanticConventions.RequestBody && t.Value == JsonSerializer.Serialize(events[i], JsonSerialisationOptions.Options)));
         }
         
         //TODO: When we deposit multiple we do a bulk write to the Outbox, so we should expect to see a bulk operation at the Db level

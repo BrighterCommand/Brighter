@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation
@@ -53,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
              {
                  if (key != "myArrayKey")
                  {
-                     deserializedHeader.Bag[key].Should().Be(expectedBag[key]);
+                     Assert.Equal(expectedBag[key], deserializedHeader.Bag[key]);
                  }
                  if (key == "myArrayKey")
                  {
@@ -62,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
                      
                      for (int i = 0; i < 4; i++)
                      {
-                         expectedVals[i].Should().Be((int)providedVals[i]);
+                         Assert.Equal((int)providedVals[i], expectedVals[i]);
                      }
                  }
              }

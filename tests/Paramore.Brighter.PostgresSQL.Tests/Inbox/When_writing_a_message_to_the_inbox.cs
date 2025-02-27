@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.PostgresSQL.Tests.TestDoubles;

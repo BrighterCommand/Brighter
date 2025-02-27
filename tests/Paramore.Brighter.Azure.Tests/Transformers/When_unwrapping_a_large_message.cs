@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Blobs;
-using FluentAssertions;
 using Paramore.Brighter.Azure.Tests.Helpers;
 using Paramore.Brighter.Azure.Tests.TestDoubles;
 using Paramore.Brighter.Transformers.Azure;
@@ -76,8 +75,8 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         
         //assert
         //contents should be from storage
-        transformedMessage.Value.Should().Be(contents);
-        (await _luggageStore.HasClaimAsync(id, CancellationToken.None)).Should().BeFalse();
+        Assert.Equal(contents, transformedMessage.Value);
+        Assert.False((await _luggageStore.HasClaimAsync(id, CancellationToken.None)));
     }
     
     public void Dispose()

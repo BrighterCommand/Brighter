@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.MySQL.Tests.TestDoubles;
@@ -57,8 +56,8 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
             _exception = Catch.Exception(() => _mysqlInbox.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            _mysqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            Assert.Null(_exception);
+            Assert.True(_mysqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey));
         }
 
         [Fact]

@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Monitoring.TestDoubles;
 using Paramore.Brighter.Monitoring.Configuration;
@@ -78,19 +76,19 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             _afterEvent = _controlBusSender.Observe<MonitorEvent>();
 
             //_should_pass_through_the_exception_not_swallow
-            _thrownException.Should().NotBeNull();
+            Assert.NotNull(_thrownException);
             //_should_monitor_the_exception
-            _afterEvent.Exception.Should().BeOfType<Exception>();
+            Assert.True((_afterEvent.Exception) is Exception);
             //_should_surface_the_error_message
-            _afterEvent.Exception.Message.Should().Contain("monitored");
+            Assert.Contains("monitored", _afterEvent.Exception.Message);
             //_should_have_an_instance_name_after
-            _afterEvent.InstanceName.Should().Be("UnitTests");
+            Assert.Equal("UnitTests", _afterEvent.InstanceName);
             //_should_post_the_handler_fullname_to_the_control_bus_after
-            _afterEvent.HandlerName.Should().Be(typeof(MyMonitoredHandler).FullName);
+            Assert.Equal(typeof(MyMonitoredHandler).FullName, _afterEvent.HandlerName);
             //_should_post_the_handler_name_to_the_control_bus_after
-            _afterEvent.HandlerFullAssemblyName.Should().Be(typeof(MyMonitoredHandler).AssemblyQualifiedName);
+            Assert.Equal(typeof(MyMonitoredHandler).AssemblyQualifiedName, _afterEvent.HandlerFullAssemblyName);
             //should_post_the_time_of_the_request_after
-            _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
+            Assert.True((_afterEvent.EventTime.AsUtc()) > (_at.AsUtc()));
         }
 
         public void Dispose()

@@ -9,7 +9,6 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.SecurityToken;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.Tranformers.AWS;
@@ -74,12 +73,12 @@ public class S3LuggageUploadTests : IDisposable
 
         //assert
         //do we have a claim?
-        (await luggageStore.HasClaimAsync(claim)).Should().BeTrue();
+        Assert.True((await luggageStore.HasClaimAsync(claim)));
         
         //check for the contents indicated by the claim id on S3
         var result = await luggageStore.RetrieveAsync(claim);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
-        resultAsString.Should().Be(testContent);
+        Assert.Equal(testContent, resultAsString);
 
         await luggageStore.DeleteAsync(claim);
 

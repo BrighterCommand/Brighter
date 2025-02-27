@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -75,10 +74,10 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
 
         //publish_and_subscribe_should_use_custom_http_client_factory
         InterceptingDelegatingHandler.RequestCount.Should().ContainKey("async_sub");
-        InterceptingDelegatingHandler.RequestCount["async_sub"].Should().BeGreaterThan(0);
+        Assert.True((InterceptingDelegatingHandler.RequestCount["async_sub"]) > (0));
 
         InterceptingDelegatingHandler.RequestCount.Should().ContainKey("async_pub");
-        InterceptingDelegatingHandler.RequestCount["async_pub"].Should().BeGreaterThan(0);
+        Assert.True((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0));
     }
 
     public void Dispose()

@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -143,7 +142,7 @@ public class RMQMessageConsumerRetryDLQTests : IDisposable
         var dlqMessage = _deadLetterConsumer.Receive(new TimeSpan(10000)).First();
 
         //assert this is our message
-        dlqMessage.Body.Value.Should().Be(_message.Body.Value);
+        Assert.Equal(_message.Body.Value, dlqMessage.Body.Value);
 
         _deadLetterConsumer.Acknowledge(dlqMessage);
 

@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
@@ -87,16 +86,16 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage = _sqlOutbox.Get(_message.Id, new RequestContext());
 
             //_should_read_the_message_from_the__sql_outbox
-            _storedMessage.Body.Value.Should().Be(_message.Body.Value);
+            Assert.Equal(_message.Body.Value, _storedMessage.Body.Value);
             //_should_read_the_message_header_type_from_the__sql_outbox
-            _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
+            Assert.Equal(_message.Header.MessageType, _storedMessage.Header.MessageType);
             //_should_read_the_message_header_topic_from_the__sql_outbox
-            _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
+            Assert.Equal(_message.Header.Topic, _storedMessage.Header.Topic);
             //_should_default_the_timestamp_from_the__sql_outbox
             _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss").Should()
                 .Be(_message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
             //_should_read_empty_header_bag_from_the__sql_outbox
-            _storedMessage.Header.Bag.Keys.Should().BeEmpty();
+            Assert.Empty(_storedMessage.Header.Bag.Keys ?? []);
         }
 
         public async ValueTask DisposeAsync()

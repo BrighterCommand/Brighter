@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.MySQL.Tests.TestDoubles;
@@ -61,7 +60,7 @@ namespace Paramore.Brighter.MySQL.Tests.Inbox
         {
             string commandId = Guid.NewGuid().ToString();
             bool exists = await _mysqlInbox.ExistsAsync<MyCommand>(commandId, _contextKey);
-            exists.Should().BeFalse();
+            Assert.False(exists);
         }
 
         public void Dispose()
