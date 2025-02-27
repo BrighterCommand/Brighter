@@ -75,8 +75,8 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         
         //assert
         //contents should be from storage
-        Assert.Equal(contents, transformedMessage.Value);
-        Assert.False((await _luggageStore.HasClaimAsync(id, CancellationToken.None)));
+        Assert.Equals(contents, transformedMessage.Value);
+        Assert.That((await _luggageStore.HasClaimAsync(id, CancellationToken.None)));
     }
     
     public void Dispose()
