@@ -80,10 +80,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             );
         
             CommandProcessor.ClearServiceBus();
+            var scheduler = new InMemorySchedulerFactory();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
                 bus,
+                scheduler,
                 _transactionProvider
             );
         }
