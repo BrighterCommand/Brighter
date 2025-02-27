@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -105,7 +106,13 @@ namespace Paramore.Brighter
         /// </summary>
         private static IAmAnOutboxProducerMediator? s_mediator;
         private static readonly object s_padlock = new();
-        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new(); 
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCalls = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundDepositCallsAsync = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCalls = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundBulkDepositCallsAsync = new();
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_boundMediatorMethods = new();
+        private static IAmABoxTransactionProvider? s_defaultTransactionProvider;
+        private static Type s_transactionType = typeof(CommittableTransaction);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class
@@ -160,7 +167,8 @@ namespace Paramore.Brighter
         /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="bus">The external service bus that we want to send messages over</param>
+        /// <param name="bus">The external service bus that we want to send messages over.</param>
+        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
@@ -175,6 +183,7 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAnOutboxProducerMediator bus,
             IAmARequestSchedulerFactory  requestSchedulerFactory,
+            IAmABoxTransactionProvider? transactionProvider = null,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
             IEnumerable<Subscription>? replySubscriptions = null,
@@ -188,8 +197,8 @@ namespace Paramore.Brighter
             _instrumentationOptions = instrumentationOptions;
             _replySubscriptions = replySubscriptions;
             _schedulerFactory = requestSchedulerFactory;
-            
-            InitExtServiceBus(bus); 
+
+            InitExtServiceBus(bus, transactionProvider);
         }
 
         /// <summary>
@@ -199,6 +208,7 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mediator">The external service bus that we want to send messages over</param>
+        /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
@@ -210,6 +220,7 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAnOutboxProducerMediator mediator,
             IAmARequestSchedulerFactory requestSchedulerFactory,
+            IAmABoxTransactionProvider? transactionProvider = null,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
             IEnumerable<Subscription>? replySubscriptions = null,
@@ -225,7 +236,7 @@ namespace Paramore.Brighter
             _instrumentationOptions = instrumentationOptions;
             _schedulerFactory = requestSchedulerFactory;
 
-            InitExtServiceBus(mediator); 
+            InitExtServiceBus(mediator, transactionProvider); 
         }
 
         /// <summary>
@@ -511,7 +522,7 @@ namespace Paramore.Brighter
             
             using var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration);
             var handlerSpans = new ConcurrentDictionary<string, Activity>();
-             try
+            try
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(),
                     @event.Id);
@@ -617,7 +628,7 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null
         ) where TRequest : class, IRequest
         {
-            ClearOutbox(new []{DepositPost(request, (IAmABoxTransactionProvider<CommittableTransaction>?)null, requestContext, args)}, requestContext, args);
+            ClearOutbox([CallDepositPost(request, null, requestContext, args, null, s_transactionType)], requestContext, args);
         }
 
         /// <inheritdoc />
@@ -675,11 +686,11 @@ namespace Paramore.Brighter
             Dictionary<string, object>? args = null,
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default
-            )
-            where TRequest : class, IRequest
+        ) where TRequest : class, IRequest
         {
-            var messageId = await DepositPostAsync(request, (IAmABoxTransactionProvider<CommittableTransaction>?)null, requestContext, args, continueOnCapturedContext, cancellationToken);
-            await ClearOutboxAsync(new[] { messageId }, requestContext, args, continueOnCapturedContext, cancellationToken);
+
+            var messageId = await CallDepositPostAsync(request, null, requestContext, args, continueOnCapturedContext, cancellationToken, null, s_transactionType);
+            await ClearOutboxAsync([messageId], requestContext, args, continueOnCapturedContext, cancellationToken);
         }
 
         /// <inheritdoc />
@@ -726,10 +737,13 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string DepositPost<TRequest>(TRequest request, RequestContext? requestContext = null, Dictionary<string, object>? args = null) 
-            where TRequest : class, IRequest
+        public string DepositPost<TRequest>(
+            TRequest request,
+            RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null
+        ) where TRequest : class, IRequest
         {
-            return DepositPost<TRequest, CommittableTransaction>(request, null, requestContext, args); 
+            return CallDepositPost(request, s_defaultTransactionProvider, requestContext, args, null, s_transactionType);
         }
 
         /// <summary>
@@ -740,16 +754,16 @@ namespace Paramore.Brighter
         /// Pass deposited message to <see cref="ClearOutbox(string[],Paramore.Brighter.RequestContext,System.Collections.Generic.Dictionary{string,object})"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
-        /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
+        /// <param name="transactionProvider">The transaction provider to use with an outbox. Must match the transaction type configured during startup</param>
         /// <param name="requestContext">The context of the request; if null we will start one via a <see cref="IAmARequestContextFactory"/> </param>
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <param name="batchId">The id of any batch of deposits we are called within; this will be set by the call to DepositPost with
         /// a collection of requests and there is no need to set this yourself</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <typeparam name="TTransaction">The type of Db transaction used by the Outbox</typeparam>
+        /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        [DepositCallSite] //NOTE: if you adjust the signature, adjust the bulk caller
-        public string DepositPost<TRequest, TTransaction>(
+        [DepositCallSite] //NOTE: if you adjust the signature, adjust the invocation site
+        public string DepositPost<TRequest,TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
             RequestContext? requestContext = null,
@@ -759,19 +773,20 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
             
-             var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
-             var context = InitRequestContext(span, requestContext);
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Deposit, request, requestContext?.Span, options: _instrumentationOptions);
+            var context = InitRequestContext(span, requestContext);
 
             try
             {
-                Message message = s_mediator!.CreateMessageFromRequest(request, context);
-                
-                var mediator = ((IAmAnOutboxProducerMediator<Message, TTransaction>)s_mediator);
+                if (typeof(TTransaction) != s_transactionType)
+                    throw new InvalidOperationException("Supplied transaction provider doesn't match configured transaction type.");
 
-                if (!mediator.HasOutbox())
+                Message message = s_mediator!.CreateMessageFromRequest(request, context);
+
+                if (!s_mediator.HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
 
-                mediator.AddToOutbox(message, context, transactionProvider, batchId);
+                CallAddToOutbox(message, context, transactionProvider, batchId);
 
                 return message.Id;
             }
@@ -798,10 +813,13 @@ namespace Paramore.Brighter
         /// <param name="args">For transports or outboxes that require additional parameters such as topic, provide an optional arg</param>
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public string[] DepositPost<TRequest>(IEnumerable<TRequest> requests, RequestContext? requestContext = null, Dictionary<string, object>? args = null) 
-            where TRequest : class, IRequest
+        public string[] DepositPost<TRequest>(
+            IEnumerable<TRequest> requests, 
+            RequestContext? requestContext = null, 
+            Dictionary<string, object>? args = null
+        ) where TRequest : class, IRequest
         {
-            return DepositPost<TRequest, CommittableTransaction >(requests, null, requestContext, args); 
+            return CallBulkDepositPost(requests, s_defaultTransactionProvider, requestContext, args, s_transactionType); 
         }
 
         /// <summary>
@@ -818,6 +836,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
+        [BulkDepositCallSite] //NOTE: if you adjust the signature, adjust the invocation site
         public string[] DepositPost<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
@@ -832,21 +851,22 @@ namespace Paramore.Brighter
             
             try
             {
+                if (typeof(TTransaction) != s_transactionType)
+                    throw new InvalidOperationException("Supplied transaction provider doesn't match configured transaction type.");
+
                 var successfullySentMessage = new List<string>();
-                
-                var mediator = (IAmAnOutboxProducerMediator<Message, TTransaction>)s_mediator!;
-                
-                var batchId = mediator.StartBatchAddToOutbox();
+
+                var batchId = CallStartBatchAddToOutbox();
 
                 foreach (var request in requests)
                 {
                     var createSpan = context.Span;
-                    var messageId = CallDepositPost(request, transactionProvider, context, args, batchId);
+                    var messageId = CallDepositPost(request, transactionProvider, context, args, batchId, typeof(TTransaction));
                     successfullySentMessage.Add(messageId);
                     context.Span = createSpan;
                 }
-                
-                mediator.EndBatchAddToOutbox(batchId, transactionProvider, context);
+
+                CallEndBatchAddToOutbox(batchId, transactionProvider, context);
                 
                 return successfullySentMessage.ToArray();
             }
@@ -859,39 +879,82 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpan(span);
             }
-            
-            // Call the deposit post method for a single request
-            // We need to bind DepositPost to the type of the request; an IEnumerable<IRequest> loses type information
-            // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
-            // generic methods, like DepositPost, assume they have the derived type. This binds DepositPost to the right
-            // type before we call it.
-            string CallDepositPost(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction>? amABoxTransactionProvider, 
-                RequestContext? requestContext1, Dictionary<string, object>? dictionary, string batchId)
+        }
+
+        private string[] CallBulkDepositPost<TRequest>(
+            IEnumerable<TRequest> requests,
+            IAmABoxTransactionProvider? transactionProvider,
+            RequestContext? requestContext,
+            Dictionary<string, object>? args,
+            Type transactionType
+        ) where TRequest : class, IRequest
+        {
+            var requestType = typeof(TRequest).Name;
+            MethodInfo bulkDeposit;
+            if (s_boundBulkDepositCalls.ContainsKey(requestType))
             {
-                MethodInfo deposit;
-                var actualRequestType = actualRequest.GetType();
-
-                if (s_boundDepositCalls.ContainsKey(actualRequestType.Name))
-                {
-                    deposit = s_boundDepositCalls[actualRequestType.Name];
-                }
-                else
-                {
-                    var depositMethod = typeof(CommandProcessor)
-                        .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                        .Where(m =>
-                            m.Name == nameof(DepositPost)
-                            && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAttribute))
-                        )
-                        .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 5);
-
-                    deposit = depositMethod?.MakeGenericMethod(actualRequestType, typeof(TTransaction))!;
-                    
-                    s_boundDepositCalls[actualRequestType.Name] = deposit;
-                }
-
-                return (deposit?.Invoke(this, new object?[] { actualRequest, amABoxTransactionProvider, requestContext1, dictionary, batchId }) as string)!;
+                bulkDeposit = s_boundBulkDepositCalls[requestType];
             }
+            else
+            {
+                var bulkDepositMethod = typeof(CommandProcessor)
+                    .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m =>
+                        m.Name == nameof(DepositPost)
+                        && m.GetCustomAttributes().Any(a => a.GetType() == typeof(BulkDepositCallSiteAttribute))
+                    )
+                    .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 4);
+
+                bulkDeposit = bulkDepositMethod?.MakeGenericMethod(typeof(TRequest), transactionType)!;
+
+                s_boundBulkDepositCalls[requestType] = bulkDeposit;
+            }
+
+            return CallMethodAndPreserveException(() =>
+                (bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args]) as string[])!
+            );
+        }
+
+        // Calls the deposit post method for a single request of a specific type. The transaction type isn't known
+        // until runtime, so is passed as a parameter.
+        // We need to bind DepositPost to the type of the request; an IEnumerable<IRequest> loses type information
+        // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
+        // generic methods, like DepositPost, assume they have the derived type. This binds DepositPost to the right
+        // type before we call it.
+        private string CallDepositPost<TRequest>(
+            TRequest actualRequest, 
+            IAmABoxTransactionProvider? amABoxTransactionProvider,
+            RequestContext? requestContext, 
+            Dictionary<string, object>? dictionary, 
+            string? batchId,
+            Type transactionType
+        ) where TRequest : class, IRequest
+        {
+            MethodInfo deposit;
+            var actualRequestType = actualRequest.GetType();
+
+            if (s_boundDepositCalls.ContainsKey(actualRequestType.Name))
+            {
+                deposit = s_boundDepositCalls[actualRequestType.Name];
+            }
+            else
+            {
+                var depositMethod = typeof(CommandProcessor)
+                    .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m =>
+                        m.Name == nameof(DepositPost)
+                        && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAttribute))
+                    )
+                    .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 5);
+
+                deposit = depositMethod?.MakeGenericMethod(actualRequestType, transactionType)!;
+
+                s_boundDepositCalls[actualRequestType.Name] = deposit;
+            }
+
+            return CallMethodAndPreserveException(() =>
+                (deposit?.Invoke(this, [actualRequest, amABoxTransactionProvider, requestContext, dictionary, batchId]) as string)!
+            );
         }
 
         /// <summary>
@@ -917,13 +980,8 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            return await DepositPostAsync<TRequest, CommittableTransaction>(
-                request,
-                null,
-                requestContext,
-                args,
-                continueOnCapturedContext,
-                cancellationToken);
+            return await CallDepositPostAsync(request, s_defaultTransactionProvider, requestContext, args, 
+                continueOnCapturedContext, cancellationToken, null, s_transactionType);
         }
 
         /// <summary>
@@ -931,7 +989,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited message to <see cref="ClearOutboxAsync"/> 
+        /// Pass deposited message to <see cref="ClearOutboxAsync"/>
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="transactionProvider">The transaction provider to use with an outbox</param>
@@ -943,7 +1001,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of the transaction used by the Outbox</typeparam>
         /// <returns></returns>
-        [DepositCallSiteAsync] //NOTE: if you adjust the signature, adjust the bulk caller
+        [DepositCallSiteAsync] //NOTE: if you adjust the signature, adjust the invocation site
         public async Task<string> DepositPostAsync<TRequest, TTransaction>(
             TRequest request,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
@@ -960,14 +1018,15 @@ namespace Paramore.Brighter
 
             try
             {
+                if (typeof(TTransaction) != s_transactionType)
+                    throw new InvalidOperationException("Supplied transaction provider doesn't match configured transaction type.");
+
                 Message message = await s_mediator!.CreateMessageFromRequestAsync(request, context, cancellationToken);
                 
-                var mediator = ((IAmAnOutboxProducerMediator<Message, TTransaction>)s_mediator);
-                
-                if (!mediator.HasAsyncOutbox())
+                if (!s_mediator.HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
 
-                await mediator.AddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext,
+                await CallAddToOutboxAsync(message, context, transactionProvider, continueOnCapturedContext,
                     cancellationToken, batchId);
 
                 return message.Id;
@@ -1004,13 +1063,8 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            return await DepositPostAsync<TRequest, CommittableTransaction>(
-                requests,
-                null,
-                requestContext,
-                args,
-                continueOnCapturedContext,
-                cancellationToken);
+            return await CallBulkDepositPostAsync(requests, s_defaultTransactionProvider, requestContext, args,
+                continueOnCapturedContext, cancellationToken, s_transactionType);
         }
 
         /// <summary>
@@ -1029,6 +1083,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <typeparam name="TTransaction">The type of transaction used with the Outbox</typeparam>
         /// <returns></returns>
+        [BulkDepositCallSiteAsync] //NOTE: if you adjust the signature, adjust the invocation site
         public async Task<string[]> DepositPostAsync<TRequest, TTransaction>(
             IEnumerable<TRequest> requests,
             IAmABoxTransactionProvider<TTransaction>? transactionProvider,
@@ -1037,7 +1092,6 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = true,
             CancellationToken cancellationToken = default) where TRequest : class, IRequest
         {
-            
             var span = _tracer?.CreateBatchSpan<TRequest>(requestContext?.Span, options: _instrumentationOptions);
             var context = InitRequestContext(span, requestContext);
 
@@ -1045,20 +1099,19 @@ namespace Paramore.Brighter
             {
                 var successfullySentMessage = new List<string>();
 
-                var mediator = (IAmAnOutboxProducerMediator<Message, TTransaction>)s_mediator!;
-                
-                var batchId = mediator.StartBatchAddToOutbox();
+                var batchId = CallStartBatchAddToOutbox();
 
                 foreach (var request in requests)
                 {
                     var createSpan = context.Span;
-                    var messageId =
-                        await CallDepositPostAsync(request, transactionProvider, context, args, batchId);
+                    var messageId = await CallDepositPostAsync(request, transactionProvider, context, args, 
+                        continueOnCapturedContext, cancellationToken, batchId, typeof(TTransaction));
 
                     successfullySentMessage.Add(messageId); 
                     context.Span = createSpan;
                 }
-                await mediator.EndBatchAddToOutboxAsync(batchId, transactionProvider, context, cancellationToken);
+
+                await CallEndBatchAddToOutboxAsync(batchId, transactionProvider, context, cancellationToken);
 
                 return successfullySentMessage.ToArray();
             }
@@ -1071,39 +1124,169 @@ namespace Paramore.Brighter
             {
                 _tracer?.EndSpan(span);
             }
-            
-            // Call the deposit post method for a single request
-            // We need to bind DepositPostAsync to the type of the request; an IEnumerable<IRequest> loses type information
-            // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
-            // generic methods, like DepositPost, assume they have the derived type. This binds DepositPostAsync to the right
-            // type before we call it.
-            Task<string> CallDepositPostAsync(TRequest actualRequest, IAmABoxTransactionProvider<TTransaction>? tp, 
-                RequestContext rc, Dictionary<string, object>? bag, string? batchId = null)
+        }
+
+        private Task<string[]> CallBulkDepositPostAsync<TRequest>(
+            IEnumerable<TRequest> requests,
+            IAmABoxTransactionProvider? transactionProvider,
+            RequestContext? requestContext,
+            Dictionary<string, object>? args,
+            bool continueOnCapturedContext,
+            CancellationToken cancellationToken,
+            Type transactionType
+        ) where TRequest : class, IRequest
+        {
+            var requestType = typeof(TRequest).Name;
+            MethodInfo bulkDeposit;
+            if (s_boundBulkDepositCallsAsync.ContainsKey(requestType))
             {
-                MethodInfo deposit;
-                var actualRequestType = actualRequest.GetType();
+                bulkDeposit = s_boundBulkDepositCallsAsync[requestType];
+            }
+            else
+            {
+                var bulkDepositMethod = typeof(CommandProcessor)
+                    .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m =>
+                        m.Name == nameof(DepositPostAsync)
+                        && m.GetCustomAttributes().Any(a => a.GetType() == typeof(BulkDepositCallSiteAsyncAttribute))
+                    )
+                    .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 6);
 
-                if (s_boundDepositCalls.ContainsKey(actualRequestType.Name))
+                bulkDeposit = bulkDepositMethod?.MakeGenericMethod(typeof(TRequest), transactionType)!;
+
+                s_boundBulkDepositCallsAsync[requestType] = bulkDeposit;
+            }
+            return CallMethodAndPreserveException(() =>
+                (Task<string[]>)bulkDeposit.Invoke(this, [requests, transactionProvider, requestContext, args, continueOnCapturedContext, cancellationToken])!
+            );
+        }
+
+        // Call the deposit post method for a single request
+        // We need to bind DepositPostAsync to the type of the request; an IEnumerable<IRequest> loses type information
+        // so you need to call GetType to find the actual type. Our generic pipeline creates errors because our 
+        // generic methods, like DepositPost, assume they have the derived type. This binds DepositPostAsync to the right
+        // type before we call it.
+        Task<string> CallDepositPostAsync<TRequest>(
+            TRequest actualRequest, 
+            IAmABoxTransactionProvider? tp,
+            RequestContext? rc, 
+            Dictionary<string, object>? bag,
+            bool? continueOnCapturedContext,
+            CancellationToken? cancellationToken,
+            string? batchId,
+            Type transactionType
+        ) where TRequest : class, IRequest
+        {
+            MethodInfo deposit;
+            var actualRequestType = actualRequest.GetType();
+
+            if (s_boundDepositCallsAsync.ContainsKey(actualRequestType.Name))
+            {
+                deposit = s_boundDepositCallsAsync[actualRequestType.Name];
+            }
+            else
+            {
+                var depositMethod = typeof(CommandProcessor)
+                    .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m =>
+                        m.Name == nameof(DepositPostAsync)
+                        && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAsyncAttribute))
+                    )
+                    .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 7);
+
+                deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), transactionType)!;
+                s_boundDepositCallsAsync[actualRequestType.Name] = deposit;
+            }
+
+            return CallMethodAndPreserveException(
+                () => (Task<string>)deposit?.Invoke(this, [actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId])!
+            );
+        }
+
+        private void CallAddToOutbox<TTransaction>(
+            Message message,
+            RequestContext? context,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider,
+            string? batchId)
+        {
+            var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.AddToOutbox));
+            CallMethodAndPreserveException(
+                () => method.Invoke(s_mediator, [message, context, transactionProvider, batchId]));
+        }
+
+        private Task CallAddToOutboxAsync<TTransaction>(
+            Message message,
+            RequestContext? context,
+            IAmABoxTransactionProvider<TTransaction>? transactionProvider,
+            bool continueOnCapturedContext,
+            CancellationToken cancellationToken,
+            string? batchId)
+        {
+            var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.AddToOutboxAsync));
+            return CallMethodAndPreserveException(
+                () => (Task)method.Invoke(s_mediator, [message, context, transactionProvider, continueOnCapturedContext, cancellationToken, batchId])!);
+        }
+
+        private string CallStartBatchAddToOutbox()
+        {
+            var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.StartBatchAddToOutbox));
+            return CallMethodAndPreserveException(
+                () => (method.Invoke(s_mediator, null) as string)!);
+        }
+
+        private void CallEndBatchAddToOutbox(string batchId, IAmABoxTransactionProvider? transactionProvider, RequestContext context)
+        {
+            var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.EndBatchAddToOutbox));
+            CallMethodAndPreserveException(
+                () => method.Invoke(s_mediator, [batchId, transactionProvider, context]));
+        }
+
+        private Task CallEndBatchAddToOutboxAsync(
+            string batchId,
+            IAmABoxTransactionProvider? transactionProvider,
+            RequestContext context,
+            CancellationToken cancellationToken)
+        {
+            var method = GetMediatorMethod(nameof(IAmAnOutboxProducerMediator<object, object>.EndBatchAddToOutboxAsync));
+            return CallMethodAndPreserveException(
+                () => (Task)method.Invoke(s_mediator, [batchId, transactionProvider, context, cancellationToken])!);
+        }
+
+        private MethodInfo GetMediatorMethod(string methodName)
+        {
+            MethodInfo method;
+            if (s_boundMediatorMethods.ContainsKey(methodName))
+            {
+                method = s_boundMediatorMethods[methodName];
+            }
+            else
+            {
+                method = s_mediator!
+                    .GetType()
+                    .GetMethods()
+                    .Single(x => x.Name == methodName);
+
+                s_boundMediatorMethods[methodName] = method!;
+            }
+
+            return method;
+        }
+
+        private TResult CallMethodAndPreserveException<TResult>(Func<TResult> method)
+        {
+            try
+            {
+                return method();
+            }
+            catch (TargetInvocationException e)
+            {
+                if (e.InnerException != null)
                 {
-                    deposit = s_boundDepositCalls[actualRequestType.Name];
-                }
-                else
-                {
-                    var depositMethod = typeof(CommandProcessor)
-                        .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                        .Where(m =>
-                            m.Name == nameof(DepositPostAsync)
-                            && m.GetCustomAttributes().Any(a => a.GetType() == typeof(DepositCallSiteAsyncAttribute))
-                        )
-                        .FirstOrDefault(m => m.IsGenericMethod && m.GetParameters().Length == 7);
-
-                    deposit = depositMethod?.MakeGenericMethod(actualRequest.GetType(), typeof(TTransaction))!;
-                    s_boundDepositCalls[actualRequestType.Name] = deposit;
+                    var exceptionInfo = ExceptionDispatchInfo.Capture(e.InnerException);
+                    exceptionInfo.Throw();
                 }
 
-                return (Task<string>)deposit?
-                    .Invoke(this, new object?[] { actualRequest, tp, rc, bag, continueOnCapturedContext, cancellationToken, batchId }
-                )!;
+                throw;
             }
         }
 
@@ -1268,8 +1451,16 @@ namespace Paramore.Brighter
             {
                 lock (s_padlock)
                 {
-                    s_mediator.Dispose();
-                    s_mediator = null;
+                    if (s_mediator != null)
+                    {
+                        s_mediator.Dispose();
+                        s_mediator = null;
+                        s_boundDepositCalls.Clear();
+                        s_boundDepositCallsAsync.Clear();
+                        s_boundBulkDepositCalls.Clear();
+                        s_boundBulkDepositCallsAsync.Clear();
+                        s_boundMediatorMethods.Clear();
+                    }
                 }
             }
             s_boundDepositCalls.Clear();
@@ -1308,15 +1499,41 @@ namespace Paramore.Brighter
         // Create an instance of the OutboxProducerMediator if one not already set for this app. Note that we do not support reinitialization here, so once you have
         // set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         // if needed as a "get out of gaol" card.
-        private static void InitExtServiceBus(IAmAnOutboxProducerMediator bus)
+        private static void InitExtServiceBus(IAmAnOutboxProducerMediator bus, IAmABoxTransactionProvider? defaultTransactionProvider)
         {
             if (s_mediator == null)
             {
                 lock (s_padlock)
                 {
-                    s_mediator ??= bus;
+                    if (s_mediator == null)
+                    {
+                        s_mediator = bus;
+                        s_defaultTransactionProvider = defaultTransactionProvider;
+
+                        if (defaultTransactionProvider != null)
+                        {
+                            s_transactionType = GetTransactionTypeFromTransactionProvider(defaultTransactionProvider) 
+                                    ?? throw new ConfigurationException(
+                                        $"Unable to initialise outbox producer mediator. {defaultTransactionProvider.GetType().Name} does not implement {typeof(IAmABoxTransactionProvider<>).Name}.");
+                        }
+                        else
+                        {
+                            s_transactionType = typeof(CommittableTransaction);
+                        }
+                    }
                 }
             }
+        }
+
+        private static Type? GetTransactionTypeFromTransactionProvider (IAmABoxTransactionProvider transactionProvider)
+        {
+            var transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
+            Type? transactionType = null;
+            foreach (Type i in transactionProvider.GetType().GetInterfaces())
+                if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
+                    transactionType = i.GetGenericArguments()[0];
+
+            return transactionType;
         }
         
         private RequestContext InitRequestContext(Activity? span, RequestContext? requestContext)
