@@ -75,7 +75,8 @@ namespace GreetingsSender
                     }
                 }).Create();
             
-            serviceCollection.AddBrighter()
+            serviceCollection
+                .AddBrighter()
                 .UseExternalBus((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;

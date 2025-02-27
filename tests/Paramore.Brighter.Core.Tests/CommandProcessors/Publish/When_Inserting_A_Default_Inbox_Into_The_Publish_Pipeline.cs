@@ -56,6 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry {{Brighter.CommandProcessor.RETRYPOLICY, retryPolicy}, {Brighter.CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
+                new InMemorySchedulerFactory(),
                 inboxConfiguration: inboxConfiguration
             );
             PipelineBuilder<MyEvent>.ClearPipelineCache();

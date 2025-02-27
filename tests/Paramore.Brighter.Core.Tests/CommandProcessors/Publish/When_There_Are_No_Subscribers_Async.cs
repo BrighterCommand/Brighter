@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             var registry = new SubscriberRegistry();
             var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyEventHandlerAsync(_receivedMessages));
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 

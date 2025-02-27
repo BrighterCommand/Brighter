@@ -28,7 +28,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry());
+                new PolicyRegistry(),
+                new InMemorySchedulerFactory()
+                );
 
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 

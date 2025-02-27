@@ -38,6 +38,7 @@ using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Tasks;
 using Polly;
 using Polly.Registry;
 using Exception = System.Exception;
@@ -62,6 +63,7 @@ namespace Paramore.Brighter
         private readonly IAmAFeatureSwitchRegistry? _featureSwitchRegistry;
         private readonly IEnumerable<Subscription>? _replySubscriptions;
         private readonly IAmABrighterTracer? _tracer;
+        private readonly IAmARequestSchedulerFactory _schedulerFactory;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -124,11 +126,13 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="requestSchedulerFactory">The <see cref="IAmAMessageSchedulerFactory"/>.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
+            IAmARequestSchedulerFactory requestSchedulerFactory,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
             IAmABrighterTracer? tracer = null,
@@ -151,6 +155,7 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
+            _schedulerFactory = requestSchedulerFactory;
         }
 
         /// <summary>
@@ -165,17 +170,19 @@ namespace Paramore.Brighter
         /// <param name="bus">The external service bus that we want to send messages over.</param>
         /// <param name="transactionProvider">The provider that provides access to transactions when writing to the outbox. Null if no outbox is configured.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
-        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure.</param>
-        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues.</param>
-        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on.</param>
-        /// <param name="tracer">What is the tracer we will use for telemetry.</param>
-        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
+        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
+        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
+        /// <param name="tracer">What is the tracer we will use for telemetry</param>
+        /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="requestSchedulerFactory">The <see cref="IAmAMessageSchedulerFactory"/>.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAnOutboxProducerMediator bus,
+            IAmARequestSchedulerFactory  requestSchedulerFactory,
             IAmABoxTransactionProvider? transactionProvider = null,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
@@ -183,14 +190,15 @@ namespace Paramore.Brighter
             IAmAChannelFactory? responseChannelFactory = null,
             IAmABrighterTracer? tracer = null,
             InstrumentationOptions instrumentationOptions = InstrumentationOptions.All)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, requestSchedulerFactory, featureSwitchRegistry, inboxConfiguration)
         {
             _responseChannelFactory = responseChannelFactory;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
             _replySubscriptions = replySubscriptions;
+            _schedulerFactory = requestSchedulerFactory;
 
-            InitExtServiceBus(bus, transactionProvider); 
+            InitExtServiceBus(bus, transactionProvider);
         }
 
         /// <summary>
@@ -206,10 +214,12 @@ namespace Paramore.Brighter
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         /// <param name="tracer">What is the tracer we will use for telemetry</param>
         /// <param name="instrumentationOptions">When creating a span for <see cref="CommandProcessor"/> operations how noisy should the attributes be</param>
+        /// <param name="requestSchedulerFactory">The <see cref="IAmAMessageSchedulerFactory"/>.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAnOutboxProducerMediator mediator,
+            IAmARequestSchedulerFactory requestSchedulerFactory,
             IAmABoxTransactionProvider? transactionProvider = null,
             IAmAFeatureSwitchRegistry? featureSwitchRegistry = null,
             InboxConfiguration? inboxConfiguration = null,
@@ -224,6 +234,7 @@ namespace Paramore.Brighter
             _replySubscriptions = replySubscriptions;
             _tracer = tracer;
             _instrumentationOptions = instrumentationOptions;
+            _schedulerFactory = requestSchedulerFactory;
 
             InitExtServiceBus(mediator, transactionProvider); 
         }
@@ -262,6 +273,36 @@ namespace Paramore.Brighter
             {
                 _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public string Send<TRequest>(DateTimeOffset at, TRequest command, RequestContext? requestContext = null) where TRequest : class, IRequest
+        { 
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, command, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = (IAmARequestSchedulerSync)_schedulerFactory.CreateSync(this);
+                return scheduler.Schedule(command, RequestSchedulerType.Send, at);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public string Send<TRequest>(TimeSpan delay, TRequest command, RequestContext? requestContext = null) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, command, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateSync(this);
+                return scheduler.Schedule(command, RequestSchedulerType.Send, delay);
             }
             finally
             {
@@ -311,6 +352,38 @@ namespace Paramore.Brighter
             {
                 _tracer?.AddExceptionToSpan(span, [e]);
                 throw;
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<string> SendAsync<TRequest>(DateTimeOffset at, TRequest command, RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, command, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateAsync(this);
+                return await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, at, cancellationToken);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<string> SendAsync<TRequest>(TimeSpan delay, TRequest command, RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, command, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateAsync(this);
+                return await scheduler.ScheduleAsync(command, RequestSchedulerType.Send, delay, cancellationToken);
             }
             finally
             {
@@ -384,6 +457,36 @@ namespace Paramore.Brighter
             finally
             {
                 _tracer?.EndSpans(handlerSpans);
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public string Publish<TRequest>(DateTimeOffset at, TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, @event, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateSync(this);
+                return scheduler.Schedule(@event, RequestSchedulerType.Publish, at);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public string  Publish<TRequest>(TimeSpan delay, TRequest @event, RequestContext? requestContext = null) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, @event, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateSync(this);
+                return scheduler.Schedule(@event, RequestSchedulerType.Publish, delay);
+            }
+            finally
+            {
                 _tracer?.EndSpan(span);
             }
         }
@@ -472,6 +575,38 @@ namespace Paramore.Brighter
             }
         }
 
+        /// <inheritdoc />
+        public async Task<string> PublishAsync<TRequest>(DateTimeOffset at, TRequest @event, RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, @event, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateAsync(this);
+                return await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, at, cancellationToken);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<string> PublishAsync<TRequest>(TimeSpan delay, TRequest @event, RequestContext? requestContext = null,
+            bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, @event, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateAsync(this);
+                return await scheduler.ScheduleAsync(@event, RequestSchedulerType.Publish, delay, cancellationToken);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }
+        }
+
         /// <summary>
         /// Posts the specified request. The message is placed on a task queue and into a outbox for reposting in the event of failure.
         /// You will need to configure a service that reads from the task queue to process the message
@@ -494,6 +629,37 @@ namespace Paramore.Brighter
         ) where TRequest : class, IRequest
         {
             ClearOutbox([CallDepositPost(request, null, requestContext, args, null, s_transactionType)], requestContext, args);
+        }
+
+        /// <inheritdoc />
+        public string Post<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, request, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateSync(this);
+                return scheduler.Schedule(request, RequestSchedulerType.Post, at);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            } 
+        }
+
+        /// <inheritdoc />
+        public string Post<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null, Dictionary<string, object>? args = null) where TRequest : class, IRequest
+        { 
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, request, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateSync(this);
+                return scheduler.Schedule(request, RequestSchedulerType.Post, delay);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }        
         }
 
         /// <summary>
@@ -525,6 +691,38 @@ namespace Paramore.Brighter
 
             var messageId = await CallDepositPostAsync(request, null, requestContext, args, continueOnCapturedContext, cancellationToken, null, s_transactionType);
             await ClearOutboxAsync([messageId], requestContext, args, continueOnCapturedContext, cancellationToken);
+        }
+
+        /// <inheritdoc />
+        public async Task<string> PostAsync<TRequest>(DateTimeOffset at, TRequest request, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, request, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateAsync(this);
+                return await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, at, cancellationToken);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }        
+        }
+
+        /// <inheritdoc />
+        public async Task<string> PostAsync<TRequest>(TimeSpan delay, TRequest request, RequestContext? requestContext = null,
+            Dictionary<string, object>? args = null, bool continueOnCapturedContext = true, CancellationToken cancellationToken = default) where TRequest : class, IRequest
+        {
+            var span = _tracer?.CreateSpan(CommandProcessorSpanOperation.Scheduler, request, requestContext?.Span, options: _instrumentationOptions);
+            try
+            {
+                var scheduler = _schedulerFactory.CreateAsync(this);
+                return await scheduler.ScheduleAsync(request, RequestSchedulerType.Post, delay, cancellationToken);
+            }
+            finally
+            {
+                _tracer?.EndSpan(span);
+            }        
         }
 
         /// <summary>

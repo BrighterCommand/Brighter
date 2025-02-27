@@ -65,6 +65,9 @@ public abstract class AzureServiceBusMessageProducer : IAmAMessageProducerSync, 
     /// </summary>
     public Activity? Span { get; set; }
 
+    /// <inheritdoc />
+    public IAmAMessageScheduler? Scheduler { get; set; }
+
     /// <summary>
     /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
     /// </summary>

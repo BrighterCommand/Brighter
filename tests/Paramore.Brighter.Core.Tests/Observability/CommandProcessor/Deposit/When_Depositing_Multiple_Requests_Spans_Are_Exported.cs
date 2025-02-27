@@ -87,6 +87,7 @@ public class CommandProcessorMultipleDepositObservabilityTests : IDisposable
             new InMemoryRequestContextFactory(),
             policyRegistry, 
             bus,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );

@@ -67,6 +67,11 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// The OTel Span we are writing Producer events too
     /// </summary>
     public Activity? Span { get; set; }
+    
+    /// <summary>
+    /// The <see cref="IAmAMessageScheduler"/>
+    /// </summary>
+    public IAmAMessageScheduler? Scheduler { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -104,7 +109,7 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// <param name="message">The message.</param>
     /// <param name="delay">Delay to delivery of the message.</param>
     /// <returns>Task.</returns>
-    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay));
+    public void SendWithDelay(Message message, TimeSpan? delay = null) => BrighterAsyncContext.Run(async () => await SendWithDelayAsync(message, delay, false));
 
     /// <summary>
     /// Sends the specified message
@@ -115,7 +120,11 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
     /// <returns></returns>
     public async Task SendAsync(Message message, CancellationToken cancellationToken = default) => await SendWithDelayAsync(message, null, cancellationToken);
 
+    /// <inheritdoc />
     public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
+        => await SendWithDelayAsync(message, delay, true, cancellationToken);
+    
+    private async Task SendWithDelayAsync(Message message, TimeSpan? delay, bool useSchedulerAsync, CancellationToken cancellationToken = default)
     {
         if (Connection.Exchange is null) throw new ConfigurationException("RmqMessageProducer: Exchange is not set");
         if (Connection.AmpqUri is null) throw new ConfigurationException("RmqMessageProducer: Broker URL is not set");
@@ -144,14 +153,19 @@ public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IA
 
             _pendingConfirmations.TryAdd(await Channel.GetNextPublishSequenceNumberAsync(cancellationToken), message.Id);
 
-            if (DelaySupported)
+            if (delay == TimeSpan.Zero || DelaySupported || Scheduler == null)
             {
                 await rmqMessagePublisher.PublishMessageAsync(message, delay.Value, cancellationToken);
             }
+            else if(useSchedulerAsync)
+            {
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+            }
             else
             {
-                //TODO: Replace with a Timer, don't block
-                await rmqMessagePublisher.PublishMessageAsync(message, TimeSpan.Zero, cancellationToken);
+                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+                schedulerSync.Schedule(message, delay.Value);
             }
 
             s_logger.LogInformation(

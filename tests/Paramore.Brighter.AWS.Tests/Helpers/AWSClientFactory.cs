@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using Amazon;
+using Amazon.IdentityManagement;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.SecurityToken;
@@ -34,71 +35,19 @@ using Paramore.Brighter.MessagingGateway.AWSSQS;
 
 namespace Paramore.Brighter.AWS.Tests.Helpers;
 
-internal class AWSClientFactory
+public static class AWSClientFactoryExtensions
 {
-    private readonly AWSCredentials _credentials;
-    private readonly RegionEndpoint _region;
-    private readonly Action<ClientConfig>? _clientConfigAction;
-
-    public AWSClientFactory(AWSMessagingGatewayConnection connection)
+    public static AmazonS3Client CreateS3Client(this AWSClientFactory factory)
     {
-        _credentials = connection.Credentials;
-        _region = connection.Region;
-        _clientConfigAction = connection.ClientConfigAction;
+        var config = new AmazonS3Config { RegionEndpoint = factory.RegionEndpoint };
+        factory.ClientConfigAction?.Invoke(config);
+        return new AmazonS3Client(factory.Credentials, config);
     }
 
-    public AWSClientFactory(AWSCredentials credentials, RegionEndpoint region, Action<ClientConfig>? clientConfigAction)
+    public static AmazonIdentityManagementServiceClient CreateIdentityClient(this AWSClientFactory factory)
     {
-        _credentials = credentials;
-        _region = region;
-        _clientConfigAction = clientConfigAction;
-    }
-
-    public AmazonSimpleNotificationServiceClient CreateSnsClient()
-    {
-        var config = new AmazonSimpleNotificationServiceConfig { RegionEndpoint = _region };
-
-        if (_clientConfigAction != null)
-        {
-            _clientConfigAction(config);
-        }
-
-        return new AmazonSimpleNotificationServiceClient(_credentials, config);
-    }
-
-    public AmazonSQSClient CreateSqsClient()
-    {
-        var config = new AmazonSQSConfig { RegionEndpoint = _region };
-
-        if (_clientConfigAction != null)
-        {
-            _clientConfigAction(config);
-        }
-
-        return new AmazonSQSClient(_credentials, config);
-    }
-
-    public AmazonSecurityTokenServiceClient CreateStsClient()
-    {
-        var config = new AmazonSecurityTokenServiceConfig { RegionEndpoint = _region };
-
-        if (_clientConfigAction != null)
-        {
-            _clientConfigAction(config);
-        }
-
-        return new AmazonSecurityTokenServiceClient(_credentials, config);
-    }
-
-    public AmazonS3Client CreateS3Client()
-    {
-        var config = new AmazonS3Config { RegionEndpoint = _region };
-
-        if (_clientConfigAction != null)
-        {
-            _clientConfigAction(config);
-        }
-
-        return new AmazonS3Client(_credentials, config);
+        var config = new AmazonIdentityManagementServiceConfig { RegionEndpoint = factory.RegionEndpoint };
+        factory.ClientConfigAction?.Invoke(config);
+        return new AmazonIdentityManagementServiceClient(factory.Credentials, config);
     }
 }

@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry(), new InMemorySchedulerFactory());
 
             _command = new MyCommand();
 

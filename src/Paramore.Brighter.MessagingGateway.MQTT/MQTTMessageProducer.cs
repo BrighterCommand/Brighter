@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
@@ -13,13 +16,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     /// </summary>
     public class MQTTMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, IAmAMessageProducerSync
     {
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageProducer>();
+        
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
         public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
 
+        /// <inheritdoc />
         public Publication Publication { get; set; }
 
+        /// <inheritdoc />
         public Activity Span { get; set; }
+        
+        /// <inheritdoc />
+        public IAmAMessageScheduler Scheduler { get; set; }
 
         private MQTTMessagePublisher _mqttMessagePublisher;
 
@@ -52,10 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            if (message == null)
-                throw new ArgumentNullException(nameof(message));
-
-            _mqttMessagePublisher.PublishMessage(message);
+            SendWithDelay(message, TimeSpan.Zero);
         }
 
         /// <summary>
@@ -66,10 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <returns>Task.</returns>
         public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
-            if (message == null)
-                throw new ArgumentNullException(nameof(message));
-
-            await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
+            await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
         }
         
         /// <summary>
@@ -79,8 +83,21 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="delay">Delay is not natively supported - don't block with Task.Delay</param>
         public void SendWithDelay(Message message, TimeSpan? delay = null)
         {
+            delay ??= TimeSpan.Zero;
+            if (delay != TimeSpan.Zero)
+            {
+                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+                schedulerSync.Schedule(message, delay.Value);
+                return;
+            }
+            
             // delay is not natively supported
-            Send(message);
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+            
+            _mqttMessagePublisher.PublishMessage(message);
         }
 
         /// <summary>
@@ -91,10 +108,20 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="cancellationToken">Allows cancellation of the Send operation</param>
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
-            // delay is not natively supported
-            await SendAsync(message, cancellationToken);
-        }
+            delay ??= TimeSpan.Zero;
+            if (delay != TimeSpan.Zero)
+            {
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
+            }
+            
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
 
- 
+            await _mqttMessagePublisher.PublishMessageAsync(message, cancellationToken);
+        }
     }
 }

@@ -94,6 +94,7 @@ public class AsyncCommandProcessorClearObservabilityTests
             new InMemoryRequestContextFactory(),
             policyRegistry, 
             bus,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );

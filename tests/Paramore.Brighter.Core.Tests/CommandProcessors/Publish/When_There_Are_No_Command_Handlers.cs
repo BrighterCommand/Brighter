@@ -49,7 +49,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                 new SubscriberRegistry(), 
                 new ServiceProviderHandlerFactory(container.BuildServiceProvider()), 
                 new InMemoryRequestContextFactory(), 
-                new PolicyRegistry());
+                new PolicyRegistry(),
+                new InMemorySchedulerFactory()
+                );
         }
 
         [Fact]
