@@ -58,6 +58,7 @@ public class DispatchBuilderWithNamedGatewayAsync : IDisposable
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory())
             .Build();
 
         _builder = DispatchBuilder.StartNew()

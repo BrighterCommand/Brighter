@@ -55,6 +55,7 @@ public class CommandProcessorSendObservabilityTests
             handlerFactory,
             new InMemoryRequestContextFactory(),
             policyRegistry,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );
@@ -153,5 +154,4 @@ public class CommandProcessorSendObservabilityTests
         _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.HandlerType && (string)t.Value == "sync").Should().BeTrue();
         _exportedActivities.First().Events.First().Tags.Any(t => t.Key == BrighterSemanticConventions.IsSink && (bool)t.Value).Should().BeTrue();
     }
-    
 }

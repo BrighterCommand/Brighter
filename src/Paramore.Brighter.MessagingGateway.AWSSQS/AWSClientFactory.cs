@@ -32,40 +32,63 @@ using Amazon.SQS;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS;
 
-internal class AWSClientFactory(
+/// <summary>
+/// The Aws Client factory
+/// </summary>
+/// <param name="credentials"></param>
+/// <param name="region"></param>
+/// <param name="clientConfigAction"></param>
+public class AWSClientFactory(
     AWSCredentials credentials,
     RegionEndpoint region,
     Action<ClientConfig>? clientConfigAction)
 {
+    public AWSCredentials Credentials => credentials;
+
+    public RegionEndpoint RegionEndpoint => region;
+    public Action<ClientConfig>? ClientConfigAction => clientConfigAction;
+
     public AWSClientFactory(AWSMessagingGatewayConnection connection)
         : this(connection.Credentials, connection.Region, connection.ClientConfigAction)
     {
     }
 
+    /// <summary>
+    /// Create SNS Client
+    /// </summary>
+    /// <returns>New instance <see cref="AmazonSimpleNotificationServiceClient"/>.</returns>
     public AmazonSimpleNotificationServiceClient CreateSnsClient()
     {
-        var config = new AmazonSimpleNotificationServiceConfig { RegionEndpoint = region };
+        var config = new AmazonSimpleNotificationServiceConfig { RegionEndpoint = RegionEndpoint };
 
-        clientConfigAction?.Invoke(config);
+        ClientConfigAction?.Invoke(config);
 
-        return new AmazonSimpleNotificationServiceClient(credentials, config);
+        return new AmazonSimpleNotificationServiceClient(Credentials, config);
     }
 
+    /// <summary>
+    /// Create SQS Client
+    /// </summary>
+    /// <returns>New instance <see cref="AmazonSQSClient"/>.</returns>
     public AmazonSQSClient CreateSqsClient()
     {
-        var config = new AmazonSQSConfig { RegionEndpoint = region };
+        var config = new AmazonSQSConfig { RegionEndpoint = RegionEndpoint };
 
-        clientConfigAction?.Invoke(config);
+        ClientConfigAction?.Invoke(config);
 
-        return new AmazonSQSClient(credentials, config);
+        return new AmazonSQSClient(Credentials, config);
     }
 
+    /// <summary>
+    /// Create STS Client
+    /// </summary>
+    /// <returns>New instance <see cref="AmazonSecurityTokenServiceClient"/>.</returns>
     public AmazonSecurityTokenServiceClient CreateStsClient()
     {
-        var config = new AmazonSecurityTokenServiceConfig { RegionEndpoint = region };
+        var config = new AmazonSecurityTokenServiceConfig { RegionEndpoint = RegionEndpoint };
 
-        clientConfigAction?.Invoke(config);
+        ClientConfigAction?.Invoke(config);
 
-        return new AmazonSecurityTokenServiceClient(credentials, config);
+        return new AmazonSecurityTokenServiceClient(Credentials, config);
     }
 }

@@ -81,7 +81,8 @@ public class SnsReDrivePolicySDlqTestsAsync : IDisposable, IAsyncDisposable
             subscriberRegistry: subscriberRegistry,
             handlerFactory: new QuickHandlerFactoryAsync(() => handler),
             requestContextFactory: new InMemoryRequestContextFactory(),
-            policyRegistry: new PolicyRegistry()
+            policyRegistry: new PolicyRegistry(),
+            requestSchedulerFactory: new InMemorySchedulerFactory()
         );
 
         var messageMapperRegistry = new MessageMapperRegistry(

@@ -39,7 +39,7 @@ public class RequestContextFromFactoryTests : IDisposable
        var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareCommandHandler());
        var myCommand = new MyCommand();
 
-       var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
+       var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new InMemorySchedulerFactory());
 
        //act
        commandProcessor.Send(myCommand);
@@ -61,7 +61,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareCommandHandlerAsync());
         var myCommand = new MyCommand();
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new InMemorySchedulerFactory());
 
         //act
         await commandProcessor.SendAsync(myCommand);
@@ -83,7 +83,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var handlerFactory = new SimpleHandlerFactorySync(_ => new MyContextAwareEventHandler());
         var myEvent = new MyEvent();
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new InMemorySchedulerFactory());
 
         //act
         commandProcessor.Publish(myEvent);
@@ -105,7 +105,7 @@ public class RequestContextFromFactoryTests : IDisposable
         var handlerFactory = new SimpleHandlerFactoryAsync(_ => new MyContextAwareEventHandlerAsync());
         var myEvent = new MyEvent();
 
-        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry());
+        var commandProcessor = new CommandProcessor(registry, handlerFactory, _requestContextFactory, new PolicyRegistry(), new InMemorySchedulerFactory());
 
         //act
         await commandProcessor.PublishAsync(myEvent);
@@ -154,7 +154,8 @@ public class RequestContextFromFactoryTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         );
 
         //act
@@ -200,7 +201,8 @@ public class RequestContextFromFactoryTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         );
 
         //act
@@ -247,7 +249,8 @@ public class RequestContextFromFactoryTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         );
         
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
@@ -298,7 +301,8 @@ public class RequestContextFromFactoryTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         );
         
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};

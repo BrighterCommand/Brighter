@@ -22,15 +22,24 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyCommandHandler : RequestHandler<MyCommand>
     {
-        private MyCommand _command;
+        private readonly IDictionary<string, string> _receivedMessages = new Dictionary<string, string>();
+        private MyCommand? _command;
 
         public MyCommandHandler()
         {
             _command = null;
+        }
+        
+        public MyCommandHandler(IDictionary<string, string> receivedMessages)
+        {
+            _command = null;
+            _receivedMessages = receivedMessages;
         }
 
         public override MyCommand Handle(MyCommand command)
@@ -47,6 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         private void LogCommand(MyCommand request)
         {
             _command = request;
+            _receivedMessages.Add(nameof(MyCommandHandler), request.Id);
         }
     }
 }

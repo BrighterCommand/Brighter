@@ -30,11 +30,11 @@ public class GatewayFactory
             {
                 config?.Invoke(cfg);
 
-                var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
+                /*var serviceURL = Environment.GetEnvironmentVariable("LOCALSTACK_SERVICE_URL");
                 if (!string.IsNullOrWhiteSpace(serviceURL))
                 {
                     cfg.ServiceURL = serviceURL;
-                }
+                }*/
             });
     }
 }

@@ -97,9 +97,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
-                bus
+                bus,
+                new InMemorySchedulerFactory()
             );
-             }
+        }
 
         [Fact]
         public void When_Posting_A_Message_To_The_Command_Processor()

@@ -83,7 +83,7 @@ jobs:
     
   memory:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     needs: [build]
     
     steps:
@@ -98,7 +98,11 @@ jobs:
         run: dotnet restore
       - name: In Memory Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n  
-        
+      - name: Hangfire Tests
+        run: dotnet test ./tests/Paramore.Brighter.Hangfire.Tests/Paramore.Brighter.Hangfire.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+      - name: Quartz Tests
+        run: dotnet test ./tests/Paramore.Brighter.Quartz.Tests/Paramore.Brighter.Quartz.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
+  
   redis-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5

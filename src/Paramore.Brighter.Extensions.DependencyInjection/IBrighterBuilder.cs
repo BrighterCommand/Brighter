@@ -96,7 +96,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         IPolicyRegistry<string> PolicyRegistry { get; set; }
 
-
         /// <summary>
         /// The IoC container to populate
         /// </summary>
