@@ -42,12 +42,12 @@ public class AzureBlobUploadTests : IDisposable
 
         //assert
         //do we have a claim?
-        Assert.True((await luggageStore.HasClaimAsync(claim, CancellationToken.None)));
+        Assert.That((await luggageStore.HasClaimAsync(claim, CancellationToken.None)));
         
         //check for the contents indicated by the claim id on S3
         var result = await luggageStore.RetrieveAsync(claim, CancellationToken.None);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
-        Assert.Equal(testContent, resultAsString);
+        Assert.Equals(testContent, resultAsString);
 
         await luggageStore.DeleteAsync(claim, CancellationToken.None);
 

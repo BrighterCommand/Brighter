@@ -84,12 +84,11 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
                 sentMessages.Add(_message);
             }
 
-            Message[] recievedMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(100));
+            Message[] receivedMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(100));
 
-            Assert.NotEmpty(recievedMessages)
-            .And.HaveCount(messageCount)
-            .And.ContainInOrder(sentMessages)
-            .And.ContainItemsAssignableTo<Message>();
+            Assert.NotEmpty(receivedMessages);
+            Assert.Equal(messageCount, receivedMessages.Length);    
+            Assert.Equal(sentMessages, receivedMessages);   
         }
 
         public void Dispose()

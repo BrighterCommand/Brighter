@@ -56,10 +56,9 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 
             Message[] receivedMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
-            Assert.NotEmpty(receivedMessages)
-                .And.HaveCount(1)
-                .And.ContainInOrder(new[] { _noopMessage })
-                .And.ContainItemsAssignableTo<Message>();
+            Assert.NotEmpty(receivedMessages);
+            Assert.Single(receivedMessages);
+            Assert.Contains(_noopMessage, receivedMessages);     
         }
         
         public void Dispose()

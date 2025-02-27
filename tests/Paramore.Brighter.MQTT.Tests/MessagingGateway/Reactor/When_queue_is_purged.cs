@@ -85,10 +85,10 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Reactor
 
             Message[] recievedMessages = _messageConsumer.Receive(TimeSpan.FromMilliseconds(100));
 
-            Assert.NotEmpty(recievedMessages)
-            .And.HaveCount(1)
-            .And.ContainInOrder(new[] { _noopMessage })
-            .And.ContainItemsAssignableTo<Message>();
+            Assert.NotEmpty(recievedMessages);
+            Assert.Single(recievedMessages);
+            Assert.Contains(_noopMessage, recievedMessages);
+            Assert.IsType<Message>(recievedMessages[0]);    
         }
 
         public void Dispose()
