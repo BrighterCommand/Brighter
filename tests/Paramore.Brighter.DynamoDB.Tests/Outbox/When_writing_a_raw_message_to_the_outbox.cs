@@ -81,7 +81,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             //assert
             Assert.Equal(schemaId, retrievedSchemaId);
-            storedMessage.Body.Bytes.Should().Equal(messageEarliest.Body.Bytes);
+            Assert.Equal(messageEarliest.Body.Bytes, storedMessage.Body.Bytes);
             Assert.Equal(messageEarliest.Body.Value, storedMessage.Body.Value);
         }
     }

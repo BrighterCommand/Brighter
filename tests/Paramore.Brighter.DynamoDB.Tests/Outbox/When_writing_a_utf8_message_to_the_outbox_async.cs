@@ -96,8 +96,10 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             //should read the header from the outbox
             Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
             Assert.Equal(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
-            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ").Should()
-                .Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
+            Assert.Equal(
+                    _messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            );
             Assert.Equal(0, _storedMessage.Header.HandledCount); // -- should be zero when read from outbox
             Assert.Equal(TimeSpan.Zero, _storedMessage.Header.Delayed); // -- should be zero when read from outbox
             Assert.Equal(_messageEarliest.Header.CorrelationId, _storedMessage.Header.CorrelationId);
