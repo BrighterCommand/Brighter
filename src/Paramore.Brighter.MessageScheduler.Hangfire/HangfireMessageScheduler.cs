@@ -18,7 +18,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return ScheduleMessage(message, false, at, null);
@@ -29,7 +29,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return ScheduleMessage(message, false, null, delay);
@@ -41,7 +41,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return ScheduleRequest(request, false, type, at, null);
@@ -53,7 +53,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return ScheduleRequest(request, false, type, null, delay);
@@ -64,7 +64,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return client.Reschedule(schedulerId, at);
@@ -75,7 +75,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return client.Reschedule(schedulerId, delay);
@@ -90,7 +90,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return Task.FromResult(ScheduleMessage(message, true, at, null));
@@ -101,7 +101,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return Task.FromResult(ScheduleMessage(message, true, null, delay));
@@ -113,7 +113,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return Task.FromResult(ScheduleRequest(request, true, type, at, null));
@@ -125,7 +125,7 @@ public class HangfireMessageScheduler(IBackgroundJobClientV2 client, string? que
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return Task.FromResult(ScheduleRequest(request, true, type, null, delay));

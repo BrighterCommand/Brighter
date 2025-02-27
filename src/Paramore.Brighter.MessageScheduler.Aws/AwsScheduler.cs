@@ -9,6 +9,15 @@ using ResourceNotFoundException = Amazon.Scheduler.Model.ResourceNotFoundExcepti
 
 namespace Paramore.Brighter.MessageScheduler.Aws;
 
+/// <summary>
+/// The AWS Scheduler implementation
+/// </summary>
+/// <param name="factory">The <see cref="AWSClientFactory"/>.</param>
+/// <param name="timeProvider">The <see cref="System.TimeProvider"/>.</param>
+/// <param name="getOrCreateMessageSchedulerId">The scheduler id generator for message.</param>
+/// <param name="getOrCreateRequestSchedulerId">The scheduler id generator for request.</param>
+/// <param name="scheduler">The <see cref="Scheduler"/> configuration</param>
+/// <param name="schedulerGroup">The <see cref="SchedulerGroup"/> configuration</param>
 public class AwsScheduler(
     AWSClientFactory factory,
     TimeProvider timeProvider,
@@ -28,7 +37,7 @@ public class AwsScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return await ScheduleAsync(message, getOrCreateMessageSchedulerId(message), at, true, cancellationToken);
@@ -40,7 +49,7 @@ public class AwsScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
@@ -52,7 +61,7 @@ public class AwsScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         var id = getOrCreateRequestSchedulerId(request);
@@ -79,7 +88,7 @@ public class AwsScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
@@ -91,7 +100,7 @@ public class AwsScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         try
@@ -128,7 +137,7 @@ public class AwsScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return await ReSchedulerAsync(schedulerId, timeProvider.GetUtcNow().Add(delay), cancellationToken);

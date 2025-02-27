@@ -107,11 +107,11 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
         var exception = Catch.Exception(() =>
             _commandProcessor.Send(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
         exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
+        exception.Should().BeOfType<ArgumentOutOfRangeException>();
 
         exception = Catch.Exception(() => _commandProcessor.Send(TimeSpan.FromMilliseconds(-1), _myCommand));
         exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
+        exception.Should().BeOfType<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -120,11 +120,11 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
         var exception = Catch.Exception(() =>
             _commandProcessor.Publish(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
         exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
+        exception.Should().BeOfType<ArgumentOutOfRangeException>();
 
         exception = Catch.Exception(() => _commandProcessor.Publish(TimeSpan.FromMilliseconds(-1), _myCommand));
         exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
+        exception.Should().BeOfType<ArgumentOutOfRangeException>();
     }
     
     [Fact]
@@ -132,10 +132,10 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
     {
         var exception = Catch.Exception(() => _commandProcessor.Post(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
         exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
+        exception.Should().BeOfType<ArgumentOutOfRangeException>();
 
         exception = Catch.Exception(() => _commandProcessor.Post(TimeSpan.FromMilliseconds(-1), _myCommand));
         exception.Should().NotBeNull();
-        exception.Should().BeOfType<ConfigurationException>();
+        exception.Should().BeOfType<ArgumentOutOfRangeException>();
     }
 }

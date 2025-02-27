@@ -24,7 +24,7 @@ public class QuartzScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         var id = getOrCreateMessageSchedulerId(message);
@@ -49,7 +49,7 @@ public class QuartzScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return Schedule(message, timeProvider.GetUtcNow().Add(delay));
@@ -61,7 +61,7 @@ public class QuartzScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), "Invalid at, it should be in the future");
         }
 
         var id = getOrCreateRequestSchedulerId(request);
@@ -94,7 +94,7 @@ public class QuartzScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return Schedule(request, type, timeProvider.GetUtcNow().Add(delay));
@@ -109,7 +109,7 @@ public class QuartzScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), "Invalid delay, it can't be negative");
         }
 
         return ReScheduler(schedulerId, timeProvider.GetUtcNow().Add(delay));
@@ -125,7 +125,7 @@ public class QuartzScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), "Invalid at, it should be in the future");
         }
 
         var id = getOrCreateMessageSchedulerId(message);
@@ -151,7 +151,7 @@ public class QuartzScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
@@ -162,7 +162,7 @@ public class QuartzScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         var id = getOrCreateRequestSchedulerId(request);
@@ -195,7 +195,7 @@ public class QuartzScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
@@ -207,7 +207,7 @@ public class QuartzScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         var date = await scheduler.RescheduleJob(new TriggerKey(schedulerId + "-trigger", group!), TriggerBuilder
@@ -225,7 +225,7 @@ public class QuartzScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return await ReSchedulerAsync(schedulerId, timeProvider.GetUtcNow().Add(delay), cancellationToken);

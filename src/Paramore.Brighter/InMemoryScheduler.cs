@@ -59,7 +59,7 @@ public class InMemoryScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("invalid datetime, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "invalid datetime, it should be in the future");
         }
 
         return Schedule(request, type, at - timeProvider.GetUtcNow());
@@ -71,7 +71,7 @@ public class InMemoryScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         var id = getOrCreateRequestSchedulerId(request);
@@ -103,7 +103,7 @@ public class InMemoryScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return ReScheduler(schedulerId, at - timeProvider.GetUtcNow());
@@ -114,7 +114,7 @@ public class InMemoryScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         if (s_timers.TryGetValue(schedulerId, out var timer))
@@ -141,7 +141,7 @@ public class InMemoryScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return await ScheduleAsync(message, at - timeProvider.GetUtcNow(), cancellationToken);
@@ -153,7 +153,7 @@ public class InMemoryScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         var id = getOrCreateMessageSchedulerId(message);
@@ -179,7 +179,7 @@ public class InMemoryScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         return await ScheduleAsync(request, type, at - timeProvider.GetUtcNow(), cancellationToken);
@@ -191,7 +191,7 @@ public class InMemoryScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         var id = getOrCreateRequestSchedulerId(request);

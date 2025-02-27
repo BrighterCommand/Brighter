@@ -26,7 +26,7 @@ public class AzureServiceBusScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         var seq = await sender.ScheduleMessageAsync(
@@ -49,7 +49,7 @@ public class AzureServiceBusScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return await ScheduleAsync(message, timeProvider.GetUtcNow().Add(delay), cancellationToken);
@@ -61,7 +61,7 @@ public class AzureServiceBusScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         var id = Guid.NewGuid().ToString();
@@ -91,7 +91,7 @@ public class AzureServiceBusScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return await ScheduleAsync(request, type, timeProvider.GetUtcNow().Add(delay), cancellationToken);
@@ -168,7 +168,7 @@ public class AzureServiceBusScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         var seq = BrighterAsyncContext.Run(async () => await sender.ScheduleMessageAsync(
@@ -190,7 +190,7 @@ public class AzureServiceBusScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return Schedule(message, timeProvider.GetUtcNow().Add(delay));
@@ -202,7 +202,7 @@ public class AzureServiceBusScheduler(
     {
         if (at < timeProvider.GetUtcNow())
         {
-            throw new ConfigurationException("Invalid at, it should be in the future");
+            throw new ArgumentOutOfRangeException(nameof(at), at, "Invalid at, it should be in the future");
         }
 
         var id = Guid.NewGuid().ToString();
@@ -231,7 +231,7 @@ public class AzureServiceBusScheduler(
     {
         if (delay < TimeSpan.Zero)
         {
-            throw new ConfigurationException("Invalid delay, it can't be negative");
+            throw new ArgumentOutOfRangeException(nameof(delay), delay, "Invalid delay, it can't be negative");
         }
 
         return Schedule(request, type, timeProvider.GetUtcNow().Add(delay));
