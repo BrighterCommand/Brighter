@@ -125,8 +125,8 @@ namespace Paramore.Brighter
         [JsonConstructor]
         public Message(MessageHeader header, MessageBody body)
         {
-            Header = header;
             Body = body;
+            Header = header;
             Header.ContentType = string.IsNullOrEmpty(Header.ContentType) ? Body.ContentType: Header.ContentType;
         }
 

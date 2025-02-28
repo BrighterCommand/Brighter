@@ -130,7 +130,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null
             )
         {
-            AddAsync(message, requestContext, outBoxTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
+            AddAsync(message, requestContext, outBoxTimeout, transactionProvider).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
         /// <summary>

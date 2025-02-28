@@ -88,6 +88,7 @@ public class AsyncCommandProcessorMultipleDepositObservabilityTests : IDisposabl
             new InMemoryRequestContextFactory(),
             policyRegistry, 
             bus,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );

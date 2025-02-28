@@ -101,7 +101,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                bus
+                bus,
+                requestSchedulerFactory: new InMemorySchedulerFactory()
             );
 
             PipelineBuilder<MyResponse>.ClearPipelineCache();

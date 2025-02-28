@@ -56,6 +56,9 @@ namespace Paramore.Brighter
         /// </summary>
         public Activity? Span { get; set; }
 
+        /// <inheritdoc />
+        public IAmAMessageScheduler? Scheduler { get; set; }
+
         /// <summary>
         /// What action should we take on confirmation that a message has been published to a broker
         /// </summary>
