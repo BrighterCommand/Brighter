@@ -113,13 +113,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
-                bus
+                bus,
+                new InMemorySchedulerFactory()
             );
         }
 
 
         [Fact]
-        public void When_depositing_a_message_in_the_outbox()
+        public void When_depositing_messages_in_the_outbox()
         {
             //act
             var requests = new List<IRequest> {_myCommand, _myCommandTwo, _myEvent } ;

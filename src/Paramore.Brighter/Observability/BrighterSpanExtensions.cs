@@ -42,6 +42,7 @@ public static class BrighterSpanExtensions
        CommandProcessorSpanOperation.Send => "send",
        CommandProcessorSpanOperation.Clear => "clear",
        CommandProcessorSpanOperation.Archive => "archive",
+       CommandProcessorSpanOperation.Scheduler => "scheduler",
        _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, null)
    };
 

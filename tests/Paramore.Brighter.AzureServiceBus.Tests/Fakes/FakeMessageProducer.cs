@@ -11,6 +11,8 @@ public class FakeMessageProducer : IAmAMessageProducerAsync, IAmAMessageProducer
     public List<Message> SentMessages { get; } = new List<Message>();
     public Publication Publication { get; }
     public Activity Span { get; set; }
+    public IAmAMessageScheduler? Scheduler { get; set; }
+
     public Task SendAsync(Message message, CancellationToken cancellationToken = default)
     {
         Send(message);

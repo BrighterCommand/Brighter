@@ -54,6 +54,7 @@ public class MessagePumpQuitOberservabilityTests
                 handlerFactory, 
                 new InMemoryRequestContextFactory(), 
                 new PolicyRegistry(),
+                new InMemorySchedulerFactory(),
                 tracer: tracer,
                 instrumentationOptions: instrumentationOptions);
             
