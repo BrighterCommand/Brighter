@@ -56,12 +56,12 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
 
             _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_read_the_command_from_the__sql_inbox
-            AssertionExtensions.Should(_storedCommand).NotBeNull();
-            //_should_read_the_command_value
-            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
-            //_should_read_the_command_id
-            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
+            //Should read the command from the sql inbox
+            Assert.NotNull(_storedCommand);
+            //Should read the command value
+            Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
+            //Should read the command id
+            Assert.Equal(_raisedCommand.Id, _storedCommand.Id);
         }
 
         public async ValueTask DisposeAsync()
