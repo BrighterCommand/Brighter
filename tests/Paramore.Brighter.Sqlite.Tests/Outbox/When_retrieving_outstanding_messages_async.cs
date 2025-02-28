@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
@@ -51,8 +52,8 @@ public class PostgresSqlFetchOutStandingMessageAsyncTests : IAsyncDisposable
 
         //Assert
         Assert.Equal(2, total);
-        Assert.Equal(2, (allUnDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
+        Assert.Equal(2, allUnDispatched.Count());
+        Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours ?? []);
     }
 
