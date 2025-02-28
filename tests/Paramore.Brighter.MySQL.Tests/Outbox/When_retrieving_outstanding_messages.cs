@@ -53,7 +53,7 @@ public class MySqlFetchOutStandingMessageTests : IDisposable
         //Assert
         Assert.Equal(2, total);
         Assert.Equal(2, (allUnDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
+        Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours ?? []);
     }
 

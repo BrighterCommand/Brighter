@@ -56,10 +56,9 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway.Proactor
 
             Message[] receivedMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(100));
 
-            Assert.NotEmpty(receivedMessages)
-                .And.HaveCount(messageCount)
-                .And.ContainInOrder(sentMessages)
-                .And.ContainItemsAssignableTo<Message>();
+            Assert.NotEmpty(receivedMessages);
+            Assert.Equal(messageCount, receivedMessages.Length);
+            Assert.Equal(receivedMessages, sentMessages);    
         }
         
         public void Dispose()

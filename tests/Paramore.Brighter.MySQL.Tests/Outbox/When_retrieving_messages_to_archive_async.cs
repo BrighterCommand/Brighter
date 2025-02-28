@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.MySql;
@@ -50,8 +51,8 @@ public class MySqlArchiveFetchAsyncTests : IDisposable
             await _sqlOutbox.DispatchedMessagesAsync(4, context, cancellationToken: CancellationToken.None);
 
         //Assert
-        Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours ?? []);
     }
 
@@ -72,7 +73,7 @@ public class MySqlArchiveFetchAsyncTests : IDisposable
 
         //Assert
         Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
+        Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours ?? []);
     }
 

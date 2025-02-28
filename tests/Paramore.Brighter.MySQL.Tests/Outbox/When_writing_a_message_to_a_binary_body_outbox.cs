@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MySQL.Tests
             _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id, new RequestContext());
 
             //should read the message from the sql outbox
-            _storedMessage.Body.Bytes.Should().Equal(_messageEarliest.Body.Bytes);
+            Assert.Equal(_messageEarliest.Body.Value, _storedMessage.Body.Value);
             
             //should read the header from the sql outbox
             Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);

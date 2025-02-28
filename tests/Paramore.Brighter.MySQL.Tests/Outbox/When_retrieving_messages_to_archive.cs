@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,8 +49,8 @@ public class MySqlArchiveFetchTests : IDisposable
         var messagesOver4Hours = _sqlOutbox.DispatchedMessages(4, context);
 
         //Assert
-        Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours ?? []);
     }
 
@@ -67,7 +68,7 @@ public class MySqlArchiveFetchTests : IDisposable
 
         //Assert
         Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
+        Assert.Single(messagesOverAnHour);
         Assert.Empty(messagesOver4Hours ?? []);
     }
 
