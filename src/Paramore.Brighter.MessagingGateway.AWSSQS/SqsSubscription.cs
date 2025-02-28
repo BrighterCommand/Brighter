@@ -120,7 +120,7 @@ public class SqsSubscription : Subscription
     /// Specifies whether the FIFO queue throughput quota applies to the entire queue or per message group
     /// This configuration is used for high throughput for FIFO queues configuration
     /// </summary>
-    public int? FifoThroughputLimit { get; }
+    public FifoThroughputLimit? FifoThroughputLimit { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -183,7 +183,7 @@ public class SqsSubscription : Subscription
         SnsSqsType sqsType = SnsSqsType.Standard,
         bool contentBasedDeduplication = true,
         DeduplicationScope? deduplicationScope = null,
-        int? fifoThroughputLimit = null,
+        FifoThroughputLimit? fifoThroughputLimit = null,
         ChannelType channelType = ChannelType.PubSub,
         QueueFindBy findQueueBy = QueueFindBy.Name
     )
@@ -277,7 +277,7 @@ public class SqsSubscription<T> : SqsSubscription where T : IRequest
         SnsSqsType sqsType = SnsSqsType.Standard,
         bool contentBasedDeduplication = true,
         DeduplicationScope? deduplicationScope = null,
-        int? fifoThroughputLimit = null,
+        FifoThroughputLimit? fifoThroughputLimit = null,
         ChannelType channelType = ChannelType.PubSub,
         QueueFindBy findQueueBy = QueueFindBy.Name
     )

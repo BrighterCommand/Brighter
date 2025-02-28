@@ -40,7 +40,7 @@ public class SQSBufferedConsumerTestsAsync : IDisposable, IAsyncDisposable
             makeChannels: OnMissingChannel.Create,
             sqsType: SnsSqsType.Fifo,
             deduplicationScope: DeduplicationScope.MessageGroup,
-            fifoThroughputLimit: 1,
+            fifoThroughputLimit: FifoThroughputLimit.PerMessageGroupId,
             channelType: ChannelType.PointToPoint
         )).GetAwaiter().GetResult();
 
