@@ -323,6 +323,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Locking.M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessagingGateway.RocketMQ", "src\Paramore.Brighter.MessagingGateway.RocketMQ\Paramore.Brighter.MessagingGateway.RocketMQ.csproj", "{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.RocketMQ.Tests", "tests\Paramore.Brighter.RocketMQ.Tests\Paramore.Brighter.RocketMQ.Tests\Paramore.Brighter.RocketMQ.Tests.csproj", "{093D2329-3D21-454D-878A-AB65770C2776}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1821,6 +1823,18 @@ Global
 		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|x86.ActiveCfg = Release|Any CPU
 		{9D7DFB30-1E56-46C7-A56E-2FBC6C58EB96}.Release|x86.Build.0 = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Debug|x86.Build.0 = Debug|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|Any CPU.Build.0 = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|x86.ActiveCfg = Release|Any CPU
+		{093D2329-3D21-454D-878A-AB65770C2776}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1918,6 +1932,7 @@ Global
 		{915BD9FD-2E29-4E2B-8DA3-A74055F32A20} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{7D8CE752-CCBB-4868-ADF0-30FF94CA611C} = {11935469-A062-4CFF-9F72-F4F41E14C2B4}
 		{FBAF452E-C0AB-4C4B-9A81-F1ED9616DE2A} = {202BA107-89D5-4868-AC5A-3527114C0109}
+		{093D2329-3D21-454D-878A-AB65770C2776} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

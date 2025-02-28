@@ -1,0 +1,5 @@
+services:
+  rocketmq:
+    image: apache/rocketmq
+    ports:
+      - "9876:9876"
