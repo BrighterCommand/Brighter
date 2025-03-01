@@ -196,8 +196,7 @@ public class HangfireSchedulerRequestAsyncTests : IDisposable
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, await _outbox.GetAsync(req.Id, new RequestContext()));
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
     }
@@ -217,8 +216,7 @@ public class HangfireSchedulerRequestAsyncTests : IDisposable
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, await _outbox.GetAsync(req.Id, new RequestContext()));
     }
 
     #endregion

@@ -52,7 +52,7 @@ public class MongoDbInboxEmptyWhenSearchedTests : IDisposable
         string commandId = Guid.NewGuid().ToString();
         var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(commandId, _contextKey));
 
-        exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+        Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
 
     [Fact]

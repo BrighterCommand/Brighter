@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.Scheduler;
@@ -67,7 +68,7 @@ public class SqsSchedulingRequestTest : IDisposable
 
         var scheduler = _factory.CreateAsync(null!);
         var id = await scheduler.ScheduleAsync(command, schedulerType, TimeSpan.FromMinutes(1));
-        Assert.True((id)?.Any());
+        Assert.True(id.Any());
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);
@@ -78,7 +79,7 @@ public class SqsSchedulingRequestTest : IDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
-            messages.Should().ContainSingle();
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
@@ -120,7 +121,7 @@ public class SqsSchedulingRequestTest : IDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
-            messages.Should().ContainSingle();
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
@@ -152,7 +153,7 @@ public class SqsSchedulingRequestTest : IDisposable
 
         var scheduler = _factory.CreateAsync(null!);
         var id = await scheduler.ScheduleAsync(command, schedulerType, TimeSpan.FromMinutes(1));
-        Assert.True((id)?.Any());
+        Assert.True(id.Any());
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);
@@ -178,7 +179,7 @@ public class SqsSchedulingRequestTest : IDisposable
         var scheduler = _factory.CreateAsync(null!);
         var id = await scheduler.ScheduleAsync(command, schedulerType,
             DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(1)));
-        Assert.True((id)?.Any());
+        Assert.True(id.Any());
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);

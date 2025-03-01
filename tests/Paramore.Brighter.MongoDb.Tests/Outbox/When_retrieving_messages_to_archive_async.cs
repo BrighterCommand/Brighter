@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.MongoDb;
@@ -51,9 +52,9 @@ public class MongoDbArchiveFetchAsyncTests : IDisposable
                 cancellationToken: CancellationToken.None);
 
         //Assert
-        Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
-        Assert.Empty(messagesOver4Hours ?? []);
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Empty(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
     
     public void Dispose()

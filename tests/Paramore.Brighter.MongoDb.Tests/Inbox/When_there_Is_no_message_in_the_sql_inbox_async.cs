@@ -50,7 +50,7 @@ public class MongoDbInboxEmptyWhenSearchedAsyncTests : IDisposable
     {
         string commandId = Guid.NewGuid().ToString();
         var exception = await Catch.ExceptionAsync(() => _inbox.GetAsync<MyCommand>(commandId, "some-key"));
-        exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+        Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
 
     [Fact]

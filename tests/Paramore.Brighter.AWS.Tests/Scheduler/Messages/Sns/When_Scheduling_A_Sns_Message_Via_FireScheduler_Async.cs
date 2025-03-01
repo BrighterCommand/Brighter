@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.AWS.Tests.Helpers;
@@ -78,12 +79,12 @@ public class SnsSchedulingMessageViaFireSchedulerAsyncTest : IDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = await _consumer.ReceiveAsync();
-            messages.Should().ContainSingle();
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
                 Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);
-                Assert.True((messages[0].Body.Value)?.Any());
+                Assert.True(messages[0].Body.Value.Any());
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
                 Assert.NotNull(m);

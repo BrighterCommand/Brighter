@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.Scheduler;
@@ -74,7 +75,7 @@ public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
 
         var scheduler = _factory.CreateSync(null!);
         var id = scheduler.Schedule(command, schedulerType, TimeSpan.FromMinutes(1));
-        Assert.True((id)?.Any());
+        Assert.True(id.Any());
 
         var awsScheduler = await _scheduler.GetScheduleAsync(new GetScheduleRequest { Name = id });
         Assert.NotNull(awsScheduler);
@@ -85,7 +86,7 @@ public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = _consumer.Receive(TimeSpan.FromMinutes(1));
-            messages.Should().ContainSingle();
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
@@ -125,7 +126,8 @@ public class SnsSchedulingMessageViaFireSchedulerRequestTest : IDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = _consumer.Receive(TimeSpan.FromMinutes(1));
-            messages.Should().ContainSingle();
+            
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {

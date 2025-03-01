@@ -78,7 +78,7 @@ public class SnsSchedulingMessageTest : IDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = _consumer.Receive();
-            messages.Should().ContainSingle();
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {

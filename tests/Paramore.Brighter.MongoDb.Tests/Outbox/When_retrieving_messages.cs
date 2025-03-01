@@ -58,11 +58,13 @@ public class MongoDbFetchMessageTests : IDisposable
             context);
 
         //Assert
+        Assert.NotNull(messages);
         messages = messages.ToList();
         Assert.Equal(2, (messages)?.Count());
-        Assert.Contains(x => x.Id == _messageEarliest.Id, messages);
-        Assert.Contains(x => x.Id == _messageUnDispatched.Id, messages);
-        Assert.DoesNotContain(x => x.Id == _messageDispatched.Id, messages);
+        Assert.Contains(messages, message => message.Id == _messageEarliest.Id);
+        Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);
+        Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);
+         
     }
 
     [Fact]

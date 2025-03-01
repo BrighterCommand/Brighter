@@ -68,7 +68,7 @@ public class MongoDbInboxAddMessageTests : IDisposable
     {
         var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(_raisedCommand.Id, null));
         //should_not_read_message
-        exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+        Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
 
     public void Dispose()

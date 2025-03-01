@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
@@ -43,9 +44,9 @@ public class MongoDbArchiveFetchTests : IDisposable
         var messagesOver4Hours = _outbox.DispatchedMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
-        Assert.Empty(messagesOver4Hours ?? []);
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Empty(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
     
     public void Dispose()

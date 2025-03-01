@@ -190,8 +190,7 @@ public class HangfireSchedulerRequestTests : IDisposable
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -209,8 +208,7 @@ public class HangfireSchedulerRequestTests : IDisposable
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
     }
 
     #endregion
