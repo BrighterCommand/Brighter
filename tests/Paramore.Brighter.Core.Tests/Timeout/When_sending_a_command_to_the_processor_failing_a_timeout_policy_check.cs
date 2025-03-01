@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Timeout.Test_Doubles;
 using Xunit;

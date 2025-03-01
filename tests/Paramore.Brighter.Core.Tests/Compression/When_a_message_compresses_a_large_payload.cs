@@ -1,7 +1,5 @@
 ﻿using System;
 using System.IO.Compression;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
@@ -19,11 +17,11 @@ public class CompressLargePayloadTests
     public CompressLargePayloadTests()
     {
         _transformer = new CompressPayloadTransformer();
-        
+
         string body = DataGenerator.CreateString(6000);
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
-            new MessageBody(body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));        
+            new MessageBody(body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));
     }
 
     [Fact]
@@ -33,51 +31,48 @@ public class CompressLargePayloadTests
         var compressedMessage = _transformer.Wrap(_message, new Publication{Topic = new RoutingKey(_topic)});
 
         //look for gzip in the bytes
-        compressedMessage.Body.Bytes.Should().NotBeNull();
-        compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
-        BitConverter.ToUInt16(compressedMessage.Body.Bytes, 0).Should().Be(GZIP_LEAD_BYTES);
-        
-        //mime types
-        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformerAsync.GZIP);
-        compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
-        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformerAsync.GZIP);
-        
+        Assert.NotNull(compressedMessage.Body.Bytes);
+        Assert.True(compressedMessage.Body.Bytes.Length >= 2);
+        Assert.Equal(GZIP_LEAD_BYTES, BitConverter.ToUInt16(compressedMessage.Body.Bytes, 0));
 
+        //mime types
+        Assert.Equal(CompressPayloadTransformerAsync.GZIP, compressedMessage.Header.ContentType);
+        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
+        Assert.Equal(CompressPayloadTransformerAsync.GZIP, compressedMessage.Body.ContentType);
     }
-    
+
     [Fact]
     public void When_a_message_zlib_compresses_a_large_payload()
     {
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.Zlib, CompressionLevel.Optimal, 5);
         var compressedMessage = _transformer.Wrap(_message, new Publication{ Topic = new RoutingKey(_topic)});
-    
+
         //look for gzip in the bytes
-        compressedMessage.Body.Bytes.Should().NotBeNull();
-        compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
-        compressedMessage.Body.ContentType.Should().Be("application/deflate");
-        compressedMessage.Body.Bytes[0].Should().Be(ZLIB_LEAD_BYTE);
-    
+        Assert.NotNull(compressedMessage.Body.Bytes);
+        Assert.True(compressedMessage.Body.Bytes.Length >= 2);
+        Assert.Equal("application/deflate", compressedMessage.Body.ContentType);
+        Assert.Equal(ZLIB_LEAD_BYTE, compressedMessage.Body.Bytes[0]);
+
         //mime types
-        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformerAsync.DEFLATE);
-        compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
-        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformerAsync.DEFLATE);
+        Assert.Equal(CompressPayloadTransformerAsync.DEFLATE, compressedMessage.Header.ContentType);
+        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
+        Assert.Equal(CompressPayloadTransformerAsync.DEFLATE, compressedMessage.Body.ContentType);
     }
-    
+
     [Fact]
     public void When_a_message_brotli_compresses_a_large_payload()
     {
         _transformer.InitializeWrapFromAttributeParams(CompressionMethod.Brotli, CompressionLevel.Optimal, 5);
         var compressedMessage = _transformer.Wrap(_message, new Publication{Topic = new RoutingKey(_topic)});
-    
+
         //look for gzip in the bytes
-        compressedMessage.Body.Bytes.Should().NotBeNull();
-        compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
-        compressedMessage.Body.ContentType.Should().Be("application/br");
-        
+        Assert.NotNull(compressedMessage.Body.Bytes);
+        Assert.True(compressedMessage.Body.Bytes.Length >= 2);
+        Assert.Equal("application/br", compressedMessage.Body.ContentType);
+
         //mime types
-        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformerAsync.BROTLI);
-        compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
-        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformerAsync.BROTLI);
-    
+        Assert.Equal(CompressPayloadTransformerAsync.BROTLI, compressedMessage.Header.ContentType);
+        Assert.Equal(MessageBody.APPLICATION_JSON, compressedMessage.Header.Bag[CompressPayloadTransformerAsync.ORIGINAL_CONTENTTYPE_HEADER]);
+        Assert.Equal(CompressPayloadTransformerAsync.BROTLI, compressedMessage.Body.ContentType);
     }
 }

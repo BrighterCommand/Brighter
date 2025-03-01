@@ -26,7 +26,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Xunit;
@@ -58,11 +57,11 @@ public class MongoDbInboxAddMessageAsyncTests : IDisposable
         var storedCommand = await _inbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
         //_should_read_the_command_from_the__sql_inbox
-        storedCommand.Should().NotBeNull();
+        Assert.NotNull(storedCommand);
         //_should_read_the_command_value
-        storedCommand.Value.Should().Be(_raisedCommand.Value);
+        Assert.Equal(_raisedCommand.Value, storedCommand.Value);
         //_should_read_the_command_id
-        storedCommand.Id.Should().Be(_raisedCommand.Id);
+        Assert.Equal(_raisedCommand.Id, storedCommand.Id);
     }
 
     public void Dispose()

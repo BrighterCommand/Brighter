@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -62,9 +61,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.Build(new RequestContext()).First());
 
-            _exception.Should().NotBeNull();
-            _exception.Should().BeOfType<ConfigurationException>();
-            _exception.Message.Should().Contain(typeof(MyLoggingHandlerAsync<>).Name);
+            Assert.NotNull(_exception);
+            Assert.IsType<ConfigurationException>(_exception);
+            Assert.Contains(typeof(MyLoggingHandlerAsync<>).Name, _exception.Message);
         }
 
         public void Dispose()

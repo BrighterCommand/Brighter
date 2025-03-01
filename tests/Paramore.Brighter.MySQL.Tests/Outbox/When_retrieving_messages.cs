@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -46,7 +44,7 @@ public class MySqlFetchMessageTests : IDisposable
         var messages = _sqlOutbox.Get();
 
         //Assert
-        messages.Should().HaveCount(3);
+        Assert.Equal(3, messages.Count());
     }
 
     [Fact]
@@ -62,11 +60,11 @@ public class MySqlFetchMessageTests : IDisposable
             context);
 
         //Assert
-        messages = messages.ToList();
-        messages.Should().HaveCount(2);
-        messages.Should().Contain(x => x.Id == _messageEarliest.Id);
-        messages.Should().Contain(x => x.Id == _messageUnDispatched.Id);
-        messages.Should().NotContain(x => x.Id == _messageDispatched.Id);
+        var messageList = messages.ToList();
+        Assert.Equal(2, messageList.Count);
+        Assert.Contains(messageList, x => x.Id == _messageEarliest.Id);
+        Assert.Contains(messageList, x => x.Id == _messageUnDispatched.Id);
+        Assert.DoesNotContain(messageList, x => x.Id == _messageDispatched.Id);
     }
 
     [Fact]
@@ -77,10 +75,10 @@ public class MySqlFetchMessageTests : IDisposable
         _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
         _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
 
-        var messages = _sqlOutbox.Get(_messageDispatched.Id, context);
+        var message = _sqlOutbox.Get(_messageDispatched.Id, context);
 
         //Assert
-        messages.Id.Should().Be(_messageDispatched.Id);
+        Assert.Equal(_messageDispatched.Id, message.Id);
     }
 
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -47,6 +46,6 @@ public class AsyncMessageUnwrapRequestTests
         var request = await _transformPipeline.UnwrapAsync(_message, new RequestContext());
         
         //assert
-        request.Value.Should().Be( MySimpleTransformAsync.TRANSFORM_VALUE);
+        Assert.Equal(MySimpleTransformAsync.TRANSFORM_VALUE, request.Value);
     }
 }

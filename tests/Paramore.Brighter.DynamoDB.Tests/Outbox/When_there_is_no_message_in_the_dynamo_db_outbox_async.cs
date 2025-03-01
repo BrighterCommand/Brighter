@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -54,7 +53,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //_should_return_a_empty_message
-            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+            Assert.Equal(MessageType.MT_NONE, _storedMessage.Header.MessageType);
         }
     }
 }

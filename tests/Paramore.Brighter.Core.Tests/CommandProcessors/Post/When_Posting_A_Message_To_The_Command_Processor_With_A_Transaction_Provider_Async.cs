@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
@@ -114,15 +113,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
 
             //message should not be in the current transaction
             var transaction = _transactionProvider.GetTransaction();
-            transaction.Get(_myCommand.Id).Should().BeNull();
+            Assert.Null(transaction.Get(_myCommand.Id));
 
             //message should have been posted
-            _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+            Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
             
             //message should be in the outbox
             var message = _spyOutbox.Get(_myCommand.Id, new RequestContext());
-            message.Should().NotBeNull();
-            message.Should().Be(_message);
+            Assert.NotNull(message);
+            Assert.Equal(_message, message);
         }
 
         public void Dispose()

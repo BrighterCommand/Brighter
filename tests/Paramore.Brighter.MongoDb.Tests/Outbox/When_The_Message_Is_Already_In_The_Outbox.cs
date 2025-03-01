@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
@@ -55,7 +54,7 @@ public class MongoDbOutboxMessageAlreadyExistsTests : IDisposable
         var exception = Catch.Exception(() => _outbox.Add(_messageEarliest, new RequestContext()));
 
         //should ignore the duplicate key and still succeed
-        exception.Should().BeNull();
+        Assert.Null(exception);
     }
 
     public void Dispose()

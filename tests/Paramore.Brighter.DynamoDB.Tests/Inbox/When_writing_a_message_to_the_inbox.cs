@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;
@@ -53,11 +52,11 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             _storedCommand = _dynamoDbInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__dynamo_db_inbox
-            AssertionExtensions.Should(_storedCommand).NotBeNull();
+            Assert.NotNull(_storedCommand);
             //_should_read_the_command_value
-            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
+            Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
             //_should_read_the_command_id
-            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
+            Assert.Equal(_raisedCommand.Id, _storedCommand.Id);
         }
     }
 }

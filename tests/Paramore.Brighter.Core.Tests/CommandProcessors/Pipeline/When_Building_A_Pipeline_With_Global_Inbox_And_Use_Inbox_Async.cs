@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -79,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             }
 
             //assert
-            noException.Should().BeTrue();
+            Assert.True(noException);
 
         }
 

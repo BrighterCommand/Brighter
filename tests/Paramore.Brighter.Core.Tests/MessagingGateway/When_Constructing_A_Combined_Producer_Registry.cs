@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessagingGateway;
@@ -34,8 +33,8 @@ public class CombinedProducerRegistryTests
 
         // Producer registry should contain producers for both topics
         var producers = producerRegistry.Producers.ToList();
-        producers.Count.Should().Be(2);
-        producers.Count(x => x.Publication.Topic == "FirstTopic").Should().Be(1);
-        producers.Count(x => x.Publication.Topic == "SecondTopic").Should().Be(1);
+        Assert.Equal(2, producers.Count);
+        Assert.Equal(1, producers.Count(x => x.Publication.Topic == "FirstTopic"));
+        Assert.Equal(1, producers.Count(x => x.Publication.Topic == "SecondTopic"));
     }
 }

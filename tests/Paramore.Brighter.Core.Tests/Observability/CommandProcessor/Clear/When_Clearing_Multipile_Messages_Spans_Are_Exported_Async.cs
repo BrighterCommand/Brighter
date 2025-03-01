@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
@@ -127,24 +126,24 @@ public class AsyncCommandProcessorMultipleClearObservabilityTests
         _traceProvider.ForceFlush();
         
         //assert 
-        _exportedActivities.Count.Should().Be(21);
-        _exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter").Should().BeTrue();
+        Assert.Equal(21, _exportedActivities.Count);
+        Assert.True(_exportedActivities.Any(a => a.Source.Name == "Paramore.Brighter"));
         
         //there should be a create span for the batch
         var createActivity = _exportedActivities.Single(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Create.ToSpanName()}");
-        createActivity.Should().NotBeNull();
+        Assert.NotNull(createActivity);
         
         //there should be a clear span for each message id
         var clearActivity = _exportedActivities.Where(a => a.DisplayName == $"{BrighterSemanticConventions.ClearMessages} {CommandProcessorSpanOperation.Clear.ToSpanName()}");
-        clearActivity.Count().Should().Be(3);
+        Assert.Equal(3, clearActivity.Count());
 
         //there should be a span in the Db for retrieving the message
         var outBoxActivity = _exportedActivities.Where(a => a.DisplayName == $"{OutboxDbOperation.Get.ToSpanName()} {InMemoryAttributes.DbName} {InMemoryAttributes.DbTable}");
-        outBoxActivity.Count().Should().Be(3);
+        Assert.Equal(3, outBoxActivity.Count());
 
         //there should be a span for publishing the message via the producer
         var producerActivity = _exportedActivities.Where(a => a.DisplayName == $"{_topic} {CommandProcessorSpanOperation.Publish.ToSpanName()}");
-        producerActivity.Count().Should().Be(3);
+        Assert.Equal(3, producerActivity.Count());
         
     }
 }

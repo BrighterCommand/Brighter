@@ -1,5 +1,4 @@
 ﻿using System;
-using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Bus;
@@ -25,11 +24,11 @@ public class InternalBusDequeueTests
       var message = internalBus.Dequeue(routingKey);
       
       //assert
-      message.Should().NotBeNull();
-      message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-      message.Body.Value.Should().Be(body);
-      message.Header.Topic.Should().Be(routingKey);
-      message.Header.MessageId.Should().Be(messageId);
+      Assert.NotNull(message);
+      Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+      Assert.Equal(body, message.Body.Value);
+      Assert.Equal(routingKey, message.Header.Topic);
+      Assert.Equal(messageId, message.Header.MessageId);
    }
    
    [Fact]
@@ -43,7 +42,7 @@ public class InternalBusDequeueTests
       var message = internalBus.Dequeue(new RoutingKey(topic));
       
       //assert
-      message.Should().NotBeNull();
-      message.Header.MessageType.Should().Be(MessageType.MT_NONE);
+      Assert.NotNull(message);
+      Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
    }
 }

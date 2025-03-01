@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Proactor;
@@ -51,7 +50,7 @@ public class RedisMessageProducerMultipleSendTestsAsync : IClassFixture<RedisFix
         await _redisFixture.MessageConsumer.AcknowledgeAsync(sentMessageTwo);
 
         // _should_send_a_message_via_restms_with_the_matching_body
-        messageBodyOne.Should().Be(_messageOne.Body.Value);
-        messageBodyTwo.Should().Be(_messageTwo.Body.Value);
+        Assert.Equal(_messageOne.Body.Value, messageBodyOne);
+        Assert.Equal(_messageTwo.Body.Value, messageBodyTwo);
     }
 }

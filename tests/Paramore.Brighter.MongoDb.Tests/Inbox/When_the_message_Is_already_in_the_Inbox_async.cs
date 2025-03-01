@@ -26,7 +26,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
 using Xunit;
@@ -57,9 +56,9 @@ public class MongoDbInboxDuplicateMessageAsyncTests : IDisposable
         var exception = await Catch.ExceptionAsync(() => _inbox.AddAsync(_raisedCommand, _contextKey));
 
         //_should_succeed_even_if_the_message_is_a_duplicate
-        exception.Should().BeNull();
+        Assert.Null(exception);
         var exists = await _inbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
-        exists.Should().BeTrue();
+        Assert.True(exists);
     }
 
     [Fact]
@@ -70,7 +69,7 @@ public class MongoDbInboxDuplicateMessageAsyncTests : IDisposable
         var storedCommand = _inbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
 
         //_should_read_the_command_from_the__dynamo_db_inbox
-        storedCommand.Should().NotBeNull();
+        Assert.NotNull(storedCommand);
     }
 
     public void Dispose()

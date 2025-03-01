@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;
@@ -29,7 +28,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         {
             var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, _contextKey);
 
-            commandExists.Should().BeTrue("because the command exists.", commandExists);
+            Assert.True(commandExists);
         }
 
         [Fact]
@@ -37,7 +36,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         {
             var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(_command.Id, "some other context");
 
-            commandExists.Should().BeFalse("because the command exists for a different context.", commandExists);
+            Assert.False(commandExists);
         }
 
         [Fact]
@@ -45,7 +44,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         {
             var commandExists = await _dynamoDbInbox.ExistsAsync<MyCommand>(Guid.NewGuid().ToString(), _contextKey);
 
-            commandExists.Should().BeFalse("because the command doesn't exist.", commandExists);
+            Assert.False(commandExists);
         }
     }
 }

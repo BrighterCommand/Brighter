@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+﻿using System.Linq;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Consumer;
@@ -18,6 +18,6 @@ public class InMemoryProducerRegistryFactoryTests
 
        //assert
        Assert.NotNull(producerRegistry);
-       producerRegistry.Producers.Should().Contain(p => p.Publication.Topic == publication.Topic); 
+       Assert.Contains(producerRegistry.Producers, p => p.Publication.Topic == publication.Topic); 
     }
 }

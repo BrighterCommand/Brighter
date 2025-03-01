@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
@@ -53,14 +52,14 @@ public class MongoDbInboxEmptyWhenSearchedTests : IDisposable
         string commandId = Guid.NewGuid().ToString();
         var exception = Catch.Exception(() => _ = _inbox.Get<MyCommand>(commandId, _contextKey));
 
-        exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+        Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
 
     [Fact]
     public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Exists()
     {
         string commandId = Guid.NewGuid().ToString();
-        _inbox.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
+        Assert.False(_inbox.Exists<MyCommand>(commandId, _contextKey));
     }
     
     public void Dispose()

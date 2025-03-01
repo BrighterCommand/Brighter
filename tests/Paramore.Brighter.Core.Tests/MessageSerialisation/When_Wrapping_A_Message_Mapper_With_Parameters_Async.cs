@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -45,7 +44,7 @@ public class AsyncMessageWrapRequestWithAttributesTests
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
         
         //assert
-        message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());
-        message.Header.Bag[MyParameterizedTransformAsync.HEADER_KEY].Should().Be("I am a format indicator {0}");
+        Assert.Equal(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString(), message.Body.Value);
+        Assert.Equal("I am a format indicator {0}", message.Header.Bag[MyParameterizedTransformAsync.HEADER_KEY]);
     }
 }

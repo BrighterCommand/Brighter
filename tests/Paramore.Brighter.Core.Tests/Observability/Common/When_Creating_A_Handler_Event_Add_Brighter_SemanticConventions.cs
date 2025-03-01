@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using FluentAssertions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -42,15 +41,15 @@ public class BrighterSemanticConventionsEventTests
         //assert
         //check the created activity
         var childActivity = _exportedActivities.First(a => a.DisplayName == "BrighterSemanticConventionsEventTests");
-        childActivity.Should().NotBeNull();
+        Assert.NotNull(childActivity);
         var childEvent = childActivity.Events.First(e => e.Name == "MyCommandHandler");
-        childEvent.Tags.Should().ContainKey(BrighterSemanticConventions.HandlerName);
+        Assert.Contains(BrighterSemanticConventions.HandlerName, childEvent.Tags.ToDictionary());
         var eventDictionary = childEvent.Tags.ToDictionary(pair => pair.Key, pair => pair.Value);
-        eventDictionary[BrighterSemanticConventions.HandlerName].Should().Be("MyCommandHandler");
-        childEvent.Tags.Should().ContainKey(BrighterSemanticConventions.HandlerType);
-        eventDictionary[BrighterSemanticConventions.HandlerType].Should().Be("sync");
-        childEvent.Tags.Should().ContainKey(BrighterSemanticConventions.IsSink);
-        eventDictionary[BrighterSemanticConventions.IsSink].Should().Be(true);
+        Assert.Equal("MyCommandHandler", eventDictionary[BrighterSemanticConventions.HandlerName]);
+        Assert.Contains(BrighterSemanticConventions.HandlerType, childEvent.Tags.ToDictionary());
+        Assert.Equal("sync", eventDictionary[BrighterSemanticConventions.HandlerType]);
+        Assert.Contains(BrighterSemanticConventions.IsSink, childEvent.Tags.ToDictionary());
+        Assert.Equal(true, eventDictionary[BrighterSemanticConventions.IsSink]);
 
     }
 }

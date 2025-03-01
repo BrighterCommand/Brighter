@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -22,15 +21,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             registry.RegisterAsync<MyCommand, MyMixedImplicitHandlerAsync>();
 
             var container = new ServiceCollection();
-            container.AddTransient<MyMixedImplicitHandlerAsync>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
- 
+
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
@@ -38,14 +34,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             _exception = Catch.Exception(() => _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First());
 
-            _exception.Should().NotBeNull();
-            _exception.Should().BeOfType<ConfigurationException>();
-            _exception.Message.Should().Contain(typeof(MyLoggingHandler<>).Name);
+            Assert.NotNull(_exception);
+            Assert.IsType<ConfigurationException>(_exception);
+            Assert.Contains(typeof(MyLoggingHandler<>).Name, _exception.Message);
         }
 
         public void Dispose()
         {
-           CommandProcessor.ClearServiceBus(); 
+            CommandProcessor.ClearServiceBus();
         }
     }
 }

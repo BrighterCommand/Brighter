@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
@@ -36,19 +35,18 @@ public class AsyncLargeMessagePayloadWrapTests
 
         _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public async Task When_wrapping_a_large_message()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
         var message = await _transformPipeline.WrapAsync(_myCommand, new RequestContext(), _publication);
-        
-        //assert
-        message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();
-        var id = (string) message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
-        message.Body.Value.Should().Be($"Claim Check {id}");
-        (await _inMemoryStorageProviderAsync.HasClaimAsync(id)).Should().BeTrue();
 
+        //assert
+        Assert.True(message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK));
+        var id = (string) message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
+        Assert.Equal($"Claim Check {id}", message.Body.Value);
+        Assert.True(await _inMemoryStorageProviderAsync.HasClaimAsync(id));
     }
 }

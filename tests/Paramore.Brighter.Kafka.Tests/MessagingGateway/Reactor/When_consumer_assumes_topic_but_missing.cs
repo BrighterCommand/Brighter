@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
@@ -74,7 +73,7 @@ public class KafkaProducerAssumeTests : IDisposable
 
         ((KafkaMessageProducer)producer).Flush();
 
-        messagePublished.Should().BeFalse();
+        Assert.False(messagePublished);
     }
 
     public void Dispose()

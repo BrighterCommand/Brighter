@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -55,7 +54,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
 
             var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.Zero, _context);
 
-            undispatchedMessages.Count().Should().Be(2);
+            Assert.Equal(2, undispatchedMessages.Count());
         }
 
         public void Dispose()

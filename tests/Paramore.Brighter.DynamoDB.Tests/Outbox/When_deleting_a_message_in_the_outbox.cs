@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -29,7 +28,7 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
 
         // assert
         var foundMessage = dynamoDbOutbox.Get(message.Id, context);
-        foundMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+        Assert.Equal(MessageType.MT_NONE, foundMessage.Header.MessageType);
     }
     
     [Fact]
@@ -48,6 +47,6 @@ public class DynamoDbOutboxDeleteMessageTests : DynamoDBOutboxBaseTest
 
         // assert
         var foundMessage = await dynamoDbOutbox.GetAsync(message.Id, context);
-        foundMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+        Assert.Equal(MessageType.MT_NONE, foundMessage.Header.MessageType);
     }
 }

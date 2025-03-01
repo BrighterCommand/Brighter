@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.InMemory.Tests.TestDoubles;
 using Paramore.Brighter.Observability;
@@ -108,16 +108,15 @@ public class InMemorySchedulerMessageAsyncTests
         var id = await scheduler.ScheduleAsync(message,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True(id.Any());
 
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(message.Id, new RequestContext())
-            .Should().BeEquivalentTo(message);
+        Assert.Equivalent(message, _outbox.Get(message.Id, new RequestContext()));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
     }
 
     [Fact]
@@ -132,16 +131,15 @@ public class InMemorySchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True(id.Any());
 
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(message);
+        Assert.Equivalent(message, _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -156,19 +154,18 @@ public class InMemorySchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.True(id.Any());
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         await scheduler.ReSchedulerAsync(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromHours(1)));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         _timeProvider.Advance(TimeSpan.FromHours(2));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(message);
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
+        Assert.Equivalent(message, _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -183,19 +180,18 @@ public class InMemorySchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromHours(1));
 
-        id.Should().NotBeNullOrEmpty();
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.True(id.Any());
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         await scheduler.ReSchedulerAsync(id, TimeSpan.FromHours(1));
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         _timeProvider.Advance(TimeSpan.FromHours(2));
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -210,15 +206,14 @@ public class InMemorySchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True(id.Any());
 
 
         await scheduler.CancelAsync(id);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
 
@@ -234,13 +229,12 @@ public class InMemorySchedulerMessageAsyncTests
         var scheduler = (IAmAMessageSchedulerAsync)_scheduler.Create(_processor);
         var id = await scheduler.ScheduleAsync(message, TimeSpan.FromHours(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True(id.Any());
 
         await scheduler.CancelAsync(id);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -58,11 +57,11 @@ public class AsyncRmqMessageConsumerMultipleTopicTests : IAsyncDisposable, IDisp
         var topic2Result = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
         await  _messageConsumer.AcknowledgeAsync(topic2Result);
 
-        topic1Result.Header.Topic.Should().Be(_messageTopic1.Header.Topic);
-        topic1Result.Body.Value.Should().BeEquivalentTo(_messageTopic1.Body.Value);
+        Assert.Equal(_messageTopic1.Header.Topic, topic1Result.Header.Topic);
+        Assert.Equivalent(_messageTopic1.Body.Value, topic1Result.Body.Value);
 
-        topic2Result.Header.Topic.Should().Be(_messageTopic2.Header.Topic);
-        topic2Result.Body.Value.Should().BeEquivalentTo(_messageTopic2.Body.Value);            
+        Assert.Equal(_messageTopic2.Header.Topic, topic2Result.Header.Topic);
+        Assert.Equivalent(_messageTopic2.Body.Value, topic2Result.Body.Value);            
     }
 
     public void Dispose()

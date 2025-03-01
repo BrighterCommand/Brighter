@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());
-            tracer.ToString().Should().Contain("UseInboxHandlerAsync");
+            Assert.Contains("UseInboxHandlerAsync", tracer.ToString());
 
         }
 

@@ -1,29 +1,4 @@
-#region Licence
-/* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
 using System;
-using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
@@ -55,15 +30,15 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _request = _mapper.MapToRequest(_message);
 
-            // _should_set_the_sender_address_topic
-            _request.SendersAddress.Topic.Should().Be(_routingKey);
-            // _should_set_the_sender_correlation_id
-            _request.SendersAddress.CorrelationId.Should().Be(_correlationId);
-            // _should_set_the_hostName
-            _request.HostName.Should().Be("Test.Hostname");
-            // _should_contain_the_consumers
-            _request.Consumers.Should().Contain(rc => rc.ConsumerName == "Test.Subscription" && rc.State == ConsumerState.Open);
-            _request.Consumers.Should().Contain(rc => rc.ConsumerName == "More.Consumers" && rc.State == ConsumerState.Shut);
+            // Should set the sender address topic
+            Assert.Equal(_routingKey, _request.SendersAddress.Topic);
+            // Should set the sender correlation_id
+            Assert.Equal(_correlationId, _request.SendersAddress.CorrelationId);
+            // Should set the hostName
+            Assert.Equal("Test.Hostname", _request.HostName);
+            // Should contain the consumers
+            Assert.Contains(_request.Consumers, rc => rc.ConsumerName == "Test.Subscription" && rc.State == ConsumerState.Open);
+            Assert.Contains(_request.Consumers, rc => rc.ConsumerName == "More.Consumers" && rc.State == ConsumerState.Shut);
         }
    }
 }

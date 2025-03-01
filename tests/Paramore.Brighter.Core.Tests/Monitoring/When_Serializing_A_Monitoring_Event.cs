@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.Monitoring.Events;
@@ -64,20 +62,20 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
         {
             _monitorEvent = _monitorEventMessageMapper.MapToRequest(_message);
 
-            //_should_have_the_correct_instance_name
-            _monitorEvent.InstanceName.Should().Be(InstanceName);
-            //_should_have_the_correct_handler_name
-            _monitorEvent.HandlerName.Should().Be(HandlerName);
-            //_should_have_the_correct_handler_full_assembly_name
-            _monitorEvent.HandlerFullAssemblyName.Should().Be(HandlerFullAssemblyName);
-            //_should_have_the_correct_monitor_type
-            _monitorEvent.EventType.Should().Be(MonitorEventType.EnterHandler);
-            //_should_have_the_original_request_as_json
-            _monitorEvent.RequestBody.Should().Be(_originalRequestAsJson);
-            //_should_have_the_correct_event_time
-            _monitorEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), TimeSpan.FromSeconds(1));
-            //_should_have_the_correct_time_elapsed
-            _monitorEvent.TimeElapsedMs.Should().Be(_elapsedMilliseconds);
+            //Should have the correct instance name
+            Assert.Equal(InstanceName, _monitorEvent.InstanceName);
+            //Should have the correct handler name
+            Assert.Equal(HandlerName, _monitorEvent.HandlerName);
+            //Should have the correct handler full assembly name
+            Assert.Equal(HandlerFullAssemblyName, _monitorEvent.HandlerFullAssemblyName);
+            //Should have the correct monitor type
+            Assert.Equal(MonitorEventType.EnterHandler, _monitorEvent.EventType);
+            //Should have the original request as json
+            Assert.Equal(_originalRequestAsJson, _monitorEvent.RequestBody);
+            //Should have the correct event time
+            Assert.True((_monitorEvent.EventTime.ToUniversalTime()) >= ((_at.ToUniversalTime()) - (TimeSpan.FromSeconds(1))) && (_monitorEvent.EventTime.ToUniversalTime()) <= ((_at.ToUniversalTime()) + (TimeSpan.FromSeconds(1))));
+            //Should have the correct time elapsed
+            Assert.Equal(_elapsedMilliseconds, _monitorEvent.TimeElapsedMs);
         }
 
    }

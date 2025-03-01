@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -36,7 +35,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First();
 
-            TraceFilters().ToString().Should().Be("MyValidationHandlerAsync`1|MyPreAndPostDecoratedHandlerAsync|MyLoggingHandlerAsync`1|");
+            var trace = TraceFilters().ToString();
+            Assert.Equal("MyValidationHandlerAsync`1|MyPreAndPostDecoratedHandlerAsync|MyLoggingHandlerAsync`1|", trace);
         }
 
         public void Dispose()

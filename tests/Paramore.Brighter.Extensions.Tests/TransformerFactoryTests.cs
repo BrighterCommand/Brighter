@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
@@ -25,7 +24,7 @@ public class TransformerFactoryTests
        var testTransform = _transformFactory.Create(typeof(TestTransform));
        
        //assert
-       testTransform.Should().NotBeNull();
+       Assert.NotNull(testTransform);
     }
     
     [Fact]
@@ -43,7 +42,7 @@ public class TransformerFactoryTests
         var testTransform = _transformFactoryAsync.Create(typeof(TestTransform));
        
         //assert
-        testTransform.Should().NotBeNull();
+        Assert.NotNull(testTransform);
     }
     
     [Fact]
@@ -60,7 +59,7 @@ public class TransformerFactoryTests
         var testTransform = _transformFactory.Create(typeof(TestTransform));
        
         //assert
-        testTransform.Should().BeNull();
+        Assert.Null(testTransform);
     }
     
     [Fact]
@@ -77,6 +76,6 @@ public class TransformerFactoryTests
         var testTransform = _transformFactoryAsync.Create(typeof(TestTransform));
        
         //assert
-        testTransform.Should().BeNull();
+        Assert.Null(testTransform);
     }
 }

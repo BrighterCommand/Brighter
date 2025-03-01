@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
+﻿using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Xunit;
 
@@ -20,8 +19,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
          var exception = Catch.Exception(() => new TransformPipelineBuilder(null, messageTransformerFactory));
          
          //assert
-         exception.Should().NotBeNull();
-         exception.Should().BeOfType<ConfigurationException>();
+         Assert.NotNull(exception);
+         Assert.True((exception) is ConfigurationException);
           
     }
 }

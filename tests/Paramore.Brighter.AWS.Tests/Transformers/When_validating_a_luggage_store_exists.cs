@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.SecurityToken;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -71,7 +70,7 @@ public class S3LuggageStoreExistsTests
 #pragma warning restore CS0618
             );
 
-        luggageStore.Should().NotBeNull();
+        Assert.NotNull(luggageStore);
         
         //teardown
         await _client.DeleteBucketAsync(bucketName);
@@ -97,8 +96,8 @@ public class S3LuggageStoreExistsTests
              }
          );
 
-         doesNotExist.Should().NotBeNull();
-         doesNotExist.Should().BeOfType<InvalidOperationException>();
+         Assert.NotNull(doesNotExist);
+         Assert.True((doesNotExist) is InvalidOperationException);
 
     }
 }

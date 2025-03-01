@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -75,19 +74,19 @@ public class RmqMessageProducerDelayedMessageTestsAsync : IDisposable, IAsyncDis
 
         var immediateResult = (await _messageConsumer.ReceiveAsync(TimeSpan.Zero)).First();
         var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
-        immediateResult.Header.HandledCount.Should().Be(0);
-        immediateResult.Header.Delayed.Should().Be(TimeSpan.Zero);
+        Assert.Equal(0, immediateResult.Header.HandledCount);
+        Assert.Equal(TimeSpan.Zero, immediateResult.Header.Delayed);
 
         //_should_have_not_been_able_get_message_before_delay
-        deliveredWithoutWait.Should().BeTrue();
+        Assert.True(deliveredWithoutWait);
             
         var delayedResult = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
 
         //_should_send_a_message_via_rmq_with_the_matching_body
-        delayedResult.Body.Value.Should().Be(_message.Body.Value);
-        delayedResult.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        delayedResult.Header.HandledCount.Should().Be(0);
-        delayedResult.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(3000));
+        Assert.Equal(_message.Body.Value, delayedResult.Body.Value);
+        Assert.Equal(MessageType.MT_COMMAND, delayedResult.Header.MessageType);
+        Assert.Equal(0, delayedResult.Header.HandledCount);
+        Assert.Equal(TimeSpan.FromMilliseconds(3000), delayedResult.Header.Delayed);
 
         await _messageConsumer.AcknowledgeAsync(delayedResult);
     }
@@ -98,9 +97,9 @@ public class RmqMessageProducerDelayedMessageTestsAsync : IDisposable, IAsyncDis
         //send & receive a message
         await _messageProducer.SendAsync(_message);
         var message = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).Single();
-        message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        message.Header.HandledCount.Should().Be(0);
-        message.Header.Delayed.Should().Be(TimeSpan.FromMilliseconds(0));
+        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        Assert.Equal(0, message.Header.HandledCount);
+        Assert.Equal(TimeSpan.FromMilliseconds(0), message.Header.Delayed);
 
         await _messageConsumer.AcknowledgeAsync(message);
 
@@ -110,8 +109,8 @@ public class RmqMessageProducerDelayedMessageTestsAsync : IDisposable, IAsyncDis
 
         //receive and assert
         var message2 = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000))).Single();
-        message2.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        message2.Header.HandledCount.Should().Be(1);
+        Assert.Equal(MessageType.MT_COMMAND, message2.Header.MessageType);
+        Assert.Equal(1, message2.Header.HandledCount);
 
         await _messageConsumer.AcknowledgeAsync(message2);
     }

@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -57,12 +56,9 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
 
             _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_read_the_command_from_the__sql_inbox
-            AssertionExtensions.Should(_storedCommand).NotBeNull();
-            //_should_read_the_command_value
-            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
-            //_should_read_the_command_id
-            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
+            Assert.NotNull(_storedCommand);
+            Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
+            Assert.Equal(_raisedCommand.Id, _storedCommand.Id);
         }
 
         public void Dispose()

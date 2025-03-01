@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
@@ -40,8 +39,8 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
 
         var messages = _dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context,100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
-        message.Should().NotBeNull();
-        message.Body.Value.Should().Be(_message.Body.Value);
+        Assert.NotNull(message);
+        Assert.Equal(_message.Body.Value, message.Body.Value);
     }
 
     [Fact]
@@ -58,7 +57,7 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
 
         var messages = _dynamoDbOutbox.DispatchedMessages(TimeSpan.Zero, context, 100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
-        message.Should().NotBeNull();
-        message.Body.Value.Should().Be(_message.Body.Value);
+        Assert.NotNull(message);
+        Assert.Equal(_message.Body.Value, message.Body.Value);
     }
 }

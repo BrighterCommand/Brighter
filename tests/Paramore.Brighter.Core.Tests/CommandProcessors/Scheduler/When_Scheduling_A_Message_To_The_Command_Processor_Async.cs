@@ -29,7 +29,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
@@ -123,11 +122,11 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
     {
         await _commandProcessor.SendAsync(TimeSpan.FromSeconds(10), _myCommand);
 
-        _receivedMessages.Should().NotContain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        Assert.DoesNotContain(nameof(MyCommandHandlerAsync), _receivedMessages);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _receivedMessages.Should().Contain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        Assert.Contains(nameof(MyCommandHandlerAsync), _receivedMessages);
     }
 
     [Fact]
@@ -135,11 +134,11 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
     {
         await _commandProcessor.SendAsync(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
 
-        _receivedMessages.Should().NotContain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        Assert.DoesNotContain(nameof(MyCommandHandlerAsync), _receivedMessages);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _receivedMessages.Should().Contain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        Assert.Contains(nameof(MyCommandHandlerAsync), _receivedMessages);
     }
 
     [Fact]
@@ -147,11 +146,11 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
     {
         await _commandProcessor.PublishAsync(TimeSpan.FromSeconds(10), _myCommand);
 
-        _receivedMessages.Should().NotContain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        Assert.DoesNotContain(nameof(MyCommandHandlerAsync), _receivedMessages);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _receivedMessages.Should().Contain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        Assert.Contains(nameof(MyCommandHandlerAsync), _receivedMessages);
     }
 
     [Fact]
@@ -159,47 +158,47 @@ public class CommandProcessorSchedulerCommandAsyncTests : IDisposable
     {
         await _commandProcessor.PublishAsync(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
 
-        _receivedMessages.Should().NotContain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        Assert.DoesNotContain(nameof(MyCommandHandlerAsync), _receivedMessages);
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _receivedMessages.Should().Contain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        Assert.Contains(nameof(MyCommandHandlerAsync), _receivedMessages);
     }
 
     [Fact]
     public async Task When_Scheduling_Post_With_At_A_Message_To_The_Command_Processor_Async()
     {
         await _commandProcessor.PostAsync(_timeProvider.GetUtcNow().AddSeconds(10), _myCommand);
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
+        Assert.False(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+        Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
         var message = _outbox.Get(_myCommand.Id, new RequestContext());
-        message.Should().NotBeNull();
-        message.Should().BeEquivalentTo(new Message(
+        Assert.NotNull(message);
+        Assert.Equivalent(new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-        ));
+        ), message);
     }
 
     [Fact]
     public async Task When_Scheduling_Post_With_Delay_A_Message_To_The_Command_Processor_Async()
     {
         await _commandProcessor.PostAsync(TimeSpan.FromSeconds(10), _myCommand);
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeFalse();
+        Assert.False(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
         _timeProvider.Advance(TimeSpan.FromSeconds(10));
 
-        _internalBus.Stream(new RoutingKey(Topic)).Any().Should().BeTrue();
+        Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
         var message = _outbox.Get(_myCommand.Id, new RequestContext());
-        message.Should().NotBeNull();
-        message.Should().BeEquivalentTo(new Message(
+        Assert.NotNull(message);
+        Assert.Equivalent(new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-        ));
+        ), message);
     }
     
     public void Dispose()

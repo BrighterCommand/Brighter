@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -92,8 +91,8 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
             consumedMessages.Add(await ReadMessageAsync());
         }
 
-        consumedMessages.Count.Should().Be(9);
-        _consumer.StoredOffsets().Should().Be(9);
+        Assert.Equal(9, consumedMessages.Count);
+        Assert.Equal(9, _consumer.StoredOffsets());
 
         //Let time elapse with no activity
         await Task.Delay(10000);
@@ -106,22 +105,23 @@ public class KafkaMessageConsumerSweepOffsets : IDisposable
         await Task.Delay(10000);
 
         //Sweeper will commit these
-        _consumer.StoredOffsets().Should().Be(0);
-            
+        Assert.Equal(0, _consumer.StoredOffsets());
+        return;
+
         async Task<Message> ReadMessageAsync()
         {
-            Message[] messages = new []{new Message()};
+            Message[] messages = [new()];
             int maxTries = 0;
             do
             {
                 try
                 {
                     maxTries++;
-                    messages = _consumer.Receive(TimeSpan.FromMilliseconds(1000));
+                    messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000));
 
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                     {
-                        _consumer.Acknowledge(messages[0]);
+                        await _consumer.AcknowledgeAsync(messages[0]);
                         return messages[0];
                     }
 

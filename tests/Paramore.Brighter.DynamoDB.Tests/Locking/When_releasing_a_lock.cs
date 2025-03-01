@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Amazon.Auth.AccessControlPolicy;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Resources;
 using Paramore.Brighter.Locking.DynamoDb;
@@ -29,14 +28,14 @@ namespace Paramore.Brighter.DynamoDB.Tests.Locking
 
             var resource = Guid.NewGuid().ToString();
             var result = await provider.ObtainLockAsync(resource);
-            result.Should().NotBeNull();
+            Assert.NotNull(result);
 
             var lockItem = await GetLockItem($"{_options.LeaseholderGroupId}_{resource}");
-            lockItem.Should().NotBeNull();
+            Assert.NotNull(lockItem);
 
             await provider.ReleaseLockAsync(resource, result);
             lockItem = await GetLockItem($"{_options.LeaseholderGroupId}_{resource}");
-            lockItem.Should().BeNull();
+            Assert.Null(lockItem);
         }
 
         [Fact]
@@ -47,14 +46,14 @@ namespace Paramore.Brighter.DynamoDB.Tests.Locking
 
             var resource = Guid.NewGuid().ToString();
             var result = await provider.ObtainLockAsync(resource);
-            result.Should().NotBeNull();
+            Assert.NotNull(result);
 
             var lockItem = await GetLockItem($"{_options.LeaseholderGroupId}_{resource}");
-            lockItem.Should().NotBeNull();
+            Assert.NotNull(lockItem);
 
             await provider.ReleaseLockAsync(resource, result);
             lockItem = await GetLockItem($"{_options.LeaseholderGroupId}_{resource}");
-            lockItem.Should().NotBeNull();
+            Assert.NotNull(lockItem);
         }
 
         [Fact]
@@ -65,17 +64,17 @@ namespace Paramore.Brighter.DynamoDB.Tests.Locking
 
             var resourceA = Guid.NewGuid().ToString();
             var resultA = await provider.ObtainLockAsync(resourceA);
-            resultA.Should().NotBeNull();
+            Assert.NotNull(resultA);
 
             var resourceB = Guid.NewGuid().ToString();
             var resultB = await provider.ObtainLockAsync(resourceB);
-            resultB.Should().NotBeNull();
+            Assert.NotNull(resultB);
 
             await provider.ReleaseLockAsync(resourceA, resultA);
             var lockItemA = await GetLockItem($"{_options.LeaseholderGroupId}_{resourceA}");
             var lockItemB = await GetLockItem($"{_options.LeaseholderGroupId}_{resourceB}");
-            lockItemA.Should().BeNull();
-            lockItemB.Should().NotBeNull();
+            Assert.Null(lockItemA);
+            Assert.NotNull(lockItemB);
         }
     }
 }

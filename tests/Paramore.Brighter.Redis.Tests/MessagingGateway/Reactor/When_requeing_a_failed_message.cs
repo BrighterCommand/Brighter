@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway.Reactor;
@@ -14,13 +13,12 @@ public class RedisRequeueMessageTests : IClassFixture<RedisFixture>
     private readonly Message _messageOne;
     private readonly Message _messageTwo;
 
-
     public RedisRequeueMessageTests(RedisFixture redisFixture)
     {
         const string topic = "test";
         _redisFixture = redisFixture;
         var routingKey = new RoutingKey(topic);
-            
+
         _messageOne = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), routingKey, MessageType.MT_COMMAND),
             new MessageBody("test content")
@@ -42,7 +40,7 @@ public class RedisRequeueMessageTests : IClassFixture<RedisFixture>
         _redisFixture.MessageProducer.Send(_messageOne);
         _redisFixture.MessageProducer.Send(_messageTwo);
 
-        //Now receive, the first message 
+        //Now receive, the first message
         var sentMessageOne = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
 
         //now requeue the first message
@@ -52,14 +50,12 @@ public class RedisRequeueMessageTests : IClassFixture<RedisFixture>
         var sentMessageTwo = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
         var messageBodyTwo = sentMessageTwo.Body.Value;
         _redisFixture.MessageConsumer.Acknowledge(sentMessageTwo);
-            
+
         sentMessageOne = _redisFixture.MessageConsumer.Receive(TimeSpan.FromMilliseconds(1000)).Single();
         var messageBodyOne = sentMessageOne.Body.Value;
         _redisFixture.MessageConsumer.Acknowledge(sentMessageOne);
 
-
-        //_should_send_a_message_via_restms_with_the_matching_body
-        messageBodyOne.Should().Be(_messageOne.Body.Value);
-        messageBodyTwo.Should().Be(_messageTwo.Body.Value);
+        Assert.Equal(_messageOne.Body.Value, messageBodyOne);
+        Assert.Equal(_messageTwo.Body.Value, messageBodyTwo);
     }
 }

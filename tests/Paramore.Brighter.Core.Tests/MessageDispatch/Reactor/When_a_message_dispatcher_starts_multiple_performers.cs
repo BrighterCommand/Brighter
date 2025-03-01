@@ -1,31 +1,6 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -71,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
             for (var i = 0; i < 6; i++)
                 channel.Enqueue(message);
 
-            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+            Assert.Equal(DispatcherState.DS_AWAITING, _dispatcher.State);
             _dispatcher.Receive();
         }
 
@@ -79,13 +54,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
         [Fact]
         public void WhenAMessageDispatcherStartsMultiplePerformers()
         {
-            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
-            _dispatcher.Consumers.Count().Should().Be(3);
+            {
+                Assert.Equal(DispatcherState.DS_RUNNING, _dispatcher.State);
+                Assert.Equal(3, _dispatcher.Consumers.Count());
 
-            _dispatcher.End().Wait();
-            
-            _bus.Stream(new RoutingKey(Topic)).Count().Should().Be(0); 
-            _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
+                _dispatcher.End().Wait();
+
+                Assert.Empty(_bus.Stream(new RoutingKey(Topic)));
+                Assert.Equal(DispatcherState.DS_STOPPED, _dispatcher.State);
+            }
         }
 #pragma warning restore xUnit1031
     }

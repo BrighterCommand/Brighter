@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -106,12 +105,12 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
     {
         var exception = Catch.Exception(() =>
             _commandProcessor.Send(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
 
         exception = Catch.Exception(() => _commandProcessor.Send(TimeSpan.FromMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
     }
 
     [Fact]
@@ -119,23 +118,23 @@ public class CommandProcessorSchedulerCommandWithInvalidParamsTests
     {
         var exception = Catch.Exception(() =>
             _commandProcessor.Publish(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
 
         exception = Catch.Exception(() => _commandProcessor.Publish(TimeSpan.FromMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
     }
     
     [Fact]
     public void When_Scheduling_Post_With_Invalid_Parameter()
     {
         var exception = Catch.Exception(() => _commandProcessor.Post(_timeProvider.GetUtcNow().AddMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
 
         exception = Catch.Exception(() => _commandProcessor.Post(TimeSpan.FromMilliseconds(-1), _myCommand));
-        exception.Should().NotBeNull();
-        exception.Should().BeOfType<ArgumentOutOfRangeException>();
+        Assert.NotNull(exception);
+        Assert.True((exception) is ArgumentOutOfRangeException);
     }
 }

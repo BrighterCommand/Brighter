@@ -2,8 +2,6 @@
 using System.IO;
 using System.IO.Compression;
 using System.Text;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
@@ -45,10 +43,9 @@ public class UncompressLargePayloadTests
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(largeContent);
-        msg.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-        msg.Header.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-
+        Assert.Equal(largeContent, msg.Body.Value);
+        Assert.Equal(MessageBody.APPLICATION_JSON, msg.Body.ContentType);
+        Assert.Equal(MessageBody.APPLICATION_JSON, msg.Header.ContentType);
     }
     
     [Fact]
@@ -84,10 +81,9 @@ public class UncompressLargePayloadTests
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(largeContent);
-        msg.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-        msg.Header.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-
+        Assert.Equal(largeContent, msg.Body.Value);
+        Assert.Equal(MessageBody.APPLICATION_JSON, msg.Body.ContentType);
+        Assert.Equal(MessageBody.APPLICATION_JSON, msg.Header.ContentType);
     }
     
     [Fact]
@@ -121,11 +117,12 @@ public class UncompressLargePayloadTests
         
         //act
          var msg = transformer.Unwrap(message);
-        
-        //assert
-        msg.Body.Value.Should().Be(largeContent);
-        msg.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
-        msg.Header.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
+
+         //assert
+         Assert.Equal(largeContent, msg.Body.Value);
+         Assert.Equal(MessageBody.APPLICATION_JSON, msg.Body.ContentType);
+         Assert.Equal(MessageBody.APPLICATION_JSON, msg.Header.ContentType);
+
 
     }
 }
