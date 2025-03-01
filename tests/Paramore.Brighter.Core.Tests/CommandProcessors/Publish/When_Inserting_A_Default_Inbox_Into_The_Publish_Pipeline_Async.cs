@@ -60,6 +60,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                     { Brighter.CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
                     { Brighter.CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
                 },
+                new InMemorySchedulerFactory(),
                 inboxConfiguration: inboxConfiguration
             );
         }

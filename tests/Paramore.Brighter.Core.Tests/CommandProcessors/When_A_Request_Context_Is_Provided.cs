@@ -42,7 +42,8 @@ public class RequestContextPresentTests : IDisposable
             registry,
             handlerFactory,
             spyRequestContextFactory,
-            policyRegistry
+            policyRegistry,
+            new InMemorySchedulerFactory()
         );
 
         //act
@@ -72,7 +73,8 @@ public class RequestContextPresentTests : IDisposable
             registry,
             handlerFactory,
             spyRequestContextFactory,
-            policyRegistry
+            policyRegistry,
+            new InMemorySchedulerFactory()
         );
 
         //act
@@ -100,7 +102,8 @@ public class RequestContextPresentTests : IDisposable
             registry,
             handlerFactory,
             _requestContextFactory,
-            _policyRegistry
+            _policyRegistry,
+            new InMemorySchedulerFactory()
         );
 
         //act
@@ -128,7 +131,8 @@ public class RequestContextPresentTests : IDisposable
             registry,
             handlerFactory,
             _requestContextFactory,
-            _policyRegistry
+            _policyRegistry,
+            new InMemorySchedulerFactory()
         );
 
         //act
@@ -182,7 +186,8 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         );
 
         //act
@@ -232,7 +237,8 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         );
 
         //act
@@ -282,7 +288,8 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         );
 
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};
@@ -336,7 +343,8 @@ public class RequestContextPresentTests : IDisposable
         var commandProcessor = new CommandProcessor(
             _requestContextFactory,
             _policyRegistry,
-            bus
+            bus,
+            new InMemorySchedulerFactory()
         );
 
         var myCommand = new MyCommand() {Id = Guid.NewGuid().ToString()};

@@ -97,6 +97,7 @@ public class CommandProcessorClearOutstandingObservabilityTests
             new InMemoryRequestContextFactory(),
             policyRegistry, 
             _mediator,
+            new InMemorySchedulerFactory(),
             tracer: tracer, 
             instrumentationOptions: InstrumentationOptions.All
         );

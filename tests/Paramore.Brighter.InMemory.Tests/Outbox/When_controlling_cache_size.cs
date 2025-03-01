@@ -70,11 +70,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             await Task.Delay(500); //Allow time for compaction to run
             
             //should clear compaction percentage from the outbox, and then add  the  new one
-            Assert.True(outbox.Get(messageIds[0], context).Empty);
-            Assert.True(outbox.Get(messageIds[1], context).Empty);
-            Assert.True(outbox.Get(messageIds[2], context).Empty);
-            Assert.True(outbox.Get(messageIds[3], context).Empty);
-            Assert.True((outbox.Get(messageIds[4], context).Empty));
+            Assert.True(outbox.Get(messageIds[0], context).IsEmpty);
+            Assert.True(outbox.Get(messageIds[1], context).IsEmpty);
+            Assert.True(outbox.Get(messageIds[2], context).IsEmpty);
+            Assert.True(outbox.Get(messageIds[3], context).IsEmpty);
+            Assert.True((outbox.Get(messageIds[4], context).IsEmpty));
         }
     }
 }

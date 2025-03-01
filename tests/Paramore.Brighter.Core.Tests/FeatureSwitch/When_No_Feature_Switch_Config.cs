@@ -42,6 +42,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                 .NoExternalBus()
                 .ConfigureInstrumentation(new BrighterTracer(), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory())
                 .Build();
         }
 

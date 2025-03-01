@@ -91,7 +91,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Clear
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
-                _mediator
+                _mediator,
+                requestSchedulerFactory: new InMemorySchedulerFactory()
             );
         }
 

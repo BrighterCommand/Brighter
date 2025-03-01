@@ -49,22 +49,22 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             var firstMessage = await ConsumeMessagesAsync(consumer);
             var message = firstMessage.First();
-            Assert.False(message.Empty);
+            Assert.False(message.IsEmpty);
             Assert.Equal(msgId, message.Id);
 
             var secondMessage = await ConsumeMessagesAsync(consumer);
             message = secondMessage.First();
-            Assert.False(message.Empty);
+            Assert.False(message.IsEmpty);
             Assert.Equal(msgId2, message.Id);
 
             var thirdMessages = await ConsumeMessagesAsync(consumer);
             message = thirdMessages.First();
-            Assert.False(message.Empty);
+            Assert.False(message.IsEmpty);
             Assert.Equal(msgId3, message.Id);
 
             var fourthMessage = await ConsumeMessagesAsync(consumer);
             message = fourthMessage.First();
-            Assert.False(message.Empty);
+            Assert.False(message.IsEmpty);
             Assert.Equal(msgId4, message.Id);
         }
 

@@ -15,3 +15,11 @@ public class DepositCallSiteAttribute : Attribute { }
 /// this information being lost without casting we have to bind the call to the per-request
 /// method to the concrete type
 public class DepositCallSiteAsyncAttribute : Attribute { }
+
+/// Indicates that this method is the target site for invoking a bulk deposit when the
+/// transaction type isn't known until runtime
+public class BulkDepositCallSiteAttribute : Attribute { }
+
+/// Indicates that this method is the target site for invoking a bulk deposit when the
+/// transaction type isn't known until runtime
+public class BulkDepositCallSiteAsyncAttribute : Attribute { }

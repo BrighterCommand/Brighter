@@ -1,22 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.SecurityToken;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.AWS.Tests.Helpers;
+using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.Tranformers.AWS;
-using Polly;
-using Polly.Contrib.WaitAndRetry;
-using Polly.Retry;
 using Xunit;
-using Policy = Polly.Policy;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 

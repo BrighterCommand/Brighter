@@ -55,20 +55,6 @@ namespace Paramore.Brighter
         public MessageBody Body { get; set; }
 
         /// <summary>
-        /// Returns true if this is an empty Message.
-        /// </summary>
-        public bool Empty => Header.MessageType == MessageType.MT_NONE;
-
-        /// <summary>
-        /// Gets the identifier of the message.
-        /// </summary>
-        /// <value>The identifier.</value>
-        public string Id
-        {
-            get { return Header.MessageId; }
-        }
-        
-        /// <summary>
         /// RMQ: An identifier for the message set by the broker. Only valid on the same thread that consumed the message.
         /// </summary>
         [JsonIgnore]
@@ -82,6 +68,22 @@ namespace Paramore.Brighter
                     return 0;
             }
             set { Header.Bag[DeliveryTagHeaderName] = value; }
+        }
+        
+        public static Message Empty => new();
+        
+        /// <summary>
+        /// Returns true if this is an empty Message.
+        /// </summary>
+        public bool IsEmpty => Header.MessageType == MessageType.MT_NONE;
+
+        /// <summary>
+        /// Gets the identifier of the message.
+        /// </summary>
+        /// <value>The identifier.</value>
+        public string Id
+        {
+            get { return Header.MessageId; }
         }
 
         /// <summary>
@@ -125,8 +127,8 @@ namespace Paramore.Brighter
         [JsonConstructor]
         public Message(MessageHeader header, MessageBody body)
         {
-            Header = header;
             Body = body;
+            Header = header;
             Header.ContentType = string.IsNullOrEmpty(Header.ContentType) ? Body.ContentType: Header.ContentType;
         }
 

@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
+using Paramore.Brighter.Scheduler.Events;
 using Polly;
 using Polly.Registry;
 
@@ -104,7 +105,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageTransformerFactoryAsync messageTransformerFactoryAsync,
-            IAmABrighterTracer tracer,
+            IAmABrighterTracer tracer, 
             IAmAnOutbox? outbox = null,
             IAmARequestContextFactory? requestContextFactory = null,
             int outboxTimeout = 300,
@@ -131,7 +132,7 @@ namespace Paramore.Brighter
                 throw new ConfigurationException(
                     "A Command Processor with an external bus must have a message transformer factory");
             
-            _timeProvider = (timeProvider is null) ? TimeProvider.System : timeProvider;
+            _timeProvider = timeProvider ?? TimeProvider.System;
             _lastOutStandingMessageCheckAt = _timeProvider.GetUtcNow();
 
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -425,6 +426,13 @@ namespace Paramore.Brighter
         public Message CreateMessageFromRequest<TRequest>(TRequest request, RequestContext requestContext)
             where TRequest : class, IRequest
         {
+            // The fired scheduler message is a special case
+            // Because the message is in the raw form already, just waiting to be fired
+            if (request is FireSchedulerMessage scheduler)
+            {
+                return scheduler.Message;
+            }
+            
             var message = MapMessage(request, requestContext);
             return message;
         }
@@ -443,7 +451,14 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken
         ) where TRequest : class, IRequest
         {
-            Message message = await MapMessageAsync(request, requestContext, cancellationToken);
+            // The fired scheduler message is a special case
+            // Because the message is in the raw form already, just waiting to be fired
+            if (request is FireSchedulerMessage schedulerMessage)
+            {
+                return schedulerMessage.Message;
+            }
+            
+            var message = await MapMessageAsync(request, requestContext, cancellationToken);
             return message;
         }
 
@@ -748,7 +763,8 @@ namespace Paramore.Brighter
             return false;
         }
 
-        private void Dispatch(IEnumerable<Message> posts, RequestContext requestContext,
+        private void Dispatch(IEnumerable<Message> posts, 
+            RequestContext requestContext,
             Dictionary<string, object>? args = null)
         {
             var parentSpan = requestContext.Span;

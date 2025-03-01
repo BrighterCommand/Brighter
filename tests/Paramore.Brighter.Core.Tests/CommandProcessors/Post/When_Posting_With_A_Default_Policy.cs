@@ -62,6 +62,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Post
                 .ExternalBus(ExternalBusType.FireAndForget, externalBus)
                 .ConfigureInstrumentation(new BrighterTracer(TimeProvider.System), InstrumentationOptions.All)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
+                .RequestSchedulerFactory(new InMemorySchedulerFactory())
                 .Build();
         }
 

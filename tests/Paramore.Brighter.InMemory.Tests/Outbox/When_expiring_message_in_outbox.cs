@@ -41,7 +41,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             var message = await outbox.GetAsync(messageId, new RequestContext());
             
             //Assert
-            Assert.True(message.Empty);
+            Assert.True(message.IsEmpty);
         }
 
         [Fact]

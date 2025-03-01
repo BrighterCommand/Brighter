@@ -49,7 +49,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
                 new SubscriberRegistry(),
                 new ServiceProviderHandlerFactory(container.BuildServiceProvider()),
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry());
+                new PolicyRegistry(),
+                new InMemorySchedulerFactory()
+                );
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow

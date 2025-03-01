@@ -12,6 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
     [Trait("Category", "InMemory")]
+    [Collection("CommandProcess")]
     public class SweeperTests
     {
         private const string MyTopic = "MyTopic";
@@ -65,7 +66,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                mediator);
+                mediator,
+                new InMemorySchedulerFactory());
 
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
@@ -141,8 +143,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                mediator);
-
+                mediator,
+                new InMemorySchedulerFactory());
+            
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var events = new[]
@@ -216,8 +219,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                mediator);
-
+                mediator,
+                new InMemorySchedulerFactory());
+            
             var sweeper = new OutboxSweeper(
                 timeSinceSent,
                 mediator,
@@ -300,8 +304,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             var commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry(),
-                mediator);
-
+                mediator,
+                new InMemorySchedulerFactory());           
+            
             var sweeper = new OutboxSweeper(timeSinceSent, mediator, new InMemoryRequestContextFactory());
 
             var oldEvent = new MyEvent{Value = "old"};

@@ -27,6 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -47,6 +48,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The OTel Span we are writing Producer events too
         /// </summary>
         public Activity Span { get; set; }
+
+        /// <inheritdoc />
+        public IAmAMessageScheduler Scheduler { get; set; }
 
         private IProducer<string, byte[]> _producer;
         private readonly IKafkaMessageHeaderBuilder _headerBuilder;
@@ -122,7 +126,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Dispose of the producer 
         /// </summary>
-        /// <param name="disposing">Are we disposing or being called by the GC</param>
         public void Dispose()
         {
             Dispose(true);
@@ -133,7 +136,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Dispose of the producer 
         /// </summary>
-        /// <param name="disposing">Are we disposing or being called by the GC</param>
         public ValueTask DisposeAsync()
         {
             Dispose(true);
@@ -192,62 +194,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <exception cref="ChannelFailureException">The Kafka client  has entered an unrecoverable state</exception>
         public void Send(Message message)
         {
-            if (message == null)
-                throw new ArgumentNullException(nameof(message));
-
-            if (_hasFatalProducerError)
-                throw new ChannelFailureException($"Producer is in unrecoverable state");
-
-            try
-            {
-                s_logger.LogDebug(
-                    "Sending message to Kafka. Servers {Servers} Topic: {Topic} Body: {Request}",
-                    _producerConfig.BootstrapServers,
-                    message.Header.Topic,
-                    message.Body.Value
-                );
-
-                _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
-
-            }
-            catch (ProduceException<string, string> pe)
-            {
-                s_logger.LogError(pe,
-                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                    _producerConfig.BootstrapServers,
-                    pe.Error.Reason
-                );
-                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
-            }
-            catch (InvalidOperationException ioe)
-            {
-                s_logger.LogError(ioe,
-                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                    _producerConfig.BootstrapServers,
-                    ioe.Message
-                );
-                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
-
-            }
-            catch (ArgumentException ae)
-            {
-                s_logger.LogError(ae,
-                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                    _producerConfig.BootstrapServers,
-                    ae.Message
-                );
-                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
-               
-            }
-            catch (KafkaException kafkaException)
-            {
-                s_logger.LogError(kafkaException, $"KafkaMessageProducer: There was an error sending to topic {Topic})");
-                
-                if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
-                    throw;
-                
-                throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);
-            }
+            SendWithDelay(message, TimeSpan.Zero);
         }
 
         /// <summary>
@@ -262,11 +209,37 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="cancellationToken">Allows cancellation of the in-flight send operation</param>
         public async Task SendAsync(Message message, CancellationToken cancellationToken = default)
         {
+            await SendWithDelayAsync(message, TimeSpan.Zero, cancellationToken);
+        }
+        
+        /// <summary>
+        /// Sends the message with the given delay
+        /// </summary>
+        /// <remarks>
+        /// No delay support implemented
+        /// </remarks>
+        /// <param name="message">The message to send</param>
+        /// <param name="delay">The delay to use</param>
+        public void SendWithDelay(Message message, TimeSpan? delay = null)
+        {
+            delay ??= TimeSpan.Zero;
+            if (delay != TimeSpan.Zero)
+            {
+                var schedulerSync = (IAmAMessageSchedulerSync)Scheduler!;
+                schedulerSync.Schedule(message, delay.Value);
+                return;
+            }
+            
             if (message == null)
+            {
                 throw new ArgumentNullException(nameof(message));
+            }
 
             if (_hasFatalProducerError)
-                 throw new ChannelFailureException($"Producer is in unrecoverable state");
+            {
+                throw new ChannelFailureException($"Producer is in unrecoverable state");
+            }
+            
             try
             {
                 s_logger.LogDebug(
@@ -275,9 +248,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     message.Header.Topic,
                     message.Body.Value
                 );
-
-                await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
-
+            
+                _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
+            
             }
             catch (ProduceException<string, string> pe)
             {
@@ -296,32 +269,27 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     ioe.Message
                 );
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
-
+            
             }
             catch (ArgumentException ae)
             {
-                 s_logger.LogError(ae,
-                     "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
-                     _producerConfig.BootstrapServers,
-                     ae.Message
-                 );
-                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
-               
+                s_logger.LogError(ae,
+                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
+                    _producerConfig.BootstrapServers,
+                    ae.Message
+                );
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
+                           
             }
-        }
-        
-        /// <summary>
-        /// Sends the message with the given delay
-        /// </summary>
-        /// <remarks>
-        /// No delay support implemented
-        /// </remarks>
-        /// <param name="message">The message to send</param>
-        /// <param name="delay">The delay to use</param>
-        public void SendWithDelay(Message message, TimeSpan? delay = null)
-        {
-            //TODO: No delay support implemented
-            Send(message);
+            catch (KafkaException kafkaException)
+            {
+                s_logger.LogError(kafkaException, "KafkaMessageProducer: There was an error sending to topic {Topic})", Topic);
+                            
+                if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
+                    throw;
+                            
+                throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);
+            }
         }
 
         /// <summary>
@@ -335,8 +303,65 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="cancellationToken">Cancels the send operation</param>
         public async Task SendWithDelayAsync(Message message, TimeSpan? delay, CancellationToken cancellationToken = default)
         {
-            //TODO: No delay support implemented
-            await SendAsync(message);
+             delay ??= TimeSpan.Zero;
+             if (delay != TimeSpan.Zero)
+             {
+                var schedulerAsync = (IAmAMessageSchedulerAsync)Scheduler!;
+                await schedulerAsync.ScheduleAsync(message, delay.Value, cancellationToken);
+                return;
+             }
+                        
+             if (message == null)
+             {
+                 throw new ArgumentNullException(nameof(message));
+             }
+
+             if (_hasFatalProducerError)
+             {
+                 throw new ChannelFailureException("Producer is in unrecoverable state");
+             }
+              
+             try
+             {
+                 s_logger.LogDebug(
+                     "Sending message to Kafka. Servers {Servers} Topic: {Topic} Body: {Request}",
+                     _producerConfig.BootstrapServers,
+                     message.Header.Topic,
+                     message.Body.Value
+                 );
+            
+                 await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers), cancellationToken);
+            
+             }
+             catch (ProduceException<string, string> pe)
+             {
+                 s_logger.LogError(pe,
+                     "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
+                     _producerConfig.BootstrapServers,
+                     pe.Error.Reason
+                 );
+                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
+             }
+             catch (InvalidOperationException ioe)
+             {
+                 s_logger.LogError(ioe,
+                     "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
+                     _producerConfig.BootstrapServers,
+                     ioe.Message
+                 );
+                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
+            
+             }
+             catch (ArgumentException ae)
+             {
+                 s_logger.LogError(ae,
+                     "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
+                     _producerConfig.BootstrapServers,
+                     ae.Message
+                 );
+                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
+                           
+             }
         }
 
         private void Dispose(bool disposing)
