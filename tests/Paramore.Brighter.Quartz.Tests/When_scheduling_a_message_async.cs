@@ -120,7 +120,7 @@ public class QuartzSchedulerMessageAsyncTests
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        Assert.Equivalent(message, _outbox.Get(message.Id, new RequestContext()));
+        Assert.Equivalent(message, await _outbox.GetAsync(message.Id, new RequestContext()));
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
     }
@@ -145,7 +145,7 @@ public class QuartzSchedulerMessageAsyncTests
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        Assert.Equivalent(message, _outbox.Get(req.Id, new RequestContext()));
+        Assert.Equivalent(message, await _outbox.GetAsync(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class QuartzSchedulerMessageAsyncTests
         await Task.Delay(TimeSpan.FromSeconds(4));
 
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
-        Assert.Equivalent(message, _outbox.Get(req.Id, new RequestContext()));
+        Assert.Equivalent(message, await _outbox.GetAsync(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -197,8 +197,7 @@ public class QuartzSchedulerMessageAsyncTests
         await Task.Delay(TimeSpan.FromSeconds(4));
         Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, await _outbox.GetAsync(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -219,7 +218,7 @@ public class QuartzSchedulerMessageAsyncTests
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
+        Assert.Equivalent(new Message(), await _outbox.GetAsync(req.Id, new RequestContext()));
     }
 
 
@@ -241,6 +240,6 @@ public class QuartzSchedulerMessageAsyncTests
 
         await Task.Delay(TimeSpan.FromSeconds(2));
 
-        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
+        Assert.Equivalent(new Message(), await _outbox.GetAsync(req.Id, new RequestContext()));
     }
 }
