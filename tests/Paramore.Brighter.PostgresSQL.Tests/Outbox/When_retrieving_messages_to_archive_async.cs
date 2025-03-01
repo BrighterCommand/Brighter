@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Outbox.PostgreSql;
@@ -50,9 +51,9 @@ public class PostgresSqlArchiveFetchAsyncTests : IDisposable
             await _sqlOutbox.DispatchedMessagesAsync(4, context, cancellationToken: CancellationToken.None);
 
         //Assert
-        Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
-        Assert.Empty(messagesOver4Hours ?? []);
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Single(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
 
     [Fact]
@@ -71,9 +72,9 @@ public class PostgresSqlArchiveFetchAsyncTests : IDisposable
             await _sqlOutbox.DispatchedMessagesAsync(TimeSpan.FromHours(4), context, 100, cancellationToken: CancellationToken.None);
 
         //Assert
-        Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
-        Assert.Empty(messagesOver4Hours ?? []);
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Single(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
 
     public void Dispose()

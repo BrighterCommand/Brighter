@@ -55,12 +55,9 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         {
             _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_read_the_command_from_the__sql_inbox
-            AssertionExtensions.Should(_storedCommand).NotBeNull();
-            //_should_read_the_command_value
-            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
-            //_should_read_the_command_id
-            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
+            Assert.NotNull(_storedCommand);
+            Assert.Equal(_raisedCommand.Value, _storedCommand.Value);
+            Assert.Equal(_raisedCommand.Id, _storedCommand.Id);
         }
 
         [Fact]
@@ -68,7 +65,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
         {
             var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, null));
             //should_not_read_message
-            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
 

@@ -100,7 +100,7 @@ public class SqsMessageProducerSendTests : IDisposable, IAsyncDisposable
         Assert.Equal(_message.Body.Value, message.Body.Value);
 
         Assert.Equal(_messageGroupId, message.Header.PartitionKey);
-        message.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
+        Assert.Contains(HeaderNames.DeduplicationId, message.Header.Bag);
         Assert.Equal(_deduplicationId, message.Header.Bag[HeaderNames.DeduplicationId]);
     }
 

@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _storedMessage = _sqlOutbox.Get(_message.Id, new RequestContext());
 
             //should read the message from the sql outbox
-            _storedMessage.Body.Bytes.Should().Equal(_message.Body.Bytes);
+            Assert.Equal(_message.Body.Bytes, _storedMessage.Body.Bytes);
             //should read the header from the sql outbox
             Assert.Equal(_message.Header.Topic, _storedMessage.Header.Topic);
             Assert.Equal(_message.Header.MessageType, _storedMessage.Header.MessageType);

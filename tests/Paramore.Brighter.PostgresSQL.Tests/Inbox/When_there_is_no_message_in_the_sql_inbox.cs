@@ -55,7 +55,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             string commandId = Guid.NewGuid().ToString();
             var exception = Catch.Exception(() => _storedCommand = _pgSqlInbox.Get<MyCommand>(commandId, _contextKey));
 
-            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
         [Fact]

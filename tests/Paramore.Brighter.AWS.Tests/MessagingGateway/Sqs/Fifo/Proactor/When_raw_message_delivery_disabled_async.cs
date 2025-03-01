@@ -79,10 +79,11 @@ public class SqsRawMessageDeliveryTestsAsync : IAsyncDisposable, IDisposable
         Assert.Equal(messageToSend.Header.CorrelationId, messageReceived.Header.CorrelationId);
         Assert.Equal(messageToSend.Header.ReplyTo, messageReceived.Header.ReplyTo);
         Assert.Equal(messageToSend.Header.ContentType, messageReceived.Header.ContentType);
-        messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
+        Assert.Contains(customHeaderItem.Key, messageReceived.Header.Bag);
+        Assert.Equal(customHeaderItem.Value, messageReceived.Header.Bag[customHeaderItem.Key]);
         Assert.Equal(messageToSend.Body.Value, messageReceived.Body.Value);
         Assert.Equal(messageGroupId, messageReceived.Header.PartitionKey);
-        messageReceived.Header.Bag.Should().ContainKey(HeaderNames.DeduplicationId);
+        Assert.Contains(HeaderNames.DeduplicationId, messageReceived.Header.Bag);
         Assert.Equal(deduplicationId, messageReceived.Header.Bag[HeaderNames.DeduplicationId]);
     }
 

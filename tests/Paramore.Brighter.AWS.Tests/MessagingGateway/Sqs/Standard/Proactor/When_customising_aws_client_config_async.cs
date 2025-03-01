@@ -73,10 +73,10 @@ public class CustomisingAwsClientConfigTestsAsync : IDisposable, IAsyncDisposabl
         await _channel.AcknowledgeAsync(message);
 
         //publish_and_subscribe_should_use_custom_http_client_factory
-        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("async_sub");
+        Assert.Contains("async_sub", InterceptingDelegatingHandler.RequestCount);
         Assert.True((InterceptingDelegatingHandler.RequestCount["async_sub"]) > (0));
 
-        InterceptingDelegatingHandler.RequestCount.Should().ContainKey("async_pub");
+        Assert.Contains("async_pub", InterceptingDelegatingHandler.RequestCount);
         Assert.True((InterceptingDelegatingHandler.RequestCount["async_pub"]) > (0));
     }
 

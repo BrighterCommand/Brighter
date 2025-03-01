@@ -45,7 +45,7 @@ public class SqliteFetchMessageTests : IAsyncDisposable
         var messages = _sqlOutbox.Get();
 
         //Assert
-        Assert.Equal(3, (messages)?.Count());
+        Assert.Equal(3, messages.Count());
     }
 
     [Fact]
@@ -61,11 +61,12 @@ public class SqliteFetchMessageTests : IAsyncDisposable
             context);
 
         //Assert
-        messages = messages.ToList();
-        Assert.Equal(2, (messages)?.Count());
-        Assert.Contains(x => x.Id == _messageEarliest.Id, messages);
-        Assert.Contains(x => x.Id == _messageUnDispatched.Id, messages);
-        Assert.DoesNotContain(x => x.Id == _messageDispatched.Id, messages);
+        var messageList = messages.ToList();
+        Assert.Equal(2, messageList.Count);
+        Assert.Contains(messageList, x => x.Id == _messageEarliest.Id);
+        Assert.Contains(messageList, x => x.Id == _messageUnDispatched.Id);
+        Assert.DoesNotContain(messageList, x => x.Id == _messageDispatched.Id);
+
     }
 
     [Fact]
@@ -76,10 +77,10 @@ public class SqliteFetchMessageTests : IAsyncDisposable
         _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
         _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
 
-        var messages = _sqlOutbox.Get(_messageDispatched.Id, context);
+        var message = _sqlOutbox.Get(_messageDispatched.Id, context);
 
         //Assert
-        Assert.Equal(_messageDispatched.Id, messages.Id);
+        Assert.Equal(_messageDispatched.Id, message.Id);
     }
 
     public async ValueTask DisposeAsync()

@@ -44,8 +44,8 @@ public class PostgresSqlFetchMessageAsyncTests : IDisposable
 
         var messages = await _sqlOutbox.GetAsync();
 
-        //Assert
-        Assert.Equal(3, (messages)?.Count());
+        // Assert
+        Assert.Equal(3, messages.Count());
     }
 
     [Fact]
@@ -60,12 +60,12 @@ public class PostgresSqlFetchMessageAsyncTests : IDisposable
             [_messageEarliest.Id, _messageUnDispatched.Id],
             context);
 
-        //Assert
-        messages = messages.ToList();
-        Assert.Equal(2, (messages)?.Count());
-        Assert.Contains(x => x.Id == _messageEarliest.Id, messages);
-        Assert.Contains(x => x.Id == _messageUnDispatched.Id, messages);
-        Assert.DoesNotContain(x => x.Id == _messageDispatched.Id, messages);
+        // Assert
+        var messageList = messages.ToList();
+        Assert.Equal(2, messageList.Count);
+        Assert.Contains(messageList, x => x.Id == _messageEarliest.Id);
+        Assert.Contains(messageList, x => x.Id == _messageUnDispatched.Id);
+        Assert.DoesNotContain(messageList, x => x.Id == _messageDispatched.Id);
     }
 
     [Fact]
@@ -76,10 +76,10 @@ public class PostgresSqlFetchMessageAsyncTests : IDisposable
         await _sqlOutbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
         await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id, context);
 
-        var messages = await _sqlOutbox.GetAsync(_messageDispatched.Id, context);
+        var message = await _sqlOutbox.GetAsync(_messageDispatched.Id, context);
 
-        //Assert
-        Assert.Equal(_messageDispatched.Id, messages.Id);
+        // Assert
+        Assert.Equal(_messageDispatched.Id, message.Id);
     }
 
     public void Dispose()

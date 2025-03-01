@@ -98,10 +98,10 @@ public class SQSBufferedConsumerTests : IDisposable, IAsyncDisposable
             //retrieve  messages
             var messages = _consumer.Receive(TimeSpan.FromMilliseconds(10000));
                 
-            messages.Length.Should().BeLessThanOrEqualTo(outstandingMessageCount);
+            Assert.True(messages.Length <= outstandingMessageCount);
                 
             //should not receive more than buffer in one hit
-            messages.Length.Should().BeLessThanOrEqualTo(BufferSize);
+            Assert.True(messages.Length <= BufferSize);
 
             var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
             foreach (var message in moreMessages)

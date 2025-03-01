@@ -75,7 +75,8 @@ public class SqsRawMessageDeliveryTests : IDisposable, IAsyncDisposable
         Assert.Equal(messageToSent.Header.CorrelationId, messageReceived.Header.CorrelationId);
         Assert.Equal(messageToSent.Header.ReplyTo, messageReceived.Header.ReplyTo);
         Assert.Equal(messageToSent.Header.ContentType, messageReceived.Header.ContentType);
-        messageReceived.Header.Bag.Should().ContainKey(customHeaderItem.Key).And.ContainValue(customHeaderItem.Value);
+        Assert.Contains(customHeaderItem.Key, messageReceived.Header.Bag);
+        Assert.Equal(customHeaderItem.Value, messageReceived.Header.Bag[customHeaderItem.Key]);
         Assert.Equal(messageToSent.Body.Value, messageReceived.Body.Value);
     }
 

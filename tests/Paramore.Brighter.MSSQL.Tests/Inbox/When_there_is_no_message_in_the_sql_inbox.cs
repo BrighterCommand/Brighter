@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
             string commandId = Guid.NewGuid().ToString();
             var exception = Catch.Exception(() => _sqlInbox.Get<MyCommand>(commandId, _contextKey));
 
-            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
         }
 
         [Fact]

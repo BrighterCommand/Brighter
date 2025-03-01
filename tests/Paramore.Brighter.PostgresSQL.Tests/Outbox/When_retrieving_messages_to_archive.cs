@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
@@ -45,9 +46,9 @@ public class PostgresSqlArchiveFetchTests : IDisposable
         var messagesOver4Hours = _sqlOutbox.DispatchedMessages(4, context);
 
         //Assert
-        Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
-        Assert.Empty(messagesOver4Hours ?? []);
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Single(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
 
     [Fact]
@@ -63,9 +64,9 @@ public class PostgresSqlArchiveFetchTests : IDisposable
         var messagesOver4Hours = _sqlOutbox.DispatchedMessages(TimeSpan.FromHours(4), context);
 
         //Assert
-        Assert.Equal(2, (allDispatched)?.Count());
-        messagesOverAnHour.Should().ContainSingle();
-        Assert.Empty(messagesOver4Hours ?? []);
+        Assert.Equal(2, allDispatched.Count());
+        Assert.Single(messagesOverAnHour);
+        Assert.Empty(messagesOver4Hours);
     }
 
     public void Dispose()
