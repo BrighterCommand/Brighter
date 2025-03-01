@@ -35,7 +35,6 @@ public class RocketMessageProducerFactory(RocketMessagingGatewayConnection conne
     private async Task<Producer> CreateProducerAsync()
     {
         var builder = new Producer.Builder();
-
         builder.SetClientConfig(connection.ClientConfig)
             .SetMaxAttempts(connection.MaxAttempts)
             .SetTopics(publications

@@ -83,7 +83,7 @@ public class RocketSubscription : Subscription
         makeChannels, emptyChannelDelay, channelFailureDelay)
     {
         ConsumerGroup = consumerGroup ?? channelName?.Value ?? string.Empty;
-        ReceiveMessageTimeout = receiveMessageTimeout ?? TimeSpan.FromSeconds(1);
+        ReceiveMessageTimeout = receiveMessageTimeout ?? TimeSpan.FromMinutes(1);
         InvisibilityTimeout = invisibilityTimeout ?? TimeSpan.FromSeconds(30);
         Filter = filter ?? new FilterExpression("*");
         ClientConfig = clientConfig;

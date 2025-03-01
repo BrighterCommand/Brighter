@@ -1,6 +1,7 @@
 ﻿using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Org.Apache.Rocketmq;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RocketMQ;
 using Paramore.Brighter.Observability;
@@ -19,6 +20,7 @@ public class DispatchBuilderTests : IDisposable
 
     public DispatchBuilderTests()
     {
+        Environment.SetEnvironmentVariable("DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2SUPPORT", "false");
         var messageMapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()),
             null);
@@ -38,14 +40,14 @@ public class DispatchBuilderTests : IDisposable
             .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
         var connection = new RocketMessagingGatewayConnection(new ClientConfig.Builder()
-            .SetEndpoints("")
+            .SetEndpoints("localhost:9876")
             .Build());
 
         var consumerFactory = new RocketMessageConsumerFactory(connection);
         var container = new ServiceCollection();
 
         var tracer = new BrighterTracer(TimeProvider.System);
-        var instrumentationOptions = InstrumentationOptions.All;
+        const InstrumentationOptions instrumentationOptions = InstrumentationOptions.All;
             
         var commandProcessor = CommandProcessorBuilder.StartNew()
             .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
@@ -57,6 +59,7 @@ public class DispatchBuilderTests : IDisposable
             .NoExternalBus()
             .ConfigureInstrumentation(tracer, instrumentationOptions)
             .RequestContextFactory(new InMemoryRequestContextFactory())
+            .RequestSchedulerFactory(new InMemorySchedulerFactory())
             .Build();
 
         _builder = DispatchBuilder.StartNew()
@@ -80,7 +83,22 @@ public class DispatchBuilderTests : IDisposable
                     messagePumpType: MessagePumpType.Reactor,
                     timeOut: TimeSpan.FromMilliseconds(200))
             })
-            .ConfigureInstrumentation(tracer, instrumentationOptions);
+            .ConfigureInstrumentation(tracer);
+
+       var producerFactory = new RocketMessageProducerFactory(connection,
+            new[]
+            {
+                new RocketPublication { Topic = new RoutingKey("bob") },
+                new RocketPublication { Topic = new RoutingKey("simon") }
+            });
+
+       var producers = producerFactory.Create();
+       producers.Each(x =>
+       {
+           ((IAmAMessageProducerSync)x.Value).Send(new Message(
+               new MessageHeader(Guid.NewGuid().ToString("N"), x.Key, MessageType.MT_COMMAND),
+               new MessageBody("{}")));
+       });
     }
 
     [Fact]
@@ -111,8 +129,8 @@ public class DispatchBuilderTests : IDisposable
         CommandProcessor.ClearServiceBus();
     }
 
-    private Subscription GetConnection(string name)
+    private Subscription? GetConnection(string name)
     {
-        return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Subscriptions, conn => conn.Name == name);
+        return _dispatcher.Subscriptions.SingleOrDefault(conn => conn.Name == name);
     }
 }

@@ -23,7 +23,16 @@ public class RocketMessageProducer : IAmAMessageProducerSync, IAmAMessageProduce
 
     /// <inheritdoc />
     public Activity? Span { get; set; }
-    
+
+    /// <inheritdoc />
+    public IAmAMessageScheduler? Scheduler { get; set; }
+
+    /// <summary>
+    /// Initialize new instance <see cref="RocketMessageProducer" />
+    /// </summary>
+    /// <param name="connection"></param>
+    /// <param name="producer"></param>
+    /// <param name="publication"></param>
     public RocketMessageProducer(RocketMessagingGatewayConnection connection, Producer producer, RocketPublication publication)
     {
         _connection = connection;

@@ -1,5 +1,57 @@
+version: '3.8'
+
 services:
-  rocketmq:
-    image: apache/rocketmq
+  # RocketMQ Nameserver (Service Discovery)
+  nameserver:
+    image: apache/rocketmq:4.9.4
+    container_name: rocketmq-nameserver
     ports:
-      - "9876:9876"
+      - "9876:9876"  # Nameserver port
+    command: sh mqnamesrv
+    environment:
+      - JAVA_OPT_EXT=-Xms512m -Xmx512m -Xmn256m -Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG # JVM memory settings
+
+  # RocketMQ Broker (Message Storage)
+  broker:
+    image: apache/rocketmq:4.9.4
+    container_name: rocketmq-broker
+    ports:
+      - "10909:10909"  # Broker HA port
+      - "10911:10911"  # Broker port
+      - "10912:10912"  # Broker TLS port (optional)
+    environment:
+      - NAMESRV_ADDR=nameserver:9876  # Connect to nameserver
+      - BROKER_CLUSTER_NAME=DefaultCluster
+      - BROKER_NAME=broker-a
+      - BROKER_ID=0
+      - AUTO_CREATE_TOPIC_ENABLE=true  # Auto-create topics
+      - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
+    command: sh mqbroker
+    depends_on:
+      - nameserver
+  
+  proxy:
+    image: apache/rocketmq:5.3.1
+    container_name: rmqproxy
+    depends_on:
+      - broker
+      - nameserver
+    ports:
+      - "8081:8081"   # HTTP endpoint (for REST API)
+      - "9877:9877"   # gRPC endpoint (for clients)
+    environment:
+      - NAMESRV_ADDR=nameserver:9876
+      - JAVA_OPT_EXT=-Drocketmq.log.level=DEBUG -Drocketmq.log.root.level=DEBUG
+    command: sh mqproxy
+    
+  # RocketMQ Dashboard (Web UI - Optional)
+  dashboard:
+    image: apacherocketmq/rocketmq-dashboard:latest
+    container_name: rocketmq-dashboard
+    ports:
+      - "8080:8080"  # Dashboard UI port
+    environment:
+      - NAMESRV_ADDR=nameserver:9876  # Connect to nameserver
+    depends_on:
+      - nameserver
+      - broker
