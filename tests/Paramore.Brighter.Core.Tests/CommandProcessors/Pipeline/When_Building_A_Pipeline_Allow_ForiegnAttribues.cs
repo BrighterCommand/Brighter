@@ -19,6 +19,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             registry.Register<MyCommand, MyObsoleteCommandHandler>();
 
             var container = new ServiceCollection();
+            container.AddTransient<MyObsoleteCommandHandler>();
             container.AddTransient<MyValidationHandler<MyCommand>>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
@@ -26,6 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
