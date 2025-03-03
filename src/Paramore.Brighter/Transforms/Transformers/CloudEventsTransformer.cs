@@ -25,8 +25,8 @@ public class CloudEventsTransformer : IAmAMessageTransform
 {
     private Uri? _source;
     private string? _type;
-    private string? _datacontenttype;
-    private Uri? _dataschema;
+    private string? _dataContentType;
+    private Uri? _dataSchema;
     private string? _subject;
     
     /// <summary>
@@ -42,31 +42,31 @@ public class CloudEventsTransformer : IAmAMessageTransform
 
     public void InitializeWrapFromAttributeParams(params object[] initializerList)
     {
-        
         _source = initializerList.ElementAtOrDefault(0) == null ? null : (Uri) initializerList.ElementAtOrDefault(0)!; 
         _type = initializerList.ElementAtOrDefault(1)?.ToString(); 
-        _datacontenttype = initializerList.ElementAtOrDefault(2)?.ToString();
-        _dataschema = initializerList.ElementAtOrDefault(3) == null ? null : (Uri)initializerList.ElementAtOrDefault(3)!; 
+        _dataContentType = initializerList.ElementAtOrDefault(2)?.ToString();
+        _dataSchema = initializerList.ElementAtOrDefault(3) == null ? null : (Uri)initializerList.ElementAtOrDefault(3)!; 
         _subject = initializerList.ElementAtOrDefault(4)?.ToString();
     }
 
     public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
     {
-        throw new System.NotImplementedException();
+        
     }
 
     public Message Wrap(Message message, Publication publication)
     {
         message.Header.Source = _source ?? publication.Source;
         message.Header.Type = _type ?? publication.Type;
-        message.Header.ContentType = _datacontenttype ?? publication.ContentType;
-        message.Header.DataSchema = _dataschema ?? publication.DataSchema;
+        message.Header.ContentType = _dataContentType ?? publication.ContentType;
+        message.Header.DataSchema = _dataSchema ?? publication.DataSchema;
         message.Header.Subject = _subject ?? publication.Subject;
+        message.Header.Bag[HeaderNames.UseCloudEvents] = true;
         return message;
     }
 
     public Message Unwrap(Message message)
     {
-        throw new System.NotImplementedException();
+        return message;
     }
 }

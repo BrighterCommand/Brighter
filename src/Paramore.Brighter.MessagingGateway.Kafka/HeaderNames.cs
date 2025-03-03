@@ -45,14 +45,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// If the message was deferred, how long for?
         /// </summary>
-        public static string DELAYED_MILLISECONDS { get; } =  "x-delay";
+        public const string DELAYED_MILLISECONDS =  "x-delay";
 
         /// <summary>
         /// How many times has the message been retried with a delay
         /// </summary>
-        public static string HANDLED_COUNT { get; } = "HandledCount" ;
-
-
+        public const string HANDLED_COUNT = "HandledCount" ;
+        
         /// <summary>
         /// The message type
         /// </summary>
@@ -86,5 +85,41 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The topic
         /// </summary>
         public const string TOPIC = "Topic";
+
+        /// <summary>
+        /// The cloud event ID
+        /// </summary>
+        public const string CloudEventsId = "ce_id";
+        
+        /// <summary>
+        /// The cloud event spec version
+        /// </summary>
+        public const string CloudEventsSpecVersion = "ce_specversion";
+        
+        /// <summary>
+        /// The cloud event type
+        /// </summary>
+        public const string CloudEventsType = "ce_type";
+        
+        /// <summary>
+        /// The cloud event time
+        /// </summary>
+        public const string CloudEventsTime = "ce_time";
+        
+        /// <summary>
+        /// The cloud event subject
+        /// </summary>
+        public const string CloudEventsSubject = "ce_subject";
+        
+        /// <summary>
+        /// The cloud event data content type
+        /// </summary>
+        public const string CloudEventsDataContentType = "ce_datacontenttype";
+        
+        /// <summary>
+        /// The cloud event dataschema
+        /// </summary>
+        public const string CloudEventsDataSchema = "ce_dataschema";
+        
     }
 }

@@ -71,9 +71,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
             headers.Add(HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString().ToByteArray());
             
+            if (message.Header.Bag.ContainsKey(Paramore.Brighter.HeaderNames.UseCloudEvents))
+            {
+                headers.Add(HeaderNames.CloudEventsId, message.Header.MessageId.ToByteArray());
+                headers.Add(HeaderNames.CloudEventsSpecVersion, message.Header.SpecVersion.ToByteArray());
+                headers.Add(HeaderNames.CloudEventsType, message.Header.Type.ToByteArray());
+                headers.Add(HeaderNames.CloudEventsTime,  message.Header.TimeStamp.ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", DateTimeFormatInfo.InvariantInfo).ToByteArray());
+
+                if (!string.IsNullOrEmpty(message.Header.Subject))
+                {
+                    headers.Add(HeaderNames.CloudEventsSubject, message.Header.Subject.ToByteArray());
+                }
+
+                if (!string.IsNullOrEmpty(message.Header.ContentType))
+                {
+                    headers.Add(HeaderNames.CloudEventsDataContentType, message.Header.ContentType.ToByteArray());
+                }
+                
+                if (message.Header.DataSchema != null)
+                {
+                    headers.Add(HeaderNames.CloudEventsDataSchema, message.Header.DataSchema.ToString().ToByteArray());
+                }
+
+            }
+            
             message.Header.Bag.Each((header) =>
             {
-                if (!BrighterDefinedHeaders.HeadersToReset.Any(htr => htr.Equals(header.Key)))
+                if (!BrighterDefinedHeaders.HeadersToReset.Contains(header.Key))
                 {
                     switch (header.Value)
                     {

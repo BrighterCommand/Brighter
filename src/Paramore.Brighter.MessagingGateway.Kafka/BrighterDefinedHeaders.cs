@@ -22,15 +22,18 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter.MessagingGateway.Kafka;
 
 public static class BrighterDefinedHeaders
 {
-    public static readonly string[] HeadersToReset;
+    public static readonly HashSet<string> HeadersToReset;
 
     static BrighterDefinedHeaders()
     {
-        HeadersToReset = new[] {
+        HeadersToReset =
+        [
             HeaderNames.MESSAGE_ID,
             HeaderNames.MESSAGE_TYPE,
             HeaderNames.TOPIC,
@@ -40,8 +43,9 @@ public static class BrighterDefinedHeaders
             HeaderNames.CONTENT_TYPE,
             HeaderNames.REPLY_TO,
             HeaderNames.DELAYED_MILLISECONDS,
-            HeaderNames.HANDLED_COUNT
-        };  
+            HeaderNames.HANDLED_COUNT,
+            Paramore.Brighter.HeaderNames.UseCloudEvents
+        ];  
     }
 
 }

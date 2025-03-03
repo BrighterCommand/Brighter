@@ -16,7 +16,7 @@ public class CloudEvents : WrapWithAttribute
 {
     private readonly string _source;
     private readonly string _type;
-    private readonly string _contenttype;
+    private readonly string _contentType;
     private readonly Uri _dataSchema;
     private readonly string _subject;
 
@@ -25,7 +25,7 @@ public class CloudEvents : WrapWithAttribute
     /// Requests middleware that will set Cloud Events headers. Allows the passing of parameters that will
     /// override any <see cref="Publication"/> properties.
     /// </summary>
-    /// <paramref name="step">The step in the pipeline to apply the middleware</paramref>
+    /// <param name="step">The step in the pipeline to apply the middleware</param>
     /// <param name="source">Identifies the context in which an event happened; often a URI identifying the producer</param>
     /// <param name="type">The type of event; SHOULD be prefixed with a reverse-DNS name </param>
     /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
@@ -36,7 +36,7 @@ public class CloudEvents : WrapWithAttribute
     {
         _source = source;
         _type = type;
-        _contenttype = contentType;
+        _contentType = contentType;
         _dataSchema = dataSchema;
         _subject = subject;
     }
@@ -47,7 +47,7 @@ public class CloudEvents : WrapWithAttribute
     /// <returns></returns>
     public override object[] InitializerParams()
     {
-        return [_source, _type, _contenttype, _dataSchema, _subject];
+        return [_source, _type, _contentType, _dataSchema, _subject];
     }
 
     /// <summary>
