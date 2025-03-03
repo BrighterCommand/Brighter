@@ -24,13 +24,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime.Internal;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
@@ -283,7 +280,7 @@ public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
         {
             response = await snsClient.ListSubscriptionsByTopicAsync(
                 new ListSubscriptionsByTopicRequest { TopicArn = ChannelAddress });
-            exists = response.Subscriptions.Any(sub => (sub.Protocol.ToLower() == "sqs") && (sub.Endpoint == queueArn));
+            exists = response.Subscriptions.Any(sub => "sqs".Equals(sub.Protocol, StringComparison.OrdinalIgnoreCase) && (sub.Endpoint == queueArn));
         } while (!exists && response.NextToken != null);
 
         return exists;
