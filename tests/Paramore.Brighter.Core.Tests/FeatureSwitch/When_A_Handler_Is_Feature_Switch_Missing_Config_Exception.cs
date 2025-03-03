@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
     public class FeatureSwitchByConfigMissingConfigStrategyExceptionTests : IDisposable
     {
         private readonly MyCommand _myCommand = new();
-        private readonly MyCommand _myAsyncCommand = new();
+        private readonly MyCommandAsync _myAsyncCommand = new();
 
         private readonly CommandProcessor _commandProcessor;
         private readonly ServiceProvider _provider;
@@ -70,9 +70,18 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
         [Fact]
         public async Task When_Sending_A_Async_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_Exception()
         {
-            var sendAsync = async () => await _commandProcessor.SendAsync(_myAsyncCommand);
+            try
+            {
+                await _commandProcessor.SendAsync(_myAsyncCommand);
+            }
+            catch (Exception e)
+            {
+                _exception = e;
+            }
+                
 
-            await Assert.ThrowsAsync<ConfigurationException>(sendAsync);
+            Assert.IsType<ConfigurationException>(_exception);
+            Assert.NotNull(_exception);
             Assert.Contains($"Handler of type {nameof(MyFeatureSwitchedConfigHandlerAsync)} does not have a Feature Switch configuration!", _exception.Message);
 
             Assert.False(_provider.GetService<MyFeatureSwitchedConfigHandlerAsync>()!.DidReceive());

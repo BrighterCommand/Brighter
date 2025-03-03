@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
         {
             _commandProcessor.Send(_myCommand);
 
-            Assert.False(_provider.GetService<MyFeatureSwitchedConfigHandler>()!.DidReceive());
+            Assert.True(_provider.GetService<MyFeatureSwitchedConfigHandler>()!.DidReceive());
         }
         
         [Fact]
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
         {
             await _commandProcessor.SendAsync(_myAsyncCommand);
 
-            Assert.False(_provider.GetService<MyFeatureSwitchedConfigHandlerAsync>()!.DidReceive());
+            Assert.True(_provider.GetService<MyFeatureSwitchedConfigHandlerAsync>()!.DidReceive());
         }
 
         public void Dispose()

@@ -49,6 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Call
 
             var policyRegistry = new PolicyRegistry
             {
+                { CommandProcessor.RETRYPOLICY, retryPolicy},
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
             };
 

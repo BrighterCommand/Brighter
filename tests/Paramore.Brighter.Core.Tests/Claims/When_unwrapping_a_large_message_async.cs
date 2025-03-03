@@ -24,6 +24,8 @@ public class AsyncLargeMessagePaylodUnwrapTests
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyLargeCommandMessageMapperAsync())
             );
+        mapperRegistry.RegisterAsync<MyLargeCommand, MyLargeCommandMessageMapperAsync>();
+
         _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_inMemoryStorageProviderAsync));
 
@@ -43,6 +45,7 @@ public class AsyncLargeMessagePaylodUnwrapTests
         var writer = new StreamWriter(stream);
         await writer.WriteAsync(commandAsJson);
         await writer.FlushAsync();
+        stream.Position = 0;
         var id = await _inMemoryStorageProviderAsync.StoreAsync(stream);
 
         //pretend we ran through the claim check

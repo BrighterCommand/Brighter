@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             {
                 if (type == typeof(MyCommandMessageMapperAsync))
                     return new MyCommandMessageMapperAsync();
-                else
+                else                              
                     return new MyEventMessageMapperAsync();
             }));
             messageMapperRegistry.RegisterAsync<MyCommand, MyCommandMessageMapperAsync>();
@@ -95,8 +95,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
                     { _commandTopic, commandProducer },
-                });
-
+                    { _eventTopic, eventProducer }
+                }); 
+            
             var tracer = new BrighterTracer(new FakeTimeProvider());
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
 
