@@ -281,12 +281,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            if (args == null || !args.ContainsKey("Topic"))
+            if (args == null || !args.TryGetValue("Topic", out object topicArg))
             {
                 return await DispatchedMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
             }
 
-            var topic = (string)args["Topic"];
+            var topic = (string)topicArg;
             return await DispatchedMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
         }
         
@@ -459,12 +459,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            if (args == null || !args.ContainsKey("Topic"))
+            if (args == null || !args.TryGetValue("Topic", out object topicArg))
             {
                 return await OutstandingMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
             }
 
-            var topic = args["Topic"].ToString();
+            var topic = topicArg.ToString();
             return await OutstandingMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
         }
 
@@ -551,13 +551,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1)
             {
-                if (!_outstandingTopicQueryContexts.ContainsKey(topicName))
+                if (!_outstandingTopicQueryContexts.TryGetValue(topicName, out OutstandingTopicQueryContext context))
                 {
                     var errorMessage = $"Unable to query page {pageNumber} of outstanding messages for topic {topicName} - next available page is page 1";
                     throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
                 }
 
-                if (_outstandingTopicQueryContexts[topicName]?.NextPage != pageNumber)
+                if (context?.NextPage != pageNumber)
                 {
                     var nextPageNumber = _dispatchedTopicQueryContexts[topicName]?.NextPage ?? 1;
                     var errorMessage = $"Unable to query page {pageNumber} of outstanding messages for topic {topicName} - next available page is page {nextPageNumber}";
@@ -620,13 +620,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             // Validate that this is a query for a page we can actually retrieve
             if (pageNumber != 1)
             {
-                if (!_dispatchedTopicQueryContexts.ContainsKey(topicName))
+                if (!_dispatchedTopicQueryContexts.TryGetValue(topicName, out var context))
                 {
                     var errorMessage = $"Unable to query page {pageNumber} of dispatched messages for topic {topicName} - next available page is page 1";
                     throw new ArgumentOutOfRangeException(nameof(pageNumber), errorMessage);
                 }
 
-                if (_dispatchedTopicQueryContexts[topicName]?.NextPage != pageNumber)
+                if (context?.NextPage != pageNumber)
                 {
                     var nextPageNumber = _dispatchedTopicQueryContexts[topicName]?.NextPage ?? 1;
                     var errorMessage = $"Unable to query page {pageNumber} of dispatched messages for topic {topicName} - next available page is page {nextPageNumber}";

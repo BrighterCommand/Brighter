@@ -44,10 +44,13 @@ public class InMemoryLock : IDistributedLock
     public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
         var normalisedResourceName = resource.ToLower();
-        if (!_semaphores.ContainsKey(normalisedResourceName))
-            _semaphores.Add(normalisedResourceName, new SemaphoreSlim(1, 1));
+        if (!_semaphores.TryGetValue(normalisedResourceName, out var semaphore))
+        {
+            semaphore = new SemaphoreSlim(1, 1);
+            _semaphores.Add(normalisedResourceName, semaphore);
+        }
 
-        return (await _semaphores[normalisedResourceName].WaitAsync(TimeSpan.Zero, cancellationToken)) ? "" : null;
+        return (await semaphore.WaitAsync(TimeSpan.Zero, cancellationToken)) ? "" : null;
     }
 
     /// <summary>
