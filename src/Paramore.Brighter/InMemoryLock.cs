@@ -33,7 +33,7 @@ namespace Paramore.Brighter;
 /// </summary>
 public class InMemoryLock : IDistributedLock
 {
-    private readonly Dictionary<string, SemaphoreSlim> _semaphores = new Dictionary<string, SemaphoreSlim>();
+    private readonly Dictionary<string, SemaphoreSlim> _semaphores = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Attempt to obtain a lock on a resource
@@ -43,11 +43,10 @@ public class InMemoryLock : IDistributedLock
     /// <returns>The id of the lock that has been acquired or null if no lock was able to be acquired</returns>
     public async Task<string?> ObtainLockAsync(string resource, CancellationToken cancellationToken)
     {
-        var normalisedResourceName = resource.ToLower();
-        if (!_semaphores.TryGetValue(normalisedResourceName, out var semaphore))
+        if (!_semaphores.TryGetValue(resource, out var semaphore))
         {
             semaphore = new SemaphoreSlim(1, 1);
-            _semaphores.Add(normalisedResourceName, semaphore);
+            _semaphores.Add(resource, semaphore);
         }
 
         return (await semaphore.WaitAsync(TimeSpan.Zero, cancellationToken)) ? "" : null;
@@ -62,8 +61,7 @@ public class InMemoryLock : IDistributedLock
     /// <returns>Awaitable Task</returns>
     public Task ReleaseLockAsync(string resource, string lockId, CancellationToken cancellationToken)
     {
-        var normalisedResourceName = resource.ToLower();
-        if (_semaphores.TryGetValue(normalisedResourceName, out SemaphoreSlim? semaphore))
+        if (_semaphores.TryGetValue(resource, out SemaphoreSlim? semaphore))
             semaphore?.Release();
         return Task.CompletedTask;
     }
