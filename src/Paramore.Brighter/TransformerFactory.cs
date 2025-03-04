@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,13 +20,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
 
 namespace Paramore.Brighter
 {
-    internal class TransformerFactory<TRequest> where TRequest: class, IRequest
+    internal class TransformerFactory<TRequest> where TRequest : class, IRequest
     {
         private readonly TransformAttribute _attribute;
         private readonly IAmAMessageTransformerFactory _factory;
@@ -42,8 +44,16 @@ namespace Paramore.Brighter
         {
             var transformerType = _attribute.GetHandlerType();
             var transformer = _factory.Create(transformerType);
-            if (_attribute is WrapWithAttribute) transformer.InitializeWrapFromAttributeParams(_attribute.InitializerParams());
-            if (_attribute is UnwrapWithAttribute) transformer.InitializeUnwrapFromAttributeParams(_attribute.InitializerParams());
+            if (_attribute is WrapWithAttribute)
+            {
+                transformer.InitializeWrapFromAttributeParams(_attribute.InitializerParams());
+            }
+
+            if (_attribute is UnwrapWithAttribute)
+            {
+                transformer.InitializeUnwrapFromAttributeParams(_attribute.InitializerParams());
+            }
+
             return transformer;
         }
     }

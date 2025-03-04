@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections;
-using System.Linq;
 using Paramore.Brighter.Transforms.Attributes;
 
 namespace Paramore.Brighter.Transforms.Transformers;
@@ -11,7 +9,7 @@ namespace Paramore.Brighter.Transforms.Transformers;
 /// The following Cloud Events attributes are supported:
 /// REQUIRED
 ///     id => the message id <see cref="MessageHeader"/>; you don't set this here, as we use the id from the <see cref="Request"/>
-///     source => uses the source Uri from the <see cref="Publication"/> or <see cref="CloudEvents"/> and assigns to the message source <see cref="MessageHeader"/>
+///     source => uses the source Uri from the <see cref="Publication"/> or <see cref="CloudEventsAttribute"/> and assigns to the message source <see cref="MessageHeader"/>
 ///     specversion => uses the spec version <see cref="MessageHeader"/>; you don't set this and it defaults to 1.0
 ///     type => uses the type <see cref="MessageHeader"/>; as we used type based routing, we recommend using the hostname
 ///         scoped name of the request class you are sending
@@ -25,48 +23,71 @@ public class CloudEventsTransformer : IAmAMessageTransform
 {
     private Uri? _source;
     private string? _type;
+    private string? _specVersion;
     private string? _dataContentType;
     private Uri? _dataSchema;
     private string? _subject;
-    
+
     /// <summary>
     /// Gets or sets the context. Usually the context is given to you by the pipeline and you do not need to set this
     /// </summary>
     /// <value>The context.</value>
     public IRequestContext? Context { get; set; }
-    
+
     public void Dispose()
     {
         //no op as we have no unmanaged resources
     }
 
-    public void InitializeWrapFromAttributeParams(params object[] initializerList)
+    public void InitializeWrapFromAttributeParams(params object?[] initializerList)
     {
-        _source = initializerList.ElementAtOrDefault(0) == null ? null : (Uri) initializerList.ElementAtOrDefault(0)!; 
-        _type = initializerList.ElementAtOrDefault(1)?.ToString(); 
-        _dataContentType = initializerList.ElementAtOrDefault(2)?.ToString();
-        _dataSchema = initializerList.ElementAtOrDefault(3) == null ? null : (Uri)initializerList.ElementAtOrDefault(3)!; 
-        _subject = initializerList.ElementAtOrDefault(4)?.ToString();
+        if (initializerList[0] is string source)
+        {
+            _source = new Uri(source);
+        }
+
+        if (initializerList[1] is string type)
+        {
+            _type = type;
+        }
+
+        if (initializerList[2] is string specVersion)
+        {
+            _specVersion = specVersion;
+        }
+
+        if (initializerList[3] is string dataContentType)
+        {
+            _dataContentType = dataContentType;
+        }
+
+        if (initializerList[4] is string dataSchema)
+        {
+            _dataSchema = new Uri(dataSchema);
+        }
+
+        if (initializerList[5] is string subject)
+        {
+            _subject = subject;
+        }
     }
 
-    public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
+    public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
     {
-        
     }
 
     public Message Wrap(Message message, Publication publication)
     {
         message.Header.Source = _source ?? publication.Source;
         message.Header.Type = _type ?? publication.Type;
-        message.Header.ContentType = _dataContentType ?? publication.ContentType;
         message.Header.DataSchema = _dataSchema ?? publication.DataSchema;
         message.Header.Subject = _subject ?? publication.Subject;
+        message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
+        message.Header.ContentType = _dataContentType;
         message.Header.Bag[HeaderNames.UseCloudEvents] = true;
         return message;
     }
 
     public Message Unwrap(Message message)
-    {
-        return message;
-    }
+        => message;
 }
