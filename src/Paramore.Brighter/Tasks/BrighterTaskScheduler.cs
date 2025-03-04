@@ -16,7 +16,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tasks;
@@ -25,7 +24,7 @@ namespace Paramore.Brighter.Tasks;
 /// This class provides a task scheduler that causes all tasks to be executed synchronously on the current thread.
 /// The synchronizationHelper and scheduler are used to run continuations on the same thread as the async operation.
 /// </summary>
-internal class BrighterTaskScheduler : TaskScheduler
+internal sealed class BrighterTaskScheduler : TaskScheduler
 {
     private readonly BrighterAsyncContext _asyncContext;
 

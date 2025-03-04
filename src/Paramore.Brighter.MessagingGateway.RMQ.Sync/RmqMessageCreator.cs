@@ -35,7 +35,7 @@ using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
 {
-    internal class RmqMessageCreator
+    internal sealed class RmqMessageCreator
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
 

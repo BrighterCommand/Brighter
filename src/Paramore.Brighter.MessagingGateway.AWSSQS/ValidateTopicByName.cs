@@ -33,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// The <see cref="ValidateTopicByName"/> class is responsible for validating an AWS SNS topic by its name.
     /// </summary>
-    internal class ValidateTopicByName : IValidateTopic
+    internal sealed class ValidateTopicByName : IValidateTopic
     {
         private readonly AmazonSimpleNotificationServiceClient _snsClient;
         private readonly SnsSqsType _type;
