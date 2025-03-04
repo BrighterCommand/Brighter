@@ -43,7 +43,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
     {
         if (initializerList[0] is string source)
         {
-            _source = new Uri(source);
+            _source = new Uri(source, UriKind.RelativeOrAbsolute);
         }
 
         if (initializerList[1] is string type)
@@ -63,7 +63,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
 
         if (initializerList[4] is string dataSchema)
         {
-            _dataSchema = new Uri(dataSchema);
+            _dataSchema = new Uri(dataSchema, UriKind.RelativeOrAbsolute);
         }
 
         if (initializerList[5] is string subject)
@@ -82,8 +82,8 @@ public class CloudEventsTransformer : IAmAMessageTransform
         message.Header.Type = _type ?? publication.Type;
         message.Header.DataSchema = _dataSchema ?? publication.DataSchema;
         message.Header.Subject = _subject ?? publication.Subject;
+        message.Header.ContentType = _dataContentType ?? publication.ContentType;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
-        message.Header.ContentType = _dataContentType;
         message.Header.Bag[BrighterHeaderNames.UseCloudEvents] = true;
         return message;
     }
