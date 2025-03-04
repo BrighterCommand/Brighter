@@ -53,16 +53,16 @@ public class InternalBus(int boundedCapacity = -1) : IAmABus
         
         var topic = new RoutingKey(message.Header.Topic);
         
-        if (!_messages.ContainsKey(topic))
+        if (!_messages.TryGetValue(topic, out var blockingCollection))
         {
-            var blockingCollection = boundedCapacity > 0 ? 
+            blockingCollection = boundedCapacity > 0 ? 
                 new BlockingCollection<Message>(boundedCapacity) : new BlockingCollection<Message>();
             
             if (!_messages.TryAdd(topic, blockingCollection) && !_messages.ContainsKey(topic))
                 throw new InvalidOperationException("Failed to add topic to the bus");
         }
         
-        if (!_messages[topic].TryAdd(message, Convert.ToInt32(timeout.Value.TotalMilliseconds), CancellationToken.None))
+        if (!blockingCollection.TryAdd(message, Convert.ToInt32(timeout.Value.TotalMilliseconds), CancellationToken.None))
             throw new InvalidOperationException("Failed to add message to the bus");
     }
 

@@ -201,9 +201,9 @@ internal class RmqMessageCreator
         }
     }
 
-    private HeaderResult<TimeSpan> ReadDelay(IDictionary<string, object?> headers)
+    private static HeaderResult<TimeSpan> ReadDelay(IDictionary<string, object?> headers)
     {
-        if (headers.ContainsKey(HeaderNames.DELAYED_MILLISECONDS) == false)
+        if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out var delayedMsHeader) == false)
         {
             return new HeaderResult<TimeSpan>(TimeSpan.Zero, true);
         }
@@ -213,7 +213,7 @@ internal class RmqMessageCreator
         // on 32 bit systems the x-delay value will be a int and on 64 bit it will be a long, thank you erlang
         // The number will be negative after a message has been delayed
         // sticking with an int as you should not be delaying for more than 49 days
-        switch (headers[HeaderNames.DELAYED_MILLISECONDS])
+        switch (delayedMsHeader)
         {
             case byte[] value:
             {
