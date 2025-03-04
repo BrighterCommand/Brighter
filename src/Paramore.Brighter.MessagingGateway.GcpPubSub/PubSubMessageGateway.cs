@@ -147,9 +147,28 @@ public class PubSubMessageGateway
             gpcSubscription.ExpirationPolicy = subscription.ExpirationPolicy;
         }
 
-        if (gpcSubscription.DeadLetterPolicy != null)
+        if (!string.IsNullOrEmpty(subscription.DeadLetterTopic))
         {
-            gpcSubscription.DeadLetterPolicy = subscription.DeadLetterPolicy;
+            if (!TopicName.TryParse(subscription.DeadLetterTopic, false, out var deadLetterTopic))
+            {
+                deadLetterTopic = TopicName.FromProjectTopic(subscription.ProjectId ?? Connection.ProjectId,
+                    subscription.DeadLetterTopic);
+            }
+
+            gpcSubscription.DeadLetterPolicy = new DeadLetterPolicy
+            {
+                MaxDeliveryAttempts = subscription.RequeueCount, 
+                DeadLetterTopic = deadLetterTopic.ToString()
+            };
+        }
+
+        if (subscription.RequeueDelay != TimeSpan.Zero)
+        {
+            gpcSubscription.RetryPolicy = new RetryPolicy
+            {
+                MinimumBackoff = Duration.FromTimeSpan(subscription.RequeueDelay),
+                MaximumBackoff = Duration.FromTimeSpan(subscription.MaxRequeueDelay)
+            };
         }
 
         gpcSubscription.Labels.Add("Source", "Brighter");
