@@ -35,13 +35,7 @@ public class PubSubProducer(PublisherClient client, PubSubPublication publicatio
     {
         if (delay == null || delay == TimeSpan.Zero)
         {
-            var pubSubMessage = new PubsubMessage
-            {
-                Data = ByteString.CopyFrom(message.Body.Bytes), OrderingKey = message.Header.PartitionKey
-            };
-
-            AddHeaders(pubSubMessage.Attributes, message);
-
+            var pubSubMessage = Parser.ToPubSubMessage(message);
             BrighterTracer.WriteProducerEvent(Span, MessagingSystem.PubSub, message);
             await client.PublishAsync(pubSubMessage);
         }
