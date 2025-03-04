@@ -37,7 +37,9 @@ public class AsyncRetrieveClaimLeaveLuggage
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
-            new MessageBody($"Claim Check {id}"));
+            new MessageBody("Claim Check {id}"));
+        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
+
         //act
         var unwrappedMessage = await _transformerAsync.UnwrapAsync(message);
 

@@ -56,8 +56,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Reactor
 
             await Task.WhenAll(task);
 
-            Assert.Equal(CommandType.Send, _commandProcessor.Commands[0]);
-            Assert.Equal(6, _commandProcessor.SendCount);
+            Assert.Equal(CommandType.Publish, _commandProcessor.Commands[0]);
+            Assert.Equal(6, _commandProcessor.PublishCount);
 
             Assert.Empty(_bus.Stream(_routingKey));
             

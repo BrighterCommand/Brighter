@@ -21,6 +21,8 @@ public class LargeMessagePayloadWrapTests
         var mapperRegistry = new MessageMapperRegistry(
             new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
             null);
+        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
+        
         _publication = new Publication{Topic = new RoutingKey("transform.event")};
 
         _myCommand = new MyLargeCommand(6000);

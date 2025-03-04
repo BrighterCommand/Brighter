@@ -24,6 +24,7 @@ public class LargeMessagePaylodUnwrapTests
             null);
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
 
+        _inMemoryStorageProvider = new InMemoryStorageProvider();
         var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_inMemoryStorageProvider));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -46,6 +47,8 @@ public class LargeMessagePaylodUnwrapTests
         var id = _inMemoryStorageProvider.Store(stream);
 
         //pretend we ran through the claim check
+        myCommand.Value = $"Claim Check {id}";
+ 
         //set the headers, so that we have a claim check listed
         var message = new Message(
             new MessageHeader(myCommand.Id, new("transform.event"), MessageType.MT_COMMAND, timeStamp: DateTime.UtcNow),
