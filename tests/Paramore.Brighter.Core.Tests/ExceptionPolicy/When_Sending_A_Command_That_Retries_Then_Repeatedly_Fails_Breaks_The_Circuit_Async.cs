@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             var retryPolicy = Policy
                 .Handle<DivideByZeroException>()
-                .WaitAndRetry([
+                .WaitAndRetryAsync([
                         TimeSpan.FromMilliseconds(10), 
                         TimeSpan.FromMilliseconds(20), 
                         TimeSpan.FromMilliseconds(30)

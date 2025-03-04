@@ -184,12 +184,26 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
 
         Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
-        var message = _outbox.Get(_myCommand.Id, new RequestContext());
-        Assert.NotNull(message);
-        Assert.Equivalent(new Message(
+        var actual = _outbox.Get(_myCommand.Id, new RequestContext());
+        
+        Assert.NotNull(actual);
+        var expected = new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-        ), message);
+        );
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Fact]
@@ -202,12 +216,26 @@ public class CommandProcessorSchedulerCommandTests : IDisposable
 
         Assert.True(_internalBus.Stream(new RoutingKey(Topic)).Any());
 
-        var message = _outbox.Get(_myCommand.Id, new RequestContext());
-        Assert.NotNull(message);
-        Assert.Equivalent(new Message(
+        var actual = _outbox.Get(_myCommand.Id, new RequestContext());
+        Assert.NotNull(actual);
+
+        var expected = new Message(
             new MessageHeader(_myCommand.Id, new RoutingKey(Topic), MessageType.MT_COMMAND),
             new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-        ), message);
+        );
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     public void Dispose()

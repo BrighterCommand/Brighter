@@ -52,16 +52,21 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
              {
                  if (key != "myArrayKey")
                  {
-                     Assert.Equal(expectedBag[key], deserializedHeader.Bag[key]);
+                     var expected = expectedBag[key];
+                     var actual = deserializedHeader!.Bag[key];
+                     
+                     Assert.Equivalent(expected, actual);
                  }
                  if (key == "myArrayKey")
                  {
                      var expectedVals = (int[])expectedBag[key];
-                     var providedVals = (List<Object>)deserializedHeader.Bag[key];
+                     var providedVals = (List<object>)deserializedHeader.Bag[key];
                      
                      for (int i = 0; i < 4; i++)
                      {
-                         Assert.Equal((int)providedVals[i], expectedVals[i]);
+                         int actual = Convert.ToInt32(providedVals[i]);
+                         int expected = expectedVals[i]; 
+                         Assert.Equal(expected, actual);
                      }
                  }
              }

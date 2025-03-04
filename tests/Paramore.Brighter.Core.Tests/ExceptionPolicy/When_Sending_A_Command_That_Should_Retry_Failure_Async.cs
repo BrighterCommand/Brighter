@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             var policy = Policy
                 .Handle<DivideByZeroException>()
-                .WaitAndRetry([
+                .WaitAndRetryAsync([
                         TimeSpan.FromMilliseconds(10), 
                         TimeSpan.FromMilliseconds(20), 
                         TimeSpan.FromMilliseconds(30)
@@ -60,7 +60,8 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
 
             //_should_send_the_command_to_the_command_handler
-            Assert.True(MyFailsWithDivideByZeroHandler.ShouldReceive(_myCommand));
+            var zeroHandlerAsync = _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>();
+            Assert.True(zeroHandlerAsync!.ShouldReceive(_myCommand));
             //_should_retry_three_times
             Assert.Equal(3, _retryCount);
         }

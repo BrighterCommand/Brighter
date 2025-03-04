@@ -73,9 +73,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
             //Should have an inner exception from the handler
             Assert.IsType<InvalidOperationException>(((AggregateException)_exception).InnerException);
             //Should publish the command to the first event handler
-            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandler), _myEvent.Id), _receivedMessages);
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandlerAsync), _myEvent.Id), _receivedMessages);
             //Should publish the command to the second event handler
-            Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandler), _myEvent.Id), _receivedMessages);
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandlerAsync), _myEvent.Id), _receivedMessages);
         }
 
         public void Dispose()
