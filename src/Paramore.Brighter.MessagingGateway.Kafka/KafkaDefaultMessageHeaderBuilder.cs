@@ -43,15 +43,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var headers = new Headers
             {
+                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
                 new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()),
             };
 
-            if (message.Header.Bag.ContainsKey(Paramore.Brighter.HeaderNames.UseCloudEvents))
+            if (message.Header.Bag.TryGetValue(BrighterHeaderNames.UseCloudEvents, out var val) && val is true)
             {
+                // We are going to send both id to keep compability between old and new version of Brighter
                 headers.Add(HeaderNames.CloudEventsId, message.Header.MessageId.ToByteArray());
                 headers.Add(HeaderNames.CloudEventsSpecVersion, message.Header.SpecVersion.ToByteArray());
                 headers.Add(HeaderNames.CloudEventsType, message.Header.Type.ToByteArray());
+                headers.Add(HeaderNames.CloudEventsSource, message.Header.Source.ToString().ToByteArray());
                 headers.Add(HeaderNames.CloudEventsTime,
                     message.Header.TimeStamp.ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", DateTimeFormatInfo.InvariantInfo)
                         .ToByteArray());
@@ -65,10 +68,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     headers.Add(HeaderNames.CloudEventsDataSchema, message.Header.DataSchema.ToString().ToByteArray());
                 }
+
             }
             else
             {
-                headers.Add(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray());
                 var timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
                 if (message.Header.TimeStamp.DateTime != default)
                 {

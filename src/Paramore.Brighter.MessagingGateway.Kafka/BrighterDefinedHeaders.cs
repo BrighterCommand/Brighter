@@ -44,7 +44,7 @@ public static class BrighterDefinedHeaders
             HeaderNames.REPLY_TO,
             HeaderNames.DELAYED_MILLISECONDS,
             HeaderNames.HANDLED_COUNT,
-            Paramore.Brighter.HeaderNames.UseCloudEvents
+            Paramore.Brighter.BrighterHeaderNames.UseCloudEvents
         ];  
     }
 

@@ -84,7 +84,7 @@ public class CloudEventsTransformer : IAmAMessageTransform
         message.Header.Subject = _subject ?? publication.Subject;
         message.Header.SpecVersion = _specVersion ?? message.Header.SpecVersion;
         message.Header.ContentType = _dataContentType;
-        message.Header.Bag[HeaderNames.UseCloudEvents] = true;
+        message.Header.Bag[BrighterHeaderNames.UseCloudEvents] = true;
         return message;
     }
 
