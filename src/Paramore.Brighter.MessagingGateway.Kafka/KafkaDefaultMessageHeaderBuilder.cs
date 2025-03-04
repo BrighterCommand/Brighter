@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -42,38 +43,72 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var headers = new Headers
             {
+                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
                 new Header(HeaderNames.TOPIC, message.Header.Topic.Value.ToByteArray()),
-                new Header(HeaderNames.MESSAGE_ID, message.Header.MessageId.ToByteArray()),
             };
 
-            string timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
-            if (message.Header.TimeStamp.DateTime != default)
+            if (message.Header.Bag.TryGetValue(BrighterHeaderNames.UseCloudEvents, out var val) && val is true)
             {
-                timeStampAsString = message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture);
-            }
+                // We are going to send both id to keep compability between old and new version of Brighter
+                headers.Add(HeaderNames.CloudEventsId, message.Header.MessageId.ToByteArray());
+                headers.Add(HeaderNames.CloudEventsSpecVersion, message.Header.SpecVersion.ToByteArray());
+                headers.Add(HeaderNames.CloudEventsType, message.Header.Type.ToByteArray());
+                headers.Add(HeaderNames.CloudEventsSource, message.Header.Source.ToString().ToByteArray());
+                headers.Add(HeaderNames.CloudEventsTime,
+                    message.Header.TimeStamp.ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", DateTimeFormatInfo.InvariantInfo)
+                        .ToByteArray());
 
-            headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
+                if (!string.IsNullOrEmpty(message.Header.Subject))
+                {
+                    headers.Add(HeaderNames.CloudEventsSubject, message.Header.Subject.ToByteArray());
+                }
+
+                if (message.Header.DataSchema != null)
+                {
+                    headers.Add(HeaderNames.CloudEventsDataSchema, message.Header.DataSchema.ToString().ToByteArray());
+                }
+
+            }
+            else
+            {
+                var timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
+                if (message.Header.TimeStamp.DateTime != default)
+                {
+                    timeStampAsString = message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture);
+                }
+
+                headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
+            }
+            
+            // On Cloud Event Kafka use the content-type as datacontenttype
+            if (!string.IsNullOrEmpty(message.Header.ContentType))
+            {
+                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.ToByteArray());
+            }
             
             if (message.Header.CorrelationId != string.Empty)
+            {
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToByteArray());
+            }
 
             if (!string.IsNullOrEmpty(message.Header.PartitionKey))
+            {
                 headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.ToByteArray());
-
-            if (!string.IsNullOrEmpty(message.Header.ContentType))
-                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.ToByteArray());
+            }
 
             if (!string.IsNullOrEmpty(message.Header.ReplyTo))
-                headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
-            
-            headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.Delayed.TotalMilliseconds.ToString(CultureInfo.InvariantCulture).ToByteArray());
-            
-            headers.Add(HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString().ToByteArray());
-            
-            message.Header.Bag.Each((header) =>
             {
-                if (!BrighterDefinedHeaders.HeadersToReset.Any(htr => htr.Equals(header.Key)))
+                headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
+            }
+
+            headers.Add(HeaderNames.DELAYED_MILLISECONDS, message.Header.Delayed.TotalMilliseconds.ToString(CultureInfo.InvariantCulture).ToByteArray());
+            headers.Add(HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString().ToByteArray());
+
+
+            message.Header.Bag
+                .Where(x => !BrighterDefinedHeaders.HeadersToReset.Contains(x.Key))
+                .Each(header =>
                 {
                     switch (header.Value)
                     {
@@ -83,15 +118,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         case DateTime dateTimeValue:
                             headers.Add(header.Key, dateTimeValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
                             break;
-                       case Guid guidValue:
+                        case Guid guidValue:
                             headers.Add(header.Key, guidValue.ToString().ToByteArray());
                             break;
-                       case bool boolValue:
+                        case bool boolValue:
                             headers.Add(header.Key, boolValue.ToString().ToByteArray());
                             break;
                         case int intValue:
                             headers.Add(header.Key, intValue.ToString().ToByteArray());
-                            break; 
+                            break;
                         case double doubleValue:
                             headers.Add(header.Key, doubleValue.ToString(CultureInfo.InvariantCulture).ToByteArray());
                             break;
@@ -108,9 +143,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             headers.Add(header.Key, header.Value.ToString().ToByteArray());
                             break;
                     }
-                }
-            });
-            
+                });
+
             return headers;
         }
     }

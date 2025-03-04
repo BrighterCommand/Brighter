@@ -46,8 +46,8 @@ namespace Paramore.Brighter
     {
         public IRequestContext? Context { get; set; }
         public void Dispose() {GC.SuppressFinalize(this);}
-        public void InitializeWrapFromAttributeParams(params object[] initializerList) { }
-        public void InitializeUnwrapFromAttributeParams(params object[] initializerList) { }
+        public void InitializeWrapFromAttributeParams(params object?[] initializerList) { }
+        public void InitializeUnwrapFromAttributeParams(params object?[] initializerList) { }
         public Task<Message> WrapAsync(Message message, Publication publication, CancellationToken ct = default) { return Task.FromResult(message); }
         public Task<Message> UnwrapAsync(Message message, CancellationToken ct = default) { return Task.FromResult(message); }
     }

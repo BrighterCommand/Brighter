@@ -22,9 +22,9 @@ namespace Paramore.Brighter
         /// Initializers the parameters.
         /// </summary>
         /// <returns>System.Object[].</returns>
-        public virtual object[] InitializerParams()
+        public virtual object?[] InitializerParams()
         {
-            return Array.Empty<object>();
+            return [];
         }
     }
 }

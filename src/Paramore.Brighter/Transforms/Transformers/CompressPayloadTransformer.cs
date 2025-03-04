@@ -26,9 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.IO.Compression;
-using System.Net.Mime;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Transformers
 {
@@ -66,11 +63,11 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Used to pass the compression algorithm to the transformer and the size over which to compress
         /// </summary>
         /// <param name="initializerList"></param>
-        public void InitializeWrapFromAttributeParams(params object[] initializerList)
+        public void InitializeWrapFromAttributeParams(params object?[] initializerList)
         {
-            _compressionMethod = (CompressionMethod)initializerList[0];
-            _compressionLevel = (CompressionLevel)initializerList[1];
-            _thresholdInBytes = (int)initializerList[2] * 1024;
+            _compressionMethod = (CompressionMethod)initializerList[0]!;
+            _compressionLevel = (CompressionLevel)initializerList[1]!;
+            _thresholdInBytes = (int)initializerList[2]! * 1024;
 
         }
 
@@ -79,9 +76,9 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// Used to pass the decompression algorithm to the transformer 
         /// </summary>
         /// <param name="initializerList"></param>
-        public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
+        public void InitializeUnwrapFromAttributeParams(params object?[] initializerList)
         {
-            _compressionMethod = (CompressionMethod)initializerList[0];
+            _compressionMethod = (CompressionMethod)initializerList[0]!;
         }
 
         /// <summary>
@@ -132,7 +129,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             deCompressionStream.Close();
 
             string contentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
-            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.UTF8);
+            message.Body = new MessageBody(output.ToArray(), contentType);
             message.Header.ContentType = contentType;
 
             return message;

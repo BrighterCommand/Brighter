@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2024 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -48,28 +49,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var topic = HeaderResult<RoutingKey>.Empty();
             var messageId = HeaderResult<string>.Empty();
-            var timeStamp = HeaderResult<DateTime>.Empty();
-            var messageType = HeaderResult<MessageType>.Empty();
-            var correlationId = HeaderResult<string>.Empty();
-            var partitionKey = HeaderResult<string>.Empty();
-            var replyTo = HeaderResult<string>.Empty();
-            var contentType = HeaderResult<string>.Empty();
-            var delay = HeaderResult<TimeSpan>.Empty();
-            var handledCount = HeaderResult<int>.Empty();
 
             Message message;
             try
             {
                 topic = ReadTopic(consumeResult.Topic);
                 messageId = ReadMessageId(consumeResult.Message.Headers);
-                timeStamp = ReadTimeStamp(consumeResult.Message.Headers);
-                messageType = ReadMessageType(consumeResult.Message.Headers);
-                correlationId = ReadCorrelationId(consumeResult.Message.Headers);
-                partitionKey = ReadPartitionKey(consumeResult.Message.Headers);
-                replyTo = ReadReplyTo(consumeResult.Message.Headers);
-                contentType = ReadContentType(consumeResult.Message.Headers);
-                delay = ReadDelay(consumeResult.Message.Headers);
-                handledCount = ReadHandledCount(consumeResult.Message.Headers);
+                var timeStamp = ReadTimeStamp(consumeResult.Message.Headers);
+                var messageType = ReadMessageType(consumeResult.Message.Headers);
+                var correlationId = ReadCorrelationId(consumeResult.Message.Headers);
+                var partitionKey = ReadPartitionKey(consumeResult.Message.Headers);
+                var replyTo = ReadReplyTo(consumeResult.Message.Headers);
+                var contentType = ReadContentType(consumeResult.Message.Headers);
+                var delay = ReadDelay(consumeResult.Message.Headers);
+                var handledCount = ReadHandledCount(consumeResult.Message.Headers);
+                var subject = ReadSubject(consumeResult.Message.Headers);
+                var dataSchema = ReadDataSchema(consumeResult.Message.Headers);
+                var type = ReadType(consumeResult.Message.Headers);
+                var source = ReadSource(consumeResult.Message.Headers);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success))
                 {
@@ -81,16 +78,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         messageId: messageId.Result,
                         topic: topic.Result,
                         messageType.Result,
-                        source: null,
-                        type: "",
-                        timeStamp: timeStamp.Success ? timeStamp.Result : DateTime.UtcNow,
+                        source: source.Result,
+                        type: type.Result,
+                        timeStamp: timeStamp.Success ? timeStamp.Result : DateTimeOffset.UtcNow,
                         correlationId: correlationId.Success ? correlationId.Result : "",
                         replyTo: replyTo.Success ? new RoutingKey(replyTo.Result) : RoutingKey.Empty,
                         contentType: contentType.Success ? contentType.Result : "plain/text",
                         partitionKey: partitionKey.Success ? partitionKey.Result : consumeResult.Message.Key,
                         handledCount: handledCount.Success ? handledCount.Result : 0,
-                        dataSchema: null,
-                        subject: null,
+                        dataSchema: dataSchema.Result,
+                        subject: subject.Result,
                         delayed: delay.Success ? delay.Result : TimeSpan.Zero
                     );
 
@@ -125,12 +122,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return message;
         }
 
-        private HeaderResult<string> ReadContentType(Headers headers)
+        private static HeaderResult<string> ReadContentType(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.CONTENT_TYPE);
         }
 
-        private HeaderResult<string> ReadCorrelationId(Headers headers)
+        private static HeaderResult<string> ReadCorrelationId(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.CORRELATION_ID)
                 .Map(correlationId =>
@@ -142,11 +139,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     }
 
                     return new HeaderResult<string>(correlationId, true);
-
                 });
         }
 
-        private HeaderResult<TimeSpan> ReadDelay(Headers headers)
+        private static HeaderResult<TimeSpan> ReadDelay(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.DELAYED_MILLISECONDS)
                 .Map(s =>
@@ -167,7 +163,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<int> ReadHandledCount(Headers headers)
+        private static HeaderResult<int> ReadHandledCount(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.HANDLED_COUNT)
                 .Map(s =>
@@ -188,7 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<string> ReadReplyTo(Headers headers)
+        private static HeaderResult<string> ReadReplyTo(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.REPLY_TO)
                 .Map(s =>
@@ -203,31 +199,35 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<DateTime> ReadTimeStamp(Headers headers)
+        private static HeaderResult<DateTimeOffset> ReadTimeStamp(Headers headers)
         {
-            if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out byte[] lastHeader))
+            if (headers.TryGetLastBytesIgnoreCase(HeaderNames.TIMESTAMP, out var lastHeader))
             {
                 //Additional testing for a non unixtimestamp string
-                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AdjustToUniversal, out DateTime timestamp))
+                if (DateTime.TryParse(lastHeader.FromByteArray(), DateTimeFormatInfo.InvariantInfo,
+                        DateTimeStyles.AdjustToUniversal, out DateTime timestamp))
                 {
-                    return new HeaderResult<DateTime>(timestamp, true);
+                    return new HeaderResult<DateTimeOffset>(timestamp, true);
                 }
 
                 try
                 {
-                    return new HeaderResult<DateTime>(
+                    return new HeaderResult<DateTimeOffset>(
                         DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(lastHeader, 0)).DateTime, true);
                 }
                 catch (Exception)
                 {
-                    return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+                    return new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true);
                 }
             }
 
-            return new HeaderResult<DateTime>(DateTime.UtcNow, true);
+            return ReadHeader(headers, HeaderNames.CloudEventsTime)
+                .Map(x => DateTimeOffset.TryParse(x, out var timestamp)
+                    ? new HeaderResult<DateTimeOffset>(timestamp, true)
+                    : new HeaderResult<DateTimeOffset>(DateTimeOffset.UtcNow, true));
         }
 
-        private HeaderResult<MessageType> ReadMessageType(Headers headers)
+        private static HeaderResult<MessageType> ReadMessageType(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.MESSAGE_TYPE)
                 .Map(s =>
@@ -242,21 +242,39 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<RoutingKey> ReadTopic(string topic)
+        private static HeaderResult<RoutingKey> ReadTopic(string topic)
         {
             return new HeaderResult<RoutingKey>(new RoutingKey(topic), true);
         }
 
-        private HeaderResult<string> ReadMessageId(Headers headers)
+        private static HeaderResult<string> ReadMessageId(Headers headers)
         {
             var newMessageId = Guid.NewGuid().ToString();
 
-            return ReadHeader(headers, HeaderNames.MESSAGE_ID)
+            var id = ReadHeader(headers, HeaderNames.CloudEventsId, true)
                 .Map(messageId =>
                 {
                     if (string.IsNullOrEmpty(messageId))
                     {
-                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}", newMessageId);
+                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}",
+                            newMessageId);
+                        return new HeaderResult<string>(newMessageId, true);
+                    }
+
+                    return new HeaderResult<string>(messageId, true);
+                });
+            if (id.Success)
+            {
+                return id;
+            }
+
+            return ReadHeader(headers, HeaderNames.MESSAGE_ID, true)
+                .Map(messageId =>
+                {
+                    if (string.IsNullOrEmpty(messageId))
+                    {
+                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}",
+                            newMessageId);
                         return new HeaderResult<string>(newMessageId, true);
                     }
 
@@ -264,7 +282,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<string> ReadPartitionKey(Headers headers)
+        private static HeaderResult<string> ReadPartitionKey(Headers headers)
         {
             return ReadHeader(headers, HeaderNames.PARTITIONKEY)
                 .Map(s =>
@@ -279,7 +297,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 });
         }
 
-        private HeaderResult<string> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
+        private static HeaderResult<string> ReadSubject(Headers headers)
+            => ReadHeader(headers, HeaderNames.CloudEventsSubject);
+
+        private static HeaderResult<string> ReadType(Headers headers)
+            => ReadHeader(headers, HeaderNames.CloudEventsType);
+
+        private static HeaderResult<Uri> ReadDataSchema(Headers headers) =>
+            ReadHeader(headers, HeaderNames.CloudEventsDataSchema, true)
+                .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
+                    ? new HeaderResult<Uri>(dataSchema, true)
+                    : new HeaderResult<Uri>(null, false));
+
+        private static HeaderResult<Uri> ReadSource(Headers headers) =>
+            ReadHeader(headers, HeaderNames.CloudEventsSource)
+                .Map(x => Uri.TryCreate(x, UriKind.RelativeOrAbsolute, out var dataSchema)
+                    ? new HeaderResult<Uri>(dataSchema, true)
+                    : new HeaderResult<Uri>(new Uri("http://goparamore.io"), true));
+
+        private static HeaderResult<string> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
         {
             if (headers.TryGetLastBytesIgnoreCase(key, out byte[] lastHeader))
             {
