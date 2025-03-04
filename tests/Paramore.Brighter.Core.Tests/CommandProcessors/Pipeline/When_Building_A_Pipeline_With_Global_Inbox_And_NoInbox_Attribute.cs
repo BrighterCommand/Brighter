@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
             
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());
-            Assert.Contains("UseInboxHandler", tracer.ToString());
+            Assert.DoesNotContain("UseInboxHandler", tracer.ToString());
         }
 
         public void Dispose()
