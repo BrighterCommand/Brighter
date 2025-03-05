@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Outbox.DynamoDB;
 
-internal class DispatchedTopicQueryContext
+internal sealed class DispatchedTopicQueryContext
 {
     public int NextPage { get; private set; }
     public string LastEvaluatedKey { get; private set; }

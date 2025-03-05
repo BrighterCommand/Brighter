@@ -6,7 +6,7 @@ using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    internal class ServiceBusSenderWrapper : IServiceBusSenderWrapper
+    internal sealed class ServiceBusSenderWrapper : IServiceBusSenderWrapper
     {
         private readonly ServiceBusSender _serviceBusSender;
 

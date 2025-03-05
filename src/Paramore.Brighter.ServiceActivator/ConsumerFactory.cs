@@ -27,7 +27,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.ServiceActivator
 {
-    internal class ConsumerFactory<TRequest> : IConsumerFactory where TRequest : class, IRequest
+    internal sealed class ConsumerFactory<TRequest> : IConsumerFactory where TRequest : class, IRequest
     {
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly IAmAMessageMapperRegistry? _messageMapperRegistry;

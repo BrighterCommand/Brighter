@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.Sync
     /// <summary>
     /// Class RmqMessagePublisher.
     /// </summary>
-internal class RmqMessagePublisher
+internal sealed class RmqMessagePublisher
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessagePublisher>();
         private static readonly string[] _headersToReset =

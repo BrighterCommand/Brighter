@@ -3,7 +3,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    internal class ServiceBusSenderProvider : IServiceBusSenderProvider
+    internal sealed class ServiceBusSenderProvider : IServiceBusSenderProvider
     {
         private readonly ServiceBusClient _client;
 

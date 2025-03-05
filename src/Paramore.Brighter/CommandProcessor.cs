@@ -38,7 +38,6 @@ using Paramore.Brighter.BindingAttributes;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Observability;
-using Paramore.Brighter.Tasks;
 using Polly;
 using Polly.Registry;
 using Exception = System.Exception;
@@ -890,12 +889,7 @@ namespace Paramore.Brighter
         ) where TRequest : class, IRequest
         {
             var requestType = typeof(TRequest).Name;
-            MethodInfo bulkDeposit;
-            if (s_boundBulkDepositCalls.ContainsKey(requestType))
-            {
-                bulkDeposit = s_boundBulkDepositCalls[requestType];
-            }
-            else
+            if (!s_boundBulkDepositCalls.TryGetValue(requestType, out MethodInfo? bulkDeposit))
             {
                 var bulkDepositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -930,14 +924,9 @@ namespace Paramore.Brighter
             Type transactionType
         ) where TRequest : class, IRequest
         {
-            MethodInfo deposit;
             var actualRequestType = actualRequest.GetType();
 
-            if (s_boundDepositCalls.ContainsKey(actualRequestType.Name))
-            {
-                deposit = s_boundDepositCalls[actualRequestType.Name];
-            }
-            else
+            if (!s_boundDepositCalls.TryGetValue(actualRequestType.Name, out MethodInfo? deposit))
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -1137,12 +1126,7 @@ namespace Paramore.Brighter
         ) where TRequest : class, IRequest
         {
             var requestType = typeof(TRequest).Name;
-            MethodInfo bulkDeposit;
-            if (s_boundBulkDepositCallsAsync.ContainsKey(requestType))
-            {
-                bulkDeposit = s_boundBulkDepositCallsAsync[requestType];
-            }
-            else
+            if (!s_boundBulkDepositCallsAsync.TryGetValue(requestType, out MethodInfo? bulkDeposit))
             {
                 var bulkDepositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -1177,14 +1161,9 @@ namespace Paramore.Brighter
             Type transactionType
         ) where TRequest : class, IRequest
         {
-            MethodInfo deposit;
             var actualRequestType = actualRequest.GetType();
 
-            if (s_boundDepositCallsAsync.ContainsKey(actualRequestType.Name))
-            {
-                deposit = s_boundDepositCallsAsync[actualRequestType.Name];
-            }
-            else
+            if (!s_boundDepositCallsAsync.TryGetValue(actualRequestType.Name, out MethodInfo? deposit))
             {
                 var depositMethod = typeof(CommandProcessor)
                     .GetMethods(BindingFlags.Instance | BindingFlags.Public)
@@ -1252,14 +1231,9 @@ namespace Paramore.Brighter
                 () => (Task)method.Invoke(s_mediator, [batchId, transactionProvider, context, cancellationToken])!);
         }
 
-        private MethodInfo GetMediatorMethod(string methodName)
+        private static MethodInfo GetMediatorMethod(string methodName)
         {
-            MethodInfo method;
-            if (s_boundMediatorMethods.ContainsKey(methodName))
-            {
-                method = s_boundMediatorMethods[methodName];
-            }
-            else
+            if (!s_boundMediatorMethods.TryGetValue(methodName, out MethodInfo? method))
             {
                 method = s_mediator!
                     .GetType()
