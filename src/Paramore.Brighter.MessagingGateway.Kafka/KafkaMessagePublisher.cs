@@ -29,7 +29,7 @@ using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    internal class KafkaMessagePublisher
+    internal sealed class KafkaMessagePublisher
     {
         private readonly IProducer<string, byte[]> _producer;
 

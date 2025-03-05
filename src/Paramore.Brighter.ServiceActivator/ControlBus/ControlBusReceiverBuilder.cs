@@ -211,7 +211,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
+        private sealed class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
             public IAmABrighterTracer? Tracer { private get; set; } 
             

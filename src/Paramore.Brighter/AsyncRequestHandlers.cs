@@ -28,7 +28,7 @@ using System.Linq;
 
 namespace Paramore.Brighter
 {
-    internal class AsyncRequestHandlers<TRequest> : IEnumerable<RequestHandlerAsync<TRequest>>
+    internal sealed class AsyncRequestHandlers<TRequest> : IEnumerable<RequestHandlerAsync<TRequest>>
         where TRequest : class, IRequest
     {
         private readonly IEnumerable<object> _handlers;

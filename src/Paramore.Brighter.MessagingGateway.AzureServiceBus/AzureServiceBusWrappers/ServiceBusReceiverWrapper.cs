@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     /// <summary>
     /// Wraps the <see cref="ServiceBusReceiver"/> to provide additional functionality.
     /// </summary>
-    internal class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
+    internal sealed class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     {
         private readonly ServiceBusReceiver _messageReceiver;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceBusReceiverWrapper>();

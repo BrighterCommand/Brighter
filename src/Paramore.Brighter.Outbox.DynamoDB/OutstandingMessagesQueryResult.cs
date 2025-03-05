@@ -27,7 +27,7 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter.Outbox.DynamoDB;
 
-internal class OutstandingMessagesQueryResult
+internal sealed class OutstandingMessagesQueryResult
 {
     public IEnumerable<MessageItem> Messages { get; private set; }
     public int ShardNumber { get; private set; }
