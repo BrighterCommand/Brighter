@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using Xunit;
+﻿using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Bus;
 
@@ -18,6 +17,6 @@ public class InternalBusStreamTests
          
         //assert
         //should be empty 
-        messages.Should().BeEmpty();
+        Assert.Empty(messages);
     }
 }

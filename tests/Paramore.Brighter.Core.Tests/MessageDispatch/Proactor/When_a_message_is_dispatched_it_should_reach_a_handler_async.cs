@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text.Json;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -54,11 +53,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.Proactor
         {
             _messagePump.Run();
 
-            MyEventHandlerAsyncWithContinuation.ShouldReceive(_myEvent).Should().BeTrue();
-            MyEventHandlerAsyncWithContinuation.MonitorValue.Should().Be(2);
+            Assert.True(MyEventHandlerAsyncWithContinuation.ShouldReceive(_myEvent));
+            Assert.Equal(2, MyEventHandlerAsyncWithContinuation.MonitorValue);
             //NOTE: We may want to run the continuation on the captured context, so as not to create a new thread, which means this test would 
-            //change once we fix the pump to exhibit that behavior
-            MyEventHandlerAsyncWithContinuation.WorkThreadId.Should().NotBe(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
+            //change once we fix the pump to exhibit that behavior\
+            Assert.NotEqual(MyEventHandlerAsyncWithContinuation.WorkThreadId, MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
+
         }
     }
   }

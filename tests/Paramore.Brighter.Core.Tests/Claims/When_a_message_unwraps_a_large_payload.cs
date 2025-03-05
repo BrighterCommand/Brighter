@@ -1,7 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
@@ -33,21 +31,21 @@ public class RetrieveClaimLargePayloadTests
         writer.Write(_contents);
         writer.Flush();
         stream.Position = 0;
-        
+
         var id = _store.Store(stream);
-        
+
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
-            new MessageBody("Claim Check {id}"));
+            new MessageBody($"Claim Check {id}"));
         message.Header.DataRef = id;
-        
+
         //act
         var unwrappedMessage = _transformerAsync.Unwrap(message);
-        
+
         //assert
-        unwrappedMessage.Body.Value.Should().Be(_contents);
+        Assert.Equal(_contents, unwrappedMessage.Body.Value);
         //clean up
-        message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _).Should().BeFalse();
-        _store.HasClaim(id).Should().BeFalse();
+        Assert.False(message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _));
+        Assert.False(_store.HasClaim(id));
     }
 }

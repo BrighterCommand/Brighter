@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
@@ -56,8 +55,8 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var requeueMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Requeue(requeueMessage);
 
-            _bus.Stream(new RoutingKey(_routingKey)).Should().HaveCount(1);
-            _bus.Stream(new RoutingKey(_routingKey)).Should().Contain(requeueMessage);
+            Assert.Single(_bus.Stream(new RoutingKey(_routingKey)) ?? []);
+            Assert.Contains(requeueMessage, _bus.Stream(new RoutingKey(_routingKey)));
         }
     }
 }

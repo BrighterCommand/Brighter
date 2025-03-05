@@ -5,7 +5,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -81,7 +80,7 @@ public class SqsMessageProducerDlqTestsAsync : IDisposable, IAsyncDisposable
         await Task.Delay(5000);
 
         int dlqCount = await GetDLQCountAsync(_dlqChannelName + ".fifo");
-        dlqCount.Should().Be(1);
+        Assert.Equal(1, dlqCount);
     }
 
     private async Task<int> GetDLQCountAsync(string queueName)

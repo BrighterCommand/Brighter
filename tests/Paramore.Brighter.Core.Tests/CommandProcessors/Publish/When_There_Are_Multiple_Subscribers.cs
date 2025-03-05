@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -66,12 +65,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Publish
         {
             _exception = Catch.Exception(() => _commandProcessor.Publish(_myEvent));
 
-            //_should_not_throw_an_exception
-            _exception.Should().BeNull();
-            //_should_publish_the_command_to_the_first_event_handler
-            _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
-            //_should_publish_the_command_to_the_second_event_handler
-            _receivedMessages.Should().Contain(nameof(MyOtherEventHandler), _myEvent.Id);
+            //Should not throw an exception
+            Assert.Null(_exception);
+            //Should publish the command to the first event handler
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyEventHandler), _myEvent.Id), _receivedMessages);
+            //Should publish the command to the second event handler
+            Assert.Contains(new KeyValuePair<string, string>(nameof(MyOtherEventHandler), _myEvent.Id), _receivedMessages);
         }
 
         public void Dispose()

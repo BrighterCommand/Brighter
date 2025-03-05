@@ -1,14 +1,14 @@
 ﻿using System;
-using FluentAssertions;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Logging.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Xunit;
 using Paramore.Brighter.Logging.Handlers;
 using Polly.Registry;
 using Serilog;
 using Serilog.Sinks.TestCorrelator;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Logging
@@ -47,9 +47,9 @@ namespace Paramore.Brighter.Core.Tests.Logging
 
             commandProcessor.Send(myCommand);
 
-            TestCorrelator.GetLogEventsFromContextId(context.Id)
-                .Should().Contain(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"))
-                .Which.Properties["1"].ToString().Should().Be($"\"{typeof(MyCommand)}\"");
+            var logEvents = TestCorrelator.GetLogEventsFromContextId(context.Id);
+            Assert.Contains(logEvents, x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"));
+            Assert.Equal($"\"{typeof(MyCommand)}\"", logEvents.First(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call")).Properties["1"].ToString());
         }
 
         public void Dispose()

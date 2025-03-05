@@ -27,7 +27,6 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
@@ -82,15 +81,15 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             var remainingMessages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
 
-            remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_secondMessage);
-            remainingMessages.Should().Contain(_thirdMessage);
+            Assert.Equal(2, (remainingMessages)?.Count());
+            Assert.Contains(_secondMessage, remainingMessages);
+            Assert.Contains(_thirdMessage, remainingMessages);
             
             _outbox.Delete(remainingMessages.Select(m => m.Id).ToArray(), context);
 
             var messages = _outbox.OutstandingMessages(TimeSpan.Zero, context);
 
-            messages.Should().HaveCount(0);
+            Assert.Empty(messages ?? []);
 
         }
         [Fact]
@@ -101,9 +100,9 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             var remainingMessages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
-            remainingMessages.Should().HaveCount(2);
-            remainingMessages.Should().Contain(_secondMessage);
-            remainingMessages.Should().Contain(_thirdMessage);
+            Assert.Equal(2, (remainingMessages)?.Count());
+            Assert.Contains(_secondMessage, remainingMessages);
+            Assert.Contains(_thirdMessage, remainingMessages);
             
             await _outbox.DeleteAsync(
                 remainingMessages.Select(m => m.Id).ToArray(), 
@@ -113,7 +112,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             var messages = await _outbox.OutstandingMessagesAsync(TimeSpan.Zero, context);
 
-            messages.Should().HaveCount(0);
+            Assert.Empty(messages ?? []);
 
         }
 

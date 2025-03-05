@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Transactions;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Observability;
@@ -14,7 +13,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
 {
-
     [Collection("CommandProcessor")]
     public class CommandProcessorBulkDepositPostTestsAsync: IDisposable
     {
@@ -35,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
         {
             _myCommand.Value = "Hello World";
             _myCommand2.Value = "Update World";
-            
+
             var timeProvider = new FakeTimeProvider();
 
             InMemoryProducer commandProducer = new(_internalBus, timeProvider);
@@ -51,17 +49,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 Topic =  new RoutingKey(_eventTopic),
                 RequestType = typeof(MyEvent)
             };
-            
+
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
-            
+
             _message2 = new Message(
                 new MessageHeader(_myCommand2.Id, _commandTopic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand2, JsonSerialisationOptions.Options))
             );
-            
+
             _message3 = new Message(
                 new MessageHeader(_myEvent.Id, _eventTopic, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
@@ -102,9 +100,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             
             var tracer = new BrighterTracer(new FakeTimeProvider());
             _outbox = new InMemoryOutbox(timeProvider) {Tracer = tracer};
-            
+
             IAmAnOutboxProducerMediator bus = new OutboxProducerMediator<Message, CommittableTransaction>(
-                producerRegistry, 
+                producerRegistry,
                 policyRegistry,
                 messageMapperRegistry,
                 new EmptyMessageTransformerFactory(),
@@ -112,10 +110,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
                 tracer,
                 _outbox
             );
-        
+
             CommandProcessor.ClearServiceBus();
             _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(), 
+                new InMemoryRequestContextFactory(),
                 policyRegistry,
                 bus,
                 new InMemorySchedulerFactory()
@@ -130,49 +128,48 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Deposit
             var context = new RequestContext();
             var requests = new List<IRequest> {_myCommand, _myCommand2, _myEvent } ;
             await _commandProcessor.DepositPostAsync(requests);
-            
-            
+
             //assert
             //message should not be posted
-            _internalBus.Stream(new RoutingKey(_commandTopic)).Any().Should().BeFalse();
-            _internalBus.Stream(new RoutingKey(_eventTopic)).Any().Should().BeFalse();
-            
+            Assert.False(_internalBus.Stream(new RoutingKey(_commandTopic)).Any());
+            Assert.False(_internalBus.Stream(new RoutingKey(_eventTopic)).Any());
+
             //message should be in the store
             var depositedPost = _outbox
                 .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
-            
+
             //message should be in the store
             var depositedPost2 = _outbox
                 .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message2.Id);
-            
+
             //message should be in the store
             var depositedPost3 = _outbox
                 .OutstandingMessages(TimeSpan.Zero, context)
                 .SingleOrDefault(msg => msg.Id == _message3.Id);
 
-            depositedPost.Should().NotBeNull();
-           
+            Assert.NotNull(depositedPost);
+
             //message should correspond to the command
-            depositedPost.Id.Should().Be(_message.Id);
-            depositedPost.Body.Value.Should().Be(_message.Body.Value);
-            depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
-            depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
-            
+            Assert.Equal(_message.Id, depositedPost.Id);
+            Assert.Equal(_message.Body.Value, depositedPost.Body.Value);
+            Assert.Equal(_message.Header.Topic, depositedPost.Header.Topic);
+            Assert.Equal(_message.Header.MessageType, depositedPost.Header.MessageType);
+
             //message should correspond to the command
-            depositedPost2.Id.Should().Be(_message2.Id);
-            depositedPost2.Body.Value.Should().Be(_message2.Body.Value);
-            depositedPost2.Header.Topic.Should().Be(_message2.Header.Topic);
-            depositedPost2.Header.MessageType.Should().Be(_message2.Header.MessageType);
-            
+            Assert.Equal(_message2.Id, depositedPost2.Id);
+            Assert.Equal(_message2.Body.Value, depositedPost2.Body.Value);
+            Assert.Equal(_message2.Header.Topic, depositedPost2.Header.Topic);
+            Assert.Equal(_message2.Header.MessageType, depositedPost2.Header.MessageType);
+
             //message should correspond to the command
-            depositedPost3.Id.Should().Be(_message3.Id);
-            depositedPost3.Body.Value.Should().Be(_message3.Body.Value);
-            depositedPost3.Header.Topic.Should().Be(_message3.Header.Topic);
-            depositedPost3.Header.MessageType.Should().Be(_message3.Header.MessageType);
+            Assert.Equal(_message3.Id, depositedPost3.Id);
+            Assert.Equal(_message3.Body.Value, depositedPost3.Body.Value);
+            Assert.Equal(_message3.Header.Topic, depositedPost3.Header.Topic);
+            Assert.Equal(_message3.Header.MessageType, depositedPost3.Header.MessageType);
         }
-        
+
         public void Dispose()
         {
             CommandProcessor.ClearServiceBus();

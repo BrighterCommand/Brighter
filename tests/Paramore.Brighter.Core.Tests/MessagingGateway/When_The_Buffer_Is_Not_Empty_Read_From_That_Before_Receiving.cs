@@ -1,5 +1,4 @@
 using System;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
@@ -48,9 +47,9 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var msgThree = _channel.Receive(TimeSpan.FromMilliseconds(10));
             
             //assert
-            msgOne.Id.Should().Be(messageOne.Id);
-            msgTwo.Id.Should().Be(messageTwo.Id);
-            msgThree.Id.Should().Be(messageThree.Id);
+            Assert.Equal(messageOne.Id, msgOne.Id);
+            Assert.Equal(messageTwo.Id, msgTwo.Id);
+            Assert.Equal(messageThree.Id, msgThree.Id);
          }
 
         [Fact]

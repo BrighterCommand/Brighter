@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
@@ -58,8 +57,8 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             var receivedMessage = _channel.Receive(TimeSpan.FromMilliseconds(1000));
             _channel.Acknowledge(receivedMessage);
             
-            receivedMessage.Should().NotBeNull();
-            receivedMessage.Should().Be(_sentMessage);
+            Assert.NotNull(receivedMessage);
+            Assert.Equal(_sentMessage, receivedMessage);
         }
     }
 }

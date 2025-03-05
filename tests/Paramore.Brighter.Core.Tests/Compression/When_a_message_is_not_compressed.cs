@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
@@ -33,7 +31,7 @@ public class UncompressedPayloadTests
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(smallContent);
+        Assert.Equal(smallContent, msg.Body.Value);
     }
     
     [Fact]
@@ -60,7 +58,7 @@ public class UncompressedPayloadTests
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(smallContent);
+        Assert.Equal(smallContent, msg.Body.Value);
     }
     
     [Fact]
@@ -87,6 +85,6 @@ public class UncompressedPayloadTests
         var msg = transformer.Unwrap(message);
         
         //assert
-        msg.Body.Value.Should().Be(smallContent);
+        Assert.Equal(smallContent, msg.Body.Value);
     }
 }

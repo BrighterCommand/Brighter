@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -74,21 +73,22 @@ public class KafkaMessageConsumerUpdateOffset : IDisposable
         //This will create, then delete the consumer
         Message[] messages = await ConsumeMessages(groupId: groupId, batchLimit: 5);
 
+
         //check we read the first 5 messages
-        messages.Length.Should().Be(5);
+        Assert.Equal(5, messages.Length);
         for (int i = 0; i < 5; i++)
         {
-            messages[i].Id.Should().Be(sentMessages[i]);
+            Assert.Equal(sentMessages[i], messages[i].Id);
         }
 
         //This will create a new consumer for the same group
         Message[] newMessages = await ConsumeMessages(groupId, batchLimit: 5);
-        
+
         //check we read the next 5 messages
-        messages.Length.Should().Be(5);
+        Assert.Equal(5, newMessages.Length);
         for (int i = 0; i < 5; i++)
         {
-            newMessages[i].Id.Should().Be(sentMessages[i+5]);
+            Assert.Equal(sentMessages[i+5], newMessages[i].Id);
         }
     }
 

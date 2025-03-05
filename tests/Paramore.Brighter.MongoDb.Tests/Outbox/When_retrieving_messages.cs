@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MongoDb;
 using Xunit;
 
@@ -43,7 +42,7 @@ public class MongoDbFetchMessageTests : IDisposable
         var messages = _outbox.Get();
 
         //Assert
-        messages.Should().HaveCount(3);
+        Assert.Equal(3, (messages)?.Count());
     }
 
     [Fact]
@@ -59,11 +58,13 @@ public class MongoDbFetchMessageTests : IDisposable
             context);
 
         //Assert
+        Assert.NotNull(messages);
         messages = messages.ToList();
-        messages.Should().HaveCount(2);
-        messages.Should().Contain(x => x.Id == _messageEarliest.Id);
-        messages.Should().Contain(x => x.Id == _messageUnDispatched.Id);
-        messages.Should().NotContain(x => x.Id == _messageDispatched.Id);
+        Assert.Equal(2, (messages)?.Count());
+        Assert.Contains(messages, message => message.Id == _messageEarliest.Id);
+        Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);
+        Assert.Contains(messages, message => message.Id == _messageUnDispatched.Id);
+         
     }
 
     [Fact]
@@ -77,7 +78,7 @@ public class MongoDbFetchMessageTests : IDisposable
         var messages = _outbox.Get(_messageDispatched.Id, context);
 
         //Assert
-        messages.Id.Should().Be(_messageDispatched.Id);
+        Assert.Equal(_messageDispatched.Id, messages.Id);
     }
 
     public void Dispose()

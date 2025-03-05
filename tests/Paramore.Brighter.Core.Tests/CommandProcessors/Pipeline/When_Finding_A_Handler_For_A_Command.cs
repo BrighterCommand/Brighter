@@ -1,30 +1,5 @@
-#region Licence
-/* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
 using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
@@ -51,10 +26,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
-           //_should_return_the_my_command_handler_as_the_implicit_handler
-            _pipeline.Should().BeOfType<MyCommandHandler>();
-            //_should_be_the_only_element_in_the_chain
-            TracePipeline().ToString().Should().Be("MyCommandHandler|");
+           //Should return the my command handler as the implicit handler
+            Assert.IsType<MyCommandHandler>(_pipeline);
+            //Should be the only element in the chain
+            Assert.Equal("MyCommandHandler|", TracePipeline().ToString());
         }
 
         public void Dispose()

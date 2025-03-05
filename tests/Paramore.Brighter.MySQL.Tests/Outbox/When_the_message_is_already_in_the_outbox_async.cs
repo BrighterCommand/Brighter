@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var context = new RequestContext();
             await _sqlOutbox.AddAsync(_messageEarliest, context);
             _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest, context));
-            _exception.Should().BeNull();
+            Assert.Null(_exception);
         }
 
         public void Dispose()

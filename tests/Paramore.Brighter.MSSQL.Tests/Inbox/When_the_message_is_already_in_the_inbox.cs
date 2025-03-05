@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -56,8 +55,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
             _exception = Catch.Exception(() => _sqlInbox.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            _sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            Assert.Null(_exception);
+            Assert.True(_sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey));
         }
 
         [Fact]
@@ -67,8 +66,9 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
 
             var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
 
-            //_should_read_the_command_from_the__dynamo_db_inbox
-            AssertionExtensions.Should(storedCommand).NotBeNull();
+            //should read the command from the dynamo db inbox
+            Assert.NotNull(storedCommand);
+            
         }
 
         public void Dispose()

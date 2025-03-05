@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
@@ -31,8 +30,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         {
             var outstandingMessage = _sqlOutbox.OutstandingMessages(TimeSpan.FromMilliseconds(100), new RequestContext()).SingleOrDefault();
 
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage?.Id.Should().Be(_dispatchedMessage.Id);
+            Assert.NotNull(outstandingMessage);
+            Assert.Equal(_dispatchedMessage.Id, outstandingMessage?.Id);
         }
         
         [Fact]
@@ -40,8 +39,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         {
             var outstandingMessage = (await _sqlOutbox.OutstandingMessagesAsync(TimeSpan.FromMilliseconds(100), new RequestContext())).SingleOrDefault();
 
-            outstandingMessage.Should().NotBeNull();
-            outstandingMessage?.Id.Should().Be(_dispatchedMessage.Id);
+            Assert.NotNull(outstandingMessage);
+            Assert.Equal(_dispatchedMessage.Id, outstandingMessage?.Id);
         }
     }
 }

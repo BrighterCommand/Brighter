@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -94,7 +93,7 @@ public class RmqMessageProducerQueueLengthTestsAsync : IDisposable, IAsyncDispos
         //try to grab the next message
         var nextMessages = await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
         message = nextMessages.First();
-        message.Header.MessageType.Should().Be(MessageType.MT_NONE);
+        Assert.Equal(MessageType.MT_NONE, message.Header.MessageType);
 
     }
 

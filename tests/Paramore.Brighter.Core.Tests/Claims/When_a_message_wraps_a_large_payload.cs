@@ -1,7 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
@@ -9,7 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Claims;
 
-public class ClaimCheckLargePayloadTests 
+public class ClaimCheckLargePayloadTests
 {
     private readonly ClaimCheckTransformer _transformer;
     private readonly Message _message;
@@ -28,8 +26,9 @@ public class ClaimCheckLargePayloadTests
         _message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), _topic, MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody(_body));
+
     }
-    
+
     [Fact]
     public void When_a_message_wraps_a_large_payload()
     {
@@ -39,12 +38,12 @@ public class ClaimCheckLargePayloadTests
         //assert
         bool hasLuggage = !string.IsNullOrEmpty(luggageCheckedMessage.Header.DataRef);
 
-        hasLuggage.Should().BeTrue();
+        Assert.True(hasLuggage);
 
         var claimCheck = luggageCheckedMessage.Header.DataRef;
 
-        var luggage = new StreamReader(_store.Retrieve(claimCheck)).ReadToEnd(); 
-        
-        luggage.Should().Be(_body);
+        var luggage = new StreamReader(_store.Retrieve(claimCheck)).ReadToEnd();
+
+        Assert.Equal(_body, luggage);
     }
 }

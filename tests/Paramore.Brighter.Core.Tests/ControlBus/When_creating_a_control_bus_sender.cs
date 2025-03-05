@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Transactions;
-using FluentAssertions;
 using Paramore.Brighter.Observability;
 using Xunit;
 
@@ -19,7 +18,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _outbox = new InMemoryOutbox(TimeProvider.System);
             _gateway = new InMemoryProducer(new InternalBus(), TimeProvider.System);
- 
+
             _senderFactory = new ControlBusSenderFactory();
         }
 
@@ -27,16 +26,16 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public void When_creating_a_control_bus_sender()
         {
             _sender = _senderFactory.Create<Message, CommittableTransaction>(
-                _outbox, 
+                _outbox,
                 new ProducerRegistry(new Dictionary<RoutingKey, IAmAMessageProducer>
                 {
                     {new RoutingKey("MyTopic"), _gateway},
                 }),
                 tracer: new BrighterTracer());
 
-            _sender.Should().NotBeNull();
+            Assert.NotNull(_sender);
         }
-        
+
         public void Dispose()
         {
             CommandProcessor.ClearServiceBus();

@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -75,27 +74,26 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id, new RequestContext());
 
             //should read the message from the sql outbox
-            _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
+            Assert.Equal(_messageEarliest.Body.Value, _storedMessage.Body.Value);
             //should read the message header first bag item from the sql outbox
             //should read the message header timestamp from the sql outbox
-            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss")
-                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
+            Assert.Equal(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"), _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
             //should read the message header topic from the sql outbox =
-            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
+            Assert.Equal(_messageEarliest.Header.Topic, _storedMessage.Header.Topic);
             //should read the message header type from the sql outbox
-            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
+            Assert.Equal(_messageEarliest.Header.MessageType, _storedMessage.Header.MessageType);
             
             //Bag serialization
-            _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
-            _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
-            _storedMessage.Header.Bag[_key2].Should().Be(_value2);
-            _storedMessage.Header.Bag.ContainsKey(_key3).Should().BeTrue();
-            _storedMessage.Header.Bag[_key3].Should().Be(_value3);
-            _storedMessage.Header.Bag.ContainsKey(_key4).Should().BeTrue();
-            _storedMessage.Header.Bag[_key4].Should().Be(_value4);
-            _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
-            _storedMessage.Header.Bag[_key5].Should().Be(_value5);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key1));
+            Assert.Equal(_value1, _storedMessage.Header.Bag[_key1]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key2));
+            Assert.Equal(_value2, _storedMessage.Header.Bag[_key2]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key3));
+            Assert.Equal(_value3, _storedMessage.Header.Bag[_key3]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key4));
+            Assert.Equal(_value4, _storedMessage.Header.Bag[_key4]);
+            Assert.True(_storedMessage.Header.Bag.ContainsKey(_key5));
+            Assert.Equal(_value5, _storedMessage.Header.Bag[_key5]);
         }
 
         public async ValueTask DisposeAsync()

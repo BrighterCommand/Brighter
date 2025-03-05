@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FluentAssertions;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Bus;
@@ -20,10 +19,10 @@ public class InternalBusEnqueueTests
         
         //assert
         var message = internalBus.Stream(routingKey).Single();
-        message.Should().NotBeNull();
-        message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        message.Body.Value.Should().Be("test_content");
-        message.Header.Topic.Should().Be(routingKey);
-        message.Header.MessageId.Should().Be(messageId);
+        Assert.NotNull(message);
+        Assert.Equal(MessageType.MT_COMMAND, message.Header.MessageType);
+        Assert.Equal("test_content", message.Body.Value);
+        Assert.Equal(routingKey, message.Header.Topic);
+        Assert.Equal(messageId, message.Header.MessageId);
     }
 }

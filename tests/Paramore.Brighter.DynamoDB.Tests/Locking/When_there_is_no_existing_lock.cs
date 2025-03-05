@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Locking.DynamoDb;
 using Xunit;
@@ -27,13 +26,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.Locking
             var resource = Guid.NewGuid().ToString();
             var result = await _provider.ObtainLockAsync(resource);
 
-            result.Should().NotBeNull();
+            Assert.NotNull(result);
 
             var lockItem = await GetLockItem($"{_options.LeaseholderGroupId}_{resource}");
 
-            lockItem.Should().NotBeNull();
-            lockItem.LockId.Should().Be(result);
-            lockItem.LeaseExpiry.Should().Be(_timeProvider.GetUtcNow().Add(_options.LeaseValidity).ToUnixTimeMilliseconds());
+            Assert.NotNull(lockItem);
+            Assert.Equal(result, lockItem.LockId);
+            Assert.Equal(_timeProvider.GetUtcNow().Add(_options.LeaseValidity).ToUnixTimeMilliseconds(), lockItem.LeaseExpiry);
         }
 
         [Fact]
@@ -41,17 +40,17 @@ namespace Paramore.Brighter.DynamoDB.Tests.Locking
         {
             var resource = Guid.NewGuid().ToString();
             var result = await _provider.ObtainLockAsync(resource);
-            result.Should().NotBeNull();
+            Assert.NotNull(result);
 
             _timeProvider.Advance(TimeSpan.FromMinutes(5));
             result = await _provider.ObtainLockAsync(resource);
-            result.Should().NotBeNull();
+            Assert.NotNull(result);
 
             var lockItem = await GetLockItem($"{_options.LeaseholderGroupId}_{resource}");
 
-            lockItem.Should().NotBeNull();
-            lockItem.LockId.Should().Be(result);
-            lockItem.LeaseExpiry.Should().Be(_timeProvider.GetUtcNow().Add(_options.LeaseValidity).ToUnixTimeMilliseconds());
+            Assert.NotNull(lockItem);
+            Assert.Equal(result, lockItem.LockId);
+            Assert.Equal(_timeProvider.GetUtcNow().Add(_options.LeaseValidity).ToUnixTimeMilliseconds(), lockItem.LeaseExpiry);
         }
 
         [Fact]
@@ -59,17 +58,17 @@ namespace Paramore.Brighter.DynamoDB.Tests.Locking
         {
             var resourceA = Guid.NewGuid().ToString();
             var result = await _provider.ObtainLockAsync(resourceA);
-            result.Should().NotBeNull();
+            Assert.NotNull(result);
 
             var resourceB = Guid.NewGuid().ToString();
             result = await _provider.ObtainLockAsync(resourceB);
-            result.Should().NotBeNull();
+            Assert.NotNull(result);
 
             var lockItem = await GetLockItem($"{_options.LeaseholderGroupId}_{resourceB}");
 
-            lockItem.Should().NotBeNull();
-            lockItem.LockId.Should().Be(result);
-            lockItem.LeaseExpiry.Should().Be(_timeProvider.GetUtcNow().Add(_options.LeaseValidity).ToUnixTimeMilliseconds());
+            Assert.NotNull(lockItem);
+            Assert.Equal(result, lockItem.LockId);
+            Assert.Equal(_timeProvider.GetUtcNow().Add(_options.LeaseValidity).ToUnixTimeMilliseconds(), lockItem.LeaseExpiry);
         }
     }
 }

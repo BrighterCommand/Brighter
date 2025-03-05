@@ -4,14 +4,14 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.405.22" />
-    <PackageVersion Include="AWSSDK.IdentityManagement" Version="3.7.404" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.405.31" />
+    <PackageVersion Include="AWSSDK.IdentityManagement" Version="3.7.404.9" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.400" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.415" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.44" />
-    <PackageVersion Include="AWSSDK.Scheduler" Version="3.7.400.95" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.95" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.94" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.415.9" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.401.53" />
+    <PackageVersion Include="AWSSDK.Scheduler" Version="3.7.400.97" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.400.104" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.400.104" />
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.18.4" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.23.0" />
@@ -26,7 +26,6 @@
     <PackageVersion Include="Dapper.Contrib" Version="2.0.78" />
     <PackageVersion Include="DapperExtensions" Version="1.7.0" />
     <PackageVersion Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
-    <PackageVersion Include="FluentAssertions" Version="8.0.1" />
     <PackageVersion Include="FluentMigrator" Version="6.2.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="6.2.0" />
     <PackageVersion Include="FluentMigrator.Runner.Core" Version="6.2.0" />
@@ -54,7 +53,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.2.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
-    <PackageVersion  Include="MongoDB.Driver" Version="3.2.0" />
+    <PackageVersion  Include="MongoDB.Driver" Version="3.2.1" />
     <PackageVersion Include="MQTTnet" Version="5.0.1.1416" />
     <PackageVersion Include="MySqlConnector" Version="2.4.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
@@ -86,14 +85,14 @@
     <PackageVersion Include="Quartz" Version="3.13.1" />
     <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.13.1" />
-    <PackageVersion Include="RabbitMQ.Client" Version="7.0.0" />
+    <PackageVersion Include="RabbitMQ.Client" Version="7.1.1" />
     <PackageVersion Include="Serilog" Version="4.2.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
     <PackageVersion Include="Serilog.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageVersion Include="ServiceStack.Redis.Core" Version="8.6.0" />
-    <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.2.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="7.3.1" />
     <PackageVersion Include="System.Data.SqlClient" Version="4.9.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.2" />
     <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
@@ -127,9 +126,9 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.2" />
     <PackageVersion Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.2.efcore.9.0.0" />
-    <PackageVersion Include="Npgsql" Version="9.0.2" />
+    <PackageVersion Include="Npgsql" Version="9.0.3" />
   </ItemGroup>
-
+  
   <ItemGroup>
     <GlobalPackageReference Include="MinVer" Version="6.0.0" />
     <GlobalPackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />

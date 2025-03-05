@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -49,7 +48,7 @@ public class RmqMessageProducerSendPersistentMessageTestsAsync : IDisposable, IA
         var result = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(1000))).First();
 
         // assert
-        result.Persist.Should().Be(true);
+        Assert.Equal(true, result.Persist);
     }
 
     public void Dispose()

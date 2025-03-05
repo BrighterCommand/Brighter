@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -41,7 +40,7 @@ public class RmqBrokerNotPreCreatedTestsAsync : IDisposable
             exceptionHappened = true;
         }
             
-        exceptionHappened.Should().BeTrue();
+        Assert.True(exceptionHappened);
     }
 
     public void Dispose()

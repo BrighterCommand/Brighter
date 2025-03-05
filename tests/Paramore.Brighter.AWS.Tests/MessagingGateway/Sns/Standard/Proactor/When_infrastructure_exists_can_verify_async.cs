@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -81,7 +80,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway.Sns.Standard.Proactor
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000));
 
             var message = messages.First();
-            message.Id.Should().Be(_myCommand.Id);
+            Assert.Equal(_myCommand.Id, message.Id);
 
             await _consumer.AcknowledgeAsync(message);
         }

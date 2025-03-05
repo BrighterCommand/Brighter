@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
@@ -47,7 +46,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
                 var firstMessage = ConsumeMessages(consumer);
                 var message = firstMessage.First();
-                message.Id.Should().Be(msgId);
+                Assert.Equal(msgId, message.Id);
 
                 _consumer.Purge();
 

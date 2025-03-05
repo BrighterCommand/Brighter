@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
@@ -85,11 +84,11 @@ public class KafkaConsumerDeclareTests : IDisposable
         //ensure the messages are sent
         ((KafkaMessageProducer)producer).Flush();
 
-        Message messages = ConsumeMessage();
+        Message receivedMessage = ConsumeMessage();
 
-        messages.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-        messages.Header.PartitionKey.Should().Be(_partitionKey);
-        messages.Body.Value.Should().Be(message.Body.Value);
+        Assert.Equal(MessageType.MT_COMMAND, receivedMessage.Header.MessageType);
+        Assert.Equal(_partitionKey, receivedMessage.Header.PartitionKey);
+        Assert.Equal(message.Body.Value, receivedMessage.Body.Value);
     }
 
     private Message ConsumeMessage()

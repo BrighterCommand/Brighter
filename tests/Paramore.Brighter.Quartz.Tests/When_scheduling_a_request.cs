@@ -1,6 +1,5 @@
 ﻿using System.Collections.Specialized;
 using System.Transactions;
-using FluentAssertions;
 using Paramore.Brighter;
 using Paramore.Brighter.MessageScheduler.Quartz;
 using Paramore.Brighter.Observability;
@@ -106,16 +105,15 @@ public class QuartzSchedulerRequestTests
         var id = scheduler.Schedule(req, RequestSchedulerType.Send,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
-        _receivedMessages.Should().Contain(nameof(MyEventHandler), req.Id);
+        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -125,16 +123,15 @@ public class QuartzSchedulerRequestTests
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Send, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
-        _receivedMessages.Should().Contain(nameof(MyEventHandler), req.Id);
+        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -145,16 +142,15 @@ public class QuartzSchedulerRequestTests
         var id = scheduler.Schedule(req, RequestSchedulerType.Publish,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
-        _receivedMessages.Should().Contain(nameof(MyEventHandler), req.Id);
+        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -164,16 +160,15 @@ public class QuartzSchedulerRequestTests
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Publish, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
         
-        _receivedMessages.Should().Contain(nameof(MyEventHandler), req.Id);
+        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Fact]
@@ -184,16 +179,15 @@ public class QuartzSchedulerRequestTests
         var id = scheduler.Schedule(req, RequestSchedulerType.Post,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
     }
 
     [Fact]
@@ -203,16 +197,15 @@ public class QuartzSchedulerRequestTests
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, RequestSchedulerType.Post, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _internalBus.Stream(_routingKey).Should().BeEmpty();
+        Assert.Empty(_internalBus.Stream(_routingKey) ?? []);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
 
-        _internalBus.Stream(_routingKey).Should().NotBeEmpty();
+        Assert.NotEmpty(_internalBus.Stream(_routingKey));
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().NotBeEquivalentTo(new Message());
+        Assert.NotEqual(Message.Empty, _outbox.Get(req.Id, new RequestContext()));
     }
 
     #endregion
@@ -228,20 +221,19 @@ public class QuartzSchedulerRequestTests
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
         scheduler.ReScheduler(id, _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(5)));
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         Thread.Sleep(TimeSpan.FromSeconds(4));
-        _receivedMessages.Should().Contain(nameof(MyEventHandler), req.Id);
+        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Theory]
@@ -253,19 +245,18 @@ public class QuartzSchedulerRequestTests
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.True((id)?.Any());
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         scheduler.ReScheduler(id, TimeSpan.FromSeconds(5));
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         Thread.Sleep(TimeSpan.FromSeconds(4));
-        _receivedMessages.Should().Contain(nameof(MyEventHandler), req.Id);
+        Assert.Contains(nameof(MyEventHandler), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
     #endregion
@@ -283,18 +274,17 @@ public class QuartzSchedulerRequestTests
         var id = scheduler.Schedule(req, type,
             _timeProvider.GetUtcNow().Add(TimeSpan.FromSeconds(1)));
 
-        id.Should().NotBeNullOrEmpty();
+        Assert.True((id)?.Any());
 
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
 
         scheduler.Cancel(id);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
     [Theory]
@@ -307,16 +297,15 @@ public class QuartzSchedulerRequestTests
         var scheduler = _scheduler.CreateSync(_processor);
         var id = scheduler.Schedule(req, type, TimeSpan.FromSeconds(1));
 
-        id.Should().NotBeNullOrEmpty();
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.True((id)?.Any());
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
         scheduler.Cancel(id);
 
         Thread.Sleep(TimeSpan.FromSeconds(2));
-        _receivedMessages.Should().NotContain(nameof(MyEventHandler), req.Id);
+        Assert.DoesNotContain(nameof(MyEventHandler), _receivedMessages);
 
-        _outbox.Get(req.Id, new RequestContext())
-            .Should().BeEquivalentTo(new Message());
+        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
     }
 
     #endregion

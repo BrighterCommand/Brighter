@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Locking.DynamoDb;
 using Xunit;
@@ -27,18 +26,18 @@ namespace Paramore.Brighter.DynamoDB.Tests.Locking
             var startTime = _timeProvider.GetUtcNow();
             var resource = Guid.NewGuid().ToString();
             var resultA = await _provider.ObtainLockAsync(resource);
-            resultA.Should().NotBeNull();
+            Assert.NotNull(resultA);
 
             _timeProvider.Advance(TimeSpan.FromSeconds(30));
 
             var resultB = await _provider.ObtainLockAsync(resource);
-            resultB.Should().BeNull();
+            Assert.Null(resultB);
 
             var lockItem = await GetLockItem($"{_options.LeaseholderGroupId}_{resource}");
 
-            lockItem.Should().NotBeNull();
-            lockItem.LockId.Should().Be(resultA);
-            lockItem.LeaseExpiry.Should().Be(startTime.Add(_options.LeaseValidity).ToUnixTimeMilliseconds());
+            Assert.NotNull(lockItem);
+            Assert.Equal(resultA, lockItem.LockId);
+            Assert.Equal(startTime.Add(_options.LeaseValidity).ToUnixTimeMilliseconds(), lockItem.LeaseExpiry);
         }
     }
 }

@@ -1,7 +1,8 @@
-﻿using System;
+﻿
+
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
@@ -33,21 +34,21 @@ public class AsyncRetrieveClaimLargePayloadTests
         await writer.WriteAsync(_contents);
         await writer.FlushAsync();
         stream.Position = 0;
-        
+
         var id = await _store.StoreAsync(stream);
-        
+
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new RoutingKey("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
-        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
-        
+            message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
+
         //act
         var unwrappedMessage = await _transformerAsync.UnwrapAsync(message);
-        
+
         //assert
-        unwrappedMessage.Body.Value.Should().Be(_contents);
-        //clean up                                                      
-        message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _).Should().BeFalse();
-        (await _store.HasClaimAsync(id)).Should().BeFalse();
+        Assert.Equal(_contents, unwrappedMessage.Body.Value);
+        //clean up
+        Assert.False(message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _));
+        Assert.False(await _store.HasClaimAsync(id));
     }
 }

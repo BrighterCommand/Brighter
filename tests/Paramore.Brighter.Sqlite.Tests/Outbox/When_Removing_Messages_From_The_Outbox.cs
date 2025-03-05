@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -77,13 +76,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             _outbox.Delete([_firstMessage.Id, _thirdMessage.Id], context);
 
-            _outbox.Get(_secondMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-            _outbox.Get(_firstMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_NONE);
-            _outbox.Get(_thirdMessage.Id, context).Header.MessageType.Should().Be(MessageType.MT_NONE);
+            Assert.Equal(MessageType.MT_COMMAND, _outbox.Get(_secondMessage.Id, context).Header.MessageType);
+            Assert.Equal(MessageType.MT_NONE, _outbox.Get(_firstMessage.Id, context).Header.MessageType);
+            Assert.Equal(MessageType.MT_NONE, _outbox.Get(_thirdMessage.Id, context).Header.MessageType);
             
             _outbox.Delete([_secondMessage.Id], context);
 
-            _outbox.Get(_secondMessage.Id, context).Should().NotBeNull();
+            Assert.NotNull(_outbox.Get(_secondMessage.Id, context));
         }
 
         public async ValueTask DisposeAsync()

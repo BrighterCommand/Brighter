@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
@@ -20,7 +19,7 @@ public class RetrieveClaimLeaveLuggage
         _store = new InMemoryStorageProvider();
         _transformer = new ClaimCheckTransformer(store: _store);
         _transformer.InitializeUnwrapFromAttributeParams(true);
-        
+
         _contents = DataGenerator.CreateString(6000);
     }
 
@@ -38,15 +37,15 @@ public class RetrieveClaimLeaveLuggage
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid().ToString(), new("test_topic"), MessageType.MT_EVENT, timeStamp: DateTime.UtcNow),
-            new MessageBody("Claim Check {id}"));
+            new MessageBody($"Claim Check {id}"));
         message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
 
         //act
         var unwrappedMessage = _transformer.Unwrap(message);
-        
+
         //assert
-        message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _).Should().BeTrue();
-        _store.HasClaim(id).Should().BeTrue();
-        
+        bool hasLuggage = message.Header.Bag.TryGetValue(ClaimCheckTransformerAsync.CLAIM_CHECK, out object _);
+        Assert.True(hasLuggage);
+        Assert.True(_store.HasClaim(id));
     }
 }

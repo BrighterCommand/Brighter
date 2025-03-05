@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using RabbitMQ.Client;
 using Xunit;
@@ -52,6 +51,6 @@ public class RMQMessageGatewayConnectionPoolResetConnectionExists
 
         await _connectionPool.ResetConnectionAsync(connectionFactory);
 
-        (await _connectionPool.GetConnectionAsync(connectionFactory)).Should().NotBeSameAs(_originalConnection);
+        Assert.NotSame(_originalConnection, (await _connectionPool.GetConnectionAsync(connectionFactory)));
     }
 }

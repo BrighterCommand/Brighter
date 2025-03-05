@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -82,7 +81,7 @@ public class RmqMessageProducerTTLTests : IAsyncDisposable, IDisposable
 
         //check messages are flowing - absence needs to be expiry
         var messageOne = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(5000))).First();
-        messageOne.Id.Should().Be(_messageOne.Id);
+        Assert.Equal(_messageOne.Id, messageOne.Id);
 
         //Let it expire
         await Task.Delay(11000);
@@ -90,7 +89,7 @@ public class RmqMessageProducerTTLTests : IAsyncDisposable, IDisposable
         var dlqMessage = (await _messageConsumer.ReceiveAsync(TimeSpan.FromMilliseconds(10000))).First();
             
         //assert this is our message
-        dlqMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+        Assert.Equal(MessageType.MT_NONE, dlqMessage.Header.MessageType);
     }
 
     public void Dispose()

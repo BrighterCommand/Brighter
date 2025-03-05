@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ.Async;
 using Xunit;
 
@@ -98,8 +97,8 @@ public class RmqMessageProducerDLQTests : IDisposable
         var dlqMessage = _deadLetterConsumer.Receive(TimeSpan.FromMilliseconds(10000)).First();
             
         //assert this is our message
-        dlqMessage.Id.Should().Be(_message.Id);
-        message.Body.Value.Should().Be(dlqMessage.Body.Value);
+        Assert.Equal(_message.Id, dlqMessage.Id);
+        Assert.Equal(dlqMessage.Body.Value, message.Body.Value);
     }
 
     public void Dispose()

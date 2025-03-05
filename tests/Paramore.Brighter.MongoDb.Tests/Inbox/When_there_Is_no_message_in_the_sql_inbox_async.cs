@@ -26,7 +26,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MongoDb;
 using Paramore.Brighter.MongoDb.Tests.TestDoubles;
@@ -51,7 +50,7 @@ public class MongoDbInboxEmptyWhenSearchedAsyncTests : IDisposable
     {
         string commandId = Guid.NewGuid().ToString();
         var exception = await Catch.ExceptionAsync(() => _inbox.GetAsync<MyCommand>(commandId, "some-key"));
-        exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+        Assert.IsType<RequestNotFoundException<MyCommand>>(exception);
     }
 
     [Fact]
@@ -59,7 +58,7 @@ public class MongoDbInboxEmptyWhenSearchedAsyncTests : IDisposable
     {
         string commandId = Guid.NewGuid().ToString();
         bool exists = await _inbox.ExistsAsync<MyCommand>(commandId, "some-key");
-        exists.Should().BeFalse();
+        Assert.False(exists);
     }
 
     public void Dispose()

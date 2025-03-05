@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
@@ -53,9 +52,9 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var messages = _mySqlOutbox.OutstandingMessages(dispatchedSince: TimeSpan.Zero, _context);
 
             var msgs = messages as Message[] ?? messages.ToArray();
-            msgs.Should().NotBeNullOrEmpty();
+            Assert.True((msgs)?.Any());
 
-            msgs.Should().HaveCount(3);
+            Assert.Equal(3, (msgs)?.Count());
         }
         
         [Fact]
@@ -64,8 +63,8 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             var messages = await _mySqlOutbox.OutstandingMessagesAsync(dispatchedSince: TimeSpan.Zero, _context);
 
             var msgs = messages as Message[] ?? messages.ToArray();
-            msgs.Should().NotBeNullOrEmpty();
-            msgs.Should().HaveCount(3);
+            Assert.True((msgs)?.Any());
+            Assert.Equal(3, (msgs)?.Count());
         }
 
         public void Dispose()

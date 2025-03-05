@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -58,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.Pipeline
 
             //assert
             var exists = _inbox.Exists<MyCommand>(myCommmand.Id, CONTEXT_KEY, 500);
-            exists.Should().BeTrue();
+            Assert.True(exists);
         }
 
         public void Dispose()

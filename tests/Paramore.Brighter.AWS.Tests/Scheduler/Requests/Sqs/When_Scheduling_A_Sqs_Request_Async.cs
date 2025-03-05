@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon.Scheduler;
-using FluentAssertions;
 using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessageScheduler.Aws;
@@ -77,17 +77,17 @@ public class SqsSchedulingRequestAsyncTest : IAsyncDisposable
         while (stopAt > DateTimeOffset.UtcNow)
         {
             var messages = await _consumer.ReceiveAsync(TimeSpan.FromMinutes(1));
-            messages.Should().ContainSingle();
+            Assert.Single(messages);
 
             if (messages[0].Header.MessageType != MessageType.MT_NONE)
             {
-                messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-                messages[0].Body.Value.Should().NotBeNullOrEmpty();
+                Assert.Equal(MessageType.MT_COMMAND, messages[0].Header.MessageType);
+                Assert.True(messages[0].Body.Value.Any());
                 var m = JsonSerializer.Deserialize<FireAwsScheduler>(messages[0].Body.Value,
                     JsonSerialisationOptions.Options);
-                m.Should().NotBeNull();
-                m.Message.Should().BeEquivalentTo(message);
-                m.Async.Should().BeTrue();
+                Assert.NotNull(m);
+                Assert.Equivalent(message, m.Message);
+                Assert.True(m.Async);
                 await _consumer.AcknowledgeAsync(messages[0]);
                 return;
             }

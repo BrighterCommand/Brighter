@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,15 +11,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway.Proactor;
 [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
 public class KafkaProducerAssumeTestsAsync : IDisposable
 {
-    private readonly ITestOutputHelper _output;
     private readonly string _queueName = Guid.NewGuid().ToString();
     private readonly string _topic = Guid.NewGuid().ToString();
     private readonly IAmAProducerRegistry _producerRegistry;
     private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-    public KafkaProducerAssumeTestsAsync(ITestOutputHelper output)
+    public KafkaProducerAssumeTestsAsync()
     {
-        _output = output;
         _producerRegistry = new KafkaProducerRegistryFactory(
             new KafkaMessagingGatewayConfiguration
             {
@@ -75,7 +72,7 @@ public class KafkaProducerAssumeTestsAsync : IDisposable
         //allow callback to run
         await Task.Delay(3000);
 
-        messagePublished.Should().BeFalse();
+        Assert.False(messagePublished);
     }
 
     public void Dispose()
