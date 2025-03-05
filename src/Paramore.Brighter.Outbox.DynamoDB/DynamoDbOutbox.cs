@@ -27,6 +27,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -175,8 +176,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null,
             CancellationToken cancellationToken = default)
         {
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", message.Id}
+            };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Add, _configuration.TableName),
+                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Add, _configuration.TableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
@@ -307,13 +312,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             try
             {
+                IEnumerable<Message> result;
                 if (args == null || !args.ContainsKey("Topic"))
                 {
-                    return await DispatchedMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
+                    result = await DispatchedMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
+                }
+                else
+                {
+                    var topic = (string)args["Topic"];
+                    result = await DispatchedMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
                 }
 
-                var topic = (string)args["Topic"];
-                return await DispatchedMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
+                span.AddTag("db.response.returned_rows", result.Count());
+                return result;
             }
             finally
             {
@@ -369,8 +380,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", messageId}
+            };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Get, _configuration.TableName),
+                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Get, _configuration.TableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
@@ -401,8 +416,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", id}
+            };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.MarkDispatched, _configuration.TableName),
+                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.MarkDispatched, _configuration.TableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
@@ -516,13 +535,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             try
             {
+                IEnumerable<Message> result;
                 if (args == null || !args.ContainsKey("Topic"))
                 {
-                    return await OutstandingMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
+                    result = await OutstandingMessagesForAllTopicsAsync(dispatchedSince, pageSize, pageNumber, cancellationToken);
+                }
+                else
+                {
+                    var topic = args["Topic"].ToString();
+                    result = await OutstandingMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
                 }
 
-                var topic = args["Topic"].ToString();
-                return await OutstandingMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, topic, cancellationToken);
+                span.AddTag("db.response.returned_rows", result.Count());
+                return result;
             }
             finally
             {
@@ -535,8 +560,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args,
             CancellationToken cancellationToken)
         {
+            var dbAttributes = new Dictionary<string, string>()
+            {
+                {"db.operation.parameter.message.id", messageId}
+            };
             var span = Tracer?.CreateDbSpan(
-                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Delete, _configuration.TableName),
+                new OutboxSpanInfo(DbSystem.Dynamodb, DYNAMO_DB_NAME, OutboxDbOperation.Delete, _configuration.TableName, dbAttributes: dbAttributes),
                 requestContext?.Span,
                 options: _instrumentationOptions);
 
