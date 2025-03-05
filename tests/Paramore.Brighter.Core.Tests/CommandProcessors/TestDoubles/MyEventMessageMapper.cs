@@ -3,7 +3,7 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-internal class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
+internal sealed class MyEventMessageMapper : IAmAMessageMapper<MyEvent>
 {
     public IRequestContext Context { get; set; }
 

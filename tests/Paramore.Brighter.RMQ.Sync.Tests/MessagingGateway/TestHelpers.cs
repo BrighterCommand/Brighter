@@ -25,14 +25,13 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
 
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
 
-    internal class QueueFactory
+    internal sealed class QueueFactory
     {
         private readonly RmqMessagingGatewayConnection _connection;
         private readonly ChannelName _channelName;

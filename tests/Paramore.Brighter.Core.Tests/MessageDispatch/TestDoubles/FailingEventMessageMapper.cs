@@ -1,9 +1,8 @@
-using System;
 using Newtonsoft.Json;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
-    internal class FailingEventMessageMapper : IAmAMessageMapper<MyFailingMapperEvent>
+    internal sealed class FailingEventMessageMapper : IAmAMessageMapper<MyFailingMapperEvent>
     {
         public IRequestContext Context { get; set; }
 

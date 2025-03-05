@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyStepsPreValidationHandlerAttribute : RequestHandlerAttribute
+    internal sealed class MyStepsPreValidationHandlerAttribute : RequestHandlerAttribute
     {
         public MyStepsPreValidationHandlerAttribute(int step, HandlerTiming timing)
             : base(step, timing)

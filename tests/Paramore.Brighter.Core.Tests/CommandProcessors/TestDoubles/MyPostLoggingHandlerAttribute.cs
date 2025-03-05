@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyPostLoggingHandlerAttribute : RequestHandlerAttribute
+    internal sealed class MyPostLoggingHandlerAttribute : RequestHandlerAttribute
     {
         public MyPostLoggingHandlerAttribute(int step, HandlerTiming timing)
             : base(step, timing)

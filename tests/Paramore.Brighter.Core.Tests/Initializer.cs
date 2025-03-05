@@ -5,7 +5,7 @@ using Serilog;
 
 namespace Paramore.Brighter.Core.Tests
 {
-    class Initializer
+    sealed class Initializer
     {
         [ModuleInitializer]
         public static void InitializeTestLogger()
@@ -14,5 +14,4 @@ namespace Paramore.Brighter.Core.Tests
             ApplicationLogging.LoggerFactory = new LoggerFactory().AddSerilog(logger);
         }
     }
-        
 }
