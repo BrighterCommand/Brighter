@@ -46,7 +46,7 @@ public class MessageWrapCleanupTests
 
     }
     
-    private class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
+    private sealed class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {
         public IAmAMessageTransform Create(Type transformerType)
         {

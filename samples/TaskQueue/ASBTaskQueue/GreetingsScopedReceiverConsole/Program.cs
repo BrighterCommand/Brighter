@@ -13,7 +13,7 @@ using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
 namespace GreetingsScopedReceiverConsole
 {
-    class Program
+    static class Program
     {
         // If you run this receiver with the other receiver, and send you'll see different behaviours. 
         // This scoped receiver will refresh the scoped dependency for each pipeline (Event/Command dispatch)

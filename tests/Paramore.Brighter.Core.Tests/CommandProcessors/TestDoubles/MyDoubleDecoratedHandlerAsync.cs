@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyDoubleDecoratedHandlerAsync: RequestHandlerAsync<MyCommand>
+    internal sealed class MyDoubleDecoratedHandlerAsync: RequestHandlerAsync<MyCommand>
     {
         [MyValidationHandlerAsync(2)]
         [MyLoggingHandlerAsync(1)]

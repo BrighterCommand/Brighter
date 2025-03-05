@@ -16,7 +16,7 @@ using Serilog;
 
 namespace GreetingsPumper;
 
-class Program
+static class Program
 {
     private static async Task Main(string[] args)
     {
@@ -97,7 +97,7 @@ class Program
         await host.RunAsync();
     }
 
-    internal class RunCommandProcessor(IAmACommandProcessor commandProcessor, ILogger<RunCommandProcessor> logger)
+    internal sealed class RunCommandProcessor(IAmACommandProcessor commandProcessor, ILogger<RunCommandProcessor> logger)
         : BackgroundService
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

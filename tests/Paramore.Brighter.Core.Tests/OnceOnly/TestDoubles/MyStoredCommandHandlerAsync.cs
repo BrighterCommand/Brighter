@@ -6,7 +6,7 @@ using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
 {
-    internal class MyStoredCommandHandlerAsync : RequestHandlerAsync<MyCommand> 
+    internal sealed class MyStoredCommandHandlerAsync : RequestHandlerAsync<MyCommand> 
     {
         [UseInboxAsync(1, onceOnly: true, contextKey: typeof(MyStoredCommandHandlerAsync), timing:HandlerTiming.Before)]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
         }
     }
 
-    internal class MyStoredCommandToFailHandlerAsync : RequestHandlerAsync<MyCommandToFail> 
+    internal sealed class MyStoredCommandToFailHandlerAsync : RequestHandlerAsync<MyCommandToFail> 
     {
         [UseInboxAsync(1, onceOnly: true, contextKey: typeof(MyStoredCommandToFailHandlerAsync), timing:HandlerTiming.Before)]
         public override async Task<MyCommandToFail> HandleAsync(MyCommandToFail command, CancellationToken cancellationToken = default)

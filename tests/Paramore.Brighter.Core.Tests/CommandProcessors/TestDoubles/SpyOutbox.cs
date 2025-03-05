@@ -7,7 +7,7 @@ using Paramore.Brighter.Observability;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class SpyOutbox : 
+    internal sealed class SpyOutbox : 
         IAmAnOutboxSync<Message, SpyTransaction>,
         IAmAnOutboxAsync<Message, SpyTransaction>
     {

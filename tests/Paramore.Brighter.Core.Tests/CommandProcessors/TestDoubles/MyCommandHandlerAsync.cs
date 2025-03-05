@@ -1,11 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommandHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal sealed class MyCommandHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         private readonly IDictionary<string, string> _receivedMessages;
 

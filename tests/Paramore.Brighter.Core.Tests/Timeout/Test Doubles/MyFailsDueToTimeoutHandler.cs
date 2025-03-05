@@ -32,7 +32,7 @@ using Paramore.Brighter.Policies.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.Timeout.Test_Doubles
 {
-    internal class MyFailsDueToTimeoutHandler : RequestHandler<MyCommand>
+    internal sealed class MyFailsDueToTimeoutHandler : RequestHandler<MyCommand>
     {
         [TimeoutPolicy(500, 1, HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)

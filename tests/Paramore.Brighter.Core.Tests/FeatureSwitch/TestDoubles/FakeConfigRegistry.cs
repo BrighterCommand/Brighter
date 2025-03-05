@@ -28,7 +28,7 @@ using Paramore.Brighter.FeatureSwitch;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles
 {
-    class FakeConfigRegistry : IAmAFeatureSwitchRegistry
+    sealed class FakeConfigRegistry : IAmAFeatureSwitchRegistry
     {
         private readonly IDictionary<Type, FeatureSwitchStatus> _switches;
 

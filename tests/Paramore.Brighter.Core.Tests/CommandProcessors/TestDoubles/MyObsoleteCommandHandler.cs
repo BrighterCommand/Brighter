@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyObsoleteCommandHandler : RequestHandler<MyCommand>
+    internal sealed class MyObsoleteCommandHandler : RequestHandler<MyCommand>
     {
         private static MyCommand s_command;
 

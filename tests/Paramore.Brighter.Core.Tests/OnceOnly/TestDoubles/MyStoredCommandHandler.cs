@@ -27,7 +27,7 @@ using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
 {
-    internal class MyStoredCommandHandler : RequestHandler<MyCommand>
+    internal sealed class MyStoredCommandHandler : RequestHandler<MyCommand>
     {
         [UseInbox(1, onceOnly:true, contextKey: typeof(MyStoredCommandHandler), timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)

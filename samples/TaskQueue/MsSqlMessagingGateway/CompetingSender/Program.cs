@@ -8,12 +8,11 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using Paramore.Brighter.MsSql;
 using Serilog;
 
 namespace CompetingSender
 {
-    internal class Program
+    internal static class Program
     {
         private static async Task Main(string[] args)
         {
@@ -64,7 +63,7 @@ namespace CompetingSender
 
         }
 
-        internal class RunCommandProcessor : IHostedService
+        internal sealed class RunCommandProcessor : IHostedService
         {
             private readonly IAmACommandProcessor _commandProcessor;
             private readonly int _repeatCount;

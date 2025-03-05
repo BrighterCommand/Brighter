@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyAggregate : IAmAnAggregate
+    internal sealed class MyAggregate : IAmAnAggregate
     {
         public int ID { get; set; }
     }

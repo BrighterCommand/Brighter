@@ -28,7 +28,7 @@ using Paramore.Brighter.Logging.Attributes;
 
 namespace HelloWorld
 {
-    internal class GreetingCommandHandler : RequestHandler<GreetingCommand>
+    internal sealed class GreetingCommandHandler : RequestHandler<GreetingCommand>
     {
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         public override GreetingCommand Handle(GreetingCommand command)

@@ -6,7 +6,7 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
-internal class MyDeferredCommandMessageMapperAsync : IAmAMessageMapperAsync<MyDeferredCommand>
+internal sealed class MyDeferredCommandMessageMapperAsync : IAmAMessageMapperAsync<MyDeferredCommand>
 {
     public IRequestContext Context { get; set; }
 

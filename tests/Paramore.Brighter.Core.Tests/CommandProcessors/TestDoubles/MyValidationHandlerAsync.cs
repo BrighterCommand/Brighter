@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyValidationHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
+    internal sealed class MyValidationHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
         private static TRequest s_command;
 

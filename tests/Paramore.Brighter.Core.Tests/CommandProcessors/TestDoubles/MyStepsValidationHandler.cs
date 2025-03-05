@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyStepsValidationHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
+    internal sealed class MyStepsValidationHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
         private static TRequest s_command;
 

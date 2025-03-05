@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyImplicitHandler : RequestHandler<MyCommand>
+    internal sealed class MyImplicitHandler : RequestHandler<MyCommand>
     {
         [MyLoggingHandler(1)]
         public override MyCommand Handle(MyCommand command)

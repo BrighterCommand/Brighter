@@ -29,7 +29,7 @@ using Paramore.Brighter.Policies.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
-    internal class MyFailsWithFallbackDivideByZeroHandler : RequestHandler<MyCommand>
+    internal sealed class MyFailsWithFallbackDivideByZeroHandler : RequestHandler<MyCommand>
     {
         public static bool FallbackCalled { get; set; }
         public static bool ReceivedCommand { get; set; }

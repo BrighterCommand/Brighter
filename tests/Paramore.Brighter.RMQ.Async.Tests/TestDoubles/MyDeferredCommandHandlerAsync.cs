@@ -4,7 +4,7 @@ using Paramore.Brighter.Actions;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
-internal class MyDeferredCommandHandlerAsync : RequestHandlerAsync<MyDeferredCommand>
+internal sealed class MyDeferredCommandHandlerAsync : RequestHandlerAsync<MyDeferredCommand>
 {
     public int HandledCount { get; set; } = 0;
 

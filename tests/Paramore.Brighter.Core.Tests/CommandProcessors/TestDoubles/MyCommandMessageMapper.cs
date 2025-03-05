@@ -27,7 +27,7 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommandMessageMapper : IAmAMessageMapper<MyCommand>
+    internal sealed class MyCommandMessageMapper : IAmAMessageMapper<MyCommand>
     {
         public IRequestContext Context { get; set; }
 

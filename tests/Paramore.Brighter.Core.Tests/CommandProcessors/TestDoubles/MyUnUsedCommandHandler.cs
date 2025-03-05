@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyUnusedCommandHandler : RequestHandler<MyCommand>
+    internal sealed class MyUnusedCommandHandler : RequestHandler<MyCommand>
     {
         private static MyCommand s_command;
 

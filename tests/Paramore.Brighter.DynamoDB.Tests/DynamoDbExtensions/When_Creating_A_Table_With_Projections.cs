@@ -45,7 +45,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
         }
 
         [DynamoDBTable("MyEntity")]
-        private class DynamoDbEntity
+        private sealed class DynamoDbEntity
         {
             [DynamoDBHashKey]
             public string Id { get; set; }

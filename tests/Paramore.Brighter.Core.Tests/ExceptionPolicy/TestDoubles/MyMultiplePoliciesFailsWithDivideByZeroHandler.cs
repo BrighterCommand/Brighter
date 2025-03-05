@@ -28,7 +28,7 @@ using Paramore.Brighter.Policies.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
-    internal class MyMultiplePoliciesFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
+    internal sealed class MyMultiplePoliciesFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
     {
         public static bool ReceivedCommand { get; set; }
 

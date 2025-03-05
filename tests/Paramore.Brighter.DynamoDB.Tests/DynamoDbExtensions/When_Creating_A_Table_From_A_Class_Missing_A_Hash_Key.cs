@@ -20,6 +20,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
         }
 
         [DynamoDBTable("DnyamoDbEntity")]
-        private class DynamoDbEntity{}
+        private sealed class DynamoDbEntity{}
     }
 }

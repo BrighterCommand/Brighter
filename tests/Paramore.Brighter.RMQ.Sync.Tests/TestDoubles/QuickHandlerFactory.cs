@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
 
-internal class QuickHandlerFactory(Func<IHandleRequests> handlerAction) : IAmAHandlerFactorySync
+internal sealed class QuickHandlerFactory(Func<IHandleRequests> handlerAction) : IAmAHandlerFactorySync
 {
     public IHandleRequests Create(Type handlerType, IAmALifetime lifetime)
     {

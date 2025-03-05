@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyLoggingHandlerAsync<TRequest>: RequestHandlerAsync<TRequest>, IDisposable where TRequest : class, IRequest
+    internal sealed class MyLoggingHandlerAsync<TRequest>: RequestHandlerAsync<TRequest>, IDisposable where TRequest : class, IRequest
     {
         private TRequest _command;
         public static bool DisposeWasCalled { get; set; }

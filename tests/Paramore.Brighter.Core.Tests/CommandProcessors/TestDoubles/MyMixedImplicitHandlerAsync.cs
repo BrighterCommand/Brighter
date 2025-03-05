@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyMixedImplicitHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal sealed class MyMixedImplicitHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         [MyLoggingHandler(1)]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)

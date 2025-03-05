@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.AWS.Tests.Helpers;
 
-internal class InterceptingDelegatingHandler(string tag) : DelegatingHandler
+internal sealed class InterceptingDelegatingHandler(string tag) : DelegatingHandler
 {
     public static ConcurrentDictionary<string, int> RequestCount { get; } = new();
 

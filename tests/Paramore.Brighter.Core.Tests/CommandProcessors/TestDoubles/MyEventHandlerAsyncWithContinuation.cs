@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    class MyEventHandlerAsyncWithContinuation : RequestHandlerAsync<MyEvent>
+    sealed class MyEventHandlerAsyncWithContinuation : RequestHandlerAsync<MyEvent>
     {
         private static MyEvent s_receivedEvent;
 

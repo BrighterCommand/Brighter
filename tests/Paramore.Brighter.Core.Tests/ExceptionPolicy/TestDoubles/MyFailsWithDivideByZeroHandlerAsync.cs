@@ -30,7 +30,7 @@ using Paramore.Brighter.Policies.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
-    internal class MyFailsWithDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal sealed class MyFailsWithDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         public static bool ReceivedCommand { get; set; }
 

@@ -28,7 +28,7 @@ using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommandInboxedHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal sealed class MyCommandInboxedHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         private static MyCommand s_command;
 

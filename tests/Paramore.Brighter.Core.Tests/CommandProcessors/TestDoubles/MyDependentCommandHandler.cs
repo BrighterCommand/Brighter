@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyDependentCommandHandler : RequestHandler<MyCommand>
+    internal sealed class MyDependentCommandHandler : RequestHandler<MyCommand>
     {
         private readonly IRepository<MyAggregate> _repository;
         private static MyCommand s_command;

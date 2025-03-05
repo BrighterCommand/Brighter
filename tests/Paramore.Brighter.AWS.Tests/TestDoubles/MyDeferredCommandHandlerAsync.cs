@@ -4,7 +4,7 @@ using Paramore.Brighter.Actions;
 
 namespace Paramore.Brighter.AWS.Tests.TestDoubles;
 
-internal class MyDeferredCommandHandlerAsync : RequestHandlerAsync<MyDeferredCommand>
+internal sealed class MyDeferredCommandHandlerAsync : RequestHandlerAsync<MyDeferredCommand>
 {
     public override async Task<MyDeferredCommand> HandleAsync(MyDeferredCommand command, CancellationToken cancellationToken = default)
     {

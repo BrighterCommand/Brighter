@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
@@ -14,7 +13,7 @@ using Serilog;
 
 namespace GreetingsPumper
 {
-    class Program
+    static class Program
     {
         private static async Task Main(string[] args)
         {
@@ -76,7 +75,7 @@ namespace GreetingsPumper
             await host.RunAsync();
         }
 
-        internal class RunCommandProcessor : IHostedService
+        internal sealed class RunCommandProcessor : IHostedService
         {
             private readonly IAmACommandProcessor _commandProcessor;
 

@@ -5,7 +5,7 @@ using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
-internal class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
+internal sealed class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
 {
     public IRequestContext Context { get; set; }
 

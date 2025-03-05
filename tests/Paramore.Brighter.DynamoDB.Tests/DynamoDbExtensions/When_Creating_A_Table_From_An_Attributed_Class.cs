@@ -50,7 +50,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
         //Required
         [DynamoDBTable("MyEntity")]
-        private class DynamoDbEntity
+        private sealed class DynamoDbEntity
         {
             [DynamoDBProperty]
             public string StringProperty { get; set; }

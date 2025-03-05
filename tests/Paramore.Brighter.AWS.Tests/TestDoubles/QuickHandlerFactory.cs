@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.AWS.Tests.TestDoubles
 {
-    internal class QuickHandlerFactory : IAmAHandlerFactorySync
+    internal sealed class QuickHandlerFactory : IAmAHandlerFactorySync
     {
         private readonly Func<IHandleRequests> _handlerAction;
 

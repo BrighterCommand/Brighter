@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
-internal class MyDeferredCommandHandler : RequestHandler<MyDeferredCommand>
+internal sealed class MyDeferredCommandHandler : RequestHandler<MyDeferredCommand>
 {
     public int HandledCount { get; set; } = 0;
     public override MyDeferredCommand Handle(MyDeferredCommand command)

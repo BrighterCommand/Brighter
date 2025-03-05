@@ -24,20 +24,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Transactions;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Serilog;
-using Serilog.Extensions.Logging;
 
 namespace GreetingsSender
 {
-    internal class Program
+    internal static class Program
     {
         private static int Main(string[] args)
         {

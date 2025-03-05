@@ -31,7 +31,7 @@ using Paramore.Brighter.Policies.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
-    internal class MyFailsWithFallbackDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal sealed class MyFailsWithFallbackDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         public  bool FallbackCalled { get; set; }
         public  bool ReceivedCommand { get; set; }

@@ -27,7 +27,7 @@ using Paramore.Brighter.Monitoring.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring.TestDoubles
 {
-    internal class MyMonitoredHandler : RequestHandler<MyCommand>
+    internal sealed class MyMonitoredHandler : RequestHandler<MyCommand>
     {
         [Monitor(1, HandlerTiming.Before, typeof(MyMonitoredHandler))]
         public override MyCommand Handle(MyCommand command)

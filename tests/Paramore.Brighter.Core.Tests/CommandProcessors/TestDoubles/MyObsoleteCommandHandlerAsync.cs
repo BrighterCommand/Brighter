@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyObsoleteCommandHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal sealed class MyObsoleteCommandHandlerAsync : RequestHandlerAsync<MyCommand>
     {
         private static MyCommand s_command;
 

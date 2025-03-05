@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.RMQ.Async.Tests.TestDoubles;
 
-internal class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
+internal sealed class MyEventMessageMapperAsync : IAmAMessageMapperAsync<MyEvent>
 {
     public IRequestContext Context { get; set; }
         

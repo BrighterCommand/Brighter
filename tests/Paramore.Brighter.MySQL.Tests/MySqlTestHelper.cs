@@ -95,7 +95,7 @@ namespace Paramore.Brighter.MySQL.Tests
         }
     }
 
-    internal class MySqlSettings
+    internal sealed class MySqlSettings
     {
         public string TestsBrighterConnectionString { get; set; } =
             "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
