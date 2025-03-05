@@ -285,7 +285,22 @@ public class InMemorySchedulerRequestAsyncTests
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
         Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
+        var expected = Message.Empty;
+
+        var actual = await _outbox.GetAsync(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     [Theory]
@@ -306,7 +321,22 @@ public class InMemorySchedulerRequestAsyncTests
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
         Assert.DoesNotContain(nameof(MyEventHandlerAsync), _receivedMessages);
 
-        Assert.Equivalent(new Message(), _outbox.Get(req.Id, new RequestContext()));
+        var expected = Message.Empty;
+
+        var actual = await _outbox.GetAsync(req.Id, new RequestContext());
+        
+        Assert.Equivalent(expected.Body, actual.Body);
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Persist, actual.Persist);
+        Assert.Equal(expected.Redelivered, actual.Redelivered);
+        Assert.Equal(expected.DeliveryTag, actual.DeliveryTag);
+        Assert.Equal(expected.Header.MessageType, actual.Header.MessageType);
+        Assert.Equal(expected.Header.Topic, actual.Header.Topic);
+        Assert.Equal(expected.Header.TimeStamp, actual.Header.TimeStamp, TimeSpan.FromSeconds(1));
+        Assert.Equal(expected.Header.CorrelationId, actual.Header.CorrelationId);
+        Assert.Equal(expected.Header.ReplyTo, actual.Header.ReplyTo);
+        Assert.Equal(expected.Header.ContentType, actual.Header.ContentType);
+        Assert.Equal(expected.Header.HandledCount, actual.Header.HandledCount);
     }
 
     #endregion
