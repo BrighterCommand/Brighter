@@ -68,20 +68,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     headers.Add(HeaderNames.CloudEventsDataSchema, message.Header.DataSchema.ToString().ToByteArray());
                 }
-
-            }
-            else
-            {
-                var timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
-                if (message.Header.TimeStamp.DateTime != default)
+                
+                if (!string.IsNullOrEmpty(message.Header.ContentType))
                 {
-                    timeStampAsString = message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture);
+                    headers.Add(HeaderNames.CloudEventsContentType, message.Header.ContentType.ToByteArray());
                 }
-
-                headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
             }
             
-            // On Cloud Event Kafka use the content-type as datacontenttype
+            var timeStampAsString = DateTimeOffset.UtcNow.DateTime.ToString(CultureInfo.InvariantCulture);
+            if (message.Header.TimeStamp.DateTime != default)
+            {
+                timeStampAsString = message.Header.TimeStamp.DateTime.ToString(CultureInfo.InvariantCulture);
+            }
+
+            headers.Add(HeaderNames.TIMESTAMP, timeStampAsString.ToByteArray());
+            
             if (!string.IsNullOrEmpty(message.Header.ContentType))
             {
                 headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.ToByteArray());

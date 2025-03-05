@@ -124,7 +124,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         private static HeaderResult<string> ReadContentType(Headers headers)
         {
-            return ReadHeader(headers, HeaderNames.CONTENT_TYPE);
+            var contentType = ReadHeader(headers, HeaderNames.CloudEventsContentType, true);
+            return !contentType.Success ? contentType : ReadHeader(headers, HeaderNames.CONTENT_TYPE);
         }
 
         private static HeaderResult<string> ReadCorrelationId(Headers headers)

@@ -30,13 +30,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// A dictionary of user defined values
         /// </summary>
-        public static string BAG { get; } = "Bag";
+        public const string BAG = "Bag";
 
         /// <summary>
-        /// What is the content type of the message§
+        /// What is the content type of the message
         /// </summary>
-        public static string CONTENT_TYPE { get; set; } = "ContentType";
-
+        public const string CONTENT_TYPE  = "ContentType";
+        
         /// <summary>
         /// The correlation id
         /// </summary>
@@ -121,5 +121,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The cloud event subject
         /// </summary>
         public const string CloudEventsSource = "ce_source";
+        
+        /// <summary>
+        /// The cloud events for content-type
+        /// </summary>
+        public const string CloudEventsContentType  = "content-type";
     }
 }
