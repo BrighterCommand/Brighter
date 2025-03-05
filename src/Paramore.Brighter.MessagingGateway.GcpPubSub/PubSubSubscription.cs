@@ -26,6 +26,7 @@ public class PubSubSubscription : Subscription
     public string? DeadLetterTopic { get; set; }
 
     public TimeSpan MaxRequeueDelay { get; set; } = TimeSpan.FromSeconds(600);
+    public TimeProvider TimeProvider { get; set; } = TimeProvider.System;
     
     public PubSubSubscription(Type dataType, SubscriptionName? name = null, ChannelName? channelName = null, RoutingKey? routingKey = null, int bufferSize = 1, int noOfPerformers = 1, TimeSpan? timeOut = null, int requeueCount = -1, TimeSpan? requeueDelay = null, int unacceptableMessageLimit = 0, MessagePumpType messagePumpType = MessagePumpType.Unknown, IAmAChannelFactory? channelFactory = null, OnMissingChannel makeChannels = OnMissingChannel.Create, TimeSpan? emptyChannelDelay = null, TimeSpan? channelFailureDelay = null) : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeOut, requeueCount, requeueDelay, unacceptableMessageLimit, messagePumpType, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
     {
