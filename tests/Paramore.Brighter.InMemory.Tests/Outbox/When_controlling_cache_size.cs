@@ -58,23 +58,23 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             var context = new RequestContext();
             for (int i = 0; i <= limit - 1; i++)
             {
-                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]), context);
+                await outbox.AddAsync(new MessageTestDataBuilder().WithId(messageIds[i]), context);
                 timeProvider.Advance(TimeSpan.FromMilliseconds(1000));
             }
 
             //Act
             Assert.Equal(5, outbox.EntryCount);
             
-            outbox.Add(new MessageTestDataBuilder(), context);
+            await outbox.AddAsync(new MessageTestDataBuilder(), context);
 
-            await Task.Delay(500); //Allow time for compaction to run
+            await Task.Delay(100); //Allow time for compaction to run
             
             //should clear compaction percentage from the outbox, and then add  the  new one
-            Assert.True(outbox.Get(messageIds[0], context).IsEmpty);
-            Assert.True(outbox.Get(messageIds[1], context).IsEmpty);
-            Assert.True(outbox.Get(messageIds[2], context).IsEmpty);
-            Assert.True(outbox.Get(messageIds[3], context).IsEmpty);
-            Assert.True((outbox.Get(messageIds[4], context).IsEmpty));
+            Assert.True((await outbox.GetAsync(messageIds[0], context)).IsEmpty);
+            Assert.True((await outbox.GetAsync(messageIds[1], context)).IsEmpty);
+            Assert.True((await outbox.GetAsync(messageIds[2], context)).IsEmpty);
+            Assert.False((await outbox.GetAsync(messageIds[3], context)).IsEmpty);
+            Assert.False(((await outbox.GetAsync(messageIds[4], context)).IsEmpty));
         }
     }
 }
