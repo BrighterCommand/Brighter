@@ -406,7 +406,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
     }
 
-    internal class SpyRequeueCommandProcessor : SpyCommandProcessor
+    internal sealed class SpyRequeueCommandProcessor : SpyCommandProcessor
     {
         public int SendCount { get; set; }
         public int PublishCount { get; set; }
@@ -464,7 +464,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
     }
 
-    internal class SpyExceptionCommandProcessor : SpyCommandProcessor
+    internal sealed class SpyExceptionCommandProcessor : SpyCommandProcessor
     {
         public int SendCount { get; set; }
         public int PublishCount { get; set; }

@@ -30,7 +30,7 @@ using Paramore.Brighter.Policies.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.Timeout.Test_Doubles
 {
-    internal class MyPassesTimeoutHandler : RequestHandler<MyCommand>
+    internal sealed class MyPassesTimeoutHandler : RequestHandler<MyCommand>
     {
         [TimeoutPolicy(10000, 0, HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)

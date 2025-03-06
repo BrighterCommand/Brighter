@@ -34,7 +34,7 @@ using Serilog.Extensions.Logging;
 
 namespace GreetingsSender
 {
-    class Program
+    static class Program
     {
         static void Main(string[] args)
         {
