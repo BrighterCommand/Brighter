@@ -280,7 +280,6 @@ public class InMemorySchedulerMessageTests
         _timeProvider.Advance(TimeSpan.FromSeconds(2));
 
         var expected = Message.Empty;
-
         var actual = _outbox.Get(req.Id, new RequestContext());
         
         Assert.Equivalent(expected.Body, actual.Body);
