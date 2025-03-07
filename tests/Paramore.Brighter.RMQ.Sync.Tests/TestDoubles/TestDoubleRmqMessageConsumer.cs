@@ -23,8 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Sync;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
@@ -34,7 +32,7 @@ namespace Paramore.Brighter.RMQ.Sync.Tests.TestDoubles;
  * Use to force a failure mirroring a RabbitMQ subscription failure for testing flow of failure
  */
 
-internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
+internal sealed class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
 {
     public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
         : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
@@ -45,7 +43,7 @@ internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
     }
 }
 
-internal class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
+internal sealed class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
 {
     public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
         : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
@@ -56,7 +54,7 @@ internal class AlreadyClosedRmqMessageConsumer : RmqMessageConsumer
     }
 }
 
-internal class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
+internal sealed class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
 {
     public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
         : base(connection, queueName, routingKey, isDurable,isHighAvailability) { }
@@ -67,7 +65,7 @@ internal class OperationInterruptedRmqMessageConsumer : RmqMessageConsumer
     }
 }
 
-internal class NotSupportedRmqMessageConsumer : RmqMessageConsumer
+internal sealed class NotSupportedRmqMessageConsumer : RmqMessageConsumer
 {
     public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, ChannelName queueName, RoutingKey routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) 
         : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }

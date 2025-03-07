@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.AWS.Tests.TestDoubles
 {
-    internal class MyDeferredCommandMessageMapper : IAmAMessageMapper<MyDeferredCommand>
+    internal sealed class MyDeferredCommandMessageMapper : IAmAMessageMapper<MyDeferredCommand>
     {
         public IRequestContext Context { get; set; }
 

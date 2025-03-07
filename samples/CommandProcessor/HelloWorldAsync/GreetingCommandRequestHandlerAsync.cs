@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
@@ -31,7 +30,7 @@ using Paramore.Brighter.Logging.Attributes;
 
 namespace HelloWorldAsync
 {
-    internal class GreetingCommandRequestHandlerAsync : RequestHandlerAsync<GreetingCommand>
+    internal sealed class GreetingCommandRequestHandlerAsync : RequestHandlerAsync<GreetingCommand>
     {
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
         public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)

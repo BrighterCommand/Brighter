@@ -8,7 +8,7 @@ using Paramore.Brighter.Outbox.PostgreSql;
 
 namespace Paramore.Brighter.PostgresSQL.Tests
 {
-    internal class PostgresSqlTestHelper
+    internal sealed class PostgresSqlTestHelper
     {
         private readonly bool _binaryMessagePayload;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlTestHelper>();
@@ -125,7 +125,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
     }
 
 
-    internal class PostgreSqlSettings
+    internal sealed class PostgreSqlSettings
     {
         public string TestsBrighterConnectionString { get; set; } = "Host=localhost;Username=postgres;Password=password;Database=brightertests;";
 
