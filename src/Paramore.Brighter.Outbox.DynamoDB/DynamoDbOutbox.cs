@@ -322,7 +322,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     result = await DispatchedMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, (string)topicArg, cancellationToken);
                 }
 
-                span.AddTag("db.response.returned_rows", result.Count());
+                span?.AddTag("db.response.returned_rows", result.Count());
                 return result;
             }
             finally
@@ -544,7 +544,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     result = await OutstandingMessagesForTopicAsync(dispatchedSince, pageSize, pageNumber, (string)topicArg, cancellationToken);
                 }
 
-                span.AddTag("db.response.returned_rows", result.Count());
+                span?.AddTag("db.response.returned_rows", result.Count());
                 return result;
             }
             finally
