@@ -43,7 +43,7 @@ public class MsSqlFetchOutStandingMessageTests : IDisposable
         _sqlOutbox.Add([_messageEarliest, _messageDispatched, _messageUnDispatched], context);
         _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
         
-        var total = _sqlOutbox.GetNumberOfOutstandingMessages();
+        var total = _sqlOutbox.GetNumberOfOutstandingMessages(null);
 
         var allUnDispatched = _sqlOutbox.OutstandingMessages(TimeSpan.Zero, context);
         var messagesOverAnHour = _sqlOutbox.OutstandingMessages(TimeSpan.FromHours(1), context);

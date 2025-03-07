@@ -33,6 +33,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Observability;
 using Paramore.Brighter.Sqlite;
 
 namespace Paramore.Brighter.Outbox.Sqlite
@@ -54,7 +55,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
         public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider)
-            : base(configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
+            : base(DbSystem.Sqlite, configuration.DatabaseName, configuration.OutBoxTableName, 
+                  new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;

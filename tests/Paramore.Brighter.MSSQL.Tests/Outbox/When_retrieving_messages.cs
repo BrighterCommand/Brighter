@@ -42,7 +42,7 @@ public class MsSqlFetchMessageTests : IDisposable
         _sqlOutbox.MarkDispatched(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
         _sqlOutbox.MarkDispatched(_messageDispatched.Id, context);
 
-        var messages = _sqlOutbox.Get();
+        var messages = _sqlOutbox.Get(null);
 
         //Assert
         messages.Should().HaveCount(3);

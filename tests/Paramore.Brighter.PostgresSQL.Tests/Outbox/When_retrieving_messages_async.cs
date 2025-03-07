@@ -43,7 +43,7 @@ public class PostgresSqlFetchMessageAsyncTests : IDisposable
         await _sqlOutbox.MarkDispatchedAsync(_messageEarliest.Id, context, DateTime.UtcNow.AddHours(-3));
         await _sqlOutbox.MarkDispatchedAsync(_messageDispatched.Id, context);
 
-        var messages = await _sqlOutbox.GetAsync();
+        var messages = await _sqlOutbox.GetAsync(null);
 
         //Assert
         messages.Should().HaveCount(3);
